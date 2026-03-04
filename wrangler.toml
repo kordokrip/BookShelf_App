@@ -1,0 +1,47 @@
+name = "bookshelf-api"
+main = "worker/index.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+account_id = "544c335c41ce3cd6f43b32cce9f15aaa"
+
+# ─── 빌드 설정 ───────────────────────────────────────────────
+[build]
+command = "npm run build:worker"
+
+# ─── 로컬 개발 ───────────────────────────────────────────────
+[dev]
+port = 8787
+local_protocol = "http"
+
+# ─── D1 데이터베이스 ─────────────────────────────────────────
+[[d1_databases]]
+binding = "DB"
+database_name = "bookshelf-db"
+database_id = "013db269-dc7a-4a60-9920-ed40c12ab623"
+migrations_dir = "worker/db/migrations"
+
+# ─── 환경 변수 (비밀값은 wrangler secret put 사용) ────────────
+[vars]
+ENVIRONMENT = "production"
+APP_NAME = "BookShelf"
+
+# ─── 로컬 개발용 환경 변수 ────────────────────────────────────
+[env.local.vars]
+ENVIRONMENT = "local"
+
+# ─── 스테이징 환경 ───────────────────────────────────────────
+[env.staging]
+name = "bookshelf-api-staging"
+
+[env.staging.vars]
+ENVIRONMENT = "staging"
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "bookshelf-db-staging"
+database_id = "REPLACE_WITH_STAGING_D1_DATABASE_ID"
+
+# ─── Assets (PWA 빌드 결과물 서빙) ───────────────────────────
+[assets]
+directory = "./dist"
+binding = "ASSETS"
