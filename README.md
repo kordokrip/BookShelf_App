@@ -7,13 +7,14 @@
 **읽은 책이 쌓이면, 삶이 깊어진다**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-indigo.svg)](LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)](https://reactjs.org/)
+[![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite)](https://vitejs.dev/)
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare)](https://workers.cloudflare.com/)
 [![PWA](https://img.shields.io/badge/PWA-Ready-5A0FC8?logo=pwa)](https://web.dev/progressive-web-apps/)
 [![Figma](https://img.shields.io/badge/Designed_in-Figma-F24E1E?logo=figma)](https://figma.com)
 
-[데모 보기](#) · [기능 소개](#-주요-기능) · [시작하기](#-빠른-시작) · [기술 스택](#️-기술-스택) · [아키텍처](#-아키텍처)
+[기능 소개](#-주요-기능) · [시작하기](#-빠른-시작) · [기술 스택](#️-기술-스택) · [아키텍처](#-아키텍처) · [배포](#-배포-cloudflare)
 
 ---
 
@@ -147,13 +148,13 @@ BookShelf는 바로 그 질문에서 시작되었습니다.
                             │  HTTPS
 ┌───────────────────────────▼─────────────────────────────────────┐
 │               Cloudflare Pages (CDN 엣지 배포)                   │
-│          React 18 + Vite 5 PWA  ←  TailwindCSS + shadcn/ui      │
+│          React 18 + Vite 6 PWA  ←  TailwindCSS v4 + shadcn/ui      │
 │                                                                  │
 │  ┌──────────────┐  ┌─────────────────┐  ┌──────────────────┐   │
 │  │ 완독 책장    │  │  읽는 중 책장    │  │  Wish 책장       │   │
 │  │ 통계 대시보드│  │  책 등록 플로우  │  │  AI 독후감 보조  │   │
 │  └──────────────┘  └─────────────────┘  └──────────────────┘   │
-│              Zustand (전역 상태) + React Query (서버 상태)        │
+│     Zustand v5 (전역 상태) + TanStack Query v5 (서버 상태)       │
 └───────────────────────────┬─────────────────────────────────────┘
                             │  REST API  /api/*
 ┌───────────────────────────▼─────────────────────────────────────┐
@@ -165,11 +166,7 @@ BookShelf는 바로 그 질문에서 시작되었습니다.
 │  │  /api/books │  │  /api/notes   │  │  /api/ai             │  │
 │  │  /api/stats │  │  JWT + KV     │  │  Workers AI (llava)  │  │
 │  └──────┬──────┘  └───────┬───────┘  └──────────┬───────────┘  │
-│         │                 │                      │              │
-│  ┌──────▼─────────────────▼──────────────────────▼───────────┐  │
-│  │              Drizzle ORM (SQLite 쿼리 빌더)                 │  │
-│  └──────────────────────────┬────────────────────────────────┘  │
-└─────────────────────────────┼───────────────────────────────────┘
+└─────────┼─────────────────┼──────────────────────┼─────────────┘
                               │
 ┌─────────────────────────────▼───────────────────────────────────┐
 │                    Cloudflare 인프라 레이어                        │
@@ -261,19 +258,20 @@ users ──┬── books ──── shelf_items ──┬── reading_not
 | 기술 | 버전 | 역할 |
 |------|------|------|
 | React | 18 | UI 컴포넌트 프레임워크 |
-| TypeScript | 5.0 | 정적 타입 시스템 |
-| Vite | 5 | 빌드 도구 + Dev 서버 |
-| TailwindCSS | 3 | 유틸리티 CSS |
-| shadcn/ui | latest | 접근성 기반 UI 컴포넌트 |
-| React Router | v6 | 클라이언트 라우팅 |
-| React Query | v5 | 서버 상태 관리 + 캐싱 |
-| Zustand | latest | 클라이언트 전역 상태 |
-| React Hook Form | latest | 폼 상태 관리 |
-| Zod | latest | 스키마 검증 |
-| Recharts | latest | 통계 차트 시각화 |
-| Lucide React | 0.263 | 아이콘 시스템 |
-| ZXing | latest | 바코드 스캔 (클라이언트) |
-| Vite PWA Plugin | latest | PWA + Service Worker |
+| TypeScript | 5.9 | 정적 타입 시스템 |
+| Vite | 6 | 빌드 도구 + Dev 서버 |
+| TailwindCSS | v4 | 유틸리티 CSS |
+| shadcn/ui + Radix UI | latest | 접근성 기반 UI 컴포넌트 |
+| React Router | v7 | 클라이언트 라우팅 (createBrowserRouter) |
+| TanStack Query | v5 | 서버 상태 관리 + 캐싱 |
+| Zustand | v5 | 클라이언트 전역 상태 (persist) |
+| React Hook Form | 7.55 | 폼 상태 관리 |
+| Zod | v4 | 스키마 검증 |
+| Recharts | 2.15 | 통계 차트 시각화 |
+| Lucide React | 0.487 | 아이콘 시스템 |
+| ZXing | 0.1.5 | 바코드 스캔 (클라이언트) |
+| vite-plugin-pwa | 1.2 | PWA + Service Worker (Workbox) |
+| Motion | 12 | 애니메이션 |
 
 ### Backend (Cloudflare)
 
@@ -286,7 +284,6 @@ users ──┬── books ──── shelf_items ──┬── reading_not
 | Cloudflare R2 | 책 표지 이미지 오브젝트 스토리지 |
 | Cloudflare Workers AI | OCR (llava-1.5-7b) + 임베딩 |
 | Cloudflare Pages | 프론트엔드 CDN 배포 |
-| Drizzle ORM | 타입 안전 D1 쿼리 빌더 |
 | jose | JWT (Workers 런타임 호환) |
 | OpenAI gpt-4o-mini | 독후감 보조 + 책 추천 텍스트 |
 
@@ -296,9 +293,8 @@ users ──┬── books ──── shelf_items ──┬── reading_not
 |------|------|
 | VS Code | 코드 에디터 |
 | GitHub Copilot (Claude Sonnet 4.6) | AI 코딩 보조 |
-| Figma AI Make | UI 목업 생성 |
-| Wrangler CLI v3 | Cloudflare 배포 도구 |
-| Drizzle Kit | DB 마이그레이션 관리 |
+| Figma AI Make | UI 목업 생성 및 컴포넌트 생성 |
+| Wrangler CLI v4 | Cloudflare 배포 도구 |
 
 ---
 
@@ -306,98 +302,87 @@ users ──┬── books ──── shelf_items ──┬── reading_not
 
 ```
 BookShelf_App/
-├── apps/
-│   ├── web/                          # React PWA 프론트엔드
-│   │   ├── src/
-│   │   │   ├── app/
-│   │   │   │   ├── components/       # Figma AI Make 생성 컴포넌트 (34개)
-│   │   │   │   │   ├── navigation/   # TopBar, BottomNavBar, SideNav
-│   │   │   │   │   ├── books/        # BookCard, GenreBadge, FilterBar
-│   │   │   │   │   ├── stats/        # SummaryCard, Charts, Heatmap
-│   │   │   │   │   └── ui/           # Button, Input, Modal, Skeleton
-│   │   │   │   ├── data/             # Mock 데이터 (개발용)
-│   │   │   │   └── pages/            # 14개 페이지 컴포넌트
-│   │   │   │       ├── LibraryPage      # 완독 책장
-│   │   │   │       ├── ReadingPage      # 읽는 중
-│   │   │   │       ├── WishlistPage     # Wish 책장
-│   │   │   │       ├── StatsPage        # 통계 대시보드
-│   │   │   │       ├── BookDetailPage   # 책 상세 + 노트
-│   │   │   │       ├── RegisterFlowPage # 책 등록 6단계
-│   │   │   │       ├── LoginPage        # 로그인
-│   │   │   │       └── RegisterPage     # 회원가입
-│   │   │   ├── features/             # 기능별 모듈
-│   │   │   │   ├── shelf-done/       # 완독 기능 (훅, API, 타입)
-│   │   │   │   ├── shelf-reading/    # 읽는중 기능
-│   │   │   │   ├── shelf-wishlist/   # Wish 기능
-│   │   │   │   ├── book-register/    # 책 등록 (OCR, 바코드)
-│   │   │   │   ├── notes/            # 노트 관리
-│   │   │   │   ├── stats/            # 통계
-│   │   │   │   └── ai-recommend/     # AI 추천
-│   │   │   ├── shared/
-│   │   │   │   ├── components/       # 공통 UI (Toast, Dialog, PWA)
-│   │   │   │   ├── hooks/            # 공통 훅 (useCamera, usePWA)
-│   │   │   │   ├── lib/              # API 클라이언트, 유틸
-│   │   │   │   ├── store/            # Zustand 스토어
-│   │   │   │   └── constants/        # 장르 코드, 테마 상수
-│   │   │   └── styles/
-│   │   │       ├── theme.css         # CSS 변수 (디자인 토큰)
-│   │   │       ├── fonts.css         # Pretendard 폰트
-│   │   │       └── index.css         # Tailwind 진입점
-│   │   ├── public/
-│   │   │   └── icons/                # PWA 아이콘 (192, 512px)
-│   │   ├── vite.config.ts            # Vite + PWA 설정
-│   │   └── package.json
-│   │
-│   └── worker/                       # Cloudflare Workers API
-│       ├── src/
-│       │   ├── index.ts              # Hono 앱 진입점
-│       │   ├── routes/
-│       │   │   ├── auth.ts           # 인증 (JWT)
-│       │   │   ├── books.ts          # 책 CRUD
-│       │   │   ├── shelf.ts          # 책장 관리
-│       │   │   ├── notes.ts          # 독서 노트
-│       │   │   ├── ocr.ts            # OCR + 바코드
-│       │   │   ├── ai.ts             # AI 기능
-│       │   │   └── stats.ts          # 통계
-│       │   ├── db/
-│       │   │   ├── schema.ts         # Drizzle ORM 스키마
-│       │   │   ├── index.ts          # DB 인스턴스
-│       │   │   ├── seed.ts           # 개발용 시드 데이터
-│       │   │   └── migrations/
-│       │   │       ├── 0001_initial_schema.sql
-│       │   │       └── 0001_rollback.sql
-│       │   ├── repositories/
-│       │   │   ├── BookRepository.ts
-│       │   │   ├── ShelfRepository.ts
-│       │   │   ├── NoteRepository.ts
-│       │   │   └── StatsRepository.ts
-│       │   ├── services/
-│       │   │   ├── ocrService.ts       # Workers AI OCR
-│       │   │   ├── bookMetadataService.ts # ISBN 조회
-│       │   │   ├── aiReviewService.ts  # gpt-4o-mini
-│       │   │   └── aiRecommendService.ts
-│       │   ├── middleware/
-│       │   │   ├── auth.ts            # JWT 미들웨어
-│       │   │   └── errorHandler.ts
-│       │   ├── lib/
-│       │   │   └── response.ts        # 표준 응답 헬퍼
-│       │   └── types/
-│       │       └── env.ts             # Cloudflare Bindings 타입
-│       ├── wrangler.toml              # Cloudflare 설정
-│       └── package.json
+├── src/                              # React 프론트엔드
+│   ├── main.tsx
+│   ├── app/
+│   │   ├── App.tsx                   # Provider + RouterProvider + PWA 배너
+│   │   ├── Root.tsx                  # 레이아웃 (TopBar + BottomNavBar)
+│   │   ├── routes.ts                 # createBrowserRouter
+│   │   ├── providers.tsx             # QueryClientProvider + ToastProvider
+│   │   ├── components/
+│   │   │   ├── auth/ProtectedRoute.tsx
+│   │   │   ├── books/                # BookCard, GenreFilterBar
+│   │   │   ├── navigation/           # TopBar, BottomNavBar, SideNav
+│   │   │   ├── stats/                # StatsComponents
+│   │   │   └── ui/                   # 34개 shadcn/ui 컴포넌트
+│   │   ├── data/mockData.ts          # 개발용 Mock 데이터
+│   │   └── pages/
+│   │       ├── LibraryPage.tsx       # 완독 책장
+│   │       ├── ReadingPage.tsx       # 읽는 중
+│   │       ├── WishlistPage.tsx      # Wish 책장
+│   │       ├── StatsPage.tsx         # 독서 통계
+│   │       ├── BookDetailPage.tsx    # 책 상세 + 노트
+│   │       ├── RegisterFlowPage.tsx  # 책 등록 6단계 (OCR/바코드)
+│   │       ├── NotesSearchPage.tsx   # 노트 검색 + AI 독후감
+│   │       ├── LoginPage.tsx
+│   │       └── SignUpPage.tsx
+│   ├── features/                     # Feature-Sliced Design
+│   │   ├── shelf-done/api/useShelfDone.ts
+│   │   ├── shelf-reading/
+│   │   │   ├── api/useShelfReading.ts
+│   │   │   ├── api/useUpdateProgress.ts   # Optimistic Update
+│   │   │   └── lib/readingCalc.ts         # 일일 목표 계산 순수 함수
+│   │   ├── shelf-wishlist/api/
+│   │   │   ├── useShelfWishlist.ts
+│   │   │   ├── useMoveToReading.ts
+│   │   │   └── useDeleteWish.ts
+│   │   ├── book-register/
+│   │   │   ├── api/useRegisterBook.ts
+│   │   │   ├── api/useOcrScan.ts
+│   │   │   ├── api/useBarcodeLookup.ts
+│   │   │   ├── hooks/useCamera.ts         # MediaDevices API
+│   │   │   └── hooks/useBarcodeScan.ts    # ZXing
+│   │   ├── notes/api/useReviewAssist.ts   # GPT-4o-mini 독후감
+│   │   ├── stats/api/useStats.ts
+│   │   └── ai-recommend/api/useRecommendations.ts  # 30분 캐시
+│   └── shared/
+│       ├── components/
+│       │   ├── feedback/ConfirmDialog.tsx
+│       │   └── pwa/
+│       │       ├── InstallBanner.tsx      # PWA 설치 유도
+│       │       └── OfflineBanner.tsx      # 오프라인 감지
+│       ├── hooks/usePWA.ts               # 4개 PWA 훅
+│       ├── lib/
+│       │   ├── api-client.ts             # fetch 래퍼 (JWT 자동 주입)
+│       │   └── queryKeys.ts              # React Query 키 팩토리
+│       └── store/
+│           ├── authStore.ts              # JWT 인증 상태 (persist)
+│           └── uiStore.ts               # activeShelf, modal, search
 │
-├── packages/
-│   └── shared-types/                 # 프론트-백 공유 타입
-│       └── src/
-│           ├── book.ts
-│           ├── shelf.ts
-│           ├── user.ts
-│           └── genre.ts              # 19개 장르 코드
+├── worker/                               # Cloudflare Workers API (Hono)
+│   ├── index.ts                          # 앱 진입점
+│   ├── types.ts                          # Bindings (D1, KV, R2, AI)
+│   ├── routes/                           # auth, books, shelf, notes, ocr, ai, stats, push
+│   ├── services/                         # ocrService, bookMetadataService, aiReviewService, aiRecommendService
+│   └── db/
+│       ├── migrations/
+│       │   ├── 0001_initial_schema.sql
+│       │   └── 0001_rollback.sql
+│       └── seed.sql
 │
-├── .github/
-│   └── copilot-instructions.md      # Copilot 지침서
-├── package.json                      # 루트 (npm workspaces)
-└── README.md
+├── public/
+│   ├── manifest.json                     # Web App Manifest
+│   └── icons/                            # PWA 아이콘 (192, 512px)
+│
+├── scripts/
+│   ├── generate-icons.mjs
+│   └── setup-cloudflare.sh              # 원스텝 Cloudflare 리소스 설정
+│
+├── .github/workflows/deploy.yml          # GitHub Actions CI/CD
+├── wrangler.toml                         # Cloudflare 설정 (D1, KV, R2, AI 바인딩)
+├── vite.config.ts                        # Vite + PWA + Workbox
+├── index.html                            # iOS PWA 메타태그 포함
+└── package.json
 ```
 
 ---
@@ -415,7 +400,7 @@ npm --version    # v10 이상
 ### 1. 저장소 클론
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/BookShelf_App.git
+git clone https://github.com/kordokrip/BookShelf_App.git
 cd BookShelf_App
 npm install
 ```
@@ -423,93 +408,85 @@ npm install
 ### 2. Cloudflare 리소스 생성
 
 ```bash
-# Cloudflare 로그인
 npx wrangler login
 
-# D1 데이터베이스 생성
+# 원스텝 자동 생성 (권장)
+bash scripts/setup-cloudflare.sh
+
+# 또는 수동 생성
 npx wrangler d1 create bookshelf-db
-# → 출력된 database_id를 apps/worker/wrangler.toml에 입력
-
-# KV 네임스페이스 생성 (세션)
-npx wrangler kv:namespace create SESSIONS
-# → 출력된 id를 wrangler.toml에 입력
-
-# R2 버킷 생성 (이미지)
+npx wrangler kv:namespace create "SESSIONS"
+npx wrangler kv:namespace create "AI_CACHE"
 npx wrangler r2 bucket create bookshelf-covers
+npx wrangler pages project create bookshelf-web
 ```
+
+> 각 명령어 출력 ID를 `wrangler.toml`의 placeholder에 입력하세요.
 
 ### 3. 환경 변수 설정
 
 ```bash
-# apps/worker/.dev.vars 파일 생성
-cat > apps/worker/.dev.vars << EOF
-JWT_SECRET=your-secret-key-minimum-32-characters
-OPENAI_API_KEY=sk-your-openai-key
-NAVER_CLIENT_ID=your-naver-client-id
-NAVER_CLIENT_SECRET=your-naver-client-secret
-EOF
+# .dev.vars (Worker 로컬 시크릿)
+JWT_SECRET=<32자 이상 랜덤 문자열>
+OPENAI_API_KEY=sk-...
+NAVER_CLIENT_ID=...
+NAVER_CLIENT_SECRET=...
 
-# apps/web/.env.local 파일 생성
-cat > apps/web/.env.local << EOF
+# .env.local (프론트엔드)
 VITE_API_BASE_URL=http://localhost:8787
 VITE_USE_MOCK=true
-EOF
 ```
 
-### 4. 데이터베이스 마이그레이션
+### 4. 데이터베이스 초기화
 
 ```bash
-# 로컬 DB 초기화
-npx wrangler d1 execute bookshelf-db --local \
-  --file=apps/worker/src/db/migrations/0001_initial_schema.sql
-
-# 개발용 시드 데이터 삽입
-npm run db:seed:local
+npm run db:migrate:local
+wrangler d1 execute bookshelf-db --local --file=worker/db/seed.sql
 ```
 
 ### 5. 개발 서버 실행
 
 ```bash
-npm run dev
+npm run dev:full
 # 프론트엔드: http://localhost:5173
-# Workers API: http://localhost:8787
+# Workers API:  http://localhost:8787
 ```
 
 ---
 
 ## 📦 배포 (Cloudflare)
 
-### Workers API 배포
+### 프로덕션 시크릿 등록
 
 ```bash
-cd apps/worker
-
-# 프로덕션 시크릿 설정
 npx wrangler secret put JWT_SECRET
 npx wrangler secret put OPENAI_API_KEY
 npx wrangler secret put NAVER_CLIENT_ID
 npx wrangler secret put NAVER_CLIENT_SECRET
-
-# 프로덕션 DB 마이그레이션
-npx wrangler d1 execute bookshelf-db \
-  --file=src/db/migrations/0001_initial_schema.sql
-
-# 배포
-npx wrangler deploy
 ```
 
-### Pages (프론트엔드) 배포
+### 프로덕션 DB 마이그레이션
 
 ```bash
-cd apps/web
-
-# 빌드
-VITE_API_BASE_URL=https://bookshelf-api.YOUR_SUBDOMAIN.workers.dev \
-  npm run build
-
-# Cloudflare Pages 배포
-npx wrangler pages deploy dist --project-name=bookshelf-web
+npx wrangler d1 execute bookshelf-db \
+  --file=worker/db/migrations/0001_initial_schema.sql
 ```
+
+### 전체 배포
+
+```bash
+npm run deploy
+```
+
+### GitHub Actions 자동 배포
+
+`main` 브랜치 push 시 자동 배포 (`.github/workflows/deploy.yml`)  
+GitHub → Settings → Secrets에 추가:
+
+| Secret | 값 |
+|--------|----|  
+| `CLOUDFLARE_API_TOKEN` | Cloudflare API 토큰 |
+| `CLOUDFLARE_ACCOUNT_ID` | 계정 ID |
 
 ### 배포 URL
 
@@ -679,11 +656,11 @@ npm run lint
 npx wrangler d1 execute bookshelf-db --local \
   --command="SELECT * FROM books LIMIT 5;"
 
-# Workers 로컬 테스트
-cd apps/worker && npx wrangler dev --local
+# Worker 로컬 테스트
+npm run dev:worker
 
 # 빌드 미리보기
-cd apps/web && npm run build && npm run preview
+npm run build && npm run preview
 ```
 
 ---
@@ -702,18 +679,22 @@ cd apps/web && npm run build && npm run preview
 
 ## 🗺️ 로드맵
 
-### Phase 1 — MVP ✅ (현재)
+### Phase 1 — MVP ✅ 완료
 - [x] 3탭 책장 UI (완독 / 읽는중 / Wish)
 - [x] 카메라 OCR + 바코드 스캔 책 등록
 - [x] 독서 노트 (메모·문구·독후감)
-- [x] 독서 통계 시각화
+- [x] 독서 통계 시각화 (Recharts)
+- [x] React Query v5 + Zustand v5 상태 관리
 - [x] Cloudflare Workers + D1 백엔드
 - [x] PWA (iOS/Android 홈 화면 설치)
+- [x] Workbox 오프라인 캐시 5종 전략
 
-### Phase 2 — 강화 🔄 (진행 중)
-- [ ] AI 독후감 보조 (gpt-4o-mini)
-- [ ] 맞춤 책 추천
-- [ ] 푸시 알림 (독서 목표 리마인더)
+### Phase 2 — AI & 강화 ✅ 완료
+- [x] AI 독후감 보조 (gpt-4o-mini, 일 5회 제한)
+- [x] 맞춤 책 추천 (장르 분석 + 30분 KV 캐시)
+- [x] Workers AI OCR (llava-1.5-7b)
+- [x] GitHub Actions CI/CD 자동 배포
+- [ ] 푸시 알림 (구독 저장 완료, 발송 구현 예정)
 - [ ] 소셜 로그인 (Google, Kakao)
 
 ### Phase 3 — 확장 🌱 (계획)
@@ -728,7 +709,7 @@ cd apps/web && npm run build && npm run preview
 
 ```bash
 # 1. Fork 후 클론
-git clone https://github.com/YOUR_USERNAME/BookShelf_App.git
+git clone https://github.com/kordokrip/BookShelf_App.git
 
 # 2. 브랜치 생성
 git checkout -b feature/your-feature-name
@@ -785,7 +766,7 @@ git commit -m "docs: 문서 업데이트"
 
 <br/>
 
-[![GitHub stars](https://img.shields.io/github/stars/YOUR_USERNAME/BookShelf_App?style=social)](https://github.com/YOUR_USERNAME/BookShelf_App)
-[![GitHub forks](https://img.shields.io/github/forks/YOUR_USERNAME/BookShelf_App?style=social)](https://github.com/YOUR_USERNAME/BookShelf_App)
+[![GitHub stars](https://img.shields.io/github/stars/kordokrip/BookShelf_App?style=social)](https://github.com/kordokrip/BookShelf_App)
+[![GitHub forks](https://img.shields.io/github/forks/kordokrip/BookShelf_App?style=social)](https://github.com/kordokrip/BookShelf_App)
 
 </div>
