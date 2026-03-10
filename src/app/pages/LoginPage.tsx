@@ -484,7 +484,7 @@ export function LoginPage() {
                 로그인하여 독서 기록을 이어가세요
               </p>
             </div>
-            <LoginForm onSuccess={() => {}} />
+            <LoginForm onSuccess={() => navigate("/")} />
           </div>
         </div>
       </div>
