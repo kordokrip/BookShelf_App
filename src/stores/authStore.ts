@@ -53,13 +53,23 @@ export const useAuthStore = create<AuthState>()(
         try {
           const res = await usersApi.login({ email, password });
           localStorage.setItem(TOKEN_KEY, res.data.token);
+          const raw = res.data.user as AuthUser & {
+            favorite_genres?: string | string[];
+            reading_goal?: number;
+          };
+          const favoriteGenres =
+            typeof raw.favorite_genres === 'string'
+              ? (JSON.parse(raw.favorite_genres || '[]') as string[])
+              : (raw.favorite_genres ?? []);
           set(
             {
               user: {
-                id: res.data.user.id,
-                email: res.data.user.email,
-                name: res.data.user.name,
-                avatar_url: res.data.user.avatar_url,
+                id: raw.id,
+                email: raw.email,
+                name: raw.name,
+                avatar_url: raw.avatar_url,
+                favorite_genres: favoriteGenres,
+                reading_goal: raw.reading_goal,
               },
               status: 'authenticated',
               isLoading: false,

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus, X, Target, Zap, BookOpen } from "lucide-react";
 import type { UIBook, GenreKey } from "../../types/book";
+import { ALL_GENRES } from "../../types/book";
 import { ReadingBookCard, BookCover } from "../components/books/BookCard";
 import { GenreFilterBar } from "../components/books/GenreFilterBar";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -11,10 +12,7 @@ import { useNavigate } from "react-router";
 import { useBooks, useUpdateBook } from "../../hooks/useBooks";
 import { useAddSession } from "../../hooks/useSessions";
 
-const ALL_GENRES: GenreKey[] = [
-  "인문학", "경제/경영", "AI/데이터", "현대문학", "해외문학",
-  "과학/수학", "자기계발", "컴퓨터·프로그래밍", "철학", "심리학",
-];
+
 
 /* ─── Page Update Bottom Sheet Modal ───────────────────────── */
 function PageUpdateModal({

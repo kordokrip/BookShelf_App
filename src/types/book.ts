@@ -148,6 +148,9 @@ export const GENRE_CONFIG: Record<GenreKey, { bg: string; text: string; emoji: s
   "기타":             { bg: "#F1F5F9", text: "#475569", emoji: "📚" },
 };
 
+/** 앱 전체에서 사용하는 장르 목록 (GENRE_CONFIG 기반 단일 출처) */
+export const ALL_GENRES = Object.keys(GENRE_CONFIG) as GenreKey[];
+
 export const COVER_GRADIENTS = [
   "from-indigo-500 to-violet-600",
   "from-violet-500 to-purple-700",

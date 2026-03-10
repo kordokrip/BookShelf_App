@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Plus, ChevronDown, Search, X } from "lucide-react";
 import type { GenreKey } from "../../types/book";
+import { ALL_GENRES } from "../../types/book";
 import type { SearchBook } from "../../lib/api";
 import { WishBookCard } from "../components/books/BookCard";
 import { GenreFilterBar } from "../components/books/GenreFilterBar";
@@ -12,10 +13,7 @@ import { useBooks, useDeleteBook, useUpdateBook, useAddBook } from "../../hooks/
 import { useBookSearch } from "../../hooks/useBookSearch";
 import { useAIRecommendations } from "../../hooks/useAI";
 
-const ALL_GENRES: GenreKey[] = [
-  "인문학", "경제/경영", "AI/데이터", "현대문학", "해외문학",
-  "과학/수학", "자기계발", "컴퓨터·프로그래밍", "철학", "심리학",
-];
+
 
 const SORT_OPTIONS = [
   { value: "priority" as const, label: "⭐ 우선순위" },

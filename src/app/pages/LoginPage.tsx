@@ -146,9 +146,9 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
     setSubmitted(true);
     const err = validateEmail(email);
     setEmailError(err);
-    if (!err && password) {
+    if (!err && password.trim()) {
       try {
-        await login(email, password);
+        await login(email.trim(), password);
         onSuccess();
       } catch {
         // authError 상태가 스토어에서 관리됨
@@ -156,8 +156,13 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
     }
   };
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleLogin();
+  };
+
   return (
-    <div className="flex flex-col gap-4">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
       {/* Email */}
       <div>
         <label
@@ -222,15 +227,21 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
       </div>
 
       {/* Auth error message */}
-      {authError && submitted && (
+      {authError && (
         <p className="flex items-center gap-1" style={{ fontSize: 13, color: "#EF4444", fontFamily: "var(--font-pretendard)" }}>
           <span>⚠</span> {authError}
         </p>
       )}
 
+      {submitted && !password.trim() && (
+        <p className="flex items-center gap-1" style={{ fontSize: 12, color: "#EF4444", fontFamily: "var(--font-pretendard)" }}>
+          <span>⚠</span> 비밀번호를 입력해주세요
+        </p>
+      )}
+
       {/* Login button */}
       <button
-        onClick={handleLogin}
+        type="submit"
         disabled={isLoading}
         className="w-full rounded-2xl text-white mt-2 flex items-center justify-center gap-2 transition-opacity active:opacity-80 disabled:opacity-80"
         style={{
@@ -304,7 +315,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
           회원가입
         </Link>
       </p>
-    </div>
+    </form>
   );
 }
 

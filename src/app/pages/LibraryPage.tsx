@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, Plus, ChevronRight } from "lucide-react";
 import type { UIBook, GenreKey } from "../../types/book";
+import { ALL_GENRES } from "../../types/book";
 import { useBooks } from "../../hooks/useBooks";
 import { DoneBookCard } from "../components/books/BookCard";
 import { GenreFilterBar } from "../components/books/GenreFilterBar";
@@ -27,10 +28,7 @@ function groupByMonth(books: UIBook[]) {
   return map;
 }
 
-const ALL_GENRES: GenreKey[] = [
-  "인문학", "경제/경영", "AI/데이터", "현대문학", "해외문학",
-  "과학/수학", "자기계발", "컴퓨터·프로그래밍", "철학", "심리학",
-];
+
 
 const SORT_OPTIONS = [
   { value: "date" as const, label: "최근순" },

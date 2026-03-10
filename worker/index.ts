@@ -22,12 +22,15 @@ app.use(
   '/api/*',
   cors({
     origin: (origin) => {
-      // 개발: 모든 localhost 허용 / 프로덕션: 배포된 Pages URL 허용
+      // 개발: 모든 localhost 허용
+      // 프로덕션: workers.dev 및 Pages URL 허용
+      if (!origin) return '*';   // 동일 오리진(Origin 헤더 없음) 통과
       const allowed = [
         /^http:\/\/localhost:\d+$/,
         /^https:\/\/bookshelf.*\.pages\.dev$/,
+        /^https:\/\/bookshelf.*\.workers\.dev$/,   // workers.dev 서비스
       ];
-      return allowed.some((r) => r.test(origin ?? '')) ? origin : null;
+      return allowed.some((r) => r.test(origin)) ? origin : null;
     },
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
