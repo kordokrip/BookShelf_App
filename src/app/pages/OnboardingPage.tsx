@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { AuthPreviewNav } from "../components/auth/AuthPreviewNav";
+import { GENRE_CONFIG } from "../../types/book";
+import { usersApi } from "../../lib/api";
 
 /* ─── Slide 1: Isometric Bookshelf ──────────────────────────── */
 function BookshelfIllustration() {
@@ -232,19 +234,71 @@ const slides = [
 
 export function OnboardingPage() {
   const [current, setCurrent] = useState(0);
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+  const [readingGoal, setReadingGoal] = useState(12);
+  const [isSaving, setIsSaving] = useState(false);
   const navigate = useNavigate();
 
+  const TOTAL_SLIDES = 4;
+
   const goNext = () => {
-    if (current < 2) setCurrent(current + 1);
+    if (current < TOTAL_SLIDES - 1) setCurrent(current + 1);
   };
   const goLogin = () => navigate("/login");
+
+  const handleOnboardingComplete = async () => {
+    const token = localStorage.getItem("auth_token");
+    if (token) {
+      setIsSaving(true);
+      try {
+        await usersApi.updateProfile({
+          favorite_genres: selectedGenres,
+          reading_goal: readingGoal,
+        });
+      } catch (err) {
+        console.warn("온보딩 데이터 저장 실패:", err);
+      } finally {
+        setIsSaving(false);
+      }
+    }
+    navigate("/login");
+  };
+
+  const toggleGenre = (genre: string) => {
+    setSelectedGenres((prev) =>
+      prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre]
+    );
+  };
+
+  const slide = current < 3 ? slides[current] : null;
+
+  /* ─── dot indicator (공용) ─────────────────────────────── */
+  const Dots = () => (
+    <div className="flex gap-2">
+      {Array.from({ length: TOTAL_SLIDES }).map((_, i) => (
+        <button
+          key={i}
+          onClick={() => setCurrent(i)}
+          aria-label={`슬라이드 ${i + 1}`}
+          className="rounded-full transition-all duration-300"
+          style={{
+            width: 8,
+            height: 8,
+            backgroundColor: i === current ? "#4F46E5" : "transparent",
+            border: i === current ? "none" : "2px solid #C7D2FE",
+            flexShrink: 0,
+          }}
+        />
+      ))}
+    </div>
+  );
 
   return (
     <div
       className="flex flex-col min-h-screen bg-white overflow-hidden"
       style={{ maxWidth: 390, margin: "0 auto" }}
     >
-      {/* Skip button top-right */}
+      {/* Skip button */}
       <div className="flex justify-end px-6 pt-5 pb-2" style={{ minHeight: 44 }}>
         <button
           onClick={goLogin}
@@ -252,91 +306,55 @@ export function OnboardingPage() {
             fontSize: 14,
             color: "#64748B",
             fontFamily: "var(--font-pretendard)",
-            opacity: current === 2 ? 0 : 1,
-            pointerEvents: current === 2 ? "none" : "auto",
+            opacity: current === TOTAL_SLIDES - 1 ? 0 : 1,
+            pointerEvents: current === TOTAL_SLIDES - 1 ? "none" : "auto",
           }}
         >
           건너뛰기
         </button>
       </div>
 
-      {/* Illustration — top 55% of 844px = ~464px, but we use flex proportion */}
-      <div
-        className="flex items-center justify-center px-6"
-        style={{ height: "50vw", maxHeight: 464, minHeight: 240 }}
-      >
-        {slides[current].illustration}
-      </div>
+      {current < 3 ? (
+        /* ─── 정보 슬라이드 0·1·2 ─────────────────────────── */
+        <>
+          <div
+            className="flex items-center justify-center px-6"
+            style={{ height: "50vw", maxHeight: 464, minHeight: 240 }}
+          >
+            {slide!.illustration}
+          </div>
 
-      {/* Content */}
-      <div className="flex-1 px-8 pb-10 flex flex-col items-center gap-4 justify-center">
-        {/* Headline */}
-        <h2
-          className="text-center"
-          style={{
-            fontFamily: "var(--font-pretendard)",
-            fontSize: 24,
-            fontWeight: 700,
-            color: "#1E293B",
-            lineHeight: 1.3,
-          }}
-        >
-          {slides[current].headline}
-        </h2>
-
-        {/* Body */}
-        <p
-          className="text-center"
-          style={{
-            fontFamily: "var(--font-pretendard)",
-            fontSize: 14,
-            color: "#64748B",
-            lineHeight: 1.6,
-            maxWidth: 280,
-          }}
-        >
-          {slides[current].body}
-        </p>
-
-        {/* Dot indicators — circular ●○○ */}
-        <div className="flex gap-2 mt-1">
-          {[0, 1, 2].map((i) => (
-            <button
-              key={i}
-              onClick={() => setCurrent(i)}
-              aria-label={`슬라이드 ${i + 1}`}
-              className="rounded-full transition-all duration-300"
+          <div className="flex-1 px-8 pb-10 flex flex-col items-center gap-4 justify-center">
+            <h2
+              className="text-center"
               style={{
-                width: 8,
-                height: 8,
-                backgroundColor: i === current ? "#4F46E5" : "transparent",
-                border: i === current ? "none" : "2px solid #C7D2FE",
-                flexShrink: 0,
-              }}
-            />
-          ))}
-        </div>
-
-        {/* Action buttons */}
-        <div className="w-full mt-2 flex flex-col gap-3">
-          {current < 2 ? (
-            <button
-              onClick={goNext}
-              className="w-full rounded-2xl text-white transition-opacity active:opacity-80"
-              style={{
-                height: 48,
-                background: "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)",
                 fontFamily: "var(--font-pretendard)",
-                fontSize: 15,
+                fontSize: 24,
                 fontWeight: 700,
+                color: "#1E293B",
+                lineHeight: 1.3,
               }}
             >
-              다음
-            </button>
-          ) : (
-            <>
+              {slide!.headline}
+            </h2>
+            <p
+              className="text-center"
+              style={{
+                fontFamily: "var(--font-pretendard)",
+                fontSize: 14,
+                color: "#64748B",
+                lineHeight: 1.6,
+                maxWidth: 280,
+              }}
+            >
+              {slide!.body}
+            </p>
+
+            <Dots />
+
+            <div className="w-full mt-2">
               <button
-                onClick={goLogin}
+                onClick={goNext}
                 className="w-full rounded-2xl text-white transition-opacity active:opacity-80"
                 style={{
                   height: 48,
@@ -346,23 +364,131 @@ export function OnboardingPage() {
                   fontWeight: 700,
                 }}
               >
-                시작하기
+                다음
               </button>
+            </div>
+          </div>
+        </>
+      ) : (
+        /* ─── 슬라이드 3: 장르 & 독서 목표 ──────────────────── */
+        <div className="flex-1 px-6 pb-10 flex flex-col gap-5 overflow-y-auto">
+          <div className="flex flex-col gap-1 pt-2">
+            <h2
+              style={{
+                fontFamily: "var(--font-pretendard)",
+                fontSize: 22,
+                fontWeight: 700,
+                color: "#1E293B",
+              }}
+            >
+              어떤 책을 좋아하세요?
+            </h2>
+            <p
+              style={{
+                fontFamily: "var(--font-pretendard)",
+                fontSize: 13,
+                color: "#64748B",
+              }}
+            >
+              관심 장르를 선택하면 맞춤 추천을 받을 수 있어요
+            </p>
+          </div>
+
+          {/* 장르 칩 */}
+          <div className="flex flex-wrap gap-2">
+            {(
+              Object.entries(GENRE_CONFIG) as [
+                string,
+                { bg: string; text: string; emoji: string },
+              ][]
+            )
+              .filter(([key]) => key !== "기타")
+              .map(([genre, config]) => {
+                const selected = selectedGenres.includes(genre);
+                return (
+                  <button
+                    key={genre}
+                    onClick={() => toggleGenre(genre)}
+                    className="inline-flex items-center gap-1.5 rounded-full px-3 transition-all"
+                    style={{
+                      height: 32,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      fontFamily: "var(--font-pretendard)",
+                      backgroundColor: selected ? config.bg : "#F8FAFC",
+                      color: selected ? config.text : "#94A3B8",
+                      border: `1.5px solid ${selected ? config.text + "40" : "#E2E8F0"}`,
+                    }}
+                  >
+                    <span>{config.emoji}</span>
+                    {genre}
+                  </button>
+                );
+              })}
+          </div>
+
+          {/* 독서 목표 */}
+          <div className="flex flex-col gap-3 pt-1">
+            <p
+              style={{
+                fontFamily: "var(--font-pretendard)",
+                fontSize: 15,
+                fontWeight: 700,
+                color: "#1E293B",
+              }}
+            >
+              올해 독서 목표
+            </p>
+            <div className="flex items-center gap-4">
               <button
-                onClick={goLogin}
-                style={{
-                  fontSize: 14,
-                  color: "#64748B",
-                  fontFamily: "var(--font-pretendard)",
-                }}
-                className="w-full py-2 text-center"
+                onClick={() => setReadingGoal((g) => Math.max(1, g - 1))}
+                className="w-10 h-10 rounded-full flex items-center justify-center"
+                style={{ background: "#F1F5F9", fontSize: 22, color: "#4F46E5" }}
               >
-                건너뛰기
+                −
               </button>
-            </>
-          )}
+              <span
+                style={{
+                  fontFamily: "var(--font-pretendard)",
+                  fontSize: 28,
+                  fontWeight: 700,
+                  color: "#1E293B",
+                  minWidth: 72,
+                  textAlign: "center",
+                }}
+              >
+                {readingGoal}권
+              </span>
+              <button
+                onClick={() => setReadingGoal((g) => Math.min(100, g + 1))}
+                className="w-10 h-10 rounded-full flex items-center justify-center"
+                style={{ background: "#F1F5F9", fontSize: 22, color: "#4F46E5" }}
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          {/* 하단 도트 + 시작하기 */}
+          <div className="flex flex-col items-center gap-3 mt-auto pt-4">
+            <Dots />
+            <button
+              onClick={handleOnboardingComplete}
+              disabled={isSaving}
+              className="w-full rounded-2xl text-white transition-opacity active:opacity-80 disabled:opacity-60"
+              style={{
+                height: 48,
+                background: "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)",
+                fontFamily: "var(--font-pretendard)",
+                fontSize: 15,
+                fontWeight: 700,
+              }}
+            >
+              {isSaving ? "저장 중..." : "시작하기"}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       <AuthPreviewNav />
     </div>

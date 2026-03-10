@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Calendar, Trash2, Star } from "lucide-react";
-import { type Book, GENRE_CONFIG } from "../../data/mockData";
+import { Calendar, Star } from "lucide-react";
+import { type UIBook as Book, GENRE_CONFIG } from "../../../types/book";
 import { GenreBadge } from "../ui/GenreBadge";
 
 /* ─── Shared Book Cover ────────────────────────────────────── */

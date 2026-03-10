@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { Plus, X, Target, Zap, BookOpen } from "lucide-react";
-import { mockReadingBooks, type Book, type GenreKey } from "../data/mockData";
+import type { UIBook, GenreKey } from "../../types/book";
 import { ReadingBookCard, BookCover } from "../components/books/BookCard";
 import { GenreFilterBar } from "../components/books/GenreFilterBar";
 import { EmptyState } from "../components/ui/EmptyState";
 import { useToast } from "../components/ui/Toast";
 import { NumberStepper } from "../components/ui/NumberStepper";
-import { ReadingBookCardSkeleton, ErrorState } from "../components/ui/Skeleton";
+import { ReadingBookCardSkeleton, ErrorState } from "../components/ui/skeleton";
 import { useNavigate } from "react-router";
+import { useBooks, useUpdateBook } from "../../hooks/useBooks";
+import { useAddSession } from "../../hooks/useSessions";
 
 const ALL_GENRES: GenreKey[] = [
   "인문학", "경제/경영", "AI/데이터", "현대문학", "해외문학",
@@ -20,7 +22,7 @@ function PageUpdateModal({
   onClose,
   onSave,
 }: {
-  book: Book;
+  book: UIBook;
   onClose: () => void;
   onSave: (page: number) => void;
 }) {
@@ -147,7 +149,7 @@ function PageUpdateModal({
 }
 
 /* ─── Overview banner ──────────────────────────────────────── */
-function ReadingOverviewBanner({ books }: { books: Book[] }) {
+function ReadingOverviewBanner({ books }: { books: UIBook[] }) {
   const totalPages = books.reduce((s, b) => s + (b.totalPages ?? 0), 0);
   const readPages = books.reduce((s, b) => s + (b.currentPage ?? 0), 0);
   const avgProgress = totalPages > 0 ? Math.round((readPages / totalPages) * 100) : 0;
@@ -213,20 +215,36 @@ function QuickActions({ onAction }: { onAction: (label: string) => void }) {
 
 /* ─── Page ─────────────────────────────────────────────────── */
 export function ReadingPage() {
-  const [books, setBooks] = useState<Book[]>(mockReadingBooks);
-  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
+  const { data: books = [], isLoading, isError, refetch } = useBooks({ status: 'reading' });
+  const updateBook = useUpdateBook();
+  const addSession = useAddSession();
+  const [selectedBook, setSelectedBook] = useState<UIBook | null>(null);
   const [selectedGenre, setSelectedGenre] = useState<GenreKey | null>(null);
-  const [loadState, setLoadState] = useState<"loading" | "error" | "success">("success");
   const { showToast } = useToast();
   const navigate = useNavigate();
 
   function handleSave(page: number) {
     if (!selectedBook) return;
-    setBooks((prev) =>
-      prev.map((b) => (b.id === selectedBook.id ? { ...b, currentPage: page } : b))
+    const startPage = selectedBook.currentPage ?? 0;
+
+    // 실제 읽기 진행이 있으면 세션 기록
+    if (page > startPage) {
+      addSession.mutate({
+        bookId: selectedBook.id,
+        startPage,
+        endPage: page,
+      });
+    }
+
+    updateBook.mutate(
+      { id: selectedBook.id, data: { currentPage: page } },
+      {
+        onSuccess: () => {
+          showToast(`📖 ${page}p 업데이트 완료!`, "success");
+          setSelectedBook(null);
+        },
+      },
     );
-    showToast(`📖 ${page}p 업데이트 완료!`, "success");
-    setSelectedBook(null);
   }
 
   // Genre counts for filter bar
@@ -268,22 +286,22 @@ export function ReadingPage() {
         />
       </div>
 
-      {filtered.length === 0 ? (
+      {isLoading ? (
+        <div className="px-4 flex flex-col gap-3">
+          {[...Array(3)].map((_, i) => <ReadingBookCardSkeleton key={i} />)}
+        </div>
+      ) : isError ? (
+        <ErrorState
+          message="읽는 중인 책 목록을 불러오지 못했어요."
+          onRetry={() => refetch()}
+        />
+      ) : filtered.length === 0 ? (
         <EmptyState
           emoji="📖"
           heading="읽고 있는 책이 없어요"
           subtext="새로운 책을 시작해보세요!"
           ctaLabel="책 추가하기"
           onCta={() => navigate("/register-flow")}
-        />
-      ) : loadState === "loading" ? (
-        <div className="px-4 flex flex-col gap-3">
-          {[...Array(3)].map((_, i) => <ReadingBookCardSkeleton key={i} />)}
-        </div>
-      ) : loadState === "error" ? (
-        <ErrorState
-          message="읽는 중인 책 목록을 불러오지 못했어요."
-          onRetry={() => setLoadState("success")}
         />
       ) : (
         <>
@@ -309,17 +327,6 @@ export function ReadingPage() {
           </div>
         </>
       )}
-
-      {/* Demo state switcher */}
-      <div className="px-4 pt-2 flex gap-2 justify-end lg:hidden opacity-50">
-        {(["success", "loading", "error"] as const).map((s) => (
-          <button key={s} onClick={() => setLoadState(s)}
-            className="px-2 py-1 rounded text-white"
-            style={{ fontSize: 10, background: loadState === s ? "#4F46E5" : "#94A3B8" }}>
-            {s === "loading" ? "로딩" : s === "error" ? "에러" : "완료"}
-          </button>
-        ))}
-      </div>
 
       {/* FAB — bottom 80px = above BottomNavBar (60px) + 20px gap */}
       <button

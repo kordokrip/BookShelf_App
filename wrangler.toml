@@ -1,12 +1,13 @@
+# ═══════════════════════════════════════════════════════════════
+# BookShelf — Cloudflare Workers 설정
+# worker/types.ts Bindings 인터페이스와 1:1 매핑
+# ═══════════════════════════════════════════════════════════════
+
 name = "bookshelf-api"
 main = "worker/index.ts"
-compatibility_date = "2024-09-23"
+compatibility_date = "2024-12-01"
 compatibility_flags = ["nodejs_compat"]
 account_id = "544c335c41ce3cd6f43b32cce9f15aaa"
-
-# ─── 빌드 설정 ───────────────────────────────────────────────
-[build]
-command = "npm run build:worker"
 
 # ─── 로컬 개발 ───────────────────────────────────────────────
 [dev]
@@ -20,12 +21,46 @@ database_name = "bookshelf-db"
 database_id = "013db269-dc7a-4a60-9920-ed40c12ab623"
 migrations_dir = "worker/db/migrations"
 
+# ─── KV Namespaces ───────────────────────────────────────────
+# 세션 / JWT Refresh Token 저장
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "3cb76beb5e9e49b3be2373d3f2a84972"
+preview_id = "5a7a6a79089849898491a7000cc5de1c"
+
+# AI 캐시 + 범용 KV
+[[kv_namespaces]]
+binding = "KV"
+id = "a5414ccd302444ddb71a1e8b66eb5a28"
+preview_id = "350e1010be544d02826e1a6f82a0044f"
+
+# ─── Workers Assets — SPA 정적 파일 서빙 ─────────────────────
+# dist/ 빌드 결과물을 ASSETS 바인딩으로 주입 → worker/index.ts의 SPA 폴백 라우트
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+
+# ─── R2 Object Storage ───────────────────────────────────────
+# 책 표지 이미지 업로드 저장소
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "bookshelf-covers"
+
+# ─── Workers AI ──────────────────────────────────────────────
+[ai]
+binding = "AI"
+
 # ─── 환경 변수 (비밀값은 wrangler secret put 사용) ────────────
 [vars]
 ENVIRONMENT = "production"
 APP_NAME = "BookShelf"
+FRONTEND_URL = "https://bookshelf-api.kordokrip.workers.dev"
 
-# ─── 로컬 개발용 환경 변수 ────────────────────────────────────
+# ─── 옵저버빌리티 ────────────────────────────────────────────
+[observability]
+enabled = true
+
+# ─── 로컬 개발 환경 (wrangler dev --env local) ───────────────
 [env.local.vars]
 ENVIRONMENT = "local"
 
@@ -36,12 +71,4 @@ name = "bookshelf-api-staging"
 [env.staging.vars]
 ENVIRONMENT = "staging"
 
-[[env.staging.d1_databases]]
-binding = "DB"
-database_name = "bookshelf-db-staging"
-database_id = "REPLACE_WITH_STAGING_D1_DATABASE_ID"
 
-# ─── Assets (PWA 빌드 결과물 서빙) ───────────────────────────
-[assets]
-directory = "./dist"
-binding = "ASSETS"

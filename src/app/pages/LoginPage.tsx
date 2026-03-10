@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { AuthPreviewNav } from "../components/auth/AuthPreviewNav";
+import { useAuthStore } from "../../stores/authStore";
 
 /* ─── Floating book decorations ──────────────────────────────── */
 function FloatingBookIcons() {
@@ -91,7 +92,10 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
   const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+
+  const login = useAuthStore((s) => s.login);
+  const isLoading = useAuthStore((s) => s.isLoading);
+  const authError = useAuthStore((s) => s.error);
 
   const validateEmail = (val: string) => {
     if (!val) return "이메일을 입력해주세요";
@@ -99,17 +103,56 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
     return "";
   };
 
-  const handleLogin = () => {
+  const handleGoogleLogin = () => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+    if (!clientId) {
+      alert('Google 로그인이 설정되지 않았습니다.');
+      return;
+    }
+    const redirectUri = encodeURIComponent(`${window.location.origin}/api/auth/google/callback`);
+    const scope = encodeURIComponent('email profile');
+    const googleAuthUrl =
+      `https://accounts.google.com/o/oauth2/v2/auth` +
+      `?client_id=${clientId}` +
+      `&redirect_uri=${redirectUri}` +
+      `&response_type=code` +
+      `&scope=${scope}` +
+      `&access_type=offline` +
+      `&prompt=select_account`;
+    window.location.href = googleAuthUrl;
+  };
+
+  const handleKakaoLogin = () => {
+    const jsKey = import.meta.env.VITE_KAKAO_JS_KEY as string | undefined;
+    if (!jsKey) {
+      alert('카카오 로그인이 설정되지 않았습니다.');
+      return;
+    }
+    if (!window.Kakao?.isInitialized()) {
+      window.Kakao?.init(jsKey);
+    }
+    // redirect_uri: 프론트엔드 origin + Vite프록시(/api) → Worker
+    // 로컀: VITE_KAKAO_REDIRECT_URI로 오버라이드 가능
+    const redirectUri =
+      (import.meta.env.VITE_KAKAO_REDIRECT_URI as string | undefined) ??
+      `${window.location.origin}/api/auth/kakao/callback`;
+    window.Kakao?.Auth.authorize({
+      redirectUri,
+      scope: 'profile_nickname,account_email',
+    });
+  };
+
+  const handleLogin = async () => {
     setSubmitted(true);
     const err = validateEmail(email);
     setEmailError(err);
     if (!err && password) {
-      setIsLoading(true);
-      // Simulate network request
-      setTimeout(() => {
-        setIsLoading(false);
+      try {
+        await login(email, password);
         onSuccess();
-      }, 1500);
+      } catch {
+        // authError 상태가 스토어에서 관리됨
+      }
     }
   };
 
@@ -178,6 +221,13 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
         </div>
       </div>
 
+      {/* Auth error message */}
+      {authError && submitted && (
+        <p className="flex items-center gap-1" style={{ fontSize: 13, color: "#EF4444", fontFamily: "var(--font-pretendard)" }}>
+          <span>⚠</span> {authError}
+        </p>
+      )}
+
       {/* Login button */}
       <button
         onClick={handleLogin}
@@ -211,8 +261,9 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
 
       {/* Google */}
       <button
+        onClick={handleGoogleLogin}
         disabled={isLoading}
-        className="w-full rounded-2xl flex items-center justify-center gap-2.5 transition-colors hover:bg-gray-50 disabled:opacity-50"
+        className="w-full rounded-2xl flex items-center justify-center gap-2.5 transition-opacity hover:opacity-90 disabled:opacity-50"
         style={{
           height: 48,
           border: "1.5px solid #E2E8F0",
@@ -229,6 +280,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
 
       {/* Kakao */}
       <button
+        onClick={handleKakaoLogin}
         disabled={isLoading}
         className="w-full rounded-2xl flex items-center justify-center gap-2.5 transition-opacity hover:opacity-90 disabled:opacity-50"
         style={{

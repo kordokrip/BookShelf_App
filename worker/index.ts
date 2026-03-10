@@ -7,6 +7,10 @@ import type { Bindings } from './types';
 import { booksRouter } from './routes/books';
 import { usersRouter } from './routes/users';
 import { sessionsRouter } from './routes/sessions';
+import { notesRouter } from './routes/notes';
+import { searchRouter } from './routes/search';
+import { authRouter } from './routes/auth';
+import aiRouter from './routes/ai';
 
 // ─── App 인스턴스 ─────────────────────────────────────────────
 const app = new Hono<{ Bindings: Bindings }>();
@@ -41,9 +45,13 @@ app.get('/api/health', (c) =>
 );
 
 // ─── API 라우터 마운트 ────────────────────────────────────────
+app.route('/api/auth', authRouter);
 app.route('/api/users', usersRouter);
 app.route('/api/books', booksRouter);
 app.route('/api/sessions', sessionsRouter);
+app.route('/api/notes', notesRouter);
+app.route('/api/search', searchRouter);
+app.route('/api/ai', aiRouter);
 
 // ─── SPA 폴백 — PWA dist 파일 서빙 ───────────────────────────
 app.get('*', async (c) => {

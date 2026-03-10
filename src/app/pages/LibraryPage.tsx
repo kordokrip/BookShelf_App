@@ -1,21 +1,23 @@
 import { useState } from "react";
 import { ChevronDown, Plus, ChevronRight } from "lucide-react";
-import { mockDoneBooks, type Book, type GenreKey } from "../data/mockData";
+import type { UIBook, GenreKey } from "../../types/book";
+import { useBooks } from "../../hooks/useBooks";
 import { DoneBookCard } from "../components/books/BookCard";
 import { GenreFilterBar } from "../components/books/GenreFilterBar";
 import { EmptyState } from "../components/ui/EmptyState";
-import { useToast } from "../components/ui/Toast";
 import { useNavigate } from "react-router";
-import { BookCardSkeleton, ErrorState } from "../components/ui/Skeleton";
+import { BookCardSkeleton, ErrorState } from "../components/ui/skeleton";
 
 /* ─── helpers ─────────────────────────────────────── */
 function getMonthLabel(dateStr: string) {
-  const [y, m] = dateStr.split("-");
+  const parts = dateStr.split("-");
+  const y = parts[0] ?? "";
+  const m = parts[1] ?? "1";
   return `${y}년 ${parseInt(m)}월`;
 }
 
-function groupByMonth(books: Book[]) {
-  const map = new Map<string, Book[]>();
+function groupByMonth(books: UIBook[]) {
+  const map = new Map<string, UIBook[]>();
   books.forEach((b) => {
     if (!b.finishedDate) return;
     const key = getMonthLabel(b.finishedDate);
@@ -117,18 +119,17 @@ export function LibraryPage() {
   const [selectedGenre, setSelectedGenre] = useState<GenreKey | null>(null);
   const [sortBy, setSortBy] = useState<"date" | "rating" | "title">("date");
   const [showAll, setShowAll] = useState(false);
-  // CV-7: loading / error states
-  const [loadState, setLoadState] = useState<"loading" | "error" | "success">("success");
-  const { showToast } = useToast();
+  const { data: books = [], isLoading, isError, refetch } = useBooks({ status: 'done' });
+  const loadState = isLoading ? "loading" : isError ? "error" : "success";
   const navigate = useNavigate();
 
   // Genre counts for filter bar
   const genreCounts = ALL_GENRES.reduce((acc, g) => {
-    acc[g] = mockDoneBooks.filter((b) => b.genre === g).length;
+    acc[g] = books.filter((b) => b.genre === g).length;
     return acc;
   }, {} as Record<string, number>);
 
-  const filtered = mockDoneBooks
+  const filtered = books
     .filter((b) => !selectedGenre || b.genre === selectedGenre)
     .sort((a, b) => {
       if (sortBy === "rating") return (b.rating ?? 0) - (a.rating ?? 0);
@@ -162,7 +163,7 @@ export function LibraryPage() {
               padding: "2px 8px",
             }}
           >
-            {mockDoneBooks.length}권
+            {books.length}권
           </span>
         </div>
         <div className="flex items-center gap-3">
@@ -182,7 +183,7 @@ export function LibraryPage() {
       {loadState === "error" && (
         <ErrorState
           message="책 목록을 불러오지 못했어요. 인터넷 연결을 확인해주세요."
-          onRetry={() => setLoadState("success")}
+          onRetry={() => { refetch(); }}
         />
       )}
 
@@ -195,7 +196,7 @@ export function LibraryPage() {
               genres={ALL_GENRES}
               selectedGenre={selectedGenre}
               genreCounts={genreCounts}
-              totalCount={mockDoneBooks.length}
+              totalCount={books.length}
               onSelect={setSelectedGenre}
             />
           </div>
@@ -289,19 +290,7 @@ export function LibraryPage() {
         </>
       )}
 
-      {/* Demo: toggle states for testing */}
-      <div className="px-4 pt-3 pb-2 flex gap-2 justify-end lg:hidden opacity-50">
-        {(["success", "loading", "error"] as const).map((s) => (
-          <button
-            key={s}
-            onClick={() => setLoadState(s)}
-            className="px-2 py-1 rounded text-white"
-            style={{ fontSize: 10, background: loadState === s ? "#4F46E5" : "#94A3B8" }}
-          >
-            {s === "loading" ? "로딩" : s === "error" ? "에러" : "완료"}
-          </button>
-        ))}
-      </div>
+
     </div>
   );
 }

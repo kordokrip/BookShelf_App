@@ -1,12 +1,16 @@
-import { useState } from "react";
-import { Plus, ChevronDown } from "lucide-react";
-import { mockWishBooks, type Book, type GenreKey } from "../data/mockData";
+import { useState, useRef, useEffect } from "react";
+import { Plus, ChevronDown, Search, X } from "lucide-react";
+import type { GenreKey } from "../../types/book";
+import type { SearchBook } from "../../lib/api";
 import { WishBookCard } from "../components/books/BookCard";
 import { GenreFilterBar } from "../components/books/GenreFilterBar";
 import { EmptyState } from "../components/ui/EmptyState";
 import { useToast } from "../components/ui/Toast";
 import { useNavigate } from "react-router";
-import { WishBookCardSkeleton, ErrorState } from "../components/ui/Skeleton";
+import { WishBookCardSkeleton, ErrorState } from "../components/ui/skeleton";
+import { useBooks, useDeleteBook, useUpdateBook, useAddBook } from "../../hooks/useBooks";
+import { useBookSearch } from "../../hooks/useBookSearch";
+import { useAIRecommendations } from "../../hooks/useAI";
 
 const ALL_GENRES: GenreKey[] = [
   "인문학", "경제/경영", "AI/데이터", "현대문학", "해외문학",
@@ -27,7 +31,6 @@ function SortDropdown({
   onChange: (v: "priority" | "added" | "title") => void;
 }) {
   const [open, setOpen] = useState(false);
-  const current = SORT_OPTIONS.find((o) => o.value === value)!;
 
   return (
     <div className="relative">
@@ -62,13 +65,51 @@ function SortDropdown({
 }
 
 export function WishlistPage() {
-  const [books, setBooks] = useState<Book[]>(mockWishBooks);
+  const { data: books = [], isLoading, isError, refetch } = useBooks({ status: 'wish' });
+  const deleteBook = useDeleteBook();
+  const updateBook = useUpdateBook();
+  const addBook = useAddBook();
   const [sortBy, setSortBy] = useState<"priority" | "added" | "title">("priority");
   const [showAll, setShowAll] = useState(false);
   const [selectedGenre, setSelectedGenre] = useState<GenreKey | null>(null);
-  const [loadState, setLoadState] = useState<"loading" | "error" | "success">("success");
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
   const navigate = useNavigate();
+
+  const { data: searchData, isLoading: isSearching } = useBookSearch(searchQuery);
+  const { data: aiData } = useAIRecommendations();
+  const searchResults = searchData?.books ?? [];
+
+  useEffect(() => {
+    if (showSearch) {
+      setTimeout(() => searchInputRef.current?.focus(), 50);
+    } else {
+      setSearchQuery("");
+    }
+  }, [showSearch]);
+
+  function handleAddFromSearch(book: SearchBook) {
+    addBook.mutate(
+      {
+        title: book.title,
+        author: book.author,
+        isbn: book.isbn || undefined,
+        coverImage: book.coverImage || undefined,
+        publisher: book.publisher || undefined,
+        status: 'wish',
+        genre: '인문학',  // 기본값, 나중에 사용자가 수정 가능
+      },
+      {
+        onSuccess: () => {
+          showToast(`"${book.title}" 위시리스트에 추가됨 💫`, "success");
+          setShowSearch(false);
+        },
+        onError: () => showToast("추가에 실패했어요. 다시 시도해주세요.", "error"),
+      },
+    );
+  }
 
   const sorted = [...books].sort((a, b) => {
     if (sortBy === "priority") return (b.priority ?? 0) - (a.priority ?? 0);
@@ -91,18 +132,166 @@ export function WishlistPage() {
 
   function handleDelete(id: string) {
     const book = books.find((b) => b.id === id);
-    setBooks((prev) => prev.filter((b) => b.id !== id));
-    showToast(`"${book?.title}" 삭제됨`, "error");
+    deleteBook.mutate(id, {
+      onSuccess: () => showToast(`"${book?.title}" 삭제됨`, "error"),
+    });
   }
 
   function handleStart(id: string) {
     const book = books.find((b) => b.id === id);
-    showToast(`"${book?.title}" 읽기를 시작했어요! 📖`, "success");
-    setBooks((prev) => prev.filter((b) => b.id !== id));
+    updateBook.mutate(
+      { id, data: { status: 'reading' } },
+      { onSuccess: () => showToast(`"${book?.title}" 읽기를 시작했어요! 📖`, "success") },
+    );
   }
 
   return (
     <div className="pb-24 lg:pb-8">
+      {/* Search Panel — showSearch 시 표시 */}
+      {showSearch && (
+        <div className="fixed inset-0 z-50 bg-white flex flex-col">
+          {/* 검색 헤더 */}
+          <div className="flex items-center gap-3 px-4 pt-5 pb-3 border-b border-[#F1F5F9]">
+            <div className="flex-1 flex items-center gap-2 bg-[#F8FAFC] rounded-xl px-3 py-2.5">
+              <Search size={16} className="text-[#94A3B8] shrink-0" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="책 제목, 저자 검색..."
+                className="flex-1 bg-transparent outline-none text-[#1E293B] placeholder-[#94A3B8]"
+                style={{ fontSize: 15 }}
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery("")} aria-label="검색어 지우기" className="text-[#94A3B8] hover:text-[#475569]">
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+            <button
+              onClick={() => setShowSearch(false)}
+              className="text-[#64748B] font-medium"
+              style={{ fontSize: 14 }}
+            >
+              취소
+            </button>
+          </div>
+
+          {/* 검색 결과 */}
+          <div className="flex-1 overflow-y-auto">
+            {searchQuery.trim().length < 2 ? (
+              <p className="text-center text-[#94A3B8] mt-16" style={{ fontSize: 14 }}>
+                검색어를 2글자 이상 입력하세요
+              </p>
+            ) : isSearching ? (
+              <div className="flex flex-col gap-0 mt-2">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 px-4 py-3 border-b border-[#F8FAFC]">
+                    <div className="w-10 h-14 bg-[#F1F5F9] rounded-lg animate-pulse shrink-0" />
+                    <div className="flex-1 flex flex-col gap-2">
+                      <div className="h-3.5 bg-[#F1F5F9] rounded animate-pulse w-3/4" />
+                      <div className="h-3 bg-[#F1F5F9] rounded animate-pulse w-1/2" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : searchResults.length === 0 ? (
+              <p className="text-center text-[#94A3B8] mt-16" style={{ fontSize: 14 }}>
+                검색 결과가 없어요
+              </p>
+            ) : (
+              <ul>
+                {searchResults.map((book) => (
+                  <li
+                    key={book.isbn || book.title}
+                    className="flex items-center gap-3 px-4 py-3 border-b border-[#F8FAFC] hover:bg-[#FAFAFA] transition-colors"
+                  >
+                    {/* 표지 */}
+                    {book.coverImage ? (
+                      <img
+                        src={book.coverImage}
+                        alt={book.title}
+                        className="w-10 h-14 object-cover rounded-lg shrink-0 shadow-sm"
+                      />
+                    ) : (
+                      <div className="w-10 h-14 bg-[#F1F5F9] rounded-lg shrink-0 flex items-center justify-center">
+                        <span style={{ fontSize: 18 }}>📚</span>
+                      </div>
+                    )}
+                    {/* 정보 */}
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className="truncate font-medium text-[#1E293B]"
+                        style={{ fontSize: 14 }}
+                      >
+                        {book.title}
+                      </p>
+                      <p className="text-[#64748B] truncate" style={{ fontSize: 12 }}>
+                        {book.author}{book.publisher ? ` · ${book.publisher}` : ""}
+                      </p>
+                    </div>
+                    {/* 추가 버튼 */}
+                    <button
+                      onClick={() => handleAddFromSearch(book)}
+                      disabled={addBook.isPending}
+                      className="shrink-0 px-3 py-1.5 rounded-lg text-white font-medium transition-opacity disabled:opacity-50"
+                      style={{
+                        fontSize: 12,
+                        background: "linear-gradient(135deg, #F59E0B, #EF4444)",
+                      }}
+                    >
+                      추가
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* AI 추천 섹션 */}
+      {aiData?.recommendations && aiData.recommendations.length > 0 && (
+        <div className="mx-4 mb-5">
+          <p
+            className="mb-3"
+            style={{ fontSize: 13, fontWeight: 600, color: "#64748B" }}
+          >
+            ✨ AI 추천 — {aiData.topGenres?.join(', ')} 기반
+          </p>
+          <div className="flex flex-col gap-2">
+            {aiData.recommendations.map((rec, i) => (
+              <div
+                key={i}
+                className="rounded-2xl p-3 border"
+                style={{
+                  background: "linear-gradient(135deg, #F5F3FF 0%, #FAFAFA 100%)",
+                  borderColor: "#DDD6FE",
+                }}
+              >
+                <p style={{ fontSize: 14, fontWeight: 700, color: "#1E293B" }}>{rec.title}</p>
+                <p style={{ fontSize: 12, color: "#64748B" }}>{rec.author} · {rec.genre}</p>
+                <p style={{ fontSize: 12, color: "#475569", marginTop: 4 }}>{rec.reason}</p>
+                <button
+                  onClick={() =>
+                    addBook.mutate(
+                      { title: rec.title, author: rec.author, genre: rec.genre as GenreKey, status: 'wish' },
+                      { onSuccess: () => showToast(`"${rec.title}" 위시리스트에 추가됨 💫`, 'success') },
+                    )
+                  }
+                  disabled={addBook.isPending}
+                  className="mt-2 disabled:opacity-50"
+                  style={{ fontSize: 12, fontWeight: 600, color: "#7C3AED" }}
+                >
+                  + 위시리스트에 추가
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Banner */}
       <div
         className="mx-4 mt-5 mb-4 rounded-2xl p-4 text-white"
@@ -154,22 +343,22 @@ export function WishlistPage() {
         />
       </div>
 
-      {sorted.length === 0 ? (
+      {isLoading ? (
+        <div className="px-4 flex flex-col gap-3">
+          {[...Array(3)].map((_, i) => <WishBookCardSkeleton key={i} />)}
+        </div>
+      ) : isError ? (
+        <ErrorState
+          message="위시리스트를 불러오지 못했어요."
+          onRetry={() => refetch()}
+        />
+      ) : sorted.length === 0 ? (
         <EmptyState
           emoji="💫"
           heading="읽고 싶은 책을 모아보세요"
           subtext="관심 있는 책을 위시리스트에 추가해보세요!"
           ctaLabel="책 추가하기"
           onCta={() => navigate("/register-flow")}
-        />
-      ) : loadState === "loading" ? (
-        <div className="px-4 flex flex-col gap-3">
-          {[...Array(3)].map((_, i) => <WishBookCardSkeleton key={i} />)}
-        </div>
-      ) : loadState === "error" ? (
-        <ErrorState
-          message="위시리스트를 불러오지 못했어요."
-          onRetry={() => setLoadState("success")}
         />
       ) : (
         <>
@@ -208,21 +397,10 @@ export function WishlistPage() {
         </>
       )}
 
-      {/* Demo state switcher */}
-      <div className="px-4 pt-2 flex gap-2 justify-end lg:hidden opacity-50">
-        {(["success", "loading", "error"] as const).map((s) => (
-          <button key={s} onClick={() => setLoadState(s)}
-            className="px-2 py-1 rounded text-white"
-            style={{ fontSize: 10, background: loadState === s ? "#4F46E5" : "#94A3B8" }}>
-            {s === "loading" ? "로딩" : s === "error" ? "에러" : "완료"}
-          </button>
-        ))}
-      </div>
-
-      {/* FAB */}
+      {/* FAB — 검색 패널 열기 */}
       <button
-        onClick={() => navigate("/register-flow")}
-        aria-label="책 추가"
+        onClick={() => setShowSearch(true)}
+        aria-label="책 검색하여 추가"
         className="fixed bottom-20 right-5 lg:bottom-8 lg:right-8 w-14 h-14 rounded-full text-white shadow-xl flex items-center justify-center transition-transform hover:scale-105 active:scale-95 z-40"
         style={{ background: "linear-gradient(135deg, #F59E0B, #EF4444)" }}
       >

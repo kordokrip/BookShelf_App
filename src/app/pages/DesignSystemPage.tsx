@@ -1,19 +1,112 @@
 import { useState } from "react";
-import { Check, Trash2, Edit, Heart, Share2 } from "lucide-react";
+import { Trash2, Edit, Heart, Share2 } from "lucide-react";
 import { GenreBadge } from "../components/ui/GenreBadge";
 import { StarRating } from "../components/ui/StarRating";
 import { ProgressBar } from "../components/ui/ProgressBar";
-import { Button, IconButton, FAB } from "../components/ui/Buttons";
+import { Button, IconButton } from "../components/ui/Buttons";
 import { TextInput, GenreSelect, NumberStepper, SearchBar, DatePicker } from "../components/ui/Inputs";
-import { BookCardSkeleton, StatCardSkeleton } from "../components/ui/Skeleton";
+import { BookCardSkeleton, StatCardSkeleton } from "../components/ui/skeleton";
 import { Modal } from "../components/ui/Modal";
 import { useToast } from "../components/ui/Toast";
 import { DoneBookCard, ReadingBookCard, WishBookCard } from "../components/books/BookCard";
 import { SummaryCard } from "../components/stats/StatsComponents";
 import { BookMarked, Star, Flame, BookOpen } from "lucide-react";
-import { GENRE_CONFIG, type GenreKey, mockDoneBooks, mockReadingBooks, mockWishBooks } from "../data/mockData";
+import { GENRE_CONFIG, type GenreKey, type UIBook } from "../../types/book";
 
 const GENRES = Object.keys(GENRE_CONFIG) as GenreKey[];
+
+const mockDoneBooks: UIBook[] = [
+  {
+    id: "d1",
+    title: "클린 아키텍처",
+    author: "로버트 C. 마틴",
+    publisher: "인사이트",
+    genre: "AI/데이터",
+    coverEmoji: "🤖",
+    coverColor: "from-indigo-500 to-violet-600",
+    status: "done",
+    rating: 5,
+    finishedDate: "2025-03-15",
+    addedDate: "2025-02-01",
+    totalPages: 360,
+  },
+  {
+    id: "d2",
+    title: "아몬드",
+    author: "손원평",
+    publisher: "창비",
+    genre: "현대문학",
+    coverEmoji: "✍️",
+    coverColor: "from-amber-500 to-orange-600",
+    status: "done",
+    rating: 4.5,
+    finishedDate: "2025-03-10",
+    addedDate: "2025-02-15",
+    totalPages: 264,
+  },
+];
+
+const mockReadingBooks: UIBook[] = [
+  {
+    id: "r1",
+    title: "클린 아키텍처",
+    author: "로버트 C. 마틴",
+    publisher: "인사이트",
+    genre: "AI/데이터",
+    coverEmoji: "🤖",
+    coverColor: "from-indigo-500 to-violet-600",
+    status: "reading",
+    totalPages: 300,
+    currentPage: 195,
+    addedDate: "2025-01-15",
+    goalDate: "2025-03-16",
+    dailyGoal: 15,
+    isOverdue: false,
+  },
+  {
+    id: "r2",
+    title: "사피엔스",
+    author: "유발 하라리",
+    publisher: "김영사",
+    genre: "인문학",
+    coverEmoji: "🏛️",
+    coverColor: "from-violet-500 to-purple-700",
+    status: "reading",
+    totalPages: 300,
+    currentPage: 96,
+    addedDate: "2025-01-20",
+    goalDate: "2025-02-28",
+    dailyGoal: 28,
+    isOverdue: true,
+  },
+];
+
+const mockWishBooks: UIBook[] = [
+  {
+    id: "w1",
+    title: "도둑맞은 집중력",
+    author: "요한 하리",
+    publisher: "어크로스",
+    genre: "자기계발",
+    coverEmoji: "🚀",
+    coverColor: "from-sky-500 to-blue-600",
+    status: "wish",
+    addedDate: "2025-01-20",
+    priority: 5,
+  },
+  {
+    id: "w2",
+    title: "넛지",
+    author: "리처드 탈러",
+    publisher: "리더스북",
+    genre: "경제/경영",
+    coverEmoji: "💼",
+    coverColor: "from-emerald-500 to-teal-600",
+    status: "wish",
+    addedDate: "2024-12-05",
+    priority: 4,
+  },
+];
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (

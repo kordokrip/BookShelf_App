@@ -1,4 +1,4 @@
-import { GENRE_CONFIG, type GenreKey } from "../../data/mockData";
+import { GENRE_CONFIG, type GenreKey } from "../../../types/book";
 
 type BadgeSize = "sm" | "md" | "lg";
 

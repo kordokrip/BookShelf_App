@@ -1,6 +1,6 @@
-import { useState, useRef, type InputHTMLAttributes, type SelectHTMLAttributes } from "react";
-import { Search, X, ChevronDown, ChevronUp, Minus, Plus, ChevronLeft, ChevronRight } from "lucide-react";
-import { GENRE_CONFIG, type GenreKey } from "../../data/mockData";
+import { useState, useRef, type InputHTMLAttributes } from "react";
+import { Search, X, ChevronDown, Minus, Plus } from "lucide-react";
+import { GENRE_CONFIG, type GenreKey } from "../../../types/book";
 
 /* ─── Text Input ─────────────────────────────────────────── */
 interface TextInputProps extends InputHTMLAttributes<HTMLInputElement> {

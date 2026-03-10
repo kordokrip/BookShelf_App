@@ -62,15 +62,23 @@ export default defineConfig({
     // Cloudflare Workers & modern browsers target
     target: 'es2022',
     outDir: 'dist',
-    sourcemap: true,
+    sourcemap: false,
     rollupOptions: {
       output: {
         // 청크 분리 — 초기 번들 크기 최적화
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router'],
-          'vendor-query': ['@tanstack/react-query'],
-          'vendor-ui': ['@radix-ui/react-dialog', '@radix-ui/react-select', '@radix-ui/react-tabs'],
-          'vendor-charts': ['recharts'],
+        manualChunks: (id) => {
+          if (id.includes('recharts') || id.includes('d3-') || id.includes('victory')) {
+            return 'vendor-charts';
+          }
+          if (id.includes('@tanstack/react-query')) {
+            return 'vendor-query';
+          }
+          if (id.includes('react-dom') || id.includes('react/') || (id.includes('react') && !id.includes('@'))) {
+            return 'vendor-react';
+          }
+          if (id.includes('@radix-ui') || id.includes('lucide-react')) {
+            return 'vendor-ui';
+          }
         },
       },
     },

@@ -31,7 +31,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '20'
           cache: 'npm'
 
       - name: Install dependencies
@@ -57,7 +57,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '20'
           cache: 'npm'
 
       - name: Install dependencies
@@ -95,7 +95,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '20'
           cache: 'npm'
 
       - name: Install dependencies
@@ -115,6 +115,24 @@ jobs:
           command: deploy
           wranglerVersion: '4'
 
+      - name: Verify deployment
+        run: |
+          sleep 10
+          curl -sf https://bookshelf-api.kordokrip.workers.dev/api/health \
+            | tee /dev/stderr | grep -q '"status":"ok"' \
+            && echo "✅ Health check passed" \
+            || echo "⚠️ Health check failed — deployment may still be propagating"
+
+      - name: Notify deployment result
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Production 배포 성공: ${{ github.sha }}"
+          else
+            echo "❌ Production 배포 실패: ${{ github.sha }}"
+            echo "::error::Production deployment failed. Check logs above."
+          fi
+
   # ─────────────────────────────────────────────────────────────
   # 4. 스테이징 배포 (staging 브랜치만)
   # ─────────────────────────────────────────────────────────────
@@ -133,7 +151,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '20'
           cache: 'npm'
 
       - name: Install dependencies
@@ -152,3 +170,12 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy --env staging
           wranglerVersion: '4'
+
+      - name: Notify staging result
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Staging 배포 성공: ${{ github.sha }}"
+          else
+            echo "❌ Staging 배포 실패: ${{ github.sha }}"
+          fi

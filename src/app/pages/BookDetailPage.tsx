@@ -1,12 +1,20 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router";
-import { ChevronLeft, MoreVertical, Plus, FileText, AlignLeft } from "lucide-react";
-import { mockDoneBooks, mockReadingBooks, mockBookNotes, type BookNote } from "../data/mockData";
+import { ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2 } from "lucide-react";
+import type { BookNote } from "../../types/book";
+import type { UIBook } from "../../types/book";
 import { BookCover } from "../components/books/BookCard";
 import { GenreBadge } from "../components/ui/GenreBadge";
 import { useToast } from "../components/ui/Toast";
-
-const allBooks = [...mockDoneBooks, ...mockReadingBooks];
+import { useBookDetail } from "../../hooks/useBooks";
+import { useBookNotes, useAddNote, useUpdateNote, useDeleteNote } from "../../hooks/useNotes";
+import { coverApi, queryKeys } from "../../lib/api";
+import { useQueryClient } from "@tanstack/react-query";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../components/ui/sheet";
+import { Textarea } from "../components/ui/textarea";
+import { Input } from "../components/ui/input";
+import { Button } from "../components/ui/button";
+import { cn } from "../components/ui/utils";
 
 /* ─── Star display ──────────────────────────────────────────── */
 function StarRow({ value }: { value: number }) {
@@ -116,21 +124,81 @@ function ReviewCard({ note, expanded, onToggle }: { note: BookNote; expanded: bo
   );
 }
 
+/* ─── Note types ─────────────────────────────────────────────── */
+type NoteFormType = "quote" | "memo" | "review";
+
+interface NoteForm {
+  type: NoteFormType;
+  content: string;
+  page: string;
+}
+
 /* ─── Notes Tab ──────────────────────────────────────────────── */
-function NotesTab({ notes }: { notes: BookNote[] }) {
+function NotesTab({ notes, bookId }: { notes: BookNote[]; bookId: string }) {
   const [expandedReview, setExpandedReview] = useState(false);
-  const { showToast } = useToast();
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [editingNote, setEditingNote] = useState<BookNote | null>(null);
+  const [form, setForm] = useState<NoteForm>({ type: "memo", content: "", page: "" });
+
+  const addMutation = useAddNote();
+  const updateMutation = useUpdateNote();
+  const deleteMutation = useDeleteNote();
+
+  const openAdd = (type: NoteFormType) => {
+    setEditingNote(null);
+    setForm({ type, content: "", page: "" });
+    setIsSheetOpen(true);
+  };
+
+  const openEdit = (note: BookNote) => {
+    setEditingNote(note);
+    setForm({
+      type: note.type as NoteFormType,
+      content: note.content,
+      page: String(note.page ?? ""),
+    });
+    setIsSheetOpen(true);
+  };
+
+  const closeSheet = () => {
+    setIsSheetOpen(false);
+    setEditingNote(null);
+    setForm({ type: "memo", content: "", page: "" });
+  };
+
+  const handleSave = async () => {
+    if (!form.content.trim()) return;
+    const payload = {
+      book_id: bookId,
+      type: form.type,
+      content: form.content.trim(),
+      page_number: form.page ? parseInt(form.page, 10) : undefined,
+    };
+    if (editingNote) {
+      await updateMutation.mutateAsync({ id: editingNote.id, data: payload });
+    } else {
+      await addMutation.mutateAsync(payload);
+    }
+    closeSheet();
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("이 노트를 삭제할까요?")) return;
+    await deleteMutation.mutateAsync(id);
+  };
+
+  const isPending = addMutation.isPending || updateMutation.isPending;
 
   const quotes = notes.filter((n) => n.type === "quote");
   const memos = notes.filter((n) => n.type === "memo");
   const reviews = notes.filter((n) => n.type === "review");
 
-  function SectionHeader({ title }: { title: string }) {
+  function SectionHeader({ title, type }: { title: string; type: NoteFormType }) {
     return (
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-[#1E293B]" style={{ fontSize: 15, fontWeight: 700 }}>{title}</h3>
         <button
-          onClick={() => showToast("메모 추가 기능이 준비 중이에요 🛠️", "info")}
+          onClick={() => openAdd(type)}
           className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#EEF2FF] text-[#4F46E5] transition-colors hover:bg-[#E0E7FF]"
           style={{ fontSize: 12, fontWeight: 600 }}
         >
@@ -141,62 +209,166 @@ function NotesTab({ notes }: { notes: BookNote[] }) {
     );
   }
 
+  function NoteActions({ note }: { note: BookNote }) {
+    return (
+      <div className="flex items-center justify-end gap-1 mt-2">
+        <button
+          onClick={() => openEdit(note)}
+          className="p-1.5 rounded-lg hover:bg-[#F1F5F9] transition-colors"
+          aria-label="편집"
+        >
+          <Pencil size={13} className="text-[#94A3B8]" />
+        </button>
+        <button
+          onClick={() => handleDelete(note.id)}
+          className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+          disabled={deleteMutation.isPending}
+          aria-label="삭제"
+        >
+          <Trash2 size={13} className="text-[#FDA5A5]" />
+        </button>
+      </div>
+    );
+  }
+
+  const NOTE_TYPES: { value: NoteFormType; label: string }[] = [
+    { value: "memo", label: "📝 메모" },
+    { value: "quote", label: "💬 문구" },
+    { value: "review", label: "✍️ 독후감" },
+  ];
+
   return (
-    <div className="flex flex-col gap-6 px-4 py-4">
-      {/* Quotes */}
-      <div>
-        <SectionHeader title="좋은 문구" />
-        <div className="flex flex-col gap-3">
-          {quotes.length === 0 ? (
-            <p className="text-[#94A3B8] text-center py-4" style={{ fontSize: 14 }}>
-              아직 저장한 문구가 없어요 ✍️
-            </p>
-          ) : (
-            quotes.map((n) => <QuoteCard key={n.id} note={n} />)
-          )}
+    <>
+      <div className="flex flex-col gap-6 px-4 py-4">
+        {/* Quotes */}
+        <div>
+          <SectionHeader title="좋은 문구" type="quote" />
+          <div className="flex flex-col gap-3">
+            {quotes.length === 0 ? (
+              <p className="text-[#94A3B8] text-center py-4" style={{ fontSize: 14 }}>
+                아직 저장한 문구가 없어요 ✍️
+              </p>
+            ) : (
+              quotes.map((n) => (
+                <div key={n.id}>
+                  <QuoteCard note={n} />
+                  <NoteActions note={n} />
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Memos */}
+        <div>
+          <SectionHeader title="메모" type="memo" />
+          <div className="flex flex-col gap-3">
+            {memos.length === 0 ? (
+              <p className="text-[#94A3B8] text-center py-4" style={{ fontSize: 14 }}>
+                아직 메모가 없어요 📝
+              </p>
+            ) : (
+              memos.map((n) => (
+                <div key={n.id}>
+                  <MemoCard note={n} />
+                  <NoteActions note={n} />
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Reviews */}
+        <div>
+          <SectionHeader title="독후감" type="review" />
+          <div className="flex flex-col gap-3">
+            {reviews.length === 0 ? (
+              <p className="text-[#94A3B8] text-center py-4" style={{ fontSize: 14 }}>
+                아직 독후감이 없어요 🌟
+              </p>
+            ) : (
+              reviews.map((n) => (
+                <div key={n.id}>
+                  <ReviewCard
+                    note={n}
+                    expanded={expandedReview}
+                    onToggle={() => setExpandedReview((v) => !v)}
+                  />
+                  <NoteActions note={n} />
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Memos */}
-      <div>
-        <SectionHeader title="메모" />
-        <div className="flex flex-col gap-3">
-          {memos.length === 0 ? (
-            <p className="text-[#94A3B8] text-center py-4" style={{ fontSize: 14 }}>
-              아직 메모가 없어요 📝
-            </p>
-          ) : (
-            memos.map((n) => <MemoCard key={n.id} note={n} />)
-          )}
-        </div>
-      </div>
+      {/* 노트 추가/편집 Sheet */}
+      <Sheet open={isSheetOpen} onOpenChange={(open) => { if (!open) closeSheet(); }}>
+        <SheetContent side="bottom" className="h-[70vh] flex flex-col">
+          <SheetHeader>
+            <SheetTitle>{editingNote ? "노트 편집" : "노트 추가"}</SheetTitle>
+          </SheetHeader>
 
-      {/* Review */}
-      <div>
-        <SectionHeader title="독후감" />
-        <div className="flex flex-col gap-3">
-          {reviews.length === 0 ? (
-            <p className="text-[#94A3B8] text-center py-4" style={{ fontSize: 14 }}>
-              아직 독후감이 없어요 🌟
-            </p>
-          ) : (
-            reviews.map((n) => (
-              <ReviewCard
-                key={n.id}
-                note={n}
-                expanded={expandedReview}
-                onToggle={() => setExpandedReview((v) => !v)}
-              />
-            ))
-          )}
-        </div>
-      </div>
-    </div>
+          <div className="flex-1 overflow-y-auto mt-4 space-y-3">
+            {/* 타입 선택 */}
+            <div className="flex gap-2">
+              {NOTE_TYPES.map((t) => (
+                <button
+                  key={t.value}
+                  onClick={() => setForm((f) => ({ ...f, type: t.value }))}
+                  className={cn(
+                    "flex-1 py-2 text-sm rounded-xl border transition-colors",
+                    form.type === t.value
+                      ? "bg-[#4F46E5] text-white border-[#4F46E5]"
+                      : "border-[#E2E8F0] text-[#64748B]"
+                  )}
+                  style={{ fontWeight: 600 }}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* 내용 */}
+            <Textarea
+              value={form.content}
+              onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
+              placeholder={
+                form.type === "quote" ? "인용할 구절을 입력하세요" :
+                form.type === "review" ? "독후감을 작성하세요" :
+                "메모 내용을 입력하세요"
+              }
+              rows={5}
+              className="resize-none"
+              autoFocus
+            />
+
+            {/* 페이지 번호 */}
+            <Input
+              type="number"
+              min={1}
+              value={form.page}
+              onChange={(e) => setForm((f) => ({ ...f, page: e.target.value }))}
+              placeholder="페이지 번호 (선택)"
+            />
+
+            {/* 저장 버튼 */}
+            <Button
+              onClick={handleSave}
+              disabled={!form.content.trim() || isPending}
+              className="w-full"
+            >
+              {isPending ? "저장 중..." : editingNote ? "수정" : "추가"}
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }
 
 /* ─── Book Info Tab ──────────────────────────────────────────── */
-function BookInfoTab({ book }: { book: ReturnType<typeof allBooks[number]> }) {
+function BookInfoTab({ book }: { book: UIBook }) {
   const rows = [
     { label: "저자", value: book.author },
     { label: "출판사", value: book.publisher },
@@ -238,8 +410,56 @@ export function BookDetailPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"notes" | "info">("notes");
   const { showToast } = useToast();
+  const qc = useQueryClient();
 
-  const book = allBooks.find((b) => b.id === id) ?? mockDoneBooks[0];
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: book, isLoading, isError } = useBookDetail(id!);
+  const { data: notes = [] } = useBookNotes(id!);
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !book) return;
+    // 파일 input 초기화 (같은 파일 재선택 가능)
+    e.target.value = '';
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      showToast('JPG, PNG, WebP 형식만 업로드 가능합니다.', 'error');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      showToast('파일 크기는 2MB 이하여야 합니다.', 'error');
+      return;
+    }
+
+    setIsUploadingCover(true);
+    try {
+      await coverApi.uploadCover(book.id, file);
+      await qc.invalidateQueries({ queryKey: queryKeys.books.detail(book.id) });
+      showToast('표지 이미지가 업데이트됐어요 🖼️', 'success');
+    } catch {
+      showToast('업로드에 실패했습니다. 다시 시도해주세요.', 'error');
+    } finally {
+      setIsUploadingCover(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+        <div className="w-8 h-8 border-3 border-[#4F46E5] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (isError || !book) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+        <p className="text-[#64748B]">책을 찾을 수 없습니다.</p>
+      </div>
+    );
+  }
 
   const tabs = [
     { key: "notes" as const, label: "독서 노트", icon: <AlignLeft size={15} /> },
@@ -271,10 +491,31 @@ export function BookDetailPage() {
       <div className="max-w-2xl mx-auto lg:max-w-3xl">
         {/* ── Hero section ── */}
         <div className="bg-white px-4 py-8 flex flex-col items-center gap-4 border-b border-[#F1F5F9]">
-          {/* Cover: 120×168px */}
-          <div style={{ filter: "drop-shadow(0 8px 24px rgba(79,70,229,0.2))" }}>
+          {/* Cover: 120×168px — 클릭 시 표지 이미지 업로드 */}
+          <div
+            className="relative cursor-pointer group"
+            style={{ filter: "drop-shadow(0 8px 24px rgba(79,70,229,0.2))" }}
+            onClick={() => fileInputRef.current?.click()}
+            title="표지 이미지 변경"
+          >
             <BookCover book={book} size="lg" />
+            {/* hover 오버레이 */}
+            <div className="absolute inset-0 rounded-2xl flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-all">
+              {isUploadingCover ? (
+                <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin opacity-0 group-hover:opacity-100" />
+              ) : (
+                <Camera size={22} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+              )}
+            </div>
           </div>
+          {/* 숨겨진 파일 input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={handleCoverUpload}
+          />
 
           {/* Meta */}
           <div className="flex flex-col items-center gap-2 text-center">
@@ -351,9 +592,9 @@ export function BookDetailPage() {
         {/* ── Tab content ── */}
         <div className="pb-24 lg:pb-12">
           {activeTab === "notes" ? (
-            <NotesTab notes={mockBookNotes} />
+            <NotesTab notes={notes} bookId={id!} />
           ) : (
-            <BookInfoTab book={book as any} />
+            <BookInfoTab book={book} />
           )}
         </div>
       </div>

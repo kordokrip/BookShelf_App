@@ -1,41 +1,117 @@
-import { useState } from "react";
 import { BookMarked, BookOpen, Sparkles, FileText } from "lucide-react";
-import { mockDoneBooks, mockReadingBooks, mockWishBooks } from "../data/mockData";
 import { SummaryCard, MonthlyBarChart, GenreDonutChart, ReadingHeatmap } from "../components/stats/StatsComponents";
-import { StatCardSkeleton, ChartSkeleton, ErrorState } from "../components/ui/Skeleton";
+import { StatCardSkeleton, ChartSkeleton } from "../components/ui/skeleton";
+import { useBooks } from "../../hooks/useBooks";
+import { useSessions } from "../../hooks/useSessions";
+import type { UIBook } from "../../types/book";
 
-const totalDone    = mockDoneBooks.length;
-const totalReading = mockReadingBooks.length;
-const totalWish    = mockWishBooks.length;
-const totalPages   = mockDoneBooks.reduce((s, b) => s + (b.totalPages ?? 0), 0);
+/* ─── 장르별 색상 매핑 ───────────────────────────────────── */
+const GENRE_COLORS: Record<string, string> = {
+  "인문학": "#7C3AED", "컴퓨터·프로그래밍": "#4F46E5", "현대문학": "#C2410C",
+  "자기계발": "#3F6212", "심리학": "#BE185D", "경제/경영": "#065F46",
+  "과학/수학": "#155E75", "해외문학": "#115E59", "AI/데이터": "#1E3A8A",
+  "기타": "#94A3B8",
+};
+
+function buildMonthlyData(books: UIBook[]) {
+  const now = new Date();
+  const currentMonth = now.getMonth(); // 0-indexed
+  const months = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
+  return months.map((month, i) => {
+    const monthBooks = books.filter((b) => {
+      if (!b.finishedDate) return false;
+      const d = new Date(b.finishedDate);
+      return d.getMonth() === i && d.getFullYear() === now.getFullYear();
+    });
+    return {
+      month,
+      books: monthBooks.length,
+      pages: monthBooks.reduce((s, b) => s + (b.totalPages ?? 0), 0),
+      status: i < currentMonth ? "past" : i === currentMonth ? "current" : "future",
+    };
+  });
+}
+
+function buildGenreDistribution(books: UIBook[]) {
+  const counts: Record<string, number> = {};
+  for (const b of books) {
+    counts[b.genre] = (counts[b.genre] ?? 0) + 1;
+  }
+  return Object.entries(counts).map(([genre, count]) => ({
+    genre,
+    count,
+    color: GENRE_COLORS[genre] ?? "#94A3B8",
+  }));
+}
+
+/** 이번 달 완독 수 대비 지난 달 완독 수로 트렌드 문자열 계산 */
+function calcDoneTrend(doneBooks: UIBook[]): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const thisM = now.getMonth();
+  const lastM = thisM === 0 ? 11 : thisM - 1;
+  const lastY = thisM === 0 ? y - 1 : y;
+
+  const thisCount = doneBooks.filter((b) => {
+    if (!b.finishedDate) return false;
+    const d = new Date(b.finishedDate);
+    return d.getMonth() === thisM && d.getFullYear() === y;
+  }).length;
+
+  const lastCount = doneBooks.filter((b) => {
+    if (!b.finishedDate) return false;
+    const d = new Date(b.finishedDate);
+    return d.getMonth() === lastM && d.getFullYear() === lastY;
+  }).length;
+
+  const diff = thisCount - lastCount;
+  if (diff > 0) return `+${diff}권`;
+  if (diff < 0) return `${diff}권`;
+  return "±0";
+}
+
+/** 가장 이른 책 추가 날짜를 기준으로 "YYYY년 M월 ~ 현재" 생성 */
+function buildDateRangeLabel(allBooks: UIBook[]): string {
+  const dates = allBooks
+    .map((b) => b.addedDate)
+    .filter(Boolean)
+    .map((d) => new Date(d));
+  if (dates.length === 0) return "독서 기록이 없습니다";
+  const earliest = new Date(Math.min(...dates.map((d) => d.getTime())));
+  return `${earliest.getFullYear()}년 ${earliest.getMonth() + 1}월 ~ 현재`;
+}
 
 export function StatsPage() {
-  const [loadState, setLoadState] = useState<"loading" | "error" | "success">("success");
+  const { data: doneBooks = [], isLoading: loadingDone } = useBooks({ status: 'done' });
+  const { data: readingBooks = [], isLoading: loadingReading } = useBooks({ status: 'reading' });
+  const { data: wishBooks = [], isLoading: loadingWish } = useBooks({ status: 'wish' });
+  const { data: sessions = [], isLoading: loadingSessions } = useSessions();
+
+  const isLoading = loadingDone || loadingReading || loadingWish || loadingSessions;
+
+  const totalDone = doneBooks.length;
+  const totalReading = readingBooks.length;
+  const totalWish = wishBooks.length;
+  const totalPages = sessions.length > 0
+    ? sessions.reduce((s, sess) => s + sess.pages_read, 0)
+    : doneBooks.reduce((s, b) => s + (b.totalPages ?? 0), 0);
+
+  const monthlyData = buildMonthlyData(doneBooks);
+  const allBooks = [...doneBooks, ...readingBooks, ...wishBooks];
+  const genreData = buildGenreDistribution(allBooks);
+  const doneTrend = calcDoneTrend(doneBooks);
+  const dateRangeLabel = buildDateRangeLabel(allBooks);
 
   return (
     <div className="pb-6">
       {/* Header */}
       <div className="px-4 pt-4 pb-3">
         <h2 className="text-[#1E293B]" style={{ fontSize: 20, fontWeight: 700 }}>나의 독서 통계 📊</h2>
-        <p className="text-[#64748B]" style={{ fontSize: 13, marginTop: 2 }}>2025년 1월 ~ 현재</p>
-      </div>
-
-      {/* Demo state switcher */}
-      <div className="px-4 pb-2 flex gap-2 justify-end lg:hidden opacity-50">
-        {(["success", "loading", "error"] as const).map((s) => (
-          <button
-            key={s}
-            onClick={() => setLoadState(s)}
-            className="px-2 py-1 rounded text-white"
-            style={{ fontSize: 10, background: loadState === s ? "#4F46E5" : "#94A3B8" }}
-          >
-            {s === "loading" ? "로딩" : s === "error" ? "에러" : "완료"}
-          </button>
-        ))}
+        <p className="text-[#64748B]" style={{ fontSize: 13, marginTop: 2 }}>{dateRangeLabel}</p>
       </div>
 
       {/* CV-7: Loading state */}
-      {loadState === "loading" && (
+      {isLoading && (
         <div className="px-4">
           <div className="grid grid-cols-2 gap-3 mb-4">
             {[...Array(4)].map((_, i) => <StatCardSkeleton key={i} />)}
@@ -48,16 +124,10 @@ export function StatsPage() {
         </div>
       )}
 
-      {/* CV-7: Error state */}
-      {loadState === "error" && (
-        <ErrorState
-          message="통계 데이터를 불러오지 못했어요. 잠시 후 다시 시도해주세요."
-          onRetry={() => setLoadState("success")}
-        />
-      )}
+      {/* CV-7: Error state — not shown when data loaded (no separate error tracking for 3 queries) */}
 
       {/* CV-7: Success state */}
-      {loadState === "success" && (
+      {!isLoading && (
         <>
           {/* Summary Cards: 2×2 grid, 12px gap (CV-1: spec exact) */}
           <div className="px-4 mb-4" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -68,7 +138,7 @@ export function StatsPage() {
               borderColor="#4F46E5"
               label="완독한 책"
               value={`${totalDone}권`}
-              trend="+8권"
+              trend={doneTrend}
             />
             {/* 읽는중: green border */}
             <SummaryCard
@@ -101,25 +171,25 @@ export function StatsPage() {
           <div className="px-4">
             {/* Mobile stacked */}
             <div className="lg:hidden flex flex-col gap-3">
-              <MonthlyBarChart />
-              <GenreDonutChart />
-              <ReadingHeatmap />
+              <MonthlyBarChart data={monthlyData} />
+              <GenreDonutChart data={genreData} />
+              <ReadingHeatmap sessions={sessions} />
             </div>
 
             {/* Desktop 2-col dashboard (CV-3: stats desktop layout) */}
             <div className="hidden lg:grid grid-cols-2 gap-5">
               <div className="flex flex-col gap-5">
-                <MonthlyBarChart />
-                <ReadingHeatmap />
+                <MonthlyBarChart data={monthlyData} />
+                <ReadingHeatmap sessions={sessions} />
               </div>
               <div className="flex flex-col gap-5">
-                <GenreDonutChart />
+                <GenreDonutChart data={genreData} />
                 {/* Top Books — desktop right column */}
                 <div className="bg-white rounded-2xl border border-[#F1F5F9] shadow-sm p-4">
                   <h3 className="text-[#1E293B] mb-3" style={{ fontSize: 15, fontWeight: 700 }}>
                     ⭐ 최고 평점 책
                   </h3>
-                  {mockDoneBooks
+                  {doneBooks
                     .filter((b) => (b.rating ?? 0) >= 5)
                     .slice(0, 5)
                     .map((book, i) => (
@@ -144,7 +214,7 @@ export function StatsPage() {
               <h3 className="text-[#1E293B] mb-3" style={{ fontSize: 15, fontWeight: 700 }}>
                 ⭐ 최고 평점 책
               </h3>
-              {mockDoneBooks
+              {doneBooks
                 .filter((b) => (b.rating ?? 0) >= 5)
                 .slice(0, 5)
                 .map((book, i) => (

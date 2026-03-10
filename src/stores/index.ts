@@ -1,8 +1,5 @@
 // Zustand 스토어 단일 진입점
-// 사용 예시: import { useBooksStore, useAuthStore, useUiStore } from '@/stores'
-
-export { useBooksStore } from './booksStore';
-export type { SortKey, SortDir } from './booksStore';
+// 사용 예시: import { useAuthStore, useUiStore } from '@/stores'
 
 export { useAuthStore } from './authStore';
 export type { AuthUser } from './authStore';

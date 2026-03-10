@@ -99,9 +99,9 @@ function StatCardSkeleton({ className }: { className?: string }) {
 }
 
 /** 차트 스켈레톤 */
-function ChartSkeleton({ className }: { className?: string }) {
+function ChartSkeleton({ className, height }: { className?: string; height?: number }) {
   return (
-    <div className={cn("p-4 rounded-2xl bg-white", className)}>
+    <div className={cn("p-4 rounded-2xl bg-white", className)} style={height ? { height } : undefined}>
       <Skeleton className="h-4 w-1/3 rounded mb-4" />
       <div className="flex items-end gap-2 h-32">
         {[60, 80, 45, 90, 70, 55, 85, 40, 75, 65, 50, 95].map((h, i) => (

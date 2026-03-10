@@ -2,10 +2,13 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { HTTPException } from 'hono/http-exception';
-import { nanoid } from 'hono/utils/crypto';
 import type { Bindings, DbBook } from '../types';
+import { optionalAuth } from '../auth';
 
-export const booksRouter = new Hono<{ Bindings: Bindings }>();
+export const booksRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
+
+// 모든 라우트에 optionalAuth 미들웨어 적용
+booksRouter.use('*', optionalAuth);
 
 // ─── 스키마 검증 ──────────────────────────────────────────────
 const createBookSchema = z.object({
@@ -30,17 +33,10 @@ const createBookSchema = z.object({
 
 const updateBookSchema = createBookSchema.partial();
 
-// TODO: 실제 인증 미들웨어로 교체 (JWT 검증)
-// 현재는 임시로 X-User-Id 헤더를 사용
-const getUserId = (c: any): string => {
-  const userId = c.req.header('X-User-Id') ?? 'demo-user';
-  return userId;
-};
-
 // ─── GET /api/books ───────────────────────────────────────────
 // 사용자의 전체 책 목록 조회 (status 필터 가능)
 booksRouter.get('/', async (c) => {
-  const userId = getUserId(c);
+  const userId = c.get('userId');
   const status = c.req.query('status');
   const genre = c.req.query('genre');
   const limit = parseInt(c.req.query('limit') ?? '100');
@@ -68,7 +64,7 @@ booksRouter.get('/', async (c) => {
 
 // ─── GET /api/books/:id ───────────────────────────────────────
 booksRouter.get('/:id', async (c) => {
-  const userId = getUserId(c);
+  const userId = c.get('userId');
   const id = c.req.param('id');
 
   const book = await c.env.DB.prepare(
@@ -84,7 +80,7 @@ booksRouter.get('/:id', async (c) => {
 
 // ─── POST /api/books ──────────────────────────────────────────
 booksRouter.post('/', zValidator('json', createBookSchema), async (c) => {
-  const userId = getUserId(c);
+  const userId = c.get('userId');
   const body = c.req.valid('json');
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
@@ -118,7 +114,7 @@ booksRouter.post('/', zValidator('json', createBookSchema), async (c) => {
 
 // ─── PUT /api/books/:id ───────────────────────────────────────
 booksRouter.put('/:id', zValidator('json', updateBookSchema), async (c) => {
-  const userId = getUserId(c);
+  const userId = c.get('userId');
   const id = c.req.param('id');
   const body = c.req.valid('json');
 
@@ -146,7 +142,7 @@ booksRouter.put('/:id', zValidator('json', updateBookSchema), async (c) => {
   for (const [key, col] of Object.entries(fieldMap)) {
     if (key in body) {
       setClauses.push(`${col} = ?`);
-      values.push((body as any)[key] ?? null);
+      values.push((body as Record<string, unknown>)[key] ?? null);
     }
   }
 
@@ -168,7 +164,7 @@ booksRouter.put('/:id', zValidator('json', updateBookSchema), async (c) => {
 
 // ─── DELETE /api/books/:id ────────────────────────────────────
 booksRouter.delete('/:id', async (c) => {
-  const userId = getUserId(c);
+  const userId = c.get('userId');
   const id = c.req.param('id');
 
   const { meta } = await c.env.DB.prepare(
@@ -181,4 +177,90 @@ booksRouter.delete('/:id', async (c) => {
     throw new HTTPException(404, { message: '책을 찾을 수 없습니다.' });
 
   return c.json({ success: true });
+});
+
+// ─── POST /api/books/:id/cover — R2 표지 이미지 업로드 ────────
+booksRouter.post('/:id/cover', async (c) => {
+  const userId = c.get('userId');
+  const bookId = c.req.param('id');
+
+  // 책 존재 + 소유권 확인
+  const book = await c.env.DB.prepare(
+    'SELECT id, user_id FROM books WHERE id = ? AND user_id = ?',
+  )
+    .bind(bookId, userId)
+    .first<{ id: string; user_id: string }>();
+
+  if (!book) throw new HTTPException(404, { message: '책을 찾을 수 없습니다.' });
+
+  // Content-Type 확인 (JPEG / PNG / WebP만 허용)
+  const contentType = c.req.header('Content-Type') ?? '';
+  const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+  if (!allowed.includes(contentType)) {
+    return c.json({ error: '이미지 파일만 업로드 가능합니다 (image/jpeg, image/png, image/webp)' }, 400);
+  }
+
+  // 파일 크기 제한: 2 MB
+  const body = await c.req.arrayBuffer();
+  const MAX_SIZE = 2 * 1024 * 1024;
+  if (body.byteLength > MAX_SIZE) {
+    return c.json({ error: '파일 크기는 2MB를 초과할 수 없습니다.' }, 400);
+  }
+
+  // R2 키: covers/{userId}/{bookId}.{ext}
+  const ext = contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg';
+  const r2Key = `covers/${userId}/${bookId}.${ext}`;
+
+  await c.env.R2.put(r2Key, body, {
+    httpMetadata: {
+      contentType,
+      cacheControl: 'public, max-age=31536000',
+    },
+    customMetadata: {
+      userId,
+      bookId,
+      uploadedAt: new Date().toISOString(),
+    },
+  });
+
+  // DB: cover_image를 r2Key로 업데이트
+  await c.env.DB.prepare(
+    `UPDATE books SET cover_image = ?, updated_at = datetime('now') WHERE id = ?`,
+  )
+    .bind(r2Key, bookId)
+    .run();
+
+  return c.json({ success: true, r2Key, coverUrl: `/api/books/${bookId}/cover` });
+});
+
+// ─── GET /api/books/:id/cover — R2에서 표지 이미지 서빙 ───────
+booksRouter.get('/:id/cover', async (c) => {
+  const bookId = c.req.param('id');
+
+  const row = await c.env.DB.prepare(
+    'SELECT cover_image FROM books WHERE id = ?',
+  )
+    .bind(bookId)
+    .first<{ cover_image: string | null }>();
+
+  if (!row?.cover_image) {
+    return c.json({ error: '표지 이미지가 없습니다.' }, 404);
+  }
+
+  const r2Key = row.cover_image;
+
+  // 외부 URL(카카오 등)이면 리다이렉트
+  if (r2Key.startsWith('http')) {
+    return c.redirect(r2Key);
+  }
+
+  const object = await c.env.R2.get(r2Key);
+  if (!object) return c.json({ error: 'R2에서 이미지를 찾을 수 없습니다.' }, 404);
+
+  const headers = new Headers();
+  headers.set('Content-Type', object.httpMetadata?.contentType ?? 'image/jpeg');
+  headers.set('Cache-Control', 'public, max-age=86400');
+  headers.set('ETag', object.etag);
+
+  return new Response(object.body, { headers });
 });

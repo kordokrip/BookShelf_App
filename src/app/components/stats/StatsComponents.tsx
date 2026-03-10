@@ -4,7 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   PieChart, Pie,
 } from "recharts";
-import { monthlyData, genreDistribution } from "../../data/mockData";
+import type { ReadingSession } from "../../../lib/api";
 
 /* ─── Design Tokens ─────────────────────────────────────────── */
 const C = {
@@ -30,13 +30,14 @@ const C = {
 interface SummaryCardProps {
   icon: ReactNode;
   iconBg: string;
-  borderColor: string;
+  borderColor?: string;
   label: string;
   value: string | number;
-  trend?: string; // e.g. "+8권"
+  trend?: string; // e.g. "+8권" or "up" | "neutral"
+  trendLabel?: string; // e.g. "+3 이번 달"
 }
 
-export function SummaryCard({ icon, iconBg, borderColor, label, value, trend }: SummaryCardProps) {
+export function SummaryCard({ icon, iconBg, borderColor, label, value, trend, trendLabel }: SummaryCardProps) {
   return (
     <div style={{
       backgroundColor: C.white,
@@ -48,7 +49,7 @@ export function SummaryCard({ icon, iconBg, borderColor, label, value, trend }: 
       flexDirection: "column",
       gap: 12,
       // 3px colored left border strip
-      borderLeft: `3px solid ${borderColor}`,
+      borderLeft: borderColor ? `3px solid ${borderColor}` : undefined,
     }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
         {/* Icon: 36px circle */}
@@ -61,14 +62,14 @@ export function SummaryCard({ icon, iconBg, borderColor, label, value, trend }: 
           {icon}
         </div>
         {/* Trend indicator */}
-        {trend && (
+        {(trend || trendLabel) && (
           <span style={{
             display: "flex", alignItems: "center", gap: 2,
             fontSize: 11, fontWeight: 600,
-            color: C.green,
+            color: trend === "up" ? C.green : C.slate5,
           }}>
-            <ArrowUp size={12} color={C.green} strokeWidth={2.5} />
-            {trend}
+            {trend === "up" && <ArrowUp size={12} color={C.green} strokeWidth={2.5} />}
+            {trendLabel ?? trend}
           </span>
         )}
       </div>
@@ -98,7 +99,13 @@ const BAR_COLORS: Record<string, string> = {
   future: C.slate9,
 };
 
-function CustomTooltip({ active, payload, label }: any) {
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{ value: number }>;
+  label?: string;
+}
+
+function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   if (!active || !payload?.length) return null;
   const isCurrent = label === "3월";
   return (
@@ -107,13 +114,13 @@ function CustomTooltip({ active, payload, label }: any) {
       boxShadow: "0 4px 16px rgba(0,0,0,0.10)", padding: "8px 12px",
     }}>
       <p style={{ fontSize: 13, fontWeight: 600, color: C.slate1 }}>
-        {label}: {payload[0].value}권 {isCurrent ? "완독 중" : "완독"}
+        {label}: {payload[0]?.value ?? 0}권 {isCurrent ? "완독 중" : "완독"}
       </p>
     </div>
   );
 }
 
-export function MonthlyBarChart() {
+export function MonthlyBarChart({ data: monthlyData }: { data: { month: string; books: number; pages: number; status: string }[] }) {
   return (
     <div style={{
       backgroundColor: C.white, borderRadius: 12,
@@ -128,7 +135,7 @@ export function MonthlyBarChart() {
           border: `1px solid ${C.slate8}`, borderRadius: 8,
           padding: "4px 10px", backgroundColor: C.slate9,
         }}>
-          2025년 ▼
+          {new Date().getFullYear()}년
         </span>
       </div>
 
@@ -192,28 +199,12 @@ export function MonthlyBarChart() {
 const DONUT_OUTER = 80;
 const DONUT_INNER = Math.round(DONUT_OUTER * 0.4); // 32
 
-function DonutCenterLabel({ cx, cy, total, filterLabel }: { cx: number; cy: number; total: number; filterLabel: string }) {
-  return (
-    <g>
-      <text x={cx} y={cy - 8} textAnchor="middle" dominantBaseline="central"
-        style={{ fontSize: 20, fontWeight: 700, fill: C.slate1, fontFamily: "var(--font-pretendard)" }}>
-        {total}권
-      </text>
-      <text x={cx} y={cy + 16} textAnchor="middle" dominantBaseline="central"
-        style={{ fontSize: 12, fontWeight: 400, fill: C.slate6, fontFamily: "var(--font-pretendard)" }}>
-        {filterLabel}
-      </text>
-    </g>
-  );
-}
-
-// Sort genres by count descending
-const sortedGenres = [...genreDistribution].sort((a, b) => b.count - a.count);
-const totalCount = sortedGenres.reduce((s, g) => s + g.count, 0);
-
-export function GenreDonutChart() {
+export function GenreDonutChart({ data: genreDistribution }: { data: { genre: string; count: number; color: string }[] }) {
   const [activeTab, setActiveTab] = useState<"전체" | "완독" | "읽는중">("전체");
   const tabs: Array<"전체" | "완독" | "읽는중"> = ["전체", "완독", "읽는중"];
+
+  const sortedGenres = [...genreDistribution].sort((a, b) => b.count - a.count);
+  const totalCount = sortedGenres.reduce((s, g) => s + g.count, 0);
 
   return (
     <div style={{
@@ -318,41 +309,53 @@ export function GenreDonutChart() {
 
 /* ─── Reading Heatmap ───────────────────────────────────────── */
 // Spec:
-// Heading "독서 스트릭 🔥" + "현재 12일 연속" chip bg #FEF3C7 text #92400E
+// Heading "독서 스트릭 🔥" + "현재 N일 연속" chip bg #FEF3C7 text #92400E
 // 52 cols × 7 rows, cell 10×10px, gap 2px
 // 5 color levels: L0=#F1F5F9, L1=#C7D2FE, L2=#818CF8, L3=#4F46E5, L4=#312E81
 // Month labels above: Korean (N월), 10px #94A3B8
 // Day labels left: 월 수 금 only (idx 1,3,5 in 일월화수목금토)
-// Recent weeks denser
-// Stats: "총 독서일: 47일" "최장 연속: 12일"
+// Stats: "총 독서일: N일" "최장 연속: N일"
 // Legend: 적음 [L0~L4] 많음
 
 const HEATMAP_LEVELS = ["#F1F5F9", "#C7D2FE", "#818CF8", "#4F46E5", "#312E81"];
 const WEEK_DAYS = ["일", "월", "화", "수", "목", "금", "토"];
+const MONTH_LABELS = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
 
-// Deterministic heatmap — recent weeks (indices 44–51) denser, current week (51) has level 2-3
-function buildHeatmap(): number[][] {
+/** sessions 배열을 받아 오늘 기준 52주 히트맵 그리드(level 0~4) 생성 */
+function buildHeatmapFromSessions(sessions: ReadingSession[]): number[][] {
+  // 날짜별 페이지 수 집계
+  const dateMap = new Map<string, number>();
+  for (const s of sessions) {
+    const date = s.session_date ?? s.created_at.split("T")[0];
+    dateMap.set(date, (dateMap.get(date) ?? 0) + (s.pages_read ?? 0));
+  }
+
+  // 전체 페이지 중 최대값 (레벨 산정용)
+  const maxPages = Math.max(1, ...Array.from(dateMap.values()));
+
+  // 오늘 기준 364일(52주) 전 일요일부터 시작
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  // 이번 주 일요일
+  const startDate = new Date(today);
+  startDate.setDate(today.getDate() - today.getDay() - 51 * 7);
+
   const grid: number[][] = [];
   for (let w = 0; w < 52; w++) {
     const week: number[] = [];
     for (let d = 0; d < 7; d++) {
-      // Recent 8 weeks have higher fill probability
-      const isRecent = w >= 44;
-      const isCurrent = w === 51;
+      const cur = new Date(startDate);
+      cur.setDate(startDate.getDate() + w * 7 + d);
+      if (cur > today) {
+        week.push(0);
+        continue;
+      }
+      const key = cur.toISOString().split("T")[0] ?? "";
+      const pages = dateMap.get(key) ?? 0;
       let level = 0;
-      // Use deterministic pseudo-random via (w*7+d) hash
-      const hash = ((w * 13 + d * 7) * 31) % 100;
-      if (isCurrent) {
-        // Current week: 5 days active with level 2-3
-        level = d < 5 ? (d % 2 === 0 ? 3 : 2) : 0;
-      } else if (isRecent) {
-        if (hash < 70) {
-          level = hash < 20 ? 4 : hash < 40 ? 3 : hash < 55 ? 2 : 1;
-        }
-      } else {
-        if (hash < 40) {
-          level = hash < 10 ? 3 : hash < 20 ? 2 : 1;
-        }
+      if (pages > 0) {
+        const ratio = pages / maxPages;
+        level = ratio > 0.75 ? 4 : ratio > 0.5 ? 3 : ratio > 0.25 ? 2 : 1;
       }
       week.push(level);
     }
@@ -361,14 +364,79 @@ function buildHeatmap(): number[][] {
   return grid;
 }
 
-const heatmapData = buildHeatmap();
+/** 연속 독서일(현재 스트릭) 계산 */
+function calculateStreak(sessions: ReadingSession[]): number {
+  const dateSet = new Set(
+    sessions.map((s) => s.session_date ?? s.created_at.split("T")[0])
+  );
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  let streak = 0;
+  const cur = new Date(today);
+  while (true) {
+    const key = cur.toISOString().split("T")[0] ?? "";
+    if (!dateSet.has(key)) break;
+    streak++;
+    cur.setDate(cur.getDate() - 1);
+  }
+  return streak;
+}
 
-// Month label positions: approximate which week each month starts
-// 52 weeks ≈ 12 months, so month i starts around week i*(52/12)
-const MONTH_LABELS = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
-const MONTH_STARTS = MONTH_LABELS.map((_, i) => Math.round(i * (52 / 12)));
+/** 최장 연속 독서일 계산 */
+function calculateMaxStreak(sessions: ReadingSession[]): number {
+  if (sessions.length === 0) return 0;
+  const dateSet = new Set(
+    sessions.map((s) => s.session_date ?? s.created_at.split("T")[0])
+  );
+  const sortedDates = Array.from(dateSet).sort();
+  let max = 1, cur = 1;
+  for (let i = 1; i < sortedDates.length; i++) {
+    const prevStr = sortedDates[i - 1];
+    const nextStr = sortedDates[i];
+    if (!prevStr || !nextStr) continue;
+    const prev = new Date(prevStr);
+    const next = new Date(nextStr);
+    const diff = (next.getTime() - prev.getTime()) / 86_400_000;
+    cur = diff === 1 ? cur + 1 : 1;
+    if (cur > max) max = cur;
+  }
+  return max;
+}
 
-export function ReadingHeatmap() {
+/** 히트맵 위에 표시할 월 레이블 위치 계산 */
+function buildMonthStarts(): { label: string; weekIndex: number }[] {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const startDate = new Date(today);
+  startDate.setDate(today.getDate() - today.getDay() - 51 * 7);
+
+  const result: { label: string; weekIndex: number }[] = [];
+  let lastMonth = -1;
+  for (let w = 0; w < 52; w++) {
+    const d = new Date(startDate);
+    d.setDate(startDate.getDate() + w * 7);
+    const m = d.getMonth();
+    if (m !== lastMonth) {
+      result.push({ label: MONTH_LABELS[m] ?? "", weekIndex: w });
+      lastMonth = m;
+    }
+  }
+  return result;
+}
+
+interface ReadingHeatmapProps {
+  sessions: ReadingSession[];
+}
+
+export function ReadingHeatmap({ sessions }: ReadingHeatmapProps) {
+  const heatmapData = buildHeatmapFromSessions(sessions);
+  const streak = calculateStreak(sessions);
+  const maxStreak = calculateMaxStreak(sessions);
+  const totalDays = new Set(
+    sessions.map((s) => s.session_date ?? s.created_at.split("T")[0])
+  ).size;
+  const monthStarts = buildMonthStarts();
+
   return (
     <div style={{
       backgroundColor: C.white, borderRadius: 12,
@@ -378,13 +446,13 @@ export function ReadingHeatmap() {
       {/* Heading row */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
         <h3 style={{ fontSize: 16, fontWeight: 600, color: C.slate1 }}>독서 스트릭 🔥</h3>
-        {/* "현재 12일 연속" chip */}
+        {/* 현재 N일 연속 chip */}
         <span style={{
           fontSize: 12, fontWeight: 500,
           backgroundColor: "#FEF3C7", color: "#92400E",
           padding: "3px 10px", borderRadius: 9999,
         }}>
-          현재 12일 연속
+          {streak > 0 ? `현재 ${streak}일 연속` : "오늘 독서를 시작해보세요!"}
         </span>
       </div>
 
@@ -410,14 +478,14 @@ export function ReadingHeatmap() {
           <div>
             {/* Month labels row */}
             <div style={{ display: "flex", height: 14, position: "relative", marginBottom: 2 }}>
-              {MONTH_STARTS.map((startWeek, mi) => (
-                <div key={mi} style={{
+              {monthStarts.map(({ label, weekIndex }) => (
+                <div key={label} style={{
                   position: "absolute",
-                  left: startWeek * (10 + 2),
+                  left: weekIndex * (10 + 2),
                   fontSize: 10, color: C.slate6,
                   whiteSpace: "nowrap",
                 }}>
-                  {MONTH_LABELS[mi]}
+                  {label}
                 </div>
               ))}
             </div>
@@ -448,8 +516,8 @@ export function ReadingHeatmap() {
 
       {/* Stats row */}
       <div style={{ display: "flex", gap: 16, marginTop: 10 }}>
-        <span style={{ fontSize: 12, color: C.slate5 }}>총 독서일: <strong style={{ color: C.slate1 }}>47일</strong></span>
-        <span style={{ fontSize: 12, color: C.slate5 }}>최장 연속: <strong style={{ color: C.slate1 }}>12일</strong></span>
+        <span style={{ fontSize: 12, color: C.slate5 }}>총 독서일: <strong style={{ color: C.slate1 }}>{totalDays}일</strong></span>
+        <span style={{ fontSize: 12, color: C.slate5 }}>최장 연속: <strong style={{ color: C.slate1 }}>{maxStreak}일</strong></span>
       </div>
 
       {/* Legend */}

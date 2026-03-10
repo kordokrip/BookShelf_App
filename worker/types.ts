@@ -30,7 +30,11 @@ export interface DbUser {
   id: string;
   email: string;
   name: string;
+  password_hash: string | null;
   avatar_url: string | null;
+  kakao_id: string | null;
+  google_id: string | null;
+  auth_provider: string;
   created_at: string;
   updated_at: string;
 }
@@ -75,10 +79,49 @@ export interface CreateSessionBody {
   duration_min?: number;
 }
 
-// Cloudflare Bindings
+// Note (메모/하이라이트) 관련 타입
+export type NoteType = 'memo' | 'highlight' | 'quote';
+
+export interface DbNote {
+  id: string;
+  book_id: string;
+  user_id: string;
+  type: NoteType;
+  content: string;
+  page_number: number | null;
+  color: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateNoteBody {
+  book_id: string;
+  type?: NoteType;
+  content: string;
+  page_number?: number;
+  color?: string;
+}
+
+export type UpdateNoteBody = Partial<Omit<CreateNoteBody, 'book_id'>>;
+
+// Cloudflare Bindings — wrangler.toml과 1:1 매핑
 export interface Bindings {
+  // 스토리지
   DB: D1Database;
+  SESSIONS: KVNamespace;
+  KV: KVNamespace;
+  R2: R2Bucket;
+  AI: Ai;
   ASSETS: Fetcher;
+  // 환경 변수
   ENVIRONMENT: string;
   APP_NAME: string;
+  FRONTEND_URL: string;
+  // Secrets (wrangler secret put 으로 설정)
+  JWT_SECRET: string;
+  KAKAO_REST_API_KEY: string;
+  NAVER_CLIENT_ID: string;
+  NAVER_CLIENT_SECRET: string;
+  GOOGLE_CLIENT_ID: string;
+  GOOGLE_CLIENT_SECRET: string;
 }

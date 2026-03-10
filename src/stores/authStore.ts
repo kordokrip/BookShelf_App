@@ -1,18 +1,21 @@
 /**
  * authStore — 사용자 인증 상태 관리
  *
- * Phase 1: 로컬 데모 인증 (X-User-Id 헤더)
- * Phase 2: Cloudflare Access / OAuth 연동 예정
+ * 실제 API 연동 (usersApi.login / register / getProfile)
+ * JWT 토큰을 localStorage에 저장, 앱 시작 시 checkAuth()로 복원
  */
 
 import { create } from 'zustand';
-import { devtools, persist } from 'zustand/middleware';
+import { devtools } from 'zustand/middleware';
+import { usersApi, ApiError } from '../lib/api';
 
 export interface AuthUser {
   id: string;
   email: string;
   name: string;
   avatar_url: string | null;
+  favorite_genres?: string[];
+  reading_goal?: number;
 }
 
 type AuthStatus = 'idle' | 'authenticated' | 'unauthenticated';
@@ -20,50 +23,171 @@ type AuthStatus = 'idle' | 'authenticated' | 'unauthenticated';
 interface AuthState {
   user: AuthUser | null;
   status: AuthStatus;
+  isLoading: boolean;
+  error: string | null;
 
   // 액션
-  login: (user: AuthUser) => void;
+  login: (email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<void>;
+  loginWithKakao: (code: string, redirectUri: string) => Promise<void>;
   logout: () => void;
+  checkAuth: () => Promise<void>;
 
   // 편의 셀렉터
   isAuthenticated: () => boolean;
   getUserId: () => string;
 }
 
-// 데모용 기본 사용자 (API 연동 전 사용)
-const DEMO_USER: AuthUser = {
-  id: 'demo-user',
-  email: 'demo@bookshelf.app',
-  name: '독서광',
-  avatar_url: null,
-};
+const TOKEN_KEY = 'auth_token';
 
 export const useAuthStore = create<AuthState>()(
   devtools(
-    persist(
-      (set, get) => ({
-        user: DEMO_USER,     // 초기값: 데모 사용자
-        status: 'authenticated',
+    (set, get) => ({
+      user: null,
+      status: 'idle',
+      isLoading: false,
+      error: null,
 
-        login: (user) => {
-          localStorage.setItem('bookshelf_user_id', user.id);
-          set({ user, status: 'authenticated' }, false, 'auth/login');
-        },
-
-        logout: () => {
-          localStorage.removeItem('bookshelf_user_id');
-          set({ user: null, status: 'unauthenticated' }, false, 'auth/logout');
-        },
-
-        isAuthenticated: () => get().status === 'authenticated',
-
-        getUserId: () => get().user?.id ?? 'demo-user',
-      }),
-      {
-        name: 'bookshelf-auth',
-        partialize: (s) => ({ user: s.user, status: s.status }),
+      login: async (email, password) => {
+        set({ isLoading: true, error: null }, false, 'auth/login:start');
+        try {
+          const res = await usersApi.login({ email, password });
+          localStorage.setItem(TOKEN_KEY, res.data.token);
+          set(
+            {
+              user: {
+                id: res.data.user.id,
+                email: res.data.user.email,
+                name: res.data.user.name,
+                avatar_url: res.data.user.avatar_url,
+              },
+              status: 'authenticated',
+              isLoading: false,
+              error: null,
+            },
+            false,
+            'auth/login:success',
+          );
+        } catch (e) {
+          const message =
+            e instanceof ApiError ? e.message : '로그인에 실패했습니다.';
+          set(
+            { isLoading: false, error: message },
+            false,
+            'auth/login:error',
+          );
+          throw e;
+        }
       },
-    ),
+
+      loginWithKakao: async (code, redirectUri) => {
+        set({ isLoading: true, error: null }, false, 'auth/kakao:start');
+        try {
+          const res = await usersApi.loginWithKakao(code, redirectUri);
+          localStorage.setItem(TOKEN_KEY, res.data.token);
+          set(
+            {
+              user: {
+                id: res.data.user.id,
+                email: res.data.user.email,
+                name: res.data.user.name,
+                avatar_url: res.data.user.avatar_url,
+              },
+              status: 'authenticated',
+              isLoading: false,
+              error: null,
+            },
+            false,
+            'auth/kakao:success',
+          );
+        } catch (e) {
+          const message =
+            e instanceof ApiError ? e.message : '카카오 로그인에 실패했습니다.';
+          set(
+            { isLoading: false, error: message },
+            false,
+            'auth/kakao:error',
+          );
+          throw e;
+        }
+      },
+
+      register: async (name, email, password) => {
+        set({ isLoading: true, error: null }, false, 'auth/register:start');
+        try {
+          await usersApi.register({ name, email, password });
+          // 회원가입 성공 후 자동 로그인
+          await get().login(email, password);
+        } catch (e) {
+          const message =
+            e instanceof ApiError ? e.message : '회원가입에 실패했습니다.';
+          set(
+            { isLoading: false, error: message },
+            false,
+            'auth/register:error',
+          );
+          throw e;
+        }
+      },
+
+      logout: () => {
+        localStorage.removeItem(TOKEN_KEY);
+        set(
+          { user: null, status: 'unauthenticated', error: null },
+          false,
+          'auth/logout',
+        );
+      },
+
+      checkAuth: async () => {
+        const token = localStorage.getItem(TOKEN_KEY);
+        if (!token) {
+          set({ status: 'unauthenticated' }, false, 'auth/check:no-token');
+          return;
+        }
+
+        set({ isLoading: true }, false, 'auth/check:start');
+        try {
+          const res = await usersApi.getProfile();
+          const raw = res.data as AuthUser & { favorite_genres?: string | string[] };
+          const favoriteGenres =
+            typeof raw.favorite_genres === 'string'
+              ? (JSON.parse(raw.favorite_genres || '[]') as string[])
+              : (raw.favorite_genres ?? []);
+          set(
+            {
+              user: {
+                id: raw.id,
+                email: raw.email,
+                name: raw.name,
+                avatar_url: raw.avatar_url,
+                favorite_genres: favoriteGenres,
+                reading_goal: raw.reading_goal,
+              },
+              status: 'authenticated',
+              isLoading: false,
+            },
+            false,
+            'auth/check:success',
+          );
+        } catch {
+          localStorage.removeItem(TOKEN_KEY);
+          set(
+            {
+              user: null,
+              status: 'unauthenticated',
+              isLoading: false,
+            },
+            false,
+            'auth/check:expired',
+          );
+        }
+      },
+
+      isAuthenticated: () => get().status === 'authenticated',
+
+      getUserId: () => get().user?.id ?? '',
+    }),
     { name: 'AuthStore' },
   ),
 );

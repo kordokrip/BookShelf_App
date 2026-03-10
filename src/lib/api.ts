@@ -80,22 +80,23 @@ export type UpdateBookInput = Partial<CreateBookInput>;
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
-    public readonly message: string,
+    public override readonly message: string,
   ) {
     super(message);
     this.name = 'ApiError';
   }
 }
 
+// ─── 인증 헤더 ────────────────────────────────────────────────
+const getAuthHeaders = (): Record<string, string> => {
+  const token = localStorage.getItem('auth_token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 // ─── 기본 fetch 래퍼 ──────────────────────────────────────────
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 
-// 임시 사용자 ID (실제 인증 구현 전 데모용)
-// TODO: Zustand authStore에서 가져오도록 교체
-const getDemoUserId = () =>
-  localStorage.getItem('bookshelf_user_id') ?? 'demo-user';
-
-async function apiFetch<T>(
+export async function apiFetch<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
@@ -105,7 +106,7 @@ async function apiFetch<T>(
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      'X-User-Id': getDemoUserId(),
+      ...getAuthHeaders(),
       ...options.headers,
     },
   });
@@ -167,8 +168,65 @@ export const booksApi = {
     }),
 };
 
+// ─── Cover API — R2 표지 이미지 업로드 ───────────────────────
+export const coverApi = {
+  /** 표지 이미지 업로드 (arrayBuffer 전송) */
+  uploadCover: async (bookId: string, file: File): Promise<{ success: boolean; coverUrl: string; r2Key: string }> => {
+    const token = localStorage.getItem('auth_token');
+    const response = await fetch(`/api/books/${bookId}/cover`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': file.type,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: await file.arrayBuffer(),
+    });
+    if (!response.ok) {
+      const err = await response.json() as { error: string };
+      throw new ApiError(response.status, err.error);
+    }
+    return response.json();
+  },
+
+  /** Worker를 통해 R2 이미지를 서빙하는 URL */
+  getCoverUrl: (bookId: string): string => `/api/books/${bookId}/cover`,
+};
+
+// ─── Auth 응답 타입 ───────────────────────────────────────────
+export interface AuthResponse {
+  data: {
+    user: User;
+    token: string;
+  };
+}
+
 // ─── Users API ────────────────────────────────────────────────
 export const usersApi = {
+  /** 회원가입 */
+  register: (data: { name: string; email: string; password: string }) =>
+    apiFetch<AuthResponse>('/api/users/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  /** 로그인 */
+  login: (data: { email: string; password: string }) =>
+    apiFetch<AuthResponse>('/api/users/login', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  /** 프로필 조회 (토큰 인증) */
+  getProfile: () =>
+    apiFetch<ApiResponse<User>>('/api/users/profile'),
+
+  /** 카카오 OAuth 로그인 */
+  loginWithKakao: (code: string, redirectUri: string) =>
+    apiFetch<AuthResponse>('/api/users/auth/kakao', {
+      method: 'POST',
+      body: JSON.stringify({ code, redirect_uri: redirectUri }),
+    }),
+
   /** 사용자 조회 */
   get: (id: string) =>
     apiFetch<ApiResponse<User>>(`/api/users/${id}`),
@@ -177,6 +235,18 @@ export const usersApi = {
   upsert: (data: { id: string; email: string; name: string; avatar_url?: string }) =>
     apiFetch<ApiResponse<User>>('/api/users', {
       method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  /** 프로필 업데이트 */
+  updateProfile: (data: {
+    name?: string;
+    favorite_genres?: string[];
+    reading_goal?: number;
+    avatar_url?: string;
+  }) =>
+    apiFetch<{ data: unknown }>('/api/users/profile', {
+      method: 'PATCH',
       body: JSON.stringify(data),
     }),
 
@@ -209,6 +279,93 @@ export const sessionsApi = {
     }),
 };
 
+// ─── Notes API ────────────────────────────────────────────────
+export interface Note {
+  id: string;
+  book_id: string;
+  user_id: string;
+  type: string;
+  content: string;
+  page_number: number | null;
+  color: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export const notesApi = {
+  /** 노트 목록 조회 */
+  list: (params: { book_id?: string; type?: string; search?: string } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.book_id) qs.set('book_id', params.book_id);
+    if (params.type) qs.set('type', params.type);
+    if (params.search) qs.set('search', params.search);
+    const query = qs.toString() ? `?${qs.toString()}` : '';
+    return apiFetch<ApiResponse<Note[]>>(`/api/notes${query}`);
+  },
+
+  /** 단일 노트 조회 */
+  get: (id: string) =>
+    apiFetch<ApiResponse<Note>>(`/api/notes/${id}`),
+
+  /** 노트 생성 */
+  create: (data: {
+    book_id: string;
+    type: string;
+    content: string;
+    page_number?: number;
+    color?: string;
+  }) =>
+    apiFetch<ApiResponse<Note>>('/api/notes', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  /** 노트 수정 */
+  update: (id: string, data: Partial<{ type: string; content: string; page_number: number; color: string }>) =>
+    apiFetch<ApiResponse<Note>>(`/api/notes/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  /** 노트 삭제 */
+  delete: (id: string) =>
+    apiFetch<{ success: boolean }>(`/api/notes/${id}`, {
+      method: 'DELETE',
+    }),
+};
+
+// ─── Search API ───────────────────────────────────────────────
+export interface SearchBook {
+  title: string;
+  author: string;
+  isbn: string;
+  coverImage: string | null;
+  publisher: string | null;
+  publishedDate: string | null;
+  pageCount: number | null;
+  description: string | null;
+}
+
+export interface SearchBooksResponse {
+  books: SearchBook[];
+  total: number;
+  isEnd: boolean;
+}
+
+export const searchApi = {
+  /** 도서 검색 (카카오 → 네이버 폴백) */
+  searchBooks: (q: string, page = 1, size = 10) =>
+    apiFetch<SearchBooksResponse>(
+      `/api/search/books?q=${encodeURIComponent(q)}&page=${page}&size=${size}`,
+    ),
+
+  /** ISBN으로 단일 도서 조회 */
+  searchByIsbn: (isbn: string) =>
+    apiFetch<{ book: SearchBook }>(
+      `/api/search/books/isbn?isbn=${encodeURIComponent(isbn)}`,
+    ),
+};
+
 // ─── React Query 키 팩토리 ────────────────────────────────────
 // useQuery / useMutation에서 일관된 캐시 키 사용
 export const queryKeys = {
@@ -229,5 +386,17 @@ export const queryKeys = {
     all: ['sessions'] as const,
     list: (filters: Parameters<typeof sessionsApi.list>[0]) =>
       [...queryKeys.sessions.all, 'list', filters] as const,
+  },
+  notes: {
+    all: ['notes'] as const,
+    lists: () => [...queryKeys.notes.all, 'list'] as const,
+    list: (filters: Parameters<typeof notesApi.list>[0]) =>
+      [...queryKeys.notes.lists(), filters] as const,
+    details: () => [...queryKeys.notes.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.notes.details(), id] as const,
+  },
+  search: {
+    all: ['search'] as const,
+    books: (query: string) => ['search', 'books', query] as const,
   },
 };

@@ -1,0 +1,48 @@
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { apiFetch } from '../lib/api';
+
+export interface AIRecommendation {
+  title: string;
+  author: string;
+  reason: string;
+  genre: string;
+}
+
+interface SummarizeResponse {
+  summary: string;
+  cached: boolean;
+}
+
+interface RecommendResponse {
+  recommendations: AIRecommendation[];
+  topGenres: string[];
+  cached?: boolean;
+  message?: string;
+}
+
+/** 책 설명 요약 */
+export function useBookSummary() {
+  return useMutation({
+    mutationFn: ({ description, title, author }: {
+      description: string;
+      title: string;
+      author: string;
+    }) =>
+      apiFetch<SummarizeResponse>('/api/ai/summarize', {
+        method: 'POST',
+        body: JSON.stringify({ description, title, author }),
+      }),
+    retry: false,
+  });
+}
+
+/** 독서 패턴 기반 AI 추천 */
+export function useAIRecommendations() {
+  return useQuery({
+    queryKey: ['ai', 'recommendations'],
+    queryFn: () =>
+      apiFetch<RecommendResponse>('/api/ai/recommend?limit=3'),
+    staleTime: 60 * 60 * 1000, // 1시간
+    retry: false,
+  });
+}

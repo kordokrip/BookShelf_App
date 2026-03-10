@@ -12,6 +12,7 @@ dist-worker/
 .env
 .env.local
 .env.*.local
+*.local
 .dev.vars                    # wrangler 로컬 비밀값
 
 # ─── IDE / OS ─────────────────────────────────────────────────

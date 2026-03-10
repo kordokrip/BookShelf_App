@@ -8,7 +8,7 @@
     "dev:worker": "wrangler dev --local",
     "dev:full": "concurrently \"npm run dev\" \"npm run dev:worker\"",
     "build": "vite build",
-    "build:worker": "wrangler deploy --dry-run --outdir dist-worker",
+    "build:worker": "echo 'Worker is bundled by wrangler deploy — no separate build needed'",
     "preview": "vite preview",
     "deploy": "npm run build && wrangler deploy",
     "db:create": "wrangler d1 create bookshelf-db",

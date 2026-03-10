@@ -7,15 +7,25 @@
 
 -- ─── 사용자 테이블 ────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS users (
-  id          TEXT PRIMARY KEY,                  -- UUID v4
-  email       TEXT NOT NULL UNIQUE,
-  name        TEXT NOT NULL,
-  avatar_url  TEXT,
-  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+  id            TEXT PRIMARY KEY,                  -- UUID v4
+  email         TEXT NOT NULL UNIQUE,
+  name          TEXT NOT NULL,
+  password_hash TEXT,                              -- SHA-256 해시 (소셜 로그인은 NULL)
+  avatar_url    TEXT,
+  -- 소셜 로그인
+  kakao_id        TEXT,                              -- 카카오 사용자 고유 ID
+  google_id       TEXT,                              -- 구글 사용자 고유 ID
+  auth_provider   TEXT NOT NULL DEFAULT 'local',     -- 'local' | 'kakao' | 'google'
+  -- 온보딩 개인화
+  favorite_genres TEXT NOT NULL DEFAULT '[]',        -- JSON 배열 문자열 (장르 키 배열)
+  reading_goal    INTEGER NOT NULL DEFAULT 12,       -- 연간 목표 권수
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
+CREATE INDEX IF NOT EXISTS idx_users_email     ON users (email);
+CREATE INDEX IF NOT EXISTS idx_users_kakao_id  ON users (kakao_id)  WHERE kakao_id  IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_users_google_id ON users (google_id) WHERE google_id IS NOT NULL;
 
 -- ─── 책 테이블 ────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS books (
@@ -77,7 +87,31 @@ CREATE INDEX IF NOT EXISTS idx_sessions_book    ON reading_sessions (book_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_user    ON reading_sessions (user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_date    ON reading_sessions (user_id, session_date);
 
+-- ─── 노트/하이라이트 테이블 ───────────────────────────────────
+CREATE TABLE IF NOT EXISTS notes (
+  id          TEXT PRIMARY KEY,                  -- UUID v4
+  book_id     TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+  user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type        TEXT NOT NULL DEFAULT 'memo'
+              CHECK (type IN ('memo', 'highlight', 'quote')),
+  content     TEXT NOT NULL,
+  page_number INTEGER,
+  color       TEXT DEFAULT 'yellow',             -- 하이라이트 색상
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_notes_book_id ON notes(book_id);
+CREATE INDEX IF NOT EXISTS idx_notes_user_id ON notes(user_id);
+CREATE INDEX IF NOT EXISTS idx_notes_type    ON notes(type);
+
 -- ─── 업데이트 트리거 ──────────────────────────────────────────
+CREATE TRIGGER IF NOT EXISTS update_notes_timestamp
+  AFTER UPDATE ON notes
+BEGIN
+  UPDATE notes SET updated_at = datetime('now') WHERE id = NEW.id;
+END;
+
 CREATE TRIGGER IF NOT EXISTS update_books_timestamp
   AFTER UPDATE ON books
 BEGIN

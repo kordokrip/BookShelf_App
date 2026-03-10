@@ -3,8 +3,12 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { HTTPException } from 'hono/http-exception';
 import type { Bindings, DbReadingSession } from '../types';
+import { optionalAuth } from '../auth';
 
-export const sessionsRouter = new Hono<{ Bindings: Bindings }>();
+export const sessionsRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
+
+// 모든 라우트에 optionalAuth 미들웨어 적용
+sessionsRouter.use('*', optionalAuth);
 
 const createSessionSchema = z.object({
   book_id: z.string().uuid(),
@@ -13,12 +17,9 @@ const createSessionSchema = z.object({
   duration_min: z.number().int().positive().optional(),
 });
 
-const getUserId = (c: any): string =>
-  c.req.header('X-User-Id') ?? 'demo-user';
-
 // ─── GET /api/sessions?book_id=&limit= ───────────────────────
 sessionsRouter.get('/', async (c) => {
-  const userId = getUserId(c);
+  const userId = c.get('userId');
   const bookId = c.req.query('book_id');
   const limit = parseInt(c.req.query('limit') ?? '30');
 
@@ -47,7 +48,7 @@ sessionsRouter.post(
   '/',
   zValidator('json', createSessionSchema),
   async (c) => {
-    const userId = getUserId(c);
+    const userId = c.get('userId');
     const body = c.req.valid('json');
     const id = crypto.randomUUID();
     const today = body.session_date ?? new Date().toISOString().slice(0, 10);

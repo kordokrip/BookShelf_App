@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { AuthPreviewNav } from "../components/auth/AuthPreviewNav";
+import { GENRE_CONFIG } from "@/types/book";
+import { useAuthStore } from "../../stores/authStore";
+import { usersApi } from "../../lib/api";
+import { NumberStepper } from "../components/ui/NumberStepper";
+
+type GenreKey = keyof typeof GENRE_CONFIG;
+const ALL_GENRES = Object.keys(GENRE_CONFIG) as GenreKey[];
 
 function FloatingBookIcons() {
   const books = [
@@ -42,7 +49,7 @@ function EyeIcon({ show }: { show: boolean }) {
   );
 }
 
-function FormContent({ onSubmit }: { onSubmit: () => void }) {
+function FormContent({ onSubmit }: { onSubmit: (name: string, email: string, password: string) => void }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -66,7 +73,7 @@ function FormContent({ onSubmit }: { onSubmit: () => void }) {
     setSubmitted(true);
     const valid = name && email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
       && password.length >= 8 && confirm === password && terms;
-    if (valid) onSubmit();
+    if (valid) onSubmit(name, email, password);
   };
 
   return (
@@ -233,8 +240,401 @@ function FormContent({ onSubmit }: { onSubmit: () => void }) {
   );
 }
 
-export function SignUpPage() {
+/* ─── Step indicator ─────────────────────────────────────────── */
+function StepIndicator({ step }: { step: number }) {
+  const TOTAL = 4;
+  return (
+    <div className="flex items-center justify-center gap-0 py-4">
+      {Array.from({ length: TOTAL }, (_, idx) => {
+        const n = idx + 1;
+        const isCompleted = n < step;
+        const isActive = n === step;
+        return (
+          <div key={n} className="flex items-center">
+            <div className="relative flex items-center justify-center" style={{ width: 26, height: 26 }}>
+              {isActive && (
+                <div className="absolute inset-0 rounded-full" style={{ backgroundColor: "#C7D2FE" }} />
+              )}
+              <div
+                className="relative z-10 flex items-center justify-center rounded-full"
+                style={{
+                  width: 18,
+                  height: 18,
+                  backgroundColor: isCompleted ? "#10B981" : isActive ? "#4F46E5" : "white",
+                  border: isCompleted || isActive ? "none" : "1.5px solid #E2E8F0",
+                }}
+              >
+                {isCompleted && (
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                    <path d="M2 5l2.5 2.5L8 2.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </div>
+            </div>
+            {n < TOTAL && (
+              <div style={{ width: 28, height: 2, backgroundColor: isCompleted ? "#10B981" : "#E2E8F0" }} />
+            )}
+          </div>
+        );
+      })}
+      <p className="ml-3 text-[12px]" style={{ color: "#64748B", fontFamily: "var(--font-pretendard)" }}>
+        Step {step}/{TOTAL}
+      </p>
+    </div>
+  );
+}
+
+/* ─── Screen 2: 장르 선택 ────────────────────────────────────── */
+function GenreScreen({
+  selected,
+  onToggle,
+  onNext,
+}: {
+  selected: GenreKey[];
+  onToggle: (g: GenreKey) => void;
+  onNext: () => void;
+}) {
+  const canProceed = selected.length > 0;
+  return (
+    <div className="flex flex-col gap-5">
+      <div>
+        <h2
+          className="text-[20px] mb-1"
+          style={{ fontFamily: "var(--font-pretendard)", fontWeight: 700, color: "#1e1b4b" }}
+        >
+          좋아하는 장르를 선택해주세요
+        </h2>
+        <p className="text-[14px]" style={{ color: "#64748B", fontFamily: "var(--font-pretendard)" }}>
+          1개 이상 선택하면 시작할 수 있어요
+        </p>
+      </div>
+
+      {/* Genre grid */}
+      <div className="flex flex-wrap gap-2">
+        {ALL_GENRES.map((genre) => {
+          const cfg = GENRE_CONFIG[genre];
+          const isSelected = selected.includes(genre);
+          return (
+            <button
+              key={genre}
+              type="button"
+              onClick={() => onToggle(genre)}
+              className="flex items-center gap-1.5 rounded-full px-3 py-2 text-[13px] transition-all active:scale-95"
+              style={{
+                fontFamily: "var(--font-pretendard)",
+                fontWeight: isSelected ? 700 : 500,
+                backgroundColor: isSelected ? cfg.bg : "#F8FAFC",
+                color: isSelected ? cfg.text : "#64748B",
+                border: isSelected ? `1.5px solid ${cfg.text}66` : "1.5px solid #E2E8F0",
+                boxShadow: isSelected ? `0 2px 8px ${cfg.text}22` : "none",
+              }}
+            >
+              <span>{cfg.emoji}</span>
+              <span>{genre}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Selected count */}
+      <p className="text-[13px]" style={{ color: "#94A3B8", fontFamily: "var(--font-pretendard)" }}>
+        {selected.length > 0
+          ? `${selected.length}개 선택됨`
+          : "장르를 선택해주세요"}
+      </p>
+
+      <button
+        type="button"
+        onClick={onNext}
+        disabled={!canProceed}
+        className="w-full rounded-2xl text-white text-[15px] transition-opacity active:opacity-80 disabled:cursor-not-allowed"
+        style={{
+          height: 48,
+          background: canProceed
+            ? "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)"
+            : "linear-gradient(135deg, #94A3B8 0%, #CBD5E1 100%)",
+          fontFamily: "var(--font-pretendard)",
+          fontWeight: 700,
+          opacity: canProceed ? 1 : 0.6,
+        }}
+      >
+        다음 →
+      </button>
+    </div>
+  );
+}
+
+/* ─── Screen 3: 독서 목표 ────────────────────────────────────── */
+function GoalScreen({
+  goal,
+  onChange,
+  onNext,
+}: {
+  goal: number;
+  onChange: (v: number) => void;
+  onNext: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <h2
+          className="text-[20px] mb-1"
+          style={{ fontFamily: "var(--font-pretendard)", fontWeight: 700, color: "#1e1b4b" }}
+        >
+          연간 독서 목표를 설정해주세요
+        </h2>
+        <p className="text-[14px]" style={{ color: "#64748B", fontFamily: "var(--font-pretendard)" }}>
+          나중에 언제든지 변경할 수 있어요
+        </p>
+      </div>
+
+      <NumberStepper
+        value={goal}
+        min={1}
+        max={100}
+        onChange={onChange}
+        unit="권"
+        label="연간 목표"
+      />
+
+      {/* Guide messages */}
+      <div
+        className="rounded-2xl px-4 py-3 flex items-center gap-3"
+        style={{ background: "linear-gradient(135deg, #EEF2FF, #EDE9FE)" }}
+      >
+        <span style={{ fontSize: 24 }}>
+          {goal <= 6 ? "🌱" : goal <= 15 ? "📚" : goal <= 30 ? "🚀" : "🌟"}
+        </span>
+        <p className="text-[13px]" style={{ color: "#4F46E5", fontFamily: "var(--font-pretendard)", fontWeight: 500 }}>
+          {goal <= 6
+            ? "한 달에 한 권씩이에요. 천천히 시작해봐요!"
+            : goal <= 15
+            ? "한 달에 한 권 이상! 좋은 목표예요 😊"
+            : goal <= 30
+            ? "거의 격주로 한 권! 독서 고수네요 🔥"
+            : "하루 한 권에 도전! 대단한 목표예요 ⚡"}
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={onNext}
+        className="w-full rounded-2xl text-white text-[15px] transition-opacity active:opacity-80"
+        style={{
+          height: 48,
+          background: "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)",
+          fontFamily: "var(--font-pretendard)",
+          fontWeight: 700,
+        }}
+      >
+        다음 →
+      </button>
+    </div>
+  );
+}
+
+/* ─── Screen 4: 완료 화면 ────────────────────────────────────── */
+function CompleteScreen({
+  name,
+  selectedGenres,
+  goal,
+  onStart,
+  isLoading,
+  error,
+}: {
+  name: string;
+  selectedGenres: GenreKey[];
+  goal: number;
+  onStart: () => void;
+  isLoading: boolean;
+  error: string | null;
+}) {
+  return (
+    <div className="flex flex-col gap-5">
+      {/* Welcome */}
+      <div className="text-center">
+        <div className="text-5xl mb-3">📚</div>
+        <h2
+          className="text-[22px] mb-2"
+          style={{ fontFamily: "var(--font-pretendard)", fontWeight: 800, color: "#1e1b4b" }}
+        >
+          {name}님, 반가워요!
+        </h2>
+        <p className="text-[15px]" style={{ color: "#64748B", fontFamily: "var(--font-pretendard)" }}>
+          독서 여정을 시작해보세요! 📚
+        </p>
+      </div>
+
+      {/* Summary card */}
+      <div
+        className="rounded-2xl p-4 flex flex-col gap-3"
+        style={{ background: "#F8FAFC", border: "1.5px solid #E2E8F0" }}
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-[13px]" style={{ color: "#64748B", fontFamily: "var(--font-pretendard)" }}>
+            연간 목표
+          </span>
+          <span
+            className="text-[15px]"
+            style={{ color: "#4F46E5", fontFamily: "var(--font-pretendard)", fontWeight: 700 }}
+          >
+            📖 {goal}권
+          </span>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[13px]" style={{ color: "#64748B", fontFamily: "var(--font-pretendard)" }}>
+            선택한 장르 ({selectedGenres.length}개)
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {selectedGenres.map((genre) => {
+              const cfg = GENRE_CONFIG[genre];
+              return (
+                <span
+                  key={genre}
+                  className="rounded-full px-2.5 py-1 text-[12px]"
+                  style={{
+                    backgroundColor: cfg.bg,
+                    color: cfg.text,
+                    fontFamily: "var(--font-pretendard)",
+                    fontWeight: 600,
+                  }}
+                >
+                  {cfg.emoji} {genre}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {error && (
+        <p className="text-[13px] text-center" style={{ color: "#EF4444", fontFamily: "var(--font-pretendard)" }}>
+          ⚠ {error}
+        </p>
+      )}
+
+      <button
+        type="button"
+        onClick={onStart}
+        disabled={isLoading}
+        className="w-full rounded-2xl text-white text-[15px] transition-opacity active:opacity-80 disabled:cursor-not-allowed"
+        style={{
+          height: 52,
+          background: isLoading
+            ? "linear-gradient(135deg, #94A3B8 0%, #CBD5E1 100%)"
+            : "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)",
+          fontFamily: "var(--font-pretendard)",
+          fontWeight: 700,
+          opacity: isLoading ? 0.7 : 1,
+        }}
+      >
+        {isLoading ? "계정 생성 중..." : "🚀 시작하기"}
+      </button>
+    </div>
+  );
+}
+
+/* ─── 공통 흐름 컴포넌트 ──────────────────────────────────────── */
+function MultiStepForm() {
   const navigate = useNavigate();
+  const register = useAuthStore((s) => s.register);
+  const isLoading = useAuthStore((s) => s.isLoading);
+
+  const [step, setStep] = useState(1);
+
+  // Screen 1 data
+  const [creds, setCreds] = useState<{ name: string; email: string; password: string } | null>(null);
+
+  // Screen 2 data
+  const [selectedGenres, setSelectedGenres] = useState<GenreKey[]>([]);
+
+  // Screen 3 data
+  const [goal, setGoal] = useState(12);
+
+  // Screen 4 error (register call)
+  const [regError, setRegError] = useState<string | null>(null);
+
+  const handleScreen1 = (name: string, email: string, password: string) => {
+    setCreds({ name, email, password });
+    setStep(2);
+  };
+
+  const toggleGenre = (g: GenreKey) => {
+    setSelectedGenres((prev) =>
+      prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g],
+    );
+  };
+
+  const handleStart = async () => {
+    if (!creds) return;
+    setRegError(null);
+    try {
+      await register(creds.name, creds.email, creds.password);
+      // 장르/목표를 프로필에 저장
+      if (selectedGenres.length > 0 || goal !== 12) {
+        await usersApi.updateProfile({
+          favorite_genres: selectedGenres,
+          reading_goal: goal,
+        });
+      }
+      navigate("/library");
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "회원가입에 실패했습니다.";
+      setRegError(message);
+      setStep(1);
+    }
+  };
+
+  return (
+    <div className="flex flex-col">
+      <StepIndicator step={step} />
+
+      {step === 1 && (
+        <div className="flex flex-col gap-4">
+          <div className="mb-2">
+            <h2
+              className="text-[20px] mb-1"
+              style={{ fontFamily: "var(--font-pretendard)", fontWeight: 700, color: "#1e1b4b" }}
+            >
+              회원가입
+            </h2>
+            {regError && (
+              <p className="text-[13px] mt-1" style={{ color: "#EF4444", fontFamily: "var(--font-pretendard)" }}>
+                ⚠ {regError}
+              </p>
+            )}
+          </div>
+          <FormContent onSubmit={handleScreen1} />
+        </div>
+      )}
+
+      {step === 2 && (
+        <GenreScreen
+          selected={selectedGenres}
+          onToggle={toggleGenre}
+          onNext={() => setStep(3)}
+        />
+      )}
+
+      {step === 3 && (
+        <GoalScreen goal={goal} onChange={setGoal} onNext={() => setStep(4)} />
+      )}
+
+      {step === 4 && creds && (
+        <CompleteScreen
+          name={creds.name}
+          selectedGenres={selectedGenres}
+          goal={goal}
+          onStart={handleStart}
+          isLoading={isLoading}
+          error={null}
+        />
+      )}
+    </div>
+  );
+}
+
+export function SignUpPage() {
 
   return (
     <div className="min-h-screen flex">
@@ -244,7 +644,7 @@ export function SignUpPage() {
         <div
           className="relative overflow-hidden flex-shrink-0"
           style={{
-            height: "32vh",
+            height: "28vh",
             background: "linear-gradient(135deg, #7C3AED 0%, #4F46E5 100%)",
           }}
         >
@@ -265,16 +665,10 @@ export function SignUpPage() {
 
         {/* Card */}
         <div
-          className="flex-1 bg-white px-6 pt-8 pb-16 -mt-6 rounded-t-[28px]"
+          className="flex-1 bg-white px-6 pt-6 pb-16 -mt-6 rounded-t-[28px]"
           style={{ boxShadow: "0 -4px 24px rgba(124,58,237,0.08)" }}
         >
-          <h2
-            className="text-[20px] mb-6"
-            style={{ fontFamily: "var(--font-pretendard)", fontWeight: 700, color: "#1e1b4b" }}
-          >
-            회원가입
-          </h2>
-          <FormContent onSubmit={() => navigate("/")} />
+          <MultiStepForm />
         </div>
       </div>
 
@@ -327,19 +721,8 @@ export function SignUpPage() {
 
         {/* Right */}
         <div className="w-1/2 flex items-center justify-center bg-white px-8 py-12 overflow-y-auto">
-          <div className="w-full" style={{ maxWidth: 400 }}>
-            <div className="mb-8">
-              <h1
-                className="text-[28px] mb-2"
-                style={{ fontFamily: "var(--font-pretendard)", fontWeight: 800, color: "#1e1b4b" }}
-              >
-                회원가입 ✨
-              </h1>
-              <p className="text-[15px]" style={{ color: "#6B7280", fontFamily: "var(--font-pretendard)" }}>
-                나만의 독서 공간을 만들어보세요
-              </p>
-            </div>
-            <FormContent onSubmit={() => navigate("/")} />
+          <div className="w-full" style={{ maxWidth: 440 }}>
+            <MultiStepForm />
           </div>
         </div>
       </div>

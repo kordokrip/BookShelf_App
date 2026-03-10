@@ -1,4 +1,4 @@
-import { type GenreKey } from "../../data/mockData";
+import { type GenreKey } from "../../../types/book";
 
 interface GenreFilterBarProps {
   genres: GenreKey[];
