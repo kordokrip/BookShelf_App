@@ -1,5 +1,6 @@
 import { Search, Bell, Plus } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router";
+import { useAuthStore } from "../../../stores/authStore";
 
 const pageTitles: Record<string, string> = {
   "/": "완독 📚",
@@ -14,6 +15,8 @@ export function TopBar() {
   const location = useLocation();
   const navigate = useNavigate();
   const title = pageTitles[location.pathname] ?? "BookShelf";
+  const user = useAuthStore((s) => s.user);
+  const avatarInitial = user?.name?.[0] ?? "?";
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-[#E2E8F0]">
@@ -72,7 +75,7 @@ export function TopBar() {
             title="인증 화면 보기"
             aria-label="프로필"
           >
-            <span className="text-white text-xs font-semibold">김</span>
+            <span className="text-white text-xs font-semibold">{avatarInitial}</span>
           </Link>
         </div>
       </div>

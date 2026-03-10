@@ -1,5 +1,7 @@
 import { Link, useLocation } from "react-router";
 import { BookMarked, BookOpen, Star, BarChart2, Settings, Palette, PlusCircle, FileText } from "lucide-react";
+import { useAuthStore } from "../../../stores/authStore";
+import { useBooks } from "../../../hooks/useBooks";
 
 interface SideNavItem {
   path: string;
@@ -8,18 +10,32 @@ interface SideNavItem {
   badge?: number;
 }
 
-const navItems: SideNavItem[] = [
-  { path: "/", label: "완독 📚", icon: BookMarked, badge: 23 },
-  { path: "/reading", label: "읽는 중 📖", icon: BookOpen, badge: 3 },
-  { path: "/wishlist", label: "위시리스트 💫", icon: Star, badge: 15 },
-  { path: "/stats", label: "독서 통계 📊", icon: BarChart2 },
-  { path: "/register-flow", label: "책 등록 플로우", icon: PlusCircle },
-  { path: "/notes-search", label: "노트 & 검색", icon: FileText },
-  { path: "/design-system", label: "디자인 시스템", icon: Palette },
-];
-
 export function SideNav() {
   const location = useLocation();
+  const user = useAuthStore((s) => s.user);
+
+  const { data: doneBooks = [] } = useBooks({ status: 'done' });
+  const { data: readingBooks = [] } = useBooks({ status: 'reading' });
+  const { data: wishBooks = [] } = useBooks({ status: 'wish' });
+
+  const currentYear = new Date().getFullYear();
+  const yearDoneCount = doneBooks.filter((b) => {
+    if (!b.finishedDate) return false;
+    return new Date(b.finishedDate).getFullYear() === currentYear;
+  }).length;
+
+  const displayName = user?.name ?? "게스트";
+  const avatarInitial = displayName[0] ?? "?";
+
+  const navItems: SideNavItem[] = [
+    { path: "/", label: "완독 📚", icon: BookMarked, badge: doneBooks.length || undefined },
+    { path: "/reading", label: "읽는 중 📖", icon: BookOpen, badge: readingBooks.length || undefined },
+    { path: "/wishlist", label: "위시리스트 💫", icon: Star, badge: wishBooks.length || undefined },
+    { path: "/stats", label: "독서 통계 📊", icon: BarChart2 },
+    { path: "/register-flow", label: "책 등록 플로우", icon: PlusCircle },
+    { path: "/notes-search", label: "노트 & 검색", icon: FileText },
+    { path: "/design-system", label: "디자인 시스템", icon: Palette },
+  ];
 
   return (
     <aside className="hidden lg:flex flex-col w-60 min-h-screen bg-white border-r border-[#E2E8F0] fixed left-0 top-0 bottom-0 z-30">
@@ -89,14 +105,14 @@ export function SideNav() {
       <div className="px-4 py-4 border-t border-[#E2E8F0]">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] flex items-center justify-center shadow-sm flex-shrink-0">
-            <span className="text-white" style={{ fontSize: 14, fontWeight: 700 }}>김</span>
+            <span className="text-white" style={{ fontSize: 14, fontWeight: 700 }}>{avatarInitial}</span>
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[#1E293B] truncate" style={{ fontSize: 13, fontWeight: 600 }}>
-              김독서
+              {displayName}
             </p>
             <p className="text-[#64748B] truncate" style={{ fontSize: 11, fontWeight: 400 }}>
-              올해 읽은 책 22권
+              올해 읽은 책 {yearDoneCount}권
             </p>
           </div>
           <button className="text-[#94A3B8] hover:text-[#64748B] transition-colors">
