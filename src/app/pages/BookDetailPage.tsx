@@ -1,16 +1,21 @@
 import { useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router";
-import { ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2 } from "lucide-react";
+import { ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, BookMarked, BookOpen, Heart } from "lucide-react";
 import type { BookNote } from "../../types/book";
 import type { UIBook } from "../../types/book";
 import { BookCover } from "../components/books/BookCard";
 import { GenreBadge } from "../components/ui/GenreBadge";
 import { useToast } from "../components/ui/Toast";
-import { useBookDetail } from "../../hooks/useBooks";
+import { useBookDetail, useDeleteBook, useUpdateBook } from "../../hooks/useBooks";
 import { useBookNotes, useAddNote, useUpdateNote, useDeleteNote } from "../../hooks/useNotes";
+import { useBookSummary as useBookSummaryMutation } from "../../hooks/useAI";
 import { coverApi, queryKeys } from "../../lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../components/ui/sheet";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu";
 import { Textarea } from "../components/ui/textarea";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
@@ -369,6 +374,10 @@ function NotesTab({ notes, bookId }: { notes: BookNote[]; bookId: string }) {
 
 /* ─── Book Info Tab ──────────────────────────────────────────── */
 function BookInfoTab({ book }: { book: UIBook }) {
+  const [descInput, setDescInput] = useState("");
+  const [summaryResult, setSummaryResult] = useState<string | null>(null);
+  const summarizeMutation = useBookSummaryMutation();
+
   const rows = [
     { label: "저자", value: book.author },
     { label: "출판사", value: book.publisher },
@@ -379,8 +388,24 @@ function BookInfoTab({ book }: { book: UIBook }) {
     ...(book.finishedDate ? [{ label: "완독일", value: book.finishedDate.replace(/-/g, ".") }] : []),
   ];
 
+  const handleSummarize = async () => {
+    const text = descInput.trim();
+    if (text.length < 20) return;
+    try {
+      const res = await summarizeMutation.mutateAsync({
+        description: text,
+        title: book.title,
+        author: book.author,
+      });
+      setSummaryResult(res.summary);
+    } catch {
+      // 오류는 무시 (네트워크 등)
+    }
+  };
+
   return (
-    <div className="px-4 py-4">
+    <div className="px-4 py-4 flex flex-col gap-4">
+      {/* 기본 정보 */}
       <div className="rounded-2xl border border-[#F1F5F9] overflow-hidden" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
         {rows.map((row, i) => (
           <div
@@ -394,12 +419,46 @@ function BookInfoTab({ book }: { book: UIBook }) {
         ))}
       </div>
 
+      {/* 한 줄 감상 */}
       {book.note && (
-        <div className="mt-4 p-4 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0]">
+        <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0]">
           <p className="text-[#64748B] mb-1" style={{ fontSize: 12, fontWeight: 600 }}>한 줄 감상</p>
           <p className="text-[#1E293B] leading-relaxed" style={{ fontSize: 14 }}>{book.note}</p>
         </div>
       )}
+
+      {/* AI 요약 섹션 */}
+      <div className="rounded-2xl border border-[#DDD6FE] overflow-hidden" style={{ background: "linear-gradient(135deg, #F5F3FF 0%, #FAFAFA 100%)" }}>
+        <div className="px-4 pt-4 pb-2 flex items-center gap-2">
+          <span style={{ fontSize: 16 }}>✨</span>
+          <p style={{ fontSize: 13, fontWeight: 700, color: "#6D28D9" }}>AI 책 설명 요약</p>
+        </div>
+        <div className="px-4 pb-4 flex flex-col gap-2">
+          <Textarea
+            value={descInput}
+            onChange={(e) => { setDescInput(e.target.value); setSummaryResult(null); }}
+            placeholder="책 뒷면 소개글이나 책 설명을 붙여넣으세요 (20자 이상)"
+            rows={3}
+            className="resize-none text-sm border-[#DDD6FE] bg-white focus-visible:ring-[#7C3AED]"
+          />
+          <Button
+            onClick={handleSummarize}
+            disabled={descInput.trim().length < 20 || summarizeMutation.isPending}
+            size="sm"
+            className="self-end bg-[#7C3AED] hover:bg-[#6D28D9] text-white disabled:opacity-40"
+          >
+            {summarizeMutation.isPending ? "요약 중..." : "AI 요약 생성"}
+          </Button>
+          {summarizeMutation.isError && (
+            <p className="text-red-500" style={{ fontSize: 12 }}>요약 생성에 실패했습니다. 다시 시도해주세요.</p>
+          )}
+          {summaryResult && (
+            <div className="rounded-xl p-3 bg-white border border-[#DDD6FE]">
+              <p className="text-[#4C1D95]" style={{ fontSize: 13, lineHeight: 1.7 }}>{summaryResult}</p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -417,6 +476,23 @@ export function BookDetailPage() {
 
   const { data: book, isLoading, isError } = useBookDetail(id!);
   const { data: notes = [] } = useBookNotes(id!);
+  const deleteBook = useDeleteBook();
+  const updateBook = useUpdateBook();
+
+  const handleDeleteBook = async () => {
+    if (!book) return;
+    if (!confirm(`"${book.title}"을(를) 삭제할까요? 노트와 독서 세션도 함께 삭제됩니다.`)) return;
+    await deleteBook.mutateAsync(book.id);
+    navigate(-1);
+    showToast('책이 삭제됐어요', 'success');
+  };
+
+  const handleChangeStatus = async (status: 'done' | 'reading' | 'wish') => {
+    if (!book || book.status === status) return;
+    await updateBook.mutateAsync({ id: book.id, data: { status } });
+    const label = status === 'done' ? '완독' : status === 'reading' ? '읽는 중' : '위시리스트';
+    showToast(`"${book.title}" → ${label}로 변경됐어요`, 'success');
+  };
 
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -479,13 +555,45 @@ export function BookDetailPage() {
           <ChevronLeft size={20} />
           뒤로
         </button>
-        <button
-          onClick={() => showToast("더보기 메뉴", "info")}
-          className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#F1F5F9] transition-colors"
-          style={{ color: "#1E293B" }}
-        >
-          <MoreVertical size={20} />
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#F1F5F9] transition-colors"
+              style={{ color: "#1E293B" }}
+              aria-label="더보기"
+            >
+              <MoreVertical size={20} />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            {book?.status !== 'done' && (
+              <DropdownMenuItem onClick={() => handleChangeStatus('done')}>
+                <BookMarked size={14} className="mr-2 text-[#4F46E5]" />
+                완독으로 변경
+              </DropdownMenuItem>
+            )}
+            {book?.status !== 'reading' && (
+              <DropdownMenuItem onClick={() => handleChangeStatus('reading')}>
+                <BookOpen size={14} className="mr-2 text-[#10B981]" />
+                읽는 중으로 변경
+              </DropdownMenuItem>
+            )}
+            {book?.status !== 'wish' && (
+              <DropdownMenuItem onClick={() => handleChangeStatus('wish')}>
+                <Heart size={14} className="mr-2 text-[#F59E0B]" />
+                위시리스트로 변경
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={handleDeleteBook}
+              className="text-red-500 focus:text-red-600 focus:bg-red-50"
+            >
+              <Trash2 size={14} className="mr-2" />
+              책 삭제
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div className="max-w-2xl mx-auto lg:max-w-3xl">

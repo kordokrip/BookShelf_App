@@ -4,14 +4,12 @@ import { StatCardSkeleton, ChartSkeleton } from "../components/ui/skeleton";
 import { useBooks } from "../../hooks/useBooks";
 import { useSessions } from "../../hooks/useSessions";
 import type { UIBook } from "../../types/book";
+import { GENRE_CONFIG } from "../../types/book";
 
-/* ─── 장르별 색상 매핑 ───────────────────────────────────── */
-const GENRE_COLORS: Record<string, string> = {
-  "인문학": "#7C3AED", "컴퓨터·프로그래밍": "#4F46E5", "현대문학": "#C2410C",
-  "자기계발": "#3F6212", "심리학": "#BE185D", "경제/경영": "#065F46",
-  "과학/수학": "#155E75", "해외문학": "#115E59", "AI/데이터": "#1E3A8A",
-  "기타": "#94A3B8",
-};
+/* ─── 장르별 색상 매핑 (GENRE_CONFIG 기반 — 19종 전체 커버) */
+const GENRE_COLORS: Record<string, string> = Object.fromEntries(
+  Object.entries(GENRE_CONFIG).map(([genre, cfg]) => [genre, cfg.text]),
+);
 
 function buildMonthlyData(books: UIBook[]) {
   const now = new Date();
