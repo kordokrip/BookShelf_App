@@ -220,13 +220,6 @@ export const usersApi = {
   getProfile: () =>
     apiFetch<ApiResponse<User>>('/api/users/profile'),
 
-  /** 카카오 OAuth 로그인 */
-  loginWithKakao: (code: string, redirectUri: string) =>
-    apiFetch<AuthResponse>('/api/users/auth/kakao', {
-      method: 'POST',
-      body: JSON.stringify({ code, redirect_uri: redirectUri }),
-    }),
-
   /** 사용자 조회 */
   get: (id: string) =>
     apiFetch<ApiResponse<User>>(`/api/users/${id}`),

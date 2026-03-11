@@ -103,25 +103,6 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
     return "";
   };
 
-  const handleGoogleLogin = () => {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
-    if (!clientId) {
-      alert('Google 로그인이 설정되지 않았습니다.');
-      return;
-    }
-    const redirectUri = encodeURIComponent(`${window.location.origin}/api/auth/google/callback`);
-    const scope = encodeURIComponent('email profile');
-    const googleAuthUrl =
-      `https://accounts.google.com/o/oauth2/v2/auth` +
-      `?client_id=${clientId}` +
-      `&redirect_uri=${redirectUri}` +
-      `&response_type=code` +
-      `&scope=${scope}` +
-      `&access_type=offline` +
-      `&prompt=select_account`;
-    window.location.href = googleAuthUrl;
-  };
-
   const handleKakaoLogin = () => {
     const jsKey = import.meta.env.VITE_KAKAO_JS_KEY as string | undefined;
     if (!jsKey) {
@@ -270,24 +251,32 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
         <div className="flex-1 h-px bg-[#E2E8F0]" />
       </div>
 
-      {/* Google */}
-      <button
-        onClick={handleGoogleLogin}
-        disabled={isLoading}
-        className="w-full rounded-2xl flex items-center justify-center gap-2.5 transition-opacity hover:opacity-90 disabled:opacity-50"
-        style={{
-          height: 48,
-          border: "1.5px solid #E2E8F0",
-          backgroundColor: "white",
-          fontFamily: "var(--font-pretendard)",
-          fontWeight: 600,
-          color: "#374151",
-          fontSize: 14,
-        }}
-      >
-        <GoogleLogo />
-        Google로 계속하기
-      </button>
+      {/* Google - 준비 중 */}
+      <div className="relative">
+        <button
+          type="button"
+          disabled
+          className="w-full rounded-2xl flex items-center justify-center gap-2.5 opacity-40 cursor-not-allowed"
+          style={{
+            height: 48,
+            border: "1.5px solid #E2E8F0",
+            backgroundColor: "white",
+            fontFamily: "var(--font-pretendard)",
+            fontWeight: 600,
+            color: "#374151",
+            fontSize: 14,
+          }}
+        >
+          <GoogleLogo />
+          Google로 계속하기
+        </button>
+        <span
+          className="absolute -top-2 right-3 px-1.5 py-0.5 rounded text-white font-bold"
+          style={{ backgroundColor: "#94A3B8", fontSize: 10, fontFamily: "var(--font-pretendard)" }}
+        >
+          준비 중
+        </span>
+      </div>
 
       {/* Kakao */}
       <button

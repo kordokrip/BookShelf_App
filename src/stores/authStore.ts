@@ -29,7 +29,6 @@ interface AuthState {
   // 액션
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
-  loginWithKakao: (code: string, redirectUri: string) => Promise<void>;
   logout: () => void;
   checkAuth: () => Promise<void>;
 
@@ -85,38 +84,6 @@ export const useAuthStore = create<AuthState>()(
             { isLoading: false, error: message },
             false,
             'auth/login:error',
-          );
-          throw e;
-        }
-      },
-
-      loginWithKakao: async (code, redirectUri) => {
-        set({ isLoading: true, error: null }, false, 'auth/kakao:start');
-        try {
-          const res = await usersApi.loginWithKakao(code, redirectUri);
-          localStorage.setItem(TOKEN_KEY, res.data.token);
-          set(
-            {
-              user: {
-                id: res.data.user.id,
-                email: res.data.user.email,
-                name: res.data.user.name,
-                avatar_url: res.data.user.avatar_url,
-              },
-              status: 'authenticated',
-              isLoading: false,
-              error: null,
-            },
-            false,
-            'auth/kakao:success',
-          );
-        } catch (e) {
-          const message =
-            e instanceof ApiError ? e.message : '카카오 로그인에 실패했습니다.';
-          set(
-            { isLoading: false, error: message },
-            false,
-            'auth/kakao:error',
           );
           throw e;
         }
