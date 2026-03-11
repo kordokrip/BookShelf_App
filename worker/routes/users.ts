@@ -77,8 +77,11 @@ usersRouter.post(
       'SELECT * FROM users WHERE email = ?',
     ).bind(email).first<DbUser>();
 
-    if (!user || !user.password_hash) {
+    if (!user) {
       return c.json({ error: '이메일 또는 비밀번호가 올바르지 않습니다.' }, 401);
+    }
+    if (!user.password_hash) {
+      return c.json({ error: '이 계정은 카카오/구글 소셜 로그인으로 가입되었습니다. 소셜 로그인을 이용해주세요.' }, 401);
     }
 
     const valid = await verifyPassword(password, user.password_hash);
