@@ -608,7 +608,7 @@ export function RegisterFlowPage() {
         rating:
           form.status === "done" && form.rating > 0 ? form.rating : undefined,
       });
-      navigate("/library");
+      navigate("/");
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : "등록에 실패했습니다. 다시 시도해주세요.");
     }

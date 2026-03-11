@@ -577,7 +577,7 @@ function MultiStepForm() {
           reading_goal: goal,
         });
       }
-      navigate("/library");
+      navigate("/");
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "회원가입에 실패했습니다.";
       setRegError(message);
