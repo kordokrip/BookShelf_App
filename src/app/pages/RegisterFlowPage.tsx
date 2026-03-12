@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { ArrowLeft, Search, X, Check, ChevronRight, PenLine, Star } from "lucide-react";
+import { ArrowLeft, Camera, Search, X, Check, ChevronRight, PenLine, Star } from "lucide-react";
 import { useBookSearch } from "../../hooks/useBookSearch";
 import { useAddBook } from "../../hooks/useBooks";
 import type { GenreKey, BookStatus } from "../../types/book";
 import { GENRE_CONFIG, COVER_GRADIENTS } from "../../types/book";
 import { Skeleton } from "../components/ui/skeleton";
 import type { SearchBook } from "../../lib/api";
+import ISBNScanner from "../components/books/ISBNScanner";
 
 /* ─── 타입 ──────────────────────────────────────────────────── */
 type Step = 1 | 2 | 3 | 4;
@@ -89,6 +90,7 @@ function StepSearch({
 }) {
   const [rawQuery, setRawQuery] = useState("");
   const [query, setQuery] = useState("");
+  const [showScanner, setShowScanner] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setQuery(rawQuery), 300);
@@ -107,27 +109,50 @@ function StepSearch({
 
       {/* 검색 입력 */}
       <div className="px-4 mb-3 flex-shrink-0">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-          <input
-            type="text"
-            placeholder="책 제목 또는 저자명..."
-            value={rawQuery}
-            onChange={(e) => setRawQuery(e.target.value)}
-            autoFocus
-            className="w-full h-11 bg-muted rounded-xl pl-9 pr-9 text-sm outline-none border border-transparent focus:border-primary/50 focus:bg-background transition-colors"
-          />
-          {rawQuery && (
-            <button
-              onClick={() => { setRawQuery(""); setQuery(""); }}
-              className="absolute right-3 top-1/2 -translate-y-1/2"
-              aria-label="검색어 지우기"
-            >
-              <X className="h-4 w-4 text-muted-foreground" />
-            </button>
-          )}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              placeholder="책 제목 또는 저자명..."
+              value={rawQuery}
+              onChange={(e) => setRawQuery(e.target.value)}
+              autoFocus
+              className="w-full h-11 bg-muted rounded-xl pl-9 pr-9 text-sm outline-none border border-transparent focus:border-primary/50 focus:bg-background transition-colors"
+            />
+            {rawQuery && (
+              <button
+                type="button"
+                onClick={() => { setRawQuery(""); setQuery(""); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2"
+                aria-label="검색어 지우기"
+              >
+                <X className="h-4 w-4 text-muted-foreground" />
+              </button>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowScanner(true)}
+            className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 flex-shrink-0 transition-colors"
+            title="바코드로 검색"
+            aria-label="바코드로 검색"
+          >
+            <Camera size={20} />
+          </button>
         </div>
       </div>
+
+      {/* ISBN 바코드 스캐너 */}
+      {showScanner && (
+        <ISBNScanner
+          onResult={(book) => {
+            setShowScanner(false);
+            onSelect(book);
+          }}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
 
       {/* 결과 목록 */}
       <div className="flex-1 overflow-y-auto px-4 pb-4">
