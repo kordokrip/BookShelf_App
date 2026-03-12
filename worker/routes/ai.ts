@@ -131,4 +131,42 @@ aiRouter.get('/recommend', optionalAuth, async (c) => {
   }
 });
 
+// ─── POST /ocr ────────────────────────────────────────────────
+// 이미지에서 텍스트를 추출해 독서 노트로 저장할 수 있도록 반환
+aiRouter.post('/ocr', optionalAuth, async (c) => {
+  try {
+    const formData = await c.req.formData();
+    const imageFile = formData.get('image') as File | null;
+
+    if (!imageFile) {
+      return c.json({ error: 'image 필드가 필요합니다' }, 400);
+    }
+    if (imageFile.size > 5 * 1024 * 1024) {
+      return c.json({ error: '이미지 크기는 5MB 이하여야 합니다' }, 400);
+    }
+
+    const arrayBuffer = await imageFile.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+
+    const model = '@cf/meta/llama-3.2-11b-vision-instruct' as Parameters<Ai['run']>[0];
+    const response = await c.env.AI.run(model, {
+      prompt:
+        '이 이미지에서 보이는 모든 텍스트를 정확하게 추출해 주세요. ' +
+        '이미지에 책의 문장이나 문구가 있다면 그대로 옮겨 적어주세요. ' +
+        '추출한 텍스트만 출력하고 다른 설명은 하지 마세요.',
+      image: [...uint8Array],
+    });
+
+    const extractedText = (response as { response?: string }).response?.trim() ?? '';
+    if (!extractedText) {
+      return c.json({ error: '이미지에서 텍스트를 인식하지 못했습니다. 더 선명한 이미지를 촬영해주세요.' }, 422);
+    }
+
+    return c.json({ text: extractedText });
+  } catch (err) {
+    console.error('OCR 오류:', err);
+    return c.json({ error: 'OCR 처리 중 오류가 발생했습니다' }, 500);
+  }
+});
+
 export default aiRouter;

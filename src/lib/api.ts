@@ -359,6 +359,26 @@ export const searchApi = {
     ),
 };
 
+// ─── OCR API ──────────────────────────────────────────────────
+export const ocrApi = {
+  /** 이미지에서 텍스트 추출 (Workers AI Vision) */
+  extractText: async (imageFile: File): Promise<{ text: string }> => {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    const token = localStorage.getItem('auth_token');
+    const res = await fetch(`${BASE_URL}/api/ai/ocr`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json() as { error?: string };
+      throw new ApiError(res.status, err.error ?? 'OCR 실패');
+    }
+    return res.json() as Promise<{ text: string }>;
+  },
+};
+
 // ─── React Query 키 팩토리 ────────────────────────────────────
 // useQuery / useMutation에서 일관된 캐시 키 사용
 export const queryKeys = {

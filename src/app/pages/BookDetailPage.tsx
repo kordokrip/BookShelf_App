@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router";
-import { ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, BookMarked, BookOpen, Heart } from "lucide-react";
+import { ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, BookMarked, BookOpen, Heart, ScanLine } from "lucide-react";
 import type { BookNote } from "../../types/book";
 import type { UIBook } from "../../types/book";
 import { BookCover } from "../components/books/BookCard";
@@ -20,6 +20,7 @@ import { Textarea } from "../components/ui/textarea";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { cn } from "../components/ui/utils";
+import { CameraOCRSheet } from "../components/books/CameraOCRSheet";
 
 /* ─── Star display ──────────────────────────────────────────── */
 function StarRow({ value }: { value: number }) {
@@ -142,6 +143,7 @@ interface NoteForm {
 function NotesTab({ notes, bookId }: { notes: BookNote[]; bookId: string }) {
   const [expandedReview, setExpandedReview] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [showOCR, setShowOCR] = useState(false);
   const [editingNote, setEditingNote] = useState<BookNote | null>(null);
   const [form, setForm] = useState<NoteForm>({ type: "memo", content: "", page: "" });
 
@@ -245,6 +247,16 @@ function NotesTab({ notes, bookId }: { notes: BookNote[]; bookId: string }) {
   return (
     <>
       <div className="flex flex-col gap-6 px-4 py-4">
+        {/* OCR 노트 추가 버튼 */}
+        <button
+          onClick={() => setShowOCR(true)}
+          className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50 text-emerald-700 transition-colors hover:bg-emerald-100 active:bg-emerald-100"
+          style={{ fontSize: 13, fontWeight: 600 }}
+        >
+          <ScanLine size={16} />
+          사진으로 노트 추가 (OCR)
+        </button>
+
         {/* Quotes */}
         <div>
           <SectionHeader title="좋은 문구" type="quote" />
@@ -306,6 +318,11 @@ function NotesTab({ notes, bookId }: { notes: BookNote[]; bookId: string }) {
           </div>
         </div>
       </div>
+
+      {/* 카메라 OCR 노트 */}
+      {showOCR && (
+        <CameraOCRSheet bookId={bookId} onClose={() => setShowOCR(false)} />
+      )}
 
       {/* 노트 추가/편집 Sheet */}
       <Sheet open={isSheetOpen} onOpenChange={(open) => { if (!open) closeSheet(); }}>
