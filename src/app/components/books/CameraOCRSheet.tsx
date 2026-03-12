@@ -57,16 +57,22 @@ export function CameraOCRSheet({ bookId, onClose }: Props) {
     }
   }, []);
 
-  // 컴포넌트 마운트 시 카메라 시작
+  /**
+   * step === 'camera' 일 때 카메라를 시작한다.
+   * setStep('camera') → React 리렌더 → video DOM 마운트 → 이 effect 실행
+   * 순서가 보장되므로 재촬영 시 videoRef.current null 레이스 컨디션 없음.
+   */
   useEffect(() => {
-    startCamera();
+    if (step !== 'camera') return;
+    void startCamera();
     return () => stopCamera();
-  }, [startCamera, stopCamera]);
+  }, [step, startCamera, stopCamera]);
 
-  // previewUrl 정리
+  // previewUrl ObjectURL 메모리 정리
   useEffect(() => {
+    const url = previewUrl;
     return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      if (url) URL.revokeObjectURL(url);
     };
   }, [previewUrl]);
 
@@ -85,8 +91,7 @@ export function CameraOCRSheet({ bookId, onClose }: Props) {
       const url = URL.createObjectURL(blob);
 
       setPreviewUrl(url);
-      stopCamera();
-      setStep('review');
+      setStep('review'); // useEffect cleanup에서 stopCamera() 자동 호출
 
       // OCR 처리
       setIsProcessing(true);
@@ -104,15 +109,12 @@ export function CameraOCRSheet({ bookId, onClose }: Props) {
   };
 
   const handleRetake = () => {
-    setStep('camera');
+    // previewUrl revoke는 useEffect에서 처리 (state updater 내 side-effect 방지)
+    setPreviewUrl(null);
     setExtractedText('');
     setOcrError(null);
-    // previewUrl은 useEffect 정리에서 처리되므로 상태만 null로 변경
-    setPreviewUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return null;
-    });
-    startCamera();
+    // setStep('camera') → useEffect가 startCamera() 재호출 (DOM 마운트 후 실행 보장)
+    setStep('camera');
   };
 
   const handleSave = async () => {
