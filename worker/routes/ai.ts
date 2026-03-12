@@ -135,7 +135,13 @@ aiRouter.get('/recommend', optionalAuth, async (c) => {
 // 이미지에서 텍스트를 추출해 독서 노트로 저장할 수 있도록 반환
 aiRouter.post('/ocr', optionalAuth, async (c) => {
   try {
-    const formData = await c.req.formData();
+    let formData: FormData;
+    try {
+      formData = await c.req.formData();
+    } catch {
+      return c.json({ error: 'multipart/form-data 요청이 필요합니다' }, 400);
+    }
+
     const imageFile = formData.get('image') as File | null;
 
     if (!imageFile) {
