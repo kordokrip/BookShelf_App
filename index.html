@@ -28,6 +28,23 @@
 
     <body>
       <div id="root"></div>
+      <!--
+        청크 로드 오류 안전망 — 구 SW 코드에서도 동작 (Swift to new version)
+        React가 마운트되기 전 unhandledrejection 이벤트를 잡아 1회 reload
+        sessionStorage flag로 무한 루프 방지
+      -->
+      <script>
+        window.addEventListener('unhandledrejection', function (ev) {
+          var msg = ev && ev.reason && ev.reason.message || '';
+          if (/failed to fetch dynamically imported module/i.test(msg)) {
+            var KEY = 'chunk_reload_attempted';
+            if (!sessionStorage.getItem(KEY)) {
+              sessionStorage.setItem(KEY, '1');
+              window.location.reload();
+            }
+          }
+        });
+      </script>
       <!-- Kakao JavaScript SDK -->
       <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js"
               integrity="sha384-TiCUE00h649CAMonG018J2ujOgDKW/kVWlChEuu4jK2vxfAAD0eZxzCKakxg55G4"

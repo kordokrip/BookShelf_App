@@ -51,57 +51,58 @@ const StatsPageWithSuspense = () =>
 const protected_ = (Page: React.ComponentType) => () =>
   createElement(ProtectedRoute, null, createElement(Page));
 
-const errorElement = createElement(RouteErrorFallback);
+// React Router v7: ErrorBoundary 컴포넌트 방식 (element 공유 문제 없음)
+const EB = RouteErrorFallback;
 
 export const router = createBrowserRouter([
   // ─── 공개 라우트 ─────────────────────────────────────────
   {
     path: "/splash",
     Component: SplashPage,
-    errorElement,
+    ErrorBoundary: EB,
   },
   {
     path: "/onboarding",
     Component: OnboardingPage,
-    errorElement,
+    ErrorBoundary: EB,
   },
   {
     path: "/login",
     Component: LoginPage,
-    errorElement,
+    ErrorBoundary: EB,
   },
   {
     path: "/signup",
     Component: SignUpPage,
-    errorElement,
+    ErrorBoundary: EB,
   },
   {
     path: "/register-flow",
     Component: RegisterFlowPage,
-    errorElement,
+    ErrorBoundary: EB,
   },
   {
     path: "/auth/kakao/callback",
     Component: KakaoCallbackPage,
-    errorElement,
+    ErrorBoundary: EB,
   },
   // ─── 보호된 라우트 ───────────────────────────────────────
   {
     path: "/notes-search",
     Component: protected_(NotesSearchPage),
-    errorElement,
+    ErrorBoundary: EB,
   },
   {
     path: "/",
     Component: Root,
-    errorElement,
+    ErrorBoundary: EB,
     children: [
-      { index: true, Component: protected_(LibraryPage) },
-      { path: "reading", Component: protected_(ReadingPage) },
-      { path: "wishlist", Component: protected_(WishlistPage) },
-      { path: "stats", Component: protected_(StatsPageWithSuspense) },
-      { path: "design-system", Component: DesignSystemPage },
-      { path: "book/:id", Component: protected_(BookDetailPage) },
+      { index: true, Component: protected_(LibraryPage), ErrorBoundary: EB },
+      { path: "reading", Component: protected_(ReadingPage), ErrorBoundary: EB },
+      { path: "wishlist", Component: protected_(WishlistPage), ErrorBoundary: EB },
+      { path: "stats", Component: protected_(StatsPageWithSuspense), ErrorBoundary: EB },
+      { path: "design-system", Component: DesignSystemPage, ErrorBoundary: EB },
+      { path: "book/:id", Component: protected_(BookDetailPage), ErrorBoundary: EB },
     ],
   },
 ]);

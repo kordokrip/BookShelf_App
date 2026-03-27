@@ -22,6 +22,18 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff,woff2}'],
         runtimeCaching: [
           {
+            // JS 청크 — NetworkFirst: 새 배포 시 구 해시 404 → 네트워크 우선으로 최신 파일 사용
+            // 오프라인이거나 404 반환 시 캐시 폴백 (없을 경우 그대로 에러 전달)
+            urlPattern: /\/assets\/.*\.(js|css)(\?.*)?$/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'bookshelf-chunks-cache',
+              networkTimeoutSeconds: 5,
+              expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 7 },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
+          {
             // API calls → NetworkFirst (최신 데이터 우선, 오프라인 폴백)
             urlPattern: /^https?:\/\/.*\/api\/.*/i,
             handler: 'NetworkFirst',
