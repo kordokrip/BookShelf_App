@@ -237,6 +237,8 @@ export function OnboardingPage() {
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [readingGoal, setReadingGoal] = useState(12);
   const [isSaving, setIsSaving] = useState(false);
+  // 스와이프 제스처 상태
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const navigate = useNavigate();
 
   const TOTAL_SLIDES = 4;
@@ -244,7 +246,27 @@ export function OnboardingPage() {
   const goNext = () => {
     if (current < TOTAL_SLIDES - 1) setCurrent(current + 1);
   };
+  const goPrev = () => {
+    if (current > 0) setCurrent(current - 1);
+  };
   const goLogin = () => navigate("/login");
+
+  // 스와이프 제스처 핸들러
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches.item(0);
+    if (touch) setTouchStartX(touch.clientX);
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX === null) return;
+    const touch = e.changedTouches.item(0);
+    if (!touch) return;
+    const diff = touchStartX - touch.clientX;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) goNext(); // 왼쪽 스와이프 → 다음
+      else goPrev();          // 오른쪽 스와이프 → 이전
+    }
+    setTouchStartX(null);
+  };
 
   const handleOnboardingComplete = async () => {
     const token = localStorage.getItem("auth_token");
@@ -272,21 +294,15 @@ export function OnboardingPage() {
 
   const slide = current < 3 ? slides[current] : null;
 
-  /* ─── dot indicator (공용) ─────────────────────────────── */
-  const Dots = () => (
-    <div className="flex gap-2">
+  /* ─── 상단 진행 바 ─────────────────────────────────────────── */
+  const ProgressBar = () => (
+    <div className="flex gap-1.5 px-6 pt-4 pb-1">
       {Array.from({ length: TOTAL_SLIDES }).map((_, i) => (
-        <button
+        <div
           key={i}
-          onClick={() => setCurrent(i)}
-          aria-label={`슬라이드 ${i + 1}`}
-          className="rounded-full transition-all duration-300"
+          className="flex-1 h-1 rounded-full transition-all duration-300"
           style={{
-            width: 8,
-            height: 8,
-            backgroundColor: i === current ? "#4F46E5" : "transparent",
-            border: i === current ? "none" : "2px solid #C7D2FE",
-            flexShrink: 0,
+            backgroundColor: i <= current ? "#4F46E5" : "#E2E8F0",
           }}
         />
       ))}
@@ -296,16 +312,23 @@ export function OnboardingPage() {
   return (
     <div
       className="flex flex-col min-h-svh bg-white overflow-hidden"
-      style={{ maxWidth: 390, margin: "0 auto" }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
-      {/* Skip button */}
-      <div className="flex justify-end px-6 pt-5 pb-2" style={{ minHeight: 44 }}>
+      {/* 상단 진행 바 */}
+      <ProgressBar />
+
+      {/* 건너뛰기 버튼 */}
+      <div className="flex justify-end px-6 pt-2 pb-1" style={{ minHeight: 44 }}>
         <button
           onClick={goLogin}
           style={{
             fontSize: 14,
             color: "#64748B",
             fontFamily: "var(--font-pretendard)",
+            minHeight: 44,
+            paddingLeft: 16,
+            paddingRight: 4,
             opacity: current === TOTAL_SLIDES - 1 ? 0 : 1,
             pointerEvents: current === TOTAL_SLIDES - 1 ? "none" : "auto",
           }}
@@ -318,13 +341,13 @@ export function OnboardingPage() {
         /* ─── 정보 슬라이드 0·1·2 ─────────────────────────── */
         <>
           <div
-            className="flex items-center justify-center px-6"
-            style={{ height: "50vw", maxHeight: 464, minHeight: 240 }}
+            className="flex items-center justify-center px-6 mx-auto w-full"
+            style={{ height: "50svw", maxHeight: 420, minHeight: 240, maxWidth: 480 }}
           >
             {slide!.illustration}
           </div>
 
-          <div className="flex-1 px-8 pb-10 flex flex-col items-center gap-4 justify-center">
+          <div className="flex-1 px-8 pb-10 flex flex-col items-center gap-4 justify-center" style={{ maxWidth: 480, margin: "0 auto", width: "100%" }}>
             <h2
               className="text-center"
               style={{
@@ -341,27 +364,26 @@ export function OnboardingPage() {
               className="text-center"
               style={{
                 fontFamily: "var(--font-pretendard)",
-                fontSize: 14,
+                fontSize: 15,
                 color: "#64748B",
-                lineHeight: 1.6,
-                maxWidth: 280,
+                lineHeight: 1.65,
+                maxWidth: 300,
               }}
             >
               {slide!.body}
             </p>
 
-            <Dots />
-
-            <div className="w-full mt-2">
+            <div className="w-full mt-4">
               <button
                 onClick={goNext}
-                className="w-full rounded-2xl text-white transition-opacity active:opacity-80"
+                className="w-full rounded-2xl text-white active:scale-[0.97] transition-transform"
                 style={{
-                  height: 48,
+                  height: 52,
                   background: "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)",
                   fontFamily: "var(--font-pretendard)",
-                  fontSize: 15,
+                  fontSize: 16,
                   fontWeight: 700,
+                  boxShadow: "0 4px 14px rgba(79,70,229,0.35)",
                 }}
               >
                 다음
@@ -371,7 +393,7 @@ export function OnboardingPage() {
         </>
       ) : (
         /* ─── 슬라이드 3: 장르 & 독서 목표 ──────────────────── */
-        <div className="flex-1 px-6 pb-10 flex flex-col gap-5 overflow-y-auto">
+        <div className="flex-1 px-6 pb-10 flex flex-col gap-5 overflow-y-auto" style={{ maxWidth: 480, margin: "0 auto", width: "100%" }}>
           <div className="flex flex-col gap-1 pt-2">
             <h2
               style={{
@@ -394,7 +416,7 @@ export function OnboardingPage() {
             </p>
           </div>
 
-          {/* 장르 칩 */}
+          {/* 장르 칩 — min-height 44px (WCAG 2.1 터치 타겟 기준) */}
           <div className="flex flex-wrap gap-2">
             {(
               Object.entries(GENRE_CONFIG) as [
@@ -409,15 +431,16 @@ export function OnboardingPage() {
                   <button
                     key={genre}
                     onClick={() => toggleGenre(genre)}
-                    className="inline-flex items-center gap-1.5 rounded-full px-3 transition-all"
+                    className="inline-flex items-center gap-1.5 rounded-full px-4 transition-all active:scale-[0.95]"
                     style={{
-                      height: 32,
-                      fontSize: 13,
+                      minHeight: 44,
+                      fontSize: 14,
                       fontWeight: 600,
                       fontFamily: "var(--font-pretendard)",
                       backgroundColor: selected ? config.bg : "#F8FAFC",
                       color: selected ? config.text : "#94A3B8",
                       border: `1.5px solid ${selected ? config.text + "40" : "#E2E8F0"}`,
+                      boxShadow: selected ? `0 2px 8px ${config.text}30` : "none",
                     }}
                   >
                     <span>{config.emoji}</span>
@@ -427,64 +450,70 @@ export function OnboardingPage() {
               })}
           </div>
 
-          {/* 독서 목표 */}
-          <div className="flex flex-col gap-3 pt-1">
-            <p
-              style={{
-                fontFamily: "var(--font-pretendard)",
-                fontSize: 15,
-                fontWeight: 700,
-                color: "#1E293B",
-              }}
-            >
-              올해 독서 목표
-            </p>
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => setReadingGoal((g) => Math.max(1, g - 1))}
-                className="w-10 h-10 rounded-full flex items-center justify-center"
-                style={{ background: "#F1F5F9", fontSize: 22, color: "#4F46E5" }}
+          {/* 독서 목표 — 슬라이더 (스테퍼 대체) */}
+          <div className="flex flex-col gap-4 pt-2">
+            <div className="flex items-center justify-between">
+              <p
+                style={{
+                  fontFamily: "var(--font-pretendard)",
+                  fontSize: 15,
+                  fontWeight: 700,
+                  color: "#1E293B",
+                }}
               >
-                −
-              </button>
+                올해 독서 목표
+              </p>
               <span
                 style={{
                   fontFamily: "var(--font-pretendard)",
-                  fontSize: 28,
+                  fontSize: 22,
                   fontWeight: 700,
-                  color: "#1E293B",
-                  minWidth: 72,
-                  textAlign: "center",
+                  color: "#4F46E5",
                 }}
               >
                 {readingGoal}권
               </span>
-              <button
-                onClick={() => setReadingGoal((g) => Math.min(100, g + 1))}
-                className="w-10 h-10 rounded-full flex items-center justify-center"
-                style={{ background: "#F1F5F9", fontSize: 22, color: "#4F46E5" }}
-              >
-                +
-              </button>
+            </div>
+            {/* 슬라이더 */}
+            <input
+              type="range"
+              min={1}
+              max={100}
+              value={readingGoal}
+              onChange={(e) => setReadingGoal(Number(e.target.value))}
+              className="w-full appearance-none h-2 rounded-full outline-none cursor-pointer"
+              style={{
+                // 슬라이더 트랙 & 썸 커스텀 (webkit/moz/firefox)
+                background: `linear-gradient(to right, #4F46E5 ${readingGoal}%, #E2E8F0 ${readingGoal}%)`,
+                WebkitAppearance: "none",
+                height: 8,
+                borderRadius: 999,
+                touchAction: "pan-y", // 스크롤 방향 우선 방지
+              }}
+            />
+            <div className="flex justify-between" style={{ fontSize: 12, color: "#94A3B8", fontFamily: "var(--font-pretendard)" }}>
+              <span>1권</span>
+              <span>50권</span>
+              <span>100권</span>
             </div>
           </div>
 
-          {/* 하단 도트 + 시작하기 */}
+          {/* 시작하기 버튼 */}
           <div className="flex flex-col items-center gap-3 mt-auto pt-4">
-            <Dots />
             <button
               onClick={handleOnboardingComplete}
               disabled={isSaving}
-              className="w-full rounded-2xl text-white transition-opacity active:opacity-80 disabled:opacity-60"
+              className="w-full rounded-2xl text-white active:scale-[0.97] transition-transform disabled:opacity-60"
               style={{
-                height: 48,
+                height: 52,
                 background: "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)",
                 fontFamily: "var(--font-pretendard)",
-                fontSize: 15,
+                fontSize: 16,
                 fontWeight: 700,
+                boxShadow: "0 4px 14px rgba(79,70,229,0.35)",
               }}
             >
-              {isSaving ? "저장 중..." : "시작하기"}
+              {isSaving ? "저장 중..." : "시작하기 🚀"}
             </button>
           </div>
         </div>

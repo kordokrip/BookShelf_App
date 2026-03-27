@@ -1,53 +1,57 @@
 import { Link, useLocation } from "react-router";
 import { BookMarked, BookOpen, Star, BarChart2 } from "lucide-react";
-
-interface NavItem {
-  path: string;
-  label: string;
-  icon: React.ReactNode;
-  activeIcon: React.ReactNode;
-  badge?: number;
-}
-
-const navItems: NavItem[] = [
-  {
-    path: "/",
-    label: "완독",
-    icon: <BookMarked size={22} strokeWidth={1.5} />,
-    activeIcon: <BookMarked size={22} strokeWidth={2.5} />,
-  },
-  {
-    path: "/reading",
-    label: "읽는중",
-    icon: <BookOpen size={22} strokeWidth={1.5} />,
-    activeIcon: <BookOpen size={22} strokeWidth={2.5} />,
-    badge: 3,
-  },
-  {
-    path: "/wishlist",
-    label: "Wish",
-    icon: <Star size={22} strokeWidth={1.5} />,
-    activeIcon: <Star size={22} strokeWidth={2.5} />,
-    badge: 15,
-  },
-  {
-    path: "/stats",
-    label: "통계",
-    icon: <BarChart2 size={22} strokeWidth={1.5} />,
-    activeIcon: <BarChart2 size={22} strokeWidth={2.5} />,
-  },
-];
+import { useBooks } from "../../../hooks/useBooks";
 
 export function BottomNavBar() {
   const location = useLocation();
 
+  // 동적 badge: 실제 읽는 중 / 위시리스트 수
+  const { data: readingBooks } = useBooks({ status: "reading" });
+  const { data: wishBooks } = useBooks({ status: "wish" });
+
+  const readingCount = readingBooks?.length ?? 0;
+  const wishCount = wishBooks?.length ?? 0;
+
+  const navItems = [
+    {
+      path: "/",
+      label: "완독",
+      icon: <BookMarked size={22} strokeWidth={1.5} />,
+      activeIcon: <BookMarked size={22} strokeWidth={2.5} />,
+      badge: undefined as number | undefined,
+    },
+    {
+      path: "/reading",
+      label: "읽는중",
+      icon: <BookOpen size={22} strokeWidth={1.5} />,
+      activeIcon: <BookOpen size={22} strokeWidth={2.5} />,
+      badge: readingCount > 0 ? readingCount : undefined,
+    },
+    {
+      path: "/wishlist",
+      label: "Wish",
+      icon: <Star size={22} strokeWidth={1.5} />,
+      activeIcon: <Star size={22} strokeWidth={2.5} />,
+      badge: wishCount > 0 ? wishCount : undefined,
+    },
+    {
+      path: "/stats",
+      label: "통계",
+      icon: <BarChart2 size={22} strokeWidth={1.5} />,
+      activeIcon: <BarChart2 size={22} strokeWidth={2.5} />,
+      badge: undefined as number | undefined,
+    },
+  ];
+
   return (
-    // CV-6: Safe area — pb-[env(safe-area-inset-bottom)] for iOS home indicator
+    /* fixed-nav: GPU 합성 레이어 강제 → iOS Safari에서 스크롤 시 떨림 방지
+       transform: translateZ(0) 는 index.css의 .fixed-nav 클래스에서 적용 */
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#E2E8F0] lg:hidden"
+      className="fixed-nav fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#E2E8F0] lg:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+      aria-label="하단 네비게이션"
     >
-      <div className="flex items-stretch h-[60px] max-w-lg mx-auto">
+      <div className="flex items-stretch h-[60px] max-w-screen-sm mx-auto">
         {navItems.map((item) => {
           const isActive =
             item.path === "/"
@@ -58,37 +62,49 @@ export function BottomNavBar() {
             <Link
               key={item.path}
               to={item.path}
-              // CV-5: min 44px touch target — each item is flex-1 within h-[60px]
-              className="flex-1 flex flex-col items-center justify-center gap-1 relative no-underline group min-h-[44px]"
+              aria-label={item.label}
+              aria-current={isActive ? "page" : undefined}
+              /* touch-action은 index.css의 a 선택자에서 일괄 적용
+                 active:scale-[0.92]: 탭 피드백 애니메이션 */
+              className="flex-1 flex flex-col items-center justify-center gap-0.5 relative group active:scale-[0.92] transition-transform duration-100"
             >
-              {/* Active indicator */}
-              {isActive && (
-                <span className="absolute top-0 left-1/4 right-1/4 h-0.5 rounded-b-full bg-[#4F46E5]" />
-              )}
+              {/* 상단 활성 표시 바 */}
+              <span
+                className={`absolute top-0 left-1/4 right-1/4 h-0.5 rounded-b-full transition-all duration-200 ${
+                  isActive ? "bg-[#4F46E5] opacity-100" : "opacity-0"
+                }`}
+              />
 
-              {/* Icon + Badge */}
-              <div className="relative">
+              {/* 아이콘 + 배지 */}
+              <div className="relative mt-1">
                 <span
-                  className={`transition-colors ${
-                    isActive ? "text-[#4F46E5]" : "text-[#94A3B8] group-hover:text-[#64748B]"
+                  className={`block transition-colors duration-200 ${
+                    isActive
+                      ? "text-[#4F46E5]"
+                      : "text-[#94A3B8] group-hover:text-[#64748B]"
                   }`}
                 >
                   {isActive ? item.activeIcon : item.icon}
                 </span>
-                {item.badge != null && (
+
+                {/* 동적 배지 */}
+                {item.badge != null && item.badge > 0 && (
                   <span
                     className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 rounded-full bg-[#EF4444] text-white flex items-center justify-center"
-                    style={{ fontSize: 10, fontWeight: 700 }}
+                    style={{ fontSize: 10, fontWeight: 700, lineHeight: 1 }}
+                    aria-label={`${item.badge}개`}
                   >
-                    {item.badge}
+                    {item.badge > 99 ? "99+" : item.badge}
                   </span>
                 )}
               </div>
 
-              {/* Label */}
+              {/* 레이블 */}
               <span
-                className={`transition-colors ${
-                  isActive ? "text-[#4F46E5]" : "text-[#94A3B8] group-hover:text-[#64748B]"
+                className={`transition-colors duration-200 ${
+                  isActive
+                    ? "text-[#4F46E5]"
+                    : "text-[#94A3B8] group-hover:text-[#64748B]"
                 }`}
                 style={{ fontSize: 11, fontWeight: isActive ? 600 : 400 }}
               >

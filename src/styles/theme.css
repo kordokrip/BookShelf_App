@@ -65,6 +65,46 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
+/* ── Range Slider 크로스 브라우저 커스텀 스타일 ─────────────── */
+/* Chrome, Safari, Edge */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: white;
+  border: 2.5px solid #4F46E5;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+  cursor: pointer;
+  margin-top: -8px;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 999px;
+}
+/* Firefox */
+input[type="range"]::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: white;
+  border: 2.5px solid #4F46E5;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-track {
+  height: 8px;
+  border-radius: 999px;
+  background: #E2E8F0;
+}
+input[type="range"]:focus {
+  outline: none;
+}
+input[type="range"]:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.25);
+}
+
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);

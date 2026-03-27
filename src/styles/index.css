@@ -2,30 +2,137 @@
 @import './tailwind.css';
 @import './theme.css';
 
-/* ── 모바일 뷰포트 글로벌 픽스 ─────────────────────────────────
- * 1. iOS Safari: 주소창이 사라질 때 튀는 bounce overscroll 방지
- * 2. overflow-x 방지 (가로 스크롤 차단)
- * 3. #root: 화면 전체를 flex 컬럼으로 채워 레이아웃 정렬
- */
+/* ═══════════════════════════════════════════════════════════════
+ * 모바일 Web App 글로벌 최적화
+ * ─────────────────────────────────────────────────────────────
+ * 대상 브라우저: iOS Safari 15+, Chrome Mobile 100+, Firefox 110+
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* ── 1. 뷰포트 & 스크롤 ──────────────────────────────────────── */
 html {
   overscroll-behavior: none;
   -webkit-text-size-adjust: 100%; /* iOS 가로 전환 시 폰트 자동 확대 방지 */
   text-size-adjust: 100%;
+  /* 모든 스크롤 컨테이너의 부드러운 스크롤 */
+  scroll-behavior: smooth;
 }
 
 body {
   width: 100%;
   overflow-x: hidden;
   overscroll-behavior: none;
+  /* iOS Safari: -webkit-overflow-scrolling 대신 최신 방식 */
+  overscroll-behavior-y: contain;
 }
 
 #root {
-  /* 100svh: small viewport height — 브라우저 UI(주소창 등) 제외한 안정적 높이 */
   min-height: 100svh;
   display: flex;
   flex-direction: column;
 }
 
-/* No scrollbar utility */
+/* ── 2. 터치 최적화 — 300ms 딜레이 제거 & 탭 하이라이트 ────── */
+*,
+*::before,
+*::after {
+  /* 모든 요소에서 기본 탭 하이라이트 제거 (iOS/Android) */
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a,
+[role="button"],
+input[type="submit"],
+input[type="button"],
+label {
+  /* 더블탭 줌 방지 — 300ms 딜레이 제거 */
+  touch-action: manipulation;
+  /* iOS Safari 텍스트 선택 방지 (버튼/링크) */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ── 3. 입력 필드 — iOS 줌 방지 ─────────────────────────────── */
+/* iOS Safari는 font-size < 16px 인 입력 필드에 자동 줌 적용
+   → 모든 input/select/textarea를 최소 16px로 강제 */
+input,
+select,
+textarea {
+  font-size: max(16px, 1rem);
+  /* 입력 필드 터치 시 하이라이트 없애기 */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── 4. 포커스 링 — 키보드 접근성은 유지, 터치 시 제거 ─────── */
+@media (pointer: coarse) {
+  /* 터치 디바이스 — 포커스 링 숨김 (시각적 잡음 제거) */
+  button:focus:not(:focus-visible),
+  a:focus:not(:focus-visible) {
+    outline: none;
+  }
+}
+
+/* ── 5. 스크롤 성능 최적화 ───────────────────────────────────── */
+/* 스크롤 가능한 컨테이너에 GPU 가속 힌트 */
+.scroll-container {
+  -webkit-overflow-scrolling: touch;
+  will-change: scroll-position;
+}
+
+/* ── 6. 이미지 — 드래그 방지 & 선택 방지 ───────────────────── */
+img {
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ── 7. 네비게이션 바 — 스크롤 시 분리 방지 ─────────────────── */
+/* iOS Safari에서 fixed 요소가 스크롤 시 떨리는 현상 방지 */
+.fixed-nav {
+  /* transform: translateZ(0) 로 레이어 분리 강제 */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  /* 백페이스 렌더링 방지 */
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* ── 8. 터치 피드백 — 물리적 클릭감 ─────────────────────────── */
+.touch-feedback {
+  transition: transform 0.1s ease, opacity 0.1s ease;
+}
+.touch-feedback:active {
+  transform: scale(0.96);
+  opacity: 0.85;
+}
+
+/* ── 9. Scrollbar 숨김 유틸리티 ──────────────────────────────── */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── 10. iOS Safari — position:fixed + 키보드 대응 ─────────── */
+/* 가상 키보드가 올라올 때 fixed 레이아웃 안정화 */
+@supports (height: 100dvh) {
+  #root {
+    min-height: 100dvh;
+  }
+}
+
+/* ── 11. Firefox Mobile 스크롤바 스타일 ─────────────────────── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+*:hover {
+  scrollbar-color: rgba(0,0,0,0.15) transparent;
+}
+
+/* ── 12. 선택 텍스트 색상 (읽기 편의성) ─────────────────────── */
+::selection {
+  background-color: #4F46E520;
+  color: #4F46E5;
+}
+::-webkit-selection {
+  background-color: #4F46E520;
+  color: #4F46E5;
+}
