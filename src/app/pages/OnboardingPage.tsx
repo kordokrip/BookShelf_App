@@ -295,7 +295,7 @@ export function OnboardingPage() {
 
   return (
     <div
-      className="flex flex-col min-h-screen bg-white overflow-hidden"
+      className="flex flex-col min-h-svh bg-white overflow-hidden"
       style={{ maxWidth: 390, margin: "0 auto" }}
     >
       {/* Skip button */}

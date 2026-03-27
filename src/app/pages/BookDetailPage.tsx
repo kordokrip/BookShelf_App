@@ -540,7 +540,7 @@ export function BookDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+      <div className="min-h-svh bg-[#F8FAFC] flex items-center justify-center">
         <div className="w-8 h-8 border-3 border-[#4F46E5] border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -548,7 +548,7 @@ export function BookDetailPage() {
 
   if (isError || !book) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+      <div className="min-h-svh bg-[#F8FAFC] flex items-center justify-center">
         <p className="text-[#64748B]">책을 찾을 수 없습니다.</p>
       </div>
     );
@@ -560,7 +560,7 @@ export function BookDetailPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-24 lg:pb-8">
+    <div className="min-h-svh bg-[#F8FAFC] pb-[var(--page-pb)] lg:pb-8">
       {/* ── Top nav: ChevronLeft #1E293B + MoreVertical ── */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <button
@@ -686,7 +686,8 @@ export function BookDetailPage() {
         </div>
 
         {/* ── Tabs: [독서 노트] [책 정보], 2px underline #4F46E5 ── */}
-        <div className="bg-white border-b border-[#F1F5F9] sticky top-14 z-20">
+        {/* top: --topbar-h (56px + safe-area-inset-top) */}
+        <div className="bg-white border-b border-[#F1F5F9] sticky z-20" style={{ top: "var(--topbar-h)" }}>
           <div className="flex px-4">
             {tabs.map((tab) => (
               <button
@@ -715,7 +716,7 @@ export function BookDetailPage() {
         </div>
 
         {/* ── Tab content ── */}
-        <div className="pb-24 lg:pb-12">
+        <div className="pb-[var(--page-pb)] lg:pb-12">
           {activeTab === "notes" ? (
             <NotesTab notes={notes} bookId={id!} />
           ) : (

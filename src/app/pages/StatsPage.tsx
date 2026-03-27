@@ -101,7 +101,7 @@ export function StatsPage() {
   const dateRangeLabel = buildDateRangeLabel(allBooks);
 
   return (
-    <div className="pb-6">
+    <div className="pb-[var(--page-pb)] lg:pb-8">
       {/* Header */}
       <div className="px-4 pt-4 pb-3">
         <h2 className="text-[#1E293B]" style={{ fontSize: 20, fontWeight: 700 }}>나의 독서 통계 📊</h2>

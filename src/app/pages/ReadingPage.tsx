@@ -256,7 +256,7 @@ export function ReadingPage() {
     : books;
 
   return (
-    <div className="pb-24 lg:pb-8">
+    <div className="pb-[var(--page-pb)] lg:pb-8">
       <ReadingOverviewBanner books={books} />
       <QuickActions onAction={(label) => showToast(`${label} 기능이 준비 중이에요 🛠️`, "info")} />
 

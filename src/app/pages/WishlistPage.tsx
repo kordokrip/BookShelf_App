@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { Plus, ChevronDown, Search, X } from "lucide-react";
+import { Plus, ChevronDown, Search, X, ScanLine } from "lucide-react";
+import ISBNScanner from "../components/books/ISBNScanner";
 import type { GenreKey } from "../../types/book";
 import { ALL_GENRES } from "../../types/book";
 import type { SearchBook } from "../../lib/api";
@@ -72,6 +73,7 @@ export function WishlistPage() {
   const [selectedGenre, setSelectedGenre] = useState<GenreKey | null>(null);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showScanner, setShowScanner] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
   const navigate = useNavigate();
@@ -144,12 +146,12 @@ export function WishlistPage() {
   }
 
   return (
-    <div className="pb-24 lg:pb-8">
+    <div className="pb-[var(--page-pb)] lg:pb-8">
       {/* Search Panel — showSearch 시 표시 */}
       {showSearch && (
         <div className="fixed inset-0 z-50 bg-white flex flex-col">
           {/* 검색 헤더 */}
-          <div className="flex items-center gap-3 px-4 pt-5 pb-3 border-b border-[#F1F5F9]">
+          <div className="flex items-center gap-2 px-4 pt-5 pb-3 border-b border-[#F1F5F9]">
             <div className="flex-1 flex items-center gap-2 bg-[#F8FAFC] rounded-xl px-3 py-2.5">
               <Search size={16} className="text-[#94A3B8] shrink-0" />
               <input
@@ -167,9 +169,18 @@ export function WishlistPage() {
                 </button>
               )}
             </div>
+            {/* ISBN 바코드 스캔 버튼 */}
+            <button
+              onClick={() => setShowScanner(true)}
+              aria-label="바코드로 책 추가"
+              className="flex items-center justify-center w-10 h-10 rounded-xl shrink-0 transition-transform hover:scale-105 active:scale-95"
+              style={{ background: "linear-gradient(135deg, #F59E0B, #EF4444)" }}
+            >
+              <ScanLine size={18} color="white" />
+            </button>
             <button
               onClick={() => setShowSearch(false)}
-              className="text-[#64748B] font-medium"
+              className="text-[#64748B] font-medium shrink-0"
               style={{ fontSize: 14 }}
             >
               취소
@@ -247,6 +258,17 @@ export function WishlistPage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* ISBN 스캐너 오버레이 */}
+      {showScanner && (
+        <ISBNScanner
+          onResult={(book) => {
+            setShowScanner(false);
+            handleAddFromSearch(book);
+          }}
+          onClose={() => setShowScanner(false)}
+        />
       )}
 
       {/* AI 추천 섹션 */}

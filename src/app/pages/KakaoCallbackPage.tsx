@@ -32,7 +32,7 @@ export function KakaoCallbackPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-svh flex items-center justify-center bg-background">
         <div className="text-center px-6">
           <p className="text-4xl mb-4">😥</p>
           <p
@@ -53,7 +53,7 @@ export function KakaoCallbackPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="min-h-svh flex items-center justify-center bg-background">
       <div className="text-center px-6">
         <div
           className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse"

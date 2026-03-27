@@ -25,7 +25,8 @@ interface FormState {
   goalDate: string;
   currentPage: string;
   coverEmoji: string;
-  coverColor: string; // COVER_GRADIENTS 중 하나
+  coverColor: string; // 검색 결과 표지 없을 때 폴백 그라디언트
+  coverImage: string; // 검색 결과 표지 URL
 }
 
 const INITIAL_FORM: FormState = {
@@ -42,6 +43,7 @@ const INITIAL_FORM: FormState = {
   currentPage: "",
   coverEmoji: "📚",
   coverColor: COVER_GRADIENTS[0] ?? "from-indigo-500 to-violet-600",
+  coverImage: "",
 };
 
 /* ─── cn 유틸 ───────────────────────────────────────────────── */
@@ -364,8 +366,8 @@ function StepStatusCover({
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto px-4 pb-4">
         <div className="pt-4 pb-3">
-          <p className="text-lg font-bold text-foreground">독서 상태 & 커버</p>
-          <p className="text-sm text-muted-foreground mt-0.5">현재 독서 상태와 커버를 설정하세요</p>
+          <p className="text-lg font-bold text-foreground">독서 상태</p>
+          <p className="text-sm text-muted-foreground mt-0.5">현재 독서 상태를 선택하세요</p>
         </div>
 
         {/* 상태 선택 */}
@@ -455,36 +457,7 @@ function StepStatusCover({
           </div>
         )}
 
-        {/* 커버 그라디언트 선택 */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-foreground mb-2">커버 색상</label>
-          <div className="grid grid-cols-4 gap-2">
-            {COVER_GRADIENTS.map((gradient) => (
-              <button
-                key={gradient}
-                onClick={() => update({ coverColor: gradient })}
-                className={cn(
-                  "h-14 rounded-xl bg-gradient-to-br transition-all",
-                  gradient,
-                  form.coverColor === gradient && "ring-2 ring-offset-2 ring-primary scale-105"
-                )}
-                aria-label={gradient}
-              />
-            ))}
-          </div>
-        </div>
 
-        {/* 커버 미리보기 */}
-        <div className="flex justify-center pt-2 pb-4">
-          <div
-            className={cn(
-              "w-24 h-32 rounded-2xl bg-gradient-to-br flex items-center justify-center shadow-lg",
-              form.coverColor
-            )}
-          >
-            <span className="text-4xl">{form.coverEmoji}</span>
-          </div>
-        </div>
       </div>
 
       <div className="px-4 py-4 flex-shrink-0 border-t border-border">
@@ -535,23 +508,41 @@ function StepConfirm({
         </div>
 
         {/* 커버 카드 미리보기 */}
-        <div
-          className={cn(
-            "w-full rounded-2xl bg-gradient-to-br p-5 flex items-center gap-4 mb-5 shadow-md",
-            form.coverColor
-          )}
-        >
-          <div className="w-16 h-20 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
-            <span className="text-4xl">{form.coverEmoji}</span>
+        {form.coverImage ? (
+          <div className="w-full rounded-2xl bg-card border border-border/50 p-4 flex items-center gap-4 mb-5 shadow-sm">
+            <img
+              src={form.coverImage}
+              alt={form.title}
+              className="w-16 h-20 rounded-xl object-cover flex-shrink-0 shadow-md"
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+            />
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-foreground text-base line-clamp-2 leading-snug">{form.title}</p>
+              <p className="text-muted-foreground text-sm mt-1">{form.author}</p>
+              {form.publisher && (
+                <p className="text-muted-foreground/60 text-xs mt-0.5">{form.publisher}</p>
+              )}
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-bold text-white text-base line-clamp-2 leading-snug">{form.title}</p>
-            <p className="text-white/80 text-sm mt-1">{form.author}</p>
-            {form.publisher && (
-              <p className="text-white/60 text-xs mt-0.5">{form.publisher}</p>
+        ) : (
+          <div
+            className={cn(
+              "w-full rounded-2xl bg-gradient-to-br p-5 flex items-center gap-4 mb-5 shadow-md",
+              form.coverColor
             )}
+          >
+            <div className="w-16 h-20 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
+              <span className="text-4xl">{form.coverEmoji}</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-white text-base line-clamp-2 leading-snug">{form.title}</p>
+              <p className="text-white/80 text-sm mt-1">{form.author}</p>
+              {form.publisher && (
+                <p className="text-white/60 text-xs mt-0.5">{form.publisher}</p>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* 상세 정보 */}
         <div className="bg-card rounded-xl border border-border/50 divide-y divide-border/50">
@@ -608,6 +599,7 @@ export function RegisterFlowPage() {
       publisher:  book.publisher ?? "",
       isbn:       book.isbn,
       totalPages: book.pageCount ? String(book.pageCount) : "",
+      coverImage: book.coverImage ?? "",
     });
     setStep(2);
   };
@@ -623,6 +615,7 @@ export function RegisterFlowPage() {
         genre:        form.genre,
         coverEmoji:   form.coverEmoji,
         coverColor:   form.coverColor,
+        coverImage:   form.coverImage || undefined,
         status:       form.status,
         totalPages:   form.totalPages ? parseInt(form.totalPages, 10) : undefined,
         currentPage:  form.currentPage ? parseInt(form.currentPage, 10) : 0,
@@ -639,7 +632,7 @@ export function RegisterFlowPage() {
     }
   };
 
-  const STEP_LABELS = ["책 찾기", "책 정보", "상태 & 커버", "최종 확인"];
+  const STEP_LABELS = ["책 찾기", "책 정보", "독서 상태", "최종 확인"];
 
   const prev = () => {
     if (step > 1) setStep((s) => (s - 1) as Step);
@@ -647,7 +640,7 @@ export function RegisterFlowPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col h-svh bg-background">
       {/* 헤더 */}
       <div className="flex items-center gap-3 px-4 h-14 border-b border-border flex-shrink-0">
         <button

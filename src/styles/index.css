@@ -2,6 +2,30 @@
 @import './tailwind.css';
 @import './theme.css';
 
+/* ── 모바일 뷰포트 글로벌 픽스 ─────────────────────────────────
+ * 1. iOS Safari: 주소창이 사라질 때 튀는 bounce overscroll 방지
+ * 2. overflow-x 방지 (가로 스크롤 차단)
+ * 3. #root: 화면 전체를 flex 컬럼으로 채워 레이아웃 정렬
+ */
+html {
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%; /* iOS 가로 전환 시 폰트 자동 확대 방지 */
+  text-size-adjust: 100%;
+}
+
+body {
+  width: 100%;
+  overflow-x: hidden;
+  overscroll-behavior: none;
+}
+
+#root {
+  /* 100svh: small viewport height — 브라우저 UI(주소창 등) 제외한 안정적 높이 */
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
 /* No scrollbar utility */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

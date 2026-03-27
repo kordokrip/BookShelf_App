@@ -3,10 +3,13 @@ import { RouterProvider } from "react-router";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "../lib/queryClient";
 import { useAuthStore } from "../stores/authStore";
+import { useViewport } from "../hooks/useViewport";
 import { router } from "./routes";
 
 export default function App() {
   const checkAuth = useAuthStore((s) => s.checkAuth);
+  // 실제 디바이스 뷰포트 크기를 CSS 변수로 주입 (iOS Safari, Android Chrome 대응)
+  useViewport();
 
   useEffect(() => {
     // 카카오 서버사이드 콜백 후 /?token=xxx&provider=kakao 파라미터 처리

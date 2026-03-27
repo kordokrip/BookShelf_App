@@ -20,6 +20,8 @@ export function TopBar() {
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-[#E2E8F0]">
+      {/* iOS 노치 / PWA 스탠드얼론 모드에서 상단 안전 영역 여백 */}
+      <div aria-hidden style={{ height: "var(--safe-top)" }} />
       <div className="flex items-center justify-between px-4 h-14">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-1.5 no-underline">

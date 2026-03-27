@@ -313,7 +313,7 @@ export function LoginPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-svh flex">
       {/* ── MOBILE (< lg) ── */}
       <div className="flex flex-col w-full lg:hidden relative">
         {/* Gradient header — top 35% */}

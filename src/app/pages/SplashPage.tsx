@@ -23,7 +23,7 @@ export function SplashPage() {
   }, [navigate]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-white relative overflow-hidden">
+    <div className="flex flex-col items-center justify-center min-h-svh bg-white relative overflow-hidden">
       {/* Center content */}
       <div className="flex flex-col items-center" style={{ gap: 16 }}>
         {/* 80px Logo */}

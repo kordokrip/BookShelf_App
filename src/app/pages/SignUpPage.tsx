@@ -637,7 +637,7 @@ function MultiStepForm() {
 export function SignUpPage() {
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-svh flex">
       {/* ── MOBILE ── */}
       <div className="flex flex-col w-full lg:hidden relative">
         {/* Gradient top */}

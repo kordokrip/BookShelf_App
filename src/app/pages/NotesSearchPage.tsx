@@ -80,7 +80,7 @@ export function NotesSearchPage() {
   const deleteNoteMutation = useDeleteNote();
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col h-svh bg-background">
       {/* ── 헤더 ── */}
       <div className="flex items-center gap-3 px-4 h-14 border-b border-border flex-shrink-0">
         <button
@@ -175,7 +175,7 @@ export function NotesSearchPage() {
         )}
 
         {!isLoading && !isError && notes.length > 0 && (
-          <div className="px-4 pt-4 space-y-3 pb-24">
+          <div className="px-4 pt-4 space-y-3 pb-[var(--page-pb)]">
             {notes.map((note) => (
               <div
                 key={note.id}

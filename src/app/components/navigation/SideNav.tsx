@@ -38,7 +38,7 @@ export function SideNav() {
   ];
 
   return (
-    <aside className="hidden lg:flex flex-col w-60 min-h-screen bg-white border-r border-[#E2E8F0] fixed left-0 top-0 bottom-0 z-30">
+    <aside className="hidden lg:flex flex-col w-60 min-h-svh bg-white border-r border-[#E2E8F0] fixed left-0 top-0 bottom-0 z-30">
       {/* Logo */}
       <div className="flex items-center gap-3 px-6 h-16 border-b border-[#E2E8F0]">
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] flex items-center justify-center shadow-md">

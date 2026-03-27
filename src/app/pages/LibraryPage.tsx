@@ -142,7 +142,7 @@ export function LibraryPage() {
   const hiddenCount = monthKeys.slice(2).reduce((s, k) => s + (grouped.get(k)?.length ?? 0), 0);
 
   return (
-    <div className="pb-24 lg:pb-8">
+    <div className="pb-[var(--page-pb)] lg:pb-8">
       {/* ── Header row ── */}
       <div className="flex items-center justify-between px-4 pt-5 pb-3">
         <div className="flex items-center gap-2">
