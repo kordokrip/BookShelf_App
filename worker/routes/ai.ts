@@ -157,10 +157,17 @@ aiRouter.post('/ocr', optionalAuth, async (c) => {
     const model = '@cf/meta/llama-3.2-11b-vision-instruct' as Parameters<Ai['run']>[0];
     const response = await c.env.AI.run(model, {
       prompt:
-        '이 이미지에서 보이는 모든 텍스트를 정확하게 추출해 주세요. ' +
-        '이미지에 책의 문장이나 문구가 있다면 그대로 옮겨 적어주세요. ' +
-        '추출한 텍스트만 출력하고 다른 설명은 하지 마세요.',
+        'You are an expert OCR system specialized in Korean and English text from book pages. ' +
+        'Extract ALL visible text from this image with maximum accuracy. ' +
+        'Rules: ' +
+        '1. Output ONLY the extracted text — no explanations, labels, or image descriptions. ' +
+        '2. Preserve line breaks exactly as they appear. ' +
+        '3. For Korean text: maintain exact syllable spacing and word boundaries. ' +
+        '4. Do not translate, summarize, or modify the text in any way. ' +
+        '5. If text is partially obscured, provide your best interpretation based on context.',
       image: [...uint8Array],
+      max_tokens: 1024,
+      temperature: 0.1,
     });
 
     const extractedText = (response as { response?: string }).response?.trim() ?? '';

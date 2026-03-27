@@ -75,17 +75,18 @@ function buildDateRangeLabel(allBooks: UIBook[]): string {
     .filter(Boolean)
     .map((d) => new Date(d));
   if (dates.length === 0) return "독서 기록이 없습니다";
-  const earliest = new Date(Math.min(...dates.map((d) => d.getTime())));
+  const earliest = new Date(dates.reduce((min, d) => d.getTime() < min ? d.getTime() : min, Infinity));
   return `${earliest.getFullYear()}년 ${earliest.getMonth() + 1}월 ~ 현재`;
 }
 
 export function StatsPage() {
-  const { data: doneBooks = [], isLoading: loadingDone } = useBooks({ status: 'done' });
-  const { data: readingBooks = [], isLoading: loadingReading } = useBooks({ status: 'reading' });
-  const { data: wishBooks = [], isLoading: loadingWish } = useBooks({ status: 'wish' });
-  const { data: sessions = [], isLoading: loadingSessions } = useSessions();
+  const { data: doneBooks = [], isLoading: loadingDone, isError: errorDone } = useBooks({ status: 'done' });
+  const { data: readingBooks = [], isLoading: loadingReading, isError: errorReading } = useBooks({ status: 'reading' });
+  const { data: wishBooks = [], isLoading: loadingWish, isError: errorWish } = useBooks({ status: 'wish' });
+  const { data: sessions = [], isLoading: loadingSessions, isError: errorSessions } = useSessions();
 
   const isLoading = loadingDone || loadingReading || loadingWish || loadingSessions;
+  const isError = errorDone || errorReading || errorWish || errorSessions;
 
   const totalDone = doneBooks.length;
   const totalReading = readingBooks.length;
@@ -96,7 +97,9 @@ export function StatsPage() {
 
   const monthlyData = buildMonthlyData(doneBooks);
   const allBooks = [...doneBooks, ...readingBooks, ...wishBooks];
-  const genreData = buildGenreDistribution(allBooks);
+  const genreDataAll = buildGenreDistribution(allBooks);
+  const genreDataDone = buildGenreDistribution(doneBooks);
+  const genreDataReading = buildGenreDistribution(readingBooks);
   const doneTrend = calcDoneTrend(doneBooks);
   const dateRangeLabel = buildDateRangeLabel(allBooks);
 
@@ -122,7 +125,12 @@ export function StatsPage() {
         </div>
       )}
 
-      {/* CV-7: Error state — not shown when data loaded (no separate error tracking for 3 queries) */}
+      {/* Error state */}
+      {isError && !isLoading && (
+        <div className="px-4 py-8 text-center">
+          <p className="text-red-500 text-sm">실패 시 돁돉 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.</p>
+        </div>
+      )}
 
       {/* CV-7: Success state */}
       {!isLoading && (
@@ -170,7 +178,7 @@ export function StatsPage() {
             {/* Mobile stacked */}
             <div className="lg:hidden flex flex-col gap-3">
               <MonthlyBarChart data={monthlyData} />
-              <GenreDonutChart data={genreData} />
+              <GenreDonutChart allData={genreDataAll} doneData={genreDataDone} readingData={genreDataReading} />
               <ReadingHeatmap sessions={sessions} />
             </div>
 
@@ -181,7 +189,7 @@ export function StatsPage() {
                 <ReadingHeatmap sessions={sessions} />
               </div>
               <div className="flex flex-col gap-5">
-                <GenreDonutChart data={genreData} />
+                <GenreDonutChart allData={genreDataAll} doneData={genreDataDone} readingData={genreDataReading} />
                 {/* Top Books — desktop right column */}
                 <div className="bg-white rounded-2xl border border-[#F1F5F9] shadow-sm p-4">
                   <h3 className="text-[#1E293B] mb-3" style={{ fontSize: 15, fontWeight: 700 }}>

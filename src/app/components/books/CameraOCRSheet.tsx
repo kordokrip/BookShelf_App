@@ -18,6 +18,46 @@ const NOTE_TYPES: { value: NoteType; label: string }[] = [
   { value: 'review', label: '✍️ 독후감' },
 ];
 
+/**
+ * OCR 전처리 파이프라인:
+ * 1. 그레이스케일 변환 (BT.601 가중치)
+ * 2. 대비 향상 (히스토그램 스트레칭)
+ * 3. 샤프닝 (라플라시안 커널)
+ */
+function preprocessForOCR(ctx: CanvasRenderingContext2D, width: number, height: number): void {
+  // Step 1: 그레이스케일 + 대비 향상
+  const imageData = ctx.getImageData(0, 0, width, height);
+  const data = imageData.data;
+  for (let i = 0; i < data.length; i += 4) {
+    const gray = 0.299 * (data[i] ?? 0) + 0.587 * (data[i + 1] ?? 0) + 0.114 * (data[i + 2] ?? 0);
+    // 대비 스트레칭: [30..225] → [0..255] 범위로 선형 확장
+    const contrasted = Math.min(255, Math.max(0, ((gray - 30) / 195) * 255));
+    data[i] = data[i + 1] = data[i + 2] = contrasted;
+    // data[i + 3] (alpha) is unchanged
+  }
+  ctx.putImageData(imageData, 0, 0);
+
+  // Step 2: 샤프닝 (Laplacian 기반 unsharp mask)
+  const sharpData = ctx.getImageData(0, 0, width, height);
+  const src = new Uint8ClampedArray(sharpData.data);
+  const kernel = [0, -1, 0, -1, 5, -1, 0, -1, 0];
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const idx = (y * width + x) * 4;
+      let sum = 0;
+      for (let ky = -1; ky <= 1; ky++) {
+        for (let kx = -1; kx <= 1; kx++) {
+          const ni = ((y + ky) * width + (x + kx)) * 4;
+          sum += (src[ni] ?? 0) * (kernel[(ky + 1) * 3 + (kx + 1)] ?? 0);
+        }
+      }
+      const val = Math.min(255, Math.max(0, sum));
+      sharpData.data[idx] = sharpData.data[idx + 1] = sharpData.data[idx + 2] = val;
+    }
+  }
+  ctx.putImageData(sharpData, 0, 0);
+}
+
 export function CameraOCRSheet({ bookId, onClose }: Props) {
   const [step, setStep] = useState<'camera' | 'review'>('camera');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -42,7 +82,11 @@ export function CameraOCRSheet({ bookId, onClose }: Props) {
     setCameraError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
+        video: {
+          facingMode: 'environment',
+          width: { ideal: 1920, min: 1280 },
+          height: { ideal: 1080, min: 720 },
+        },
       });
       streamRef.current = stream;
       if (videoRef.current) {
@@ -81,13 +125,52 @@ export function CameraOCRSheet({ bookId, onClose }: Props) {
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext('2d')?.drawImage(video, 0, 0);
+    const videoW = video.videoWidth;
+    const videoH = video.videoHeight;
+    const displayW = video.clientWidth;
+    const displayH = video.clientHeight;
+    if (!videoW || !videoH || !displayW || !displayH) return;
+
+    // 가이드박스 CSS 크기 (w-72 h-52 = 288×208px)
+    const GUIDE_CSS_W = 288;
+    const GUIDE_CSS_H = 208;
+
+    // object-cover 스케일: 컨테이너를 채우는 비율 (= max of x/y scale)
+    const scale = Math.max(displayW / videoW, displayH / videoH);
+
+    // 가이드박스를 비디오 픽셀 좌표로 변환 (중앙 기준)
+    const srcX = Math.round(videoW / 2 - GUIDE_CSS_W / 2 / scale);
+    const srcY = Math.round(videoH / 2 - GUIDE_CSS_H / 2 / scale);
+    const srcW = Math.round(GUIDE_CSS_W / scale);
+    const srcH = Math.round(GUIDE_CSS_H / scale);
+
+    // 비디오 프레임 범위로 클램핑
+    const clampedX = Math.max(0, srcX);
+    const clampedY = Math.max(0, srcY);
+    const clampedW = Math.min(srcW, videoW - clampedX);
+    const clampedH = Math.min(srcH, videoH - clampedY);
+    if (!clampedW || !clampedH) return;
+
+    // 최소 640px 너비로 업스케일 (OCR 정확도 향상)
+    const targetW = Math.max(clampedW, 640);
+    const targetH = Math.round(targetW * (clampedH / clampedW));
+
+    canvas.width = targetW;
+    canvas.height = targetH;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // 가이드박스 영역만 크롭 후 리사이즈
+    ctx.drawImage(video, clampedX, clampedY, clampedW, clampedH, 0, 0, targetW, targetH);
+
+    // OCR 전처리: 그레이스케일 + 대비 향상 + 샤프닝
+    preprocessForOCR(ctx, targetW, targetH);
 
     canvas.toBlob(async (blob) => {
       if (!blob) return;
-      const file = new File([blob], 'capture.jpg', { type: 'image/jpeg' });
+      // PNG: 손실 없는 포맷 → 텍스트 엣지 보존
+      const file = new File([blob], 'capture.png', { type: 'image/png' });
       const url = URL.createObjectURL(blob);
 
       setPreviewUrl(url);
@@ -105,7 +188,7 @@ export function CameraOCRSheet({ bookId, onClose }: Props) {
       } finally {
         setIsProcessing(false);
       }
-    }, 'image/jpeg', 0.9);
+    }, 'image/png');
   };
 
   const handleRetake = () => {

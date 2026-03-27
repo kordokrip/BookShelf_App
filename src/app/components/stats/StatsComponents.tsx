@@ -107,7 +107,8 @@ interface CustomTooltipProps {
 
 function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   if (!active || !payload?.length) return null;
-  const isCurrent = label === "3월";
+  const MONTH_LABELS_TOOLTIP = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
+  const isCurrent = label === MONTH_LABELS_TOOLTIP[new Date().getMonth()];
   return (
     <div style={{
       background: C.white, borderRadius: 10, border: `1px solid ${C.slate8}`,
@@ -121,6 +122,7 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
 }
 
 export function MonthlyBarChart({ data: monthlyData }: { data: { month: string; books: number; pages: number; status: string }[] }) {
+  const maxY = Math.max(monthlyData.reduce((m, d) => d.books > m ? d.books : m, 0), 4);
   return (
     <div style={{
       backgroundColor: C.white, borderRadius: 12,
@@ -156,8 +158,8 @@ export function MonthlyBarChart({ data: monthlyData }: { data: { month: string; 
             axisLine={false}
             tickLine={false}
             allowDecimals={false}
-            domain={[0, 4]}
-            ticks={[0, 1, 2, 3, 4]}
+            domain={[0, maxY]}
+            ticks={Array.from({ length: maxY + 1 }, (_, i) => i)}
           />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: "#F8FAFC" }} />
           <Bar dataKey="books" radius={[4, 4, 0, 0]}>
@@ -199,11 +201,18 @@ export function MonthlyBarChart({ data: monthlyData }: { data: { month: string; 
 const DONUT_OUTER = 80;
 const DONUT_INNER = Math.round(DONUT_OUTER * 0.4); // 32
 
-export function GenreDonutChart({ data: genreDistribution }: { data: { genre: string; count: number; color: string }[] }) {
+interface GenreDonutChartProps {
+  allData: { genre: string; count: number; color: string }[];
+  doneData: { genre: string; count: number; color: string }[];
+  readingData: { genre: string; count: number; color: string }[];
+}
+
+export function GenreDonutChart({ allData, doneData, readingData }: GenreDonutChartProps) {
   const [activeTab, setActiveTab] = useState<"전체" | "완독" | "읽는중">("전체");
   const tabs: Array<"전체" | "완독" | "읽는중"> = ["전체", "완독", "읽는중"];
 
-  const sortedGenres = [...genreDistribution].sort((a, b) => b.count - a.count);
+  const activeData = activeTab === "전체" ? allData : activeTab === "완독" ? doneData : readingData;
+  const sortedGenres = [...activeData].sort((a, b) => b.count - a.count);
   const totalCount = sortedGenres.reduce((s, g) => s + g.count, 0);
 
   return (
