@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { AuthPreviewNav } from "../components/auth/AuthPreviewNav";
+import { useAuthStore } from "../../stores/authStore";
 
 export function SplashPage() {
   const navigate = useNavigate();
   const [dotIndex, setDotIndex] = useState(0);
+  const status = useAuthStore((s) => s.status);
 
   useEffect(() => {
     const dotInterval = setInterval(() => {
@@ -13,14 +15,18 @@ export function SplashPage() {
 
     const timer = setTimeout(() => {
       clearInterval(dotInterval);
-      navigate("/onboarding");
+      if (status === "authenticated") {
+        navigate("/", { replace: true });
+      } else {
+        navigate("/onboarding", { replace: true });
+      }
     }, 2800);
 
     return () => {
       clearInterval(dotInterval);
       clearTimeout(timer);
     };
-  }, [navigate]);
+  }, [navigate, status]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-svh bg-white relative overflow-hidden">

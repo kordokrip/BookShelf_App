@@ -92,7 +92,7 @@ export function StatsPage() {
   const totalReading = readingBooks.length;
   const totalWish = wishBooks.length;
   const totalPages = sessions.length > 0
-    ? sessions.reduce((s, sess) => s + sess.pages_read, 0)
+    ? sessions.reduce((s, sess) => s + sess.pagesRead, 0)
     : doneBooks.reduce((s, b) => s + (b.totalPages ?? 0), 0);
 
   const monthlyData = buildMonthlyData(doneBooks);

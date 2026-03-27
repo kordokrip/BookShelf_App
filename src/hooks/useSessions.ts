@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { sessionsApi, queryKeys } from '../lib/api';
+import { normalizeSession, type UISession } from '../types/book';
 
 /** 독서 세션 목록 조회 */
 export function useSessions(params?: { bookId?: string; limit?: number }) {
@@ -8,12 +9,12 @@ export function useSessions(params?: { bookId?: string; limit?: number }) {
       book_id: params?.bookId,
       limit: params?.limit,
     }),
-    queryFn: async () => {
+    queryFn: async (): Promise<UISession[]> => {
       const res = await sessionsApi.list({
         book_id: params?.bookId,
         limit: params?.limit,
       });
-      return res.data;
+      return res.data.map(normalizeSession);
     },
   });
 }

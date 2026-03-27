@@ -20,7 +20,13 @@ export function KakaoCallbackPage() {
     const errorParam = searchParams.get("error");
 
     if (errorParam) {
-      setError("카카오 로그인이 취소되었습니다.");
+      const messageMap: Record<string, string> = {
+        access_denied: "카카오 로그인이 취소되었습니다.",
+        server_error: "카카오 서버 오류가 발생했습니다.",
+        kakao_failed: "카카오 로그인에 실패했습니다.",
+        token_failed: "토큰 발급에 실패했습니다.",
+      };
+      setError(messageMap[errorParam] ?? "카카오 로그인 중 오류가 발생했습니다.");
       const timer = setTimeout(() => navigate("/login"), 2000);
       return () => clearTimeout(timer);
     }

@@ -3,12 +3,10 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { HTTPException } from 'hono/http-exception';
 import type { Bindings, DbReadingSession } from '../types';
-import { optionalAuth } from '../auth';
+import { authMiddleware, optionalAuth } from '../auth';
 
 export const sessionsRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
-// 모든 라우트에 optionalAuth 미들웨어 적용
-sessionsRouter.use('*', optionalAuth);
 
 const createSessionSchema = z.object({
   book_id: z.string().uuid(),
@@ -18,7 +16,7 @@ const createSessionSchema = z.object({
 });
 
 // ─── GET /api/sessions?book_id=&limit= ───────────────────────
-sessionsRouter.get('/', async (c) => {
+sessionsRouter.get('/', optionalAuth, async (c) => {
   const userId = c.get('userId');
   const bookId = c.req.query('book_id');
   const limit = parseInt(c.req.query('limit') ?? '30');
@@ -45,8 +43,7 @@ sessionsRouter.get('/', async (c) => {
 // ─── POST /api/sessions ───────────────────────────────────────
 // 독서 세션 기록 + 책 current_page 자동 갱신
 sessionsRouter.post(
-  '/',
-  zValidator('json', createSessionSchema),
+  '/',  authMiddleware,  zValidator('json', createSessionSchema),
   async (c) => {
     const userId = c.get('userId');
     const body = c.req.valid('json');

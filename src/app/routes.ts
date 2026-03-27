@@ -14,6 +14,7 @@ import { BookDetailPage } from "./pages/BookDetailPage";
 import { RegisterFlowPage } from "./pages/RegisterFlowPage";
 import { NotesSearchPage } from "./pages/NotesSearchPage";
 import { KakaoCallbackPage } from "./pages/KakaoCallbackPage";
+import { NotFoundPage } from "./pages/NotFoundPage";
 import { RouteErrorFallback } from "./components/RouteErrorFallback";
 
 // ─── lazy import — vendor-charts 청크를 필요 시에만 로드 ───
@@ -78,7 +79,7 @@ export const router = createBrowserRouter([
   },
   {
     path: "/register-flow",
-    Component: RegisterFlowPage,
+    Component: protected_(RegisterFlowPage),
     ErrorBoundary: EB,
   },
   {
@@ -104,5 +105,11 @@ export const router = createBrowserRouter([
       { path: "design-system", Component: DesignSystemPage, ErrorBoundary: EB },
       { path: "book/:id", Component: protected_(BookDetailPage), ErrorBoundary: EB },
     ],
+  },
+  // ─── 404 Fallback ─────────────────────────────────────────────
+  {
+    path: "*",
+    Component: NotFoundPage,
+    ErrorBoundary: EB,
   },
 ]);

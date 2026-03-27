@@ -4,7 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   PieChart, Pie,
 } from "recharts";
-import type { ReadingSession } from "../../../lib/api";
+import type { UISession } from "../../../types/book";
 
 /* ─── Design Tokens ─────────────────────────────────────────── */
 const C = {
@@ -331,12 +331,12 @@ const WEEK_DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 const MONTH_LABELS = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
 
 /** sessions 배열을 받아 오늘 기준 52주 히트맵 그리드(level 0~4) 생성 */
-function buildHeatmapFromSessions(sessions: ReadingSession[]): number[][] {
+function buildHeatmapFromSessions(sessions: UISession[]): number[][] {
   // 날짜별 페이지 수 집계
   const dateMap = new Map<string, number>();
   for (const s of sessions) {
-    const date = s.session_date ?? s.created_at.split("T")[0];
-    dateMap.set(date, (dateMap.get(date) ?? 0) + (s.pages_read ?? 0));
+    const date = s.sessionDate ?? s.createdAt.split("T")[0];
+    dateMap.set(date, (dateMap.get(date) ?? 0) + (s.pagesRead ?? 0));
   }
 
   // 전체 페이지 중 최대값 (레벨 산정용)
@@ -374,9 +374,9 @@ function buildHeatmapFromSessions(sessions: ReadingSession[]): number[][] {
 }
 
 /** 연속 독서일(현재 스트릭) 계산 */
-function calculateStreak(sessions: ReadingSession[]): number {
+function calculateStreak(sessions: UISession[]): number {
   const dateSet = new Set(
-    sessions.map((s) => s.session_date ?? s.created_at.split("T")[0])
+    sessions.map((s) => s.sessionDate ?? s.createdAt.split("T")[0])
   );
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -392,10 +392,10 @@ function calculateStreak(sessions: ReadingSession[]): number {
 }
 
 /** 최장 연속 독서일 계산 */
-function calculateMaxStreak(sessions: ReadingSession[]): number {
+function calculateMaxStreak(sessions: UISession[]): number {
   if (sessions.length === 0) return 0;
   const dateSet = new Set(
-    sessions.map((s) => s.session_date ?? s.created_at.split("T")[0])
+    sessions.map((s) => s.sessionDate ?? s.createdAt.split("T")[0])
   );
   const sortedDates = Array.from(dateSet).sort();
   let max = 1, cur = 1;
@@ -434,7 +434,7 @@ function buildMonthStarts(): { label: string; weekIndex: number }[] {
 }
 
 interface ReadingHeatmapProps {
-  sessions: ReadingSession[];
+  sessions: UISession[];
 }
 
 export function ReadingHeatmap({ sessions }: ReadingHeatmapProps) {
@@ -442,7 +442,7 @@ export function ReadingHeatmap({ sessions }: ReadingHeatmapProps) {
   const streak = calculateStreak(sessions);
   const maxStreak = calculateMaxStreak(sessions);
   const totalDays = new Set(
-    sessions.map((s) => s.session_date ?? s.created_at.split("T")[0])
+    sessions.map((s) => s.sessionDate ?? s.createdAt.split("T")[0])
   ).size;
   const monthStarts = buildMonthStarts();
 

@@ -3,12 +3,10 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { HTTPException } from 'hono/http-exception';
 import type { Bindings, DbBook } from '../types';
-import { optionalAuth } from '../auth';
+import { authMiddleware, optionalAuth } from '../auth';
 
 export const booksRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
-// 모든 라우트에 optionalAuth 미들웨어 적용
-booksRouter.use('*', optionalAuth);
 
 // ─── 스키마 검증 ──────────────────────────────────────────────
 const createBookSchema = z.object({
@@ -35,7 +33,7 @@ const updateBookSchema = createBookSchema.partial();
 
 // ─── GET /api/books ───────────────────────────────────────────
 // 사용자의 전체 책 목록 조회 (status 필터 가능)
-booksRouter.get('/', async (c) => {
+booksRouter.get('/', optionalAuth, async (c) => {
   const userId = c.get('userId');
   const status = c.req.query('status');
   const genre = c.req.query('genre');
@@ -63,7 +61,7 @@ booksRouter.get('/', async (c) => {
 });
 
 // ─── GET /api/books/:id ───────────────────────────────────────
-booksRouter.get('/:id', async (c) => {
+booksRouter.get('/:id', optionalAuth, async (c) => {
   const userId = c.get('userId');
   const id = c.req.param('id');
 
@@ -79,7 +77,7 @@ booksRouter.get('/:id', async (c) => {
 });
 
 // ─── POST /api/books ──────────────────────────────────────────
-booksRouter.post('/', zValidator('json', createBookSchema), async (c) => {
+booksRouter.post('/', authMiddleware, zValidator('json', createBookSchema), async (c) => {
   const userId = c.get('userId');
   const body = c.req.valid('json');
   const id = crypto.randomUUID();
@@ -113,7 +111,7 @@ booksRouter.post('/', zValidator('json', createBookSchema), async (c) => {
 });
 
 // ─── PUT /api/books/:id ───────────────────────────────────────
-booksRouter.put('/:id', zValidator('json', updateBookSchema), async (c) => {
+booksRouter.put('/:id', authMiddleware, zValidator('json', updateBookSchema), async (c) => {
   const userId = c.get('userId');
   const id = c.req.param('id');
   const body = c.req.valid('json');
@@ -163,7 +161,7 @@ booksRouter.put('/:id', zValidator('json', updateBookSchema), async (c) => {
 });
 
 // ─── DELETE /api/books/:id ────────────────────────────────────
-booksRouter.delete('/:id', async (c) => {
+booksRouter.delete('/:id', authMiddleware, async (c) => {
   const userId = c.get('userId');
   const id = c.req.param('id');
 
@@ -180,7 +178,7 @@ booksRouter.delete('/:id', async (c) => {
 });
 
 // ─── POST /api/books/:id/cover — R2 표지 이미지 업로드 ────────
-booksRouter.post('/:id/cover', async (c) => {
+booksRouter.post('/:id/cover', authMiddleware, async (c) => {
   const userId = c.get('userId');
   const bookId = c.req.param('id');
 

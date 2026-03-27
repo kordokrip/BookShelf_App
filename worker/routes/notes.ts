@@ -3,12 +3,10 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { HTTPException } from 'hono/http-exception';
 import type { Bindings, DbNote } from '../types';
-import { optionalAuth } from '../auth';
+import { authMiddleware, optionalAuth } from '../auth';
 
 export const notesRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
-// 모든 라우트에 optionalAuth 미들웨어 적용
-notesRouter.use('*', optionalAuth);
 
 // ─── 스키마 검증 ──────────────────────────────────────────────
 const createNoteSchema = z.object({
@@ -28,7 +26,7 @@ const updateNoteSchema = z.object({
 
 // ─── GET /api/notes ───────────────────────────────────────────
 // 사용자 노트 목록 조회 (bookId, type, search 필터)
-notesRouter.get('/', async (c) => {
+notesRouter.get('/', optionalAuth, async (c) => {
   const userId = c.get('userId');
   const bookId = c.req.query('bookId');
   const type = c.req.query('type');
@@ -69,7 +67,7 @@ notesRouter.get('/', async (c) => {
 });
 
 // ─── GET /api/notes/:id ──────────────────────────────────────
-notesRouter.get('/:id', async (c) => {
+notesRouter.get('/:id', optionalAuth, async (c) => {
   const userId = c.get('userId');
   const id = c.req.param('id');
 
@@ -85,7 +83,7 @@ notesRouter.get('/:id', async (c) => {
 });
 
 // ─── POST /api/notes ─────────────────────────────────────────
-notesRouter.post('/', zValidator('json', createNoteSchema), async (c) => {
+notesRouter.post('/', authMiddleware, zValidator('json', createNoteSchema), async (c) => {
   const userId = c.get('userId');
   const body = c.req.valid('json');
   const id = crypto.randomUUID();
@@ -114,7 +112,7 @@ notesRouter.post('/', zValidator('json', createNoteSchema), async (c) => {
 });
 
 // ─── PUT /api/notes/:id ──────────────────────────────────────
-notesRouter.put('/:id', zValidator('json', updateNoteSchema), async (c) => {
+notesRouter.put('/:id', authMiddleware, zValidator('json', updateNoteSchema), async (c) => {
   const userId = c.get('userId');
   const id = c.req.param('id');
   const body = c.req.valid('json');
@@ -167,7 +165,7 @@ notesRouter.put('/:id', zValidator('json', updateNoteSchema), async (c) => {
 });
 
 // ─── DELETE /api/notes/:id ───────────────────────────────────
-notesRouter.delete('/:id', async (c) => {
+notesRouter.delete('/:id', authMiddleware, async (c) => {
   const userId = c.get('userId');
   const id = c.req.param('id');
 

@@ -146,66 +146,63 @@ usersRouter.post(
   },
 );
 
-// ─── PATCH /api/users/profile ───────────────────────────────────
-usersRouter.patch('/profile', authMiddleware, async (c) => {
-  const userId = c.get('userId');
-
-  const body = await c.req.json() as {
-    name?: string;
-    favorite_genres?: string[];
-    reading_goal?: number;
-    avatar_url?: string;
-  };
-
-  const updates: string[] = [];
-  const values: unknown[] = [];
-
-  if (body.name !== undefined) {
-    if (body.name.trim().length < 1 || body.name.length > 50) {
-      return c.json({ error: '이름은 1-50자여야 합니다' }, 400);
-    }
-    updates.push('name = ?');
-    values.push(body.name.trim());
-  }
-
-  if (body.favorite_genres !== undefined) {
-    if (!Array.isArray(body.favorite_genres)) {
-      return c.json({ error: 'favorite_genres는 배열이어야 합니다' }, 400);
-    }
-    updates.push('favorite_genres = ?');
-    values.push(JSON.stringify(body.favorite_genres));
-  }
-
-  if (body.reading_goal !== undefined) {
-    if (body.reading_goal < 1 || body.reading_goal > 100) {
-      return c.json({ error: '독서 목표는 1-100 사이여야 합니다' }, 400);
-    }
-    updates.push('reading_goal = ?');
-    values.push(body.reading_goal);
-  }
-
-  if (body.avatar_url !== undefined) {
-    updates.push('avatar_url = ?');
-    values.push(body.avatar_url);
-  }
-
-  if (updates.length === 0) {
-    return c.json({ error: '업데이트할 내용이 없습니다' }, 400);
-  }
-
-  updates.push('updated_at = datetime(\'now\')');
-  values.push(userId);
-
-  await c.env.DB.prepare(
-    `UPDATE users SET ${updates.join(', ')} WHERE id = ?`
-  ).bind(...values).run();
-
-  const user = await c.env.DB.prepare(
-    'SELECT id, email, name, avatar_url, favorite_genres, reading_goal, created_at, updated_at FROM users WHERE id = ?'
-  ).bind(userId).first();
-
-  return c.json({ data: user });
+const updateProfileSchema = z.object({
+  name: z.string().min(1).max(50).optional(),
+  favorite_genres: z.array(z.string()).optional(),
+  reading_goal: z.number().int().min(1).max(100).optional(),
+  avatar_url: z.string().url().optional(),
 });
+
+// ─── PATCH /api/users/profile ───────────────────────────────────
+usersRouter.patch(
+  '/profile',
+  authMiddleware,
+  zValidator('json', updateProfileSchema),
+  async (c) => {
+    const userId = c.get('userId');
+    const body = c.req.valid('json');
+
+    const updates: string[] = [];
+    const values: unknown[] = [];
+
+    if (body.name !== undefined) {
+      updates.push('name = ?');
+      values.push(body.name.trim());
+    }
+
+    if (body.favorite_genres !== undefined) {
+      updates.push('favorite_genres = ?');
+      values.push(JSON.stringify(body.favorite_genres));
+    }
+
+    if (body.reading_goal !== undefined) {
+      updates.push('reading_goal = ?');
+      values.push(body.reading_goal);
+    }
+
+    if (body.avatar_url !== undefined) {
+      updates.push('avatar_url = ?');
+      values.push(body.avatar_url);
+    }
+
+    if (updates.length === 0) {
+      return c.json({ error: '업데이트할 내용이 없습니다' }, 400);
+    }
+
+    updates.push('updated_at = datetime(\'now\')');
+    values.push(userId);
+
+    await c.env.DB.prepare(
+      `UPDATE users SET ${updates.join(', ')} WHERE id = ?`
+    ).bind(...values).run();
+
+    const user = await c.env.DB.prepare(
+      'SELECT id, email, name, avatar_url, favorite_genres, reading_goal, created_at, updated_at FROM users WHERE id = ?'
+    ).bind(userId).first();
+
+    return c.json({ data: user });
+  },
+);
 
 // ─── GET /api/users/:id/stats ──────────────────────────────────
 usersRouter.get('/:id/stats', async (c) => {

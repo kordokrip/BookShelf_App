@@ -412,4 +412,9 @@ export const queryKeys = {
     all: ['search'] as const,
     books: (query: string) => ['search', 'books', query] as const,
   },
+  ai: {
+    all: ['ai'] as const,
+    recommendations: () => [...queryKeys.ai.all, 'recommendations'] as const,
+    summary: (isbn: string) => [...queryKeys.ai.all, 'summary', isbn] as const,
+  },
 };

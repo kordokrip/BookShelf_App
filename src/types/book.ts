@@ -97,8 +97,42 @@ export function normalizeBook(api: ApiBook): UIBook {
   };
 }
 
-/* ─── 변환: UI → API (업데이트 요청용) ───────────────────── */
-export function denormalizeBook(
+/* ─── Reading Session (API/DB layer, snake_case) ─────────── */
+export interface ApiSession {
+  id: string;
+  book_id: string;
+  user_id: string;
+  pages_read: number;
+  session_date: string;
+  duration_min: number | null;
+  created_at: string;
+}
+
+/* ─── Reading Session (UI layer, camelCase) ──────────────── */
+export interface UISession {
+  id: string;
+  bookId: string;
+  userId: string;
+  pagesRead: number;
+  sessionDate: string;
+  durationMin?: number;
+  createdAt: string;
+}
+
+/* ─── 변환: ApiSession → UISession ──────────────────────── */
+export function normalizeSession(api: ApiSession): UISession {
+  return {
+    id: api.id,
+    bookId: api.book_id,
+    userId: api.user_id,
+    pagesRead: api.pages_read,
+    sessionDate: api.session_date,
+    durationMin: api.duration_min ?? undefined,
+    createdAt: api.created_at,
+  };
+}
+
+/* ─── 변환: UI → API (업데이트 요청용) ───────────────────── */export function denormalizeBook(
   ui: Partial<UIBook>,
 ): Record<string, unknown> {
   const result: Record<string, unknown> = {};

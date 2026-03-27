@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { apiFetch } from '../lib/api';
+import { apiFetch, queryKeys } from '../lib/api';
 
 export interface AIRecommendation {
   title: string;
@@ -39,7 +39,7 @@ export function useBookSummary() {
 /** 독서 패턴 기반 AI 추천 */
 export function useAIRecommendations() {
   return useQuery({
-    queryKey: ['ai', 'recommendations'],
+    queryKey: queryKeys.ai.recommendations(),
     queryFn: () =>
       apiFetch<RecommendResponse>('/api/ai/recommend?limit=3'),
     staleTime: 60 * 60 * 1000, // 1시간

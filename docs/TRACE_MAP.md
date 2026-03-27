@@ -3,7 +3,7 @@
 > 작성 기준: 실제 소스 코드 전수 분석 (2026-03 기준)
 > 목적: 프로덕션 오류 발생 시 UI → Hook → API → DB 레이어를 빠르게 추적하기 위한 기준 문서
 >
-> **최근 변경**: 2026-03-27 — StatsPage 청크 에러 복구 추가, RegisterFlowPage 커버 이미지 기능 개선
+> **최근 변경**: 2026-03-28 — PROMPT-01~05 리팩토링 적용 (보안 미들웨어 교체, SplashPage 인증 분기, NotFoundPage, zod 검증, queryKey 팩토리, UISession 정규화)
 
 ---
 
@@ -21,7 +21,7 @@
 | **AI** | Workers AI (`@cf/meta/llama-3.1-8b-instruct`, `@cf/meta/llama-3.2-11b-vision-instruct`) |
 | **Storage** | Cloudflare R2 (`covers/{userId}/{bookId}.{ext}`) |
 | **TypeScript check** | ✅ 0 errors |
-| **Build** | ✅ 성공 (index.js 639KB 경고) |
+| **Build** | ✅ 성공 (index.js 642KB 경고) |
 | **Production Health** | ✅ `{"status":"ok","env":"production"}` |
 | **D1 Tables** | users, books, reading_sessions, notes, d1_migrations, _cf_KV, sqlite_sequence |
 
@@ -33,12 +33,12 @@
 
 | 경로 | 컴포넌트 | 보호 여부 | 비고 |
 |---|---|---|---|
-| `/splash` | `SplashPage` | 공개 | 2.8초 후 `/onboarding` 이동 — 인증 상태 무관 ⚠️ |
+| `/splash` | `SplashPage` | 공개 | 2.8초 후 `authenticated`→`/`, else→`/onboarding` 분기 ✅ |
 | `/onboarding` | `OnboardingPage` | 공개 | 장르 선택 온보딩 |
 | `/login` | `LoginPage` | 공개 | 로컬 + 카카오 로그인 |
 | `/signup` | `SignUpPage` | 공개 | 로컬 회원가입 |
-| `/register-flow` | `RegisterFlowPage` | **공개** ⚠️ | ProtectedRoute 없음 — 미인증 POST 가능 |
-| `/auth/kakao/callback` | `KakaoCallbackPage` | 공개 | 정상 OAuth 흐름에서 실제 미도달 |
+| `/register-flow` | `RegisterFlowPage` | **보호** ✅ | `protected_()` 래핑 (2026-03-28 수정) |
+| `/auth/kakao/callback` | `KakaoCallbackPage` | 공개 | 에러코드별 메시지 매핑 (access_denied 등) ✅ |
 | `/notes-search` | `NotesSearchPage` | **보호** | `protected_()` 래핑 |
 | `/` | `Root` > `LibraryPage` | **보호** | ProtectedRoute 래핑 |
 | `/reading` | `Root` > `ReadingPage` | **보호** | |
@@ -46,7 +46,7 @@
 | `/stats` | `Root` > `StatsPage` | **보호** | lazy import + `.catch()` 청크 에러 자동 복구 |
 | `/books/:id` | `Root` > `BookDetailPage` | **보호** | |
 | `/design-system` | `DesignSystemPage` | **공개** | ProtectedRoute 없음, 개발용 |
-| *(없음)* | — | — | 404 fallback 라우트 **없음** ⚠️ |
+| `*` | `NotFoundPage` | 공개 | 404 fallback 라우트 ✅ |
 
 > **공통**: 모든 라우트에 `errorElement={RouteErrorFallback}` 적용 — 청크 로드 오류 시 1회 자동 새로고침
 
@@ -57,9 +57,9 @@
 | `GET /api/health` | index.ts 인라인 | 없음 |
 | `/api/auth/*` | `worker/routes/auth.ts` | 없음 |
 | `/api/users/*` | `worker/routes/users.ts` | 엔드포인트별 |
-| `/api/books/*` | `worker/routes/books.ts` | `optionalAuth` 전체 적용 |
-| `/api/sessions/*` | `worker/routes/sessions.ts` | `optionalAuth` 전체 적용 |
-| `/api/notes/*` | `worker/routes/notes.ts` | `optionalAuth` 전체 적용 |
+| `/api/books/*` | `worker/routes/books.ts` | GET→`optionalAuth` / 쓰기(POST/PUT/DELETE)→`authMiddleware` ✅ |
+| `/api/sessions/*` | `worker/routes/sessions.ts` | GET→`optionalAuth` / POST→`authMiddleware` ✅ |
+| `/api/notes/*` | `worker/routes/notes.ts` | GET→`optionalAuth` / 쓰기(POST/PUT/DELETE)→`authMiddleware` ✅ |
 | `/api/search/*` | `worker/routes/search.ts` | 없음 (공개) |
 | `/api/ai/*` | `worker/routes/ai.ts` | `optionalAuth` 각 핸들러 |
 | `GET *` | SPA 폴백 | 없음 (ASSETS 서빙) |
@@ -70,10 +70,11 @@
 
 ### SplashPage (`/splash`)
 ```
-UI(2.8초 타이머) → navigate('/onboarding')
+UI(2.8초 타이머) → useAuthStore(s => s.status) 확인
+  status === 'authenticated' → navigate('/', { replace: true })
+  else (idle / unauthenticated) → navigate('/onboarding', { replace: true })
 ```
-- **의존 없음** — 순수 타이머 + 애니메이션
-- ⚠️ 인증된 사용자도 항상 `/onboarding` 경유 (직접 `/`로 이동하는 로직 없음)
+- App.tsx 마운트 시 `checkAuth()` 동시 실행 — 2.8초 내 인증 완료되면 `/`로, 미완료 시 `/onboarding` 안전 폴백
 
 ---
 
@@ -318,7 +319,7 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 | GET | `/api/users/profile` | **authMiddleware** | — | `{data: user}` | `routes/users.ts` |
 | GET | `/api/users/:id` | 없음 | — | `{data: user}` | `routes/users.ts` |
 | POST | `/api/users` | 없음 | `{id, email, name, avatar_url?}` | `{data: user}` 201 | `routes/users.ts` |
-| PATCH | `/api/users/profile` | **authMiddleware** | `{name?, favorite_genres?, reading_goal?, avatar_url?}` | `{data}` | `routes/users.ts` |
+| PATCH | `/api/users/profile` | **authMiddleware** | `{name?, favorite_genres?, reading_goal?, avatar_url?}` (zod 검증 ✅) | `{data}` | `routes/users.ts` |
 
 ### 책 (`/api/books`)
 
@@ -326,18 +327,18 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 |---|---|---|---|---|---|
 | GET | `/api/books` | optionalAuth | `?status=&genre=&limit=&offset=` | `{data:Book[], count}` | `routes/books.ts` |
 | GET | `/api/books/:id` | optionalAuth | — | `{data: Book}` | `routes/books.ts` |
-| POST | `/api/books` | optionalAuth | CreateBookBody | `{data: Book}` 201 | `routes/books.ts` |
-| PUT | `/api/books/:id` | optionalAuth | UpdateBookBody (partial) | `{data: Book}` | `routes/books.ts` |
-| DELETE | `/api/books/:id` | optionalAuth | — | `{success: true}` | `routes/books.ts` |
-| POST | `/api/books/:id/cover` | optionalAuth | ArrayBuffer (`Content-Type: image/*`) | `{success, r2Key, coverUrl}` | `routes/books.ts` |
-| GET | `/api/books/:id/cover` | optionalAuth | — | `image/*` binary 또는 redirect | `routes/books.ts` |
+| POST | `/api/books` | **authMiddleware** ✅ | CreateBookBody | `{data: Book}` 201 | `routes/books.ts` |
+| PUT | `/api/books/:id` | **authMiddleware** ✅ | UpdateBookBody (partial) | `{data: Book}` | `routes/books.ts` |
+| DELETE | `/api/books/:id` | **authMiddleware** ✅ | — | `{success: true}` | `routes/books.ts` |
+| POST | `/api/books/:id/cover` | **authMiddleware** ✅ | ArrayBuffer (`Content-Type: image/*`) | `{success, r2Key, coverUrl}` | `routes/books.ts` |
+| GET | `/api/books/:id/cover` | 없음 | — | `image/*` binary 또는 redirect | `routes/books.ts` |
 
 ### 독서 세션 (`/api/sessions`)
 
 | Method | 경로 | 인증 | 요청 | 응답 | Worker 파일 |
 |---|---|---|---|---|---|
 | GET | `/api/sessions` | optionalAuth | `?book_id=&limit=` | `{data: Session[]}` | `routes/sessions.ts` |
-| POST | `/api/sessions` | optionalAuth | `{book_id, pages_read, session_date?, duration_min?}` | `{data: Session, new_current_page}` 201 | `routes/sessions.ts` |
+| POST | `/api/sessions` | **authMiddleware** ✅ | `{book_id, pages_read, session_date?, duration_min?}` | `{data: Session, new_current_page}` 201 | `routes/sessions.ts` |
 
 ### 노트 (`/api/notes`)
 
@@ -345,9 +346,9 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 |---|---|---|---|---|---|
 | GET | `/api/notes` | optionalAuth | `?bookId=&type=&search=&limit=&offset=` | `{notes:[], total}` | `routes/notes.ts` |
 | GET | `/api/notes/:id` | optionalAuth | — | `{note}` | `routes/notes.ts` |
-| POST | `/api/notes` | optionalAuth | `{book_id, type?, content, page_number?, color?}` | `{note}` 201 | `routes/notes.ts` |
-| PUT | `/api/notes/:id` | optionalAuth | `{type?, content?, page_number?, color?}` | `{note}` | `routes/notes.ts` |
-| DELETE | `/api/notes/:id` | optionalAuth | — | `{success: true}` | `routes/notes.ts` |
+| POST | `/api/notes` | **authMiddleware** ✅ | `{book_id, type?, content, page_number?, color?}` | `{note}` 201 | `routes/notes.ts` |
+| PUT | `/api/notes/:id` | **authMiddleware** ✅ | `{type?, content?, page_number?, color?}` | `{note}` | `routes/notes.ts` |
+| DELETE | `/api/notes/:id` | **authMiddleware** ✅ | — | `{success: true}` | `routes/notes.ts` |
 
 ### 검색 (`/api/search`) — 인증 없음
 
@@ -600,8 +601,19 @@ DB (notes) → API JSON → normalizeBookNote() → UINote
 ### 6-C. Session 데이터 흐름
 
 ```
-DB (reading_sessions) → API JSON → useSessions() 훅 → raw 반환 (변환 없음)
-  note: UISession 타입 없음 — DbReadingSession 직접 사용
+DB (reading_sessions, snake_case)
+  → API JSON (ApiSession)
+  → useSessions() 훅 → normalizeSession()
+  → UISession (camelCase)
+
+normalizeSession(api: ApiSession): UISession
+  mapped fields:
+  - book_id      → bookId
+  - user_id      → userId
+  - pages_read   → pagesRead
+  - session_date → sessionDate
+  - duration_min → durationMin (null → undefined)
+  - created_at   → createdAt
 ```
 
 ### 6-D. 검색 결과 정규화
@@ -683,27 +695,25 @@ maxAge: 86400 (24h)
 
 ---
 
-### BUG-001 `[RISK]` — `/register-flow` ProtectedRoute 없음
+### BUG-001 `[FIXED]` — `/register-flow` ProtectedRoute 없음
 
 | 항목 | 내용 |
 |---|---|
 | **파일** | [src/app/routes.ts](../src/app/routes.ts) |
 | **문제** | `/register-flow` 라우트가 `protected_()` 래핑 없이 공개 라우트로 등록됨 |
-| **영향** | 미인증 사용자가 직접 URL 접속 시 `useAddBook.mutate()` 호출 → `optionalAuth`에 의해 `userId = 'demo-user'`로 책 추가 가능 |
-| **재현** | 로그아웃 상태에서 `/register-flow` 직접 접속 → 4단계 완료 시 demo-user 소유 책 추가됨 |
-| **권장 수정** | routes.ts에서 `register-flow`를 `protected_()` 내부로 이동 |
+| **수정** | `Component: protected_(RegisterFlowPage)` 로 변경 |
+| **상태** | ✅ 수정 완료 (2026-03-28) |
 
 ---
 
-### BUG-002 `[RISK]` — `optionalAuth` demo-user 폴백
+### BUG-002 `[FIXED]` — `optionalAuth` 쓰기 API 비인증 허용
 
 | 항목 | 내용 |
 |---|---|
-| **파일** | [worker/auth.ts](../worker/auth.ts) (L68-82) |
-| **문제** | `optionalAuth`는 토큰 없을 때 `userId = 'demo-user'`로 폴백. books, sessions, notes, ai 라우터 전체 적용 |
-| **영향** | 인증 없이 `/api/books`, `/api/sessions`, `/api/notes` POST 가능 — demo-user 소유 데이터 생성 |
-| **재현** | `curl -X POST /api/books -d '{"title":"test","author":"x","status":"wish"}'` (Authorization 헤더 없음) |
-| **권장 수정** | 쓰기(POST/PUT/DELETE) 라우트는 `authMiddleware`로 교체, GET만 `optionalAuth` 유지 (데모 모드 유지 시 별도 환경변수로 분기) |
+| **파일** | `worker/routes/books.ts`, `sessions.ts`, `notes.ts` |
+| **문제** | `*.use('*', optionalAuth)` 와일드카드로 모든 라우트(POST/PUT/DELETE)에 옵셔널 인증 적용 → 비인증 시 demo-user로 쓰기 가능 |
+| **수정** | 와일드카드 제거 → GET 라우트에 `optionalAuth` 인라인, POST/PUT/DELETE에 `authMiddleware` 인라인 |
+| **상태** | ✅ 수정 완료 (2026-03-28) |
 
 ---
 
@@ -732,37 +742,36 @@ maxAge: 86400 (24h)
 
 ---
 
-### BUG-003 `[CONFIRMED]` — SplashPage 인증 상태 무시
+### BUG-003 `[FIXED]` — SplashPage 인증 상태 무시
 
 | 항목 | 내용 |
 |---|---|
 | **파일** | [src/app/pages/SplashPage.tsx](../src/app/pages/SplashPage.tsx) |
 | **문제** | 이미 인증된 사용자도 앱 첫 진입 시 무조건 `/onboarding`으로 2.8초 후 이동 |
-| **영향** | 재방문 사용자 UX 저하. 이미 로그인된 사용자가 `/`로 바로 가지 못함 |
-| **재현** | 로그인 후 앱 재오픈 → 스플래시 → 온보딩 경유 |
-| **권장 수정** | checkAuth() 결과 확인 후 `authenticated` 이면 `/`로, 아니면 `/onboarding`으로 이동 |
+| **수정** | `useAuthStore(s => s.status)` 로 상태 구독, timer 콜백에서 `authenticated`→`/`, else→`/onboarding` 분기 |
+| **상태** | ✅ 수정 완료 (2026-03-28) |
 
 ---
 
-### BUG-004 `[RISK]` — 404 fallback 라우트 없음
+### BUG-004 `[FIXED]` — 404 fallback 라우트 없음
 
 | 항목 | 내용 |
 |---|---|
 | **파일** | [src/app/routes.ts](../src/app/routes.ts) |
-| **문제** | 존재하지 않는 경로 접속 시 빈 화면 또는 React Router 기본 동작 |
-| **영향** | `/invalid-path` 접속 시 사용자에게 빈 화면 표시 |
-| **권장 수정** | `path: '*'` 라우트 추가 (Not Found 페이지로 연결) |
+| **문제** | 존재하지 않는 경로 접속 시 빈 화면 |
+| **수정** | `NotFoundPage.tsx` 생성 + `path: '*'` 라우트 추가 |
+| **상태** | ✅ 수정 완료 (2026-03-28) |
 
 ---
 
-### BUG-005 `[RISK]` — useAI queryKeys 불일치
+### BUG-005 `[FIXED]` — useAI queryKeys 불일치
 
 | 항목 | 내용 |
 |---|---|
-| **파일** | [src/hooks/useAI.ts](../src/hooks/useAI.ts) |
+| **파일** | [src/hooks/useAI.ts](../src/hooks/useAI.ts), [src/lib/api.ts](../src/lib/api.ts) |
 | **문제** | `useAIRecommendations`의 queryKey가 `['ai', 'recommendations']` 하드코딩 — `queryKeys` 팩토리 미사용 |
-| **영향** | 다른 훅이나 뮤테이션에서 `queryClient.invalidateQueries(queryKeys.ai.recommendations)` 등으로 캐시 무효화 불가 |
-| **권장 수정** | `queryKeys.ai = { recommendations: () => ['ai', 'recommendations'] }` 추가 후 사용 |
+| **수정** | `queryKeys.ai = { all, recommendations(), summary(isbn) }` 추가 → `useAIRecommendations`에서 `queryKeys.ai.recommendations()` 사용 |
+| **상태** | ✅ 수정 완료 (2026-03-28) |
 
 ---
 
@@ -776,14 +785,14 @@ maxAge: 86400 (24h)
 
 ---
 
-### BUG-007 `[RISK]` — KakaoCallbackPage 오류 파라미터 없을 때 동작
+### BUG-007 `[FIXED]` — KakaoCallbackPage 에러 메시지 개선
 
 | 항목 | 내용 |
 |---|---|
 | **파일** | [src/app/pages/KakaoCallbackPage.tsx](../src/app/pages/KakaoCallbackPage.tsx) |
-| **문제** | Worker가 `/?token=...`으로 리다이렉트하지만, 만약 `/auth/kakao/callback`에 토큰 없이 도달하면 즉시 `/login`으로 이동 (오류 표시 없음) |
-| **영향** | 사용자가 왜 로그인으로 돌아갔는지 알 수 없음 |
-| **권장 수정** | 토큰 없는 도달 시 "로그인 처리 중 오류가 발생했습니다" 메시지 표시 |
+| **문제** | 에러 파라미터 종류 무관 하드코딩 메시지 "카카오 로그인이 취소되었습니다." |
+| **수정** | `messageMap: {access_denied, server_error, kakao_failed, token_failed}` 매핑 추가 |
+| **상태** | ✅ 수정 완료 (2026-03-28) |
 
 ---
 
@@ -800,12 +809,25 @@ maxAge: 86400 (24h)
 
 ### BUG-009 `[RISK]` — users.ts PATCH body zod 검증 없음
 
+### BUG-009 `[FIXED]` — users.ts PATCH body zod 검증 없음
+
 | 항목 | 내용 |
 |---|---|
 | **파일** | [worker/routes/users.ts](../worker/routes/users.ts) |
 | **문제** | `PATCH /api/users/profile`은 `zValidator` 없이 `c.req.json()` 직접 사용, 각 필드 수동 검증 |
-| **영향** | 예상치 못한 필드 전송 시 조용히 무시됨 (보안상 큰 위험은 아니나 버그 추적 어려움) |
-| **권장 수정** | zod 스키마로 통일 |
+| **수정** | `updateProfileSchema` (name/favorite_genres/reading_goal/avatar_url) 추가 → `zValidator('json', updateProfileSchema)` 적용 |
+| **상태** | ✅ 수정 완료 (2026-03-28) |
+
+---
+
+### ADD-001 `[FIXED]` — UISession 타입 정규화 누락
+
+| 항목 | 내용 |
+|---|---|
+| **파일** | [src/types/book.ts](../src/types/book.ts), [src/hooks/useSessions.ts](../src/hooks/useSessions.ts), [src/app/components/stats/StatsComponents.tsx](../src/app/components/stats/StatsComponents.tsx) |
+| **문제** | `useSessions()`가 snake_case `ReadingSession[]` 그대로 반환 — UIBook/UINote 패턴과 불일치 |
+| **수정** | `ApiSession` + `UISession` 인터페이스 및 `normalizeSession()` 추가, `useSessions` 반환 타입을 `UISession[]`로 교체, `StatsComponents` 필드 camelCase 수정 |
+| **상태** | ✅ 수정 완료 (2026-03-28) |
 
 ---
 
@@ -855,12 +877,15 @@ queryKeys:
   users.stats(id)     = ['users', id, 'stats']
 
   sessions.all        = ['sessions']
-  sessions.list(f)    = ['sessions', filters]
+  sessions.list(f)    = ['sessions', 'list', { book_id, limit }]
 
   notes.all           = ['notes']
-  notes.list(f)       = ['notes', filters]
+  notes.list(f)       = ['notes', 'list', filters]
+  notes.detail(id)    = ['notes', 'detail', id]
 
-  ['ai', 'recommendations']  ← 하드코딩 (queryKeys 팩토리 미등록 ⚠️)
+  ai.all              = ['ai']
+  ai.recommendations()= ['ai', 'recommendations']  ← queryKeys 팩토리 ✅ (2026-03-28 수정)
+  ai.summary(isbn)    = ['ai', 'summary', isbn]
 
 Global QueryClient 설정:
   staleTime: 30초
