@@ -30,7 +30,11 @@ async function hashPasswordLegacy(password: string, salt: string): Promise<strin
   return `${salt}:${hex}`;
 }
 
-/** PBKDF2 비밀번호 해싱 */
+/**
+ * PBKDF2 비밀번호 해싱
+ * CF Workers CPU 한도(10-50ms) 제약으로 10,000 iterations 사용.
+ * (OWASP 권장 600,000은 ~300ms 소요 → Workers CPU 초과 → 500 에러)
+ */
 export async function hashPassword(password: string): Promise<string> {
   const saltBytes = crypto.getRandomValues(new Uint8Array(16));
   const saltHex = [...saltBytes].map(b => b.toString(16).padStart(2, '0')).join('');
@@ -42,7 +46,7 @@ export async function hashPassword(password: string): Promise<string> {
     ['deriveBits'],
   );
   const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', salt: saltBytes, iterations: 600_000, hash: 'SHA-256' },
+    { name: 'PBKDF2', salt: saltBytes, iterations: 10_000, hash: 'SHA-256' },
     keyMaterial,
     256,
   );
@@ -66,7 +70,7 @@ export async function verifyPassword(password: string, stored: string): Promise<
       ['deriveBits'],
     );
     const bits = await crypto.subtle.deriveBits(
-      { name: 'PBKDF2', salt: saltBytes, iterations: 600_000, hash: 'SHA-256' },
+      { name: 'PBKDF2', salt: saltBytes, iterations: 10_000, hash: 'SHA-256' },
       keyMaterial,
       256,
     );
