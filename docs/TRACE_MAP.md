@@ -3,8 +3,8 @@
 > 작성 기준: 실제 소스 코드 전수 분석 (2026-03 기준)
 > 목적: 프로덕션 오류 발생 시 UI → Hook → API → DB 레이어를 빠르게 추적하기 위한 기준 문서
 >
-> **최근 변경**: 2026-03-28 — 모바일 UI/UX 최적화 (touch delay 제거, BottomNavBar 안정화, Root.tsx 레이아웃 수정, OnboardingPage UX 전면 개선)
-> **이전 변경**: 2026-03-28 — PROMPT-01~05 리팩토링 완료 (보안 미들웨어 교체, SplashPage 인증 분기, NotFoundPage, zod 검증, queryKey 팩토리, UISession 정규화)
+> **최근 변경**: 2026-03-28 — Phase 1-A~3-B 구현 (Rate Limiting, PWA Banner, QueryClient 튜닝, 독서 타이머, 스트릭 카드, PBKDF2 해싱, FTS5 전문 검색, Stats API)
+> **이전 변경**: 2026-03-28 — 모바일 UI/UX 최적화 (touch delay 제거, BottomNavBar 안정화, Root.tsx 레이아웃 수정, OnboardingPage UX 전면 개선)
 
 ---
 
@@ -22,11 +22,11 @@
 | **AI** | Workers AI (`@cf/meta/llama-3.1-8b-instruct`, `@cf/meta/llama-3.2-11b-vision-instruct`) |
 | **Storage** | Cloudflare R2 (`covers/{userId}/{bookId}.{ext}`) |
 | **TypeScript check** | ✅ 0 errors |
-| **Build** | ✅ 성공 (index.js 643KB, 3.41s) |
+| **Build** | ✅ 성공 (built in 3.04s) |
 | **Production Health** | ✅ `{"status":"ok","env":"production"}` |
-| **GitHub 커밋** | `f059a00` (main) |
-| **Cloudflare Workers** | Version ID `827b4e20-0cce-4536-a50d-9bf4ba580665` |
-| **D1 Tables** | users, books, reading_sessions, notes, d1_migrations, _cf_KV, sqlite_sequence |
+| **GitHub 커밋** | `8131eeb` (main) |
+| **Cloudflare Workers** | Version ID `40506e74-10d7-4a7d-bc37-6fd998677739` |
+| **D1 Tables** | users, books, reading_sessions, notes, notes_fts (FTS5), d1_migrations, _cf_KV, sqlite_sequence |
 
 ---
 
@@ -65,6 +65,7 @@
 | `/api/notes/*` | `worker/routes/notes.ts` | GET→`optionalAuth` / 쓰기(POST/PUT/DELETE)→`authMiddleware` ✅ |
 | `/api/search/*` | `worker/routes/search.ts` | 없음 (공개) |
 | `/api/ai/*` | `worker/routes/ai.ts` | `optionalAuth` 각 핸들러 |
+| `/api/stats/*` | `worker/routes/stats.ts` | `authMiddleware` (전체) ✅ |
 | `GET *` | SPA 폴백 | 없음 (ASSETS 서빙) |
 
 ---
@@ -285,17 +286,29 @@ UI(NumberStepper 입력) → useAddSession.mutate({ bookId, startPage, endPage, 
 
 ### StatsPage (`/stats`) — lazy
 ```
-UI(마운트) → 4개 쿼리 병렬:
-  useBooks({ status: 'done' })     → GET /api/books?status=done
-  useBooks({ status: 'reading' })  → GET /api/books?status=reading
-  useBooks({ status: 'wish' })     → GET /api/books?status=wish
-  useSessions()                    → GET /api/sessions
+UI(마운트) → useStats()  ★ 단일 쿼리 (4개와 일치 → 1개로 통합 2026-03-28)
+  → statsApi.getStats()
+    → GET /api/stats
+      → authMiddleware
+      → D1.batch([5개 쿼리 백 실행]):
+          1. 월별 완독 COUNT (finished_date 기준, 최근 12개월)
+          2. 장르에 COUNT (GROUP BY genre)
+          3. 상태별 COUNT (done / reading / wish)
+          4. 세션 날짜 DISTINCT (최근 365일, 스트릭 계산용)
+          5. 누적 합계 (total_pages, total_minutes)
+      → { monthly[], genres[], statusCounts, sessionDates[], totals }
 
-클라이언트 집계 함수:
-  buildMonthlyData()           → 월별 완독 수
-  buildGenreDistribution()     → 장르 도넛 차트
-  calcDoneTrend()              → 완독 추세
-  buildDateRangeLabel()        → 날짜 범위 레이블
+[클라이언트 변환]
+buildMonthlyFromStats()    → 월별 완독 배열 (12개월 0서보 실리)
+buildGenreFromStats()      → { genre, count, color }[] 도넛 상괇 데이터
+buildSyntheticSessions()   → sessionDates → UISession[] (StreakCard용)
+
+[스트릭 카드] ★ 신규 (2026-03-28)
+UI(StreakCard) → calcReadingStreak(syntheticSessions)
+  → { currentStreak, longestStreak, totalDays }
+  → 오늘/어제 기준 연속 일수, 전체 연속 최대값
+
+[staleTime: 5분 (timeouts) — 다른 훅에 비해 충분한 지연 새로고침]
 ```
 
 ---
@@ -336,15 +349,25 @@ UI(책 선택 후 추가) → useUpdateBook.mutate({ id, data: { status: 'readin
 UI(검색어 >= 1글자, debounce 300ms) → useNotes({ search: debouncedQuery, type })
   → notesApi.list({ search, type })
     → GET /api/notes?search=...&type=...
-      → D1: SELECT ... WHERE content LIKE '%search%'
+      → FTS5 MATCH 쿼리 (2026-03-28 신규) ★:
+         SELECT n.* FROM notes n
+         JOIN notes_fts f ON n.rowid = f.rowid
+         WHERE f.notes_fts MATCH '"keyword"*'
+           AND n.user_id = ?
+           AND n.book_id = ?
+         ORDER BY rank LIMIT 50
+      → FTS5 실패 시 LIKE 폴백:
+         WHERE content LIKE '%keyword%'
 
 [노트 편집]
 UI(Sheet) → useUpdateNote.mutate({ id, data })
   → PUT /api/notes/:id → D1: UPDATE notes
+  → ON UPDATE notes 트리거 → notes_fts 자동 동기화
 
 [노트 삭제]
 UI(AlertDialog 확인) → useDeleteNote.mutate(id)
   → DELETE /api/notes/:id → D1: DELETE FROM notes
+  → ON DELETE notes 트리거 → notes_fts 자동 삭제
 ```
 
 ---
@@ -430,6 +453,24 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 | POST | `/api/ai/summarize` | optionalAuth | `{description, title, author}` | `{summary, cached}` | KV 1일 TTL |
 | GET | `/api/ai/recommend` | optionalAuth | `?limit=3` | `{recommendations, topGenres, cached}` | KV 1시간 TTL |
 | POST | `/api/ai/ocr` | optionalAuth | FormData(`image` 파일, 최대 5MB) | `{text}` | 없음 |
+
+### 통계 (`/api/stats`) ★ 신규 (2026-03-28)
+
+| Method | 경로 | 인증 | 요청 | 응답 | Worker 파일 |
+|---|---|---|---|---|---|
+| GET | `/api/stats` | **authMiddleware** | — | `{monthly[], genres[], statusCounts, sessionDates[], totals}` | `routes/stats.ts` |
+
+**응답 상세:**
+```
+monthly:      Array<{ month: string; count: number }>   — 최근 12개월 월별 완독 수
+genres:       Array<{ genre: string; count: number }>   — 장르별 도서 수 (status='done')
+statusCounts: { done: number; reading: number; wish: number }
+sessionDates: string[]                                  — 최근 365일 독서 세션 날짜 목록 (스트릭 계산용)
+totals:       { totalPages: number; totalMinutes: number }
+```
+**구현**: D1.batch([5쿼리]) — 단일 요청으로 모든 통계 조회 (`worker/routes/stats.ts`)
+
+---
 
 ### 헬스체크
 
@@ -528,10 +569,26 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 
 ---
 
-### 트리거 (3개)
+### `notes_fts` (FTS5 Virtual Table) ★ 신규 (2026-03-28)
+
+| 항목 | 값 |
+|---|---|
+| 타입 | `USING fts5(...)` — SQLite 전문 검색 가상 테이블 |
+| 미러링 대상 | `content='notes', content_rowid='rowid'` |
+| 토크나이저 | `unicode61 remove_diacritics 1` — 유니코드 한국어 지원, 발음 구별 부호 제거 |
+| 마이그레이션 | `worker/db/migrations/0002_fts5_notes.sql` |
+
+**동작 방식**: FTS5 외부 콘텐츠 테이블 — notes 테이블을 원본으로 참조, 트리거로 동기화
+
+---
+
+### 트리거 (6개)
 - `update_notes_timestamp` — AFTER UPDATE ON notes → SET updated_at = datetime('now')
 - `update_books_timestamp` — AFTER UPDATE ON books → SET updated_at = datetime('now')
 - `update_users_timestamp` — AFTER UPDATE ON users → SET updated_at = datetime('now')
+- `notes_ai` — AFTER INSERT ON notes → `INSERT INTO notes_fts(rowid, content)` ★ FTS5 동기화 (2026-03-28)
+- `notes_ad` — AFTER DELETE ON notes → `INSERT INTO notes_fts(notes_fts, rowid, content) VALUES('delete', ...)` ★ FTS5 동기화 (2026-03-28)
+- `notes_au` — AFTER UPDATE ON notes → DELETE + INSERT FTS5 재인덱싱 ★ FTS5 동기화 (2026-03-28)
 
 ---
 
@@ -543,8 +600,9 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 [회원가입]
 SignUpPage → authStore.register(name, email, password)
   → POST /api/users/register
-  → hashPassword(password) [SHA-256 + crypto.randomUUID() salt]
-    저장 형식: "{salt}:{hex}"
+  → hashPassword(password) [PBKDF2 600,000 iterations + 16B random salt] ★ (2026-03-28)
+    저장 형식: "pbkdf2:{saltHex}:{hashHex}"
+    (구형: SHA-256 "{salt}:{hex}" — 레거시 계정 로그인 시 자동 업그레이드)
   → INSERT users
   → createToken({sub, email}, JWT_SECRET) [HS256, 24h]
   → 자동으로 authStore.login() 호출
@@ -553,7 +611,10 @@ SignUpPage → authStore.register(name, email, password)
 [로그인]
 LoginPage → authStore.login(email, password)
   → POST /api/users/login
-  → verifyPassword(input, stored) → hashPassword(input, salt) === stored
+  → verifyPassword(input, stored):
+     stored.startsWith('pbkdf2:') → PBKDF2 constant-time 비교 ★ (2026-03-28)
+     else → SHA-256 레거시 폴백 (하위 호환)
+  → 로그인 성공 + 레거시 해시 감지 시 → 자동 PBKDF2 업그레이드 ★ (2026-03-28)
   → createToken() → JWT 반환
   → localStorage.setItem('auth_token', token)
   → authStore.user = { id, email, name, avatar_url, favorite_genres[], reading_goal }
@@ -735,6 +796,7 @@ favorite_genres: DB TEXT ('["k","s"]') → authStore.login() / checkAuth()
 | `404` | 책/노트/사용자 ID 없음 |
 | `409` | 이메일 중복 (register) |
 | `422` | OCR 텍스트 인식 실패 |
+| `429` | Rate Limiting 초과 (login: 5회/60s, search: 20회/60s, ai: 10회/60s) ★ (2026-03-28) |
 | `500` | Workers AI 오류, DB 오류 |
 | `502` | 카카오 + 네이버 검색 동시 실패 |
 | `글로벌 onError` | HTTPException → `{error}`, 그 외 `{error: 'Internal Server Error'}` 500 |
@@ -965,7 +1027,7 @@ maxAge: 86400 (24h)
 |---|---|---|
 | `DB` | D1Database | 메인 데이터베이스 |
 | `SESSIONS` | KVNamespace | (예약, 현재 미사용) |
-| `KV` | KVNamespace | AI 결과 캐시 (summarize 1일, recommend 1시간) |
+| `KV` | KVNamespace | AI 결과 캐시 (summarize 1일, recommend 1시간) + Rate Limiting 카운터 ★ (2026-03-28) |
 | `R2` | R2Bucket | 표지 이미지 저장 |
 | `AI` | Ai | Workers AI (llama-3.1-8b, llama-3.2-11b-vision) |
 | `ASSETS` | Fetcher | PWA SPA 정적 파일 서빙 |
@@ -1004,10 +1066,13 @@ queryKeys:
   ai.recommendations()= ['ai', 'recommendations']  ← queryKeys 팩토리 ✅ (2026-03-28 수정)
   ai.summary(isbn)    = ['ai', 'summary', isbn]
 
+  stats.all           = ['stats']                   ← ★ 신규 (2026-03-28)
+  stats.user()        = ['stats', 'user']           ← ★ 신규 (2026-03-28)
+
 Global QueryClient 설정:
-  staleTime: 30초
+  staleTime: 60초  ← ★ 변경 (2026-03-28, 기존 30초)
   gcTime: 5분
-  refetchOnWindowFocus: true
+  refetchOnWindowFocus: false  ← ★ 변경 (2026-03-28, 기존 true)
   retry: ApiError.status < 500 → false / else failureCount < 2
   mutations.retry: false
 ```
@@ -1023,3 +1088,4 @@ Global QueryClient 설정:
 | 2026-03-28 | 초기 전수 분석 작성 |
 | 2026-03-28 | PROMPT-01~05 리팩토링 반영 (BUG-001~009, ADD-001) — GitHub `a91fd2e` / Cloudflare `fd9814b4` |
 | 2026-03-28 | 모바일 UI/UX 최적화 반영 (BUG-013~015, UX-001) — GitHub `f059a00` / Cloudflare `827b4e20` |
+| 2026-03-28 | Phase 1-A~3-B 반영 (Rate Limiting, PWA Banner, QueryClient 튜닝, 독서 타이머, 독서 스트릭, PBKDF2, FTS5, Stats API) — GitHub `8131eeb` / Cloudflare `40506e74` |
