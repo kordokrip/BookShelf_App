@@ -15,6 +15,21 @@ export function useBooks(filters?: { status?: BookStatus; genre?: string }) {
   });
 }
 
+/**
+ * 도서 수 조회 최적화 훅 — 동일한 queryKey를 재사용하되 count만 반환
+ * BottomNavBar처럼 숫자만 필요한 곳에서 사용하면 불필요한 re-render를 방지합니다.
+ */
+export function useBookCount(status: BookStatus) {
+  return useQuery({
+    queryKey: queryKeys.books.list({ status }),
+    queryFn: async () => {
+      const res = await booksApi.list({ status });
+      return res.data.map(normalizeBook);
+    },
+    select: (data: UIBook[]) => data.length,
+  });
+}
+
 /** 단일 도서 상세 조회 */
 export function useBookDetail(id: string) {
   return useQuery({

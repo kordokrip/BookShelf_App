@@ -1,9 +1,9 @@
+import { useMemo } from "react";
 import { BookMarked, BookOpen, Sparkles, FileText } from "lucide-react";
-import { SummaryCard, MonthlyBarChart, GenreDonutChart, ReadingHeatmap } from "../components/stats/StatsComponents";
+import { SummaryCard, MonthlyBarChart, GenreDonutChart, ReadingHeatmap, StreakCard } from "../components/stats/StatsComponents";
 import { StatCardSkeleton, ChartSkeleton } from "../components/ui/skeleton";
-import { useBooks } from "../../hooks/useBooks";
-import { useSessions } from "../../hooks/useSessions";
-import type { UIBook } from "../../types/book";
+import { useStats } from "../../hooks/useStats";
+import type { UISession } from "../../types/book";
 import { GENRE_CONFIG } from "../../types/book";
 
 /* ─── 장르별 색상 매핑 (GENRE_CONFIG 기반 — 19종 전체 커버) */
@@ -11,113 +11,88 @@ const GENRE_COLORS: Record<string, string> = Object.fromEntries(
   Object.entries(GENRE_CONFIG).map(([genre, cfg]) => [genre, cfg.text]),
 );
 
-function buildMonthlyData(books: UIBook[]) {
+const MONTH_LABELS = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
+
+/** stats.monthly (YYYY-MM, count) → 12개월 MonthlyBarChart data 변환 */
+function buildMonthlyFromStats(monthly: { month: string; count: number }[]) {
   const now = new Date();
+  const currentYear = now.getFullYear();
   const currentMonth = now.getMonth(); // 0-indexed
-  const months = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
-  return months.map((month, i) => {
-    const monthBooks = books.filter((b) => {
-      if (!b.finishedDate) return false;
-      const d = new Date(b.finishedDate);
-      return d.getMonth() === i && d.getFullYear() === now.getFullYear();
-    });
+  const countMap = new Map(monthly.map(m => [m.month, m.count]));
+
+  return MONTH_LABELS.map((label, i) => {
+    const key = `${currentYear}-${String(i + 1).padStart(2, '0')}`;
     return {
-      month,
-      books: monthBooks.length,
-      pages: monthBooks.reduce((s, b) => s + (b.totalPages ?? 0), 0),
+      month: label,
+      books: countMap.get(key) ?? 0,
+      pages: 0,
       status: i < currentMonth ? "past" : i === currentMonth ? "current" : "future",
     };
   });
 }
 
-function buildGenreDistribution(books: UIBook[]) {
-  const counts: Record<string, number> = {};
-  for (const b of books) {
-    counts[b.genre] = (counts[b.genre] ?? 0) + 1;
-  }
-  return Object.entries(counts).map(([genre, count]) => ({
+/** stats.genres → GenreDonutChart 데이터 변환 */
+function buildGenreFromStats(genres: { genre: string; count: number }[]) {
+  return genres.map(({ genre, count }) => ({
     genre,
     count,
     color: GENRE_COLORS[genre] ?? "#94A3B8",
   }));
 }
 
-/** 이번 달 완독 수 대비 지난 달 완독 수로 트렌드 문자열 계산 */
-function calcDoneTrend(doneBooks: UIBook[]): string {
-  const now = new Date();
-  const y = now.getFullYear();
-  const thisM = now.getMonth();
-  const lastM = thisM === 0 ? 11 : thisM - 1;
-  const lastY = thisM === 0 ? y - 1 : y;
-
-  const thisCount = doneBooks.filter((b) => {
-    if (!b.finishedDate) return false;
-    const d = new Date(b.finishedDate);
-    return d.getMonth() === thisM && d.getFullYear() === y;
-  }).length;
-
-  const lastCount = doneBooks.filter((b) => {
-    if (!b.finishedDate) return false;
-    const d = new Date(b.finishedDate);
-    return d.getMonth() === lastM && d.getFullYear() === lastY;
-  }).length;
-
-  const diff = thisCount - lastCount;
-  if (diff > 0) return `+${diff}권`;
-  if (diff < 0) return `${diff}권`;
-  return "±0";
-}
-
-/** 가장 이른 책 추가 날짜를 기준으로 "YYYY년 M월 ~ 현재" 생성 */
-function buildDateRangeLabel(allBooks: UIBook[]): string {
-  const dates = allBooks
-    .map((b) => b.addedDate)
-    .filter(Boolean)
-    .map((d) => new Date(d));
-  if (dates.length === 0) return "독서 기록이 없습니다";
-  const earliest = new Date(dates.reduce((min, d) => d.getTime() < min ? d.getTime() : min, Infinity));
-  return `${earliest.getFullYear()}년 ${earliest.getMonth() + 1}월 ~ 현재`;
+/** sessionDates 배열 → UISession 합성 객체 배열 (ReadingHeatmap / StreakCard용) */
+function buildSyntheticSessions(sessionDates: string[]): UISession[] {
+  return sessionDates.map(date => ({
+    id: date,
+    bookId: '',
+    userId: '',
+    pagesRead: 1,
+    sessionDate: date,
+    createdAt: date,
+  }));
 }
 
 export function StatsPage() {
-  const { data: doneBooks = [], isLoading: loadingDone, isError: errorDone } = useBooks({ status: 'done' });
-  const { data: readingBooks = [], isLoading: loadingReading, isError: errorReading } = useBooks({ status: 'reading' });
-  const { data: wishBooks = [], isLoading: loadingWish, isError: errorWish } = useBooks({ status: 'wish' });
-  const { data: sessions = [], isLoading: loadingSessions, isError: errorSessions } = useSessions();
+  const { data: stats, isLoading, isError } = useStats();
 
-  const isLoading = loadingDone || loadingReading || loadingWish || loadingSessions;
-  const isError = errorDone || errorReading || errorWish || errorSessions;
+  const monthlyData = useMemo(
+    () => buildMonthlyFromStats(stats?.monthly ?? []),
+    [stats?.monthly],
+  );
 
-  const totalDone = doneBooks.length;
-  const totalReading = readingBooks.length;
-  const totalWish = wishBooks.length;
-  const totalPages = sessions.length > 0
-    ? sessions.reduce((s, sess) => s + sess.pagesRead, 0)
-    : doneBooks.reduce((s, b) => s + (b.totalPages ?? 0), 0);
+  const genreDataAll = useMemo(
+    () => buildGenreFromStats(stats?.genres ?? []),
+    [stats?.genres],
+  );
 
-  const monthlyData = buildMonthlyData(doneBooks);
-  const allBooks = [...doneBooks, ...readingBooks, ...wishBooks];
-  const genreDataAll = buildGenreDistribution(allBooks);
-  const genreDataDone = buildGenreDistribution(doneBooks);
-  const genreDataReading = buildGenreDistribution(readingBooks);
-  const doneTrend = calcDoneTrend(doneBooks);
-  const dateRangeLabel = buildDateRangeLabel(allBooks);
+  const syntheticSessions = useMemo(
+    () => buildSyntheticSessions(stats?.sessionDates ?? []),
+    [stats?.sessionDates],
+  );
+
+  const totalDone = stats?.statusCounts.done ?? 0;
+  const totalReading = stats?.statusCounts.reading ?? 0;
+  const totalWish = stats?.statusCounts.wish ?? 0;
+  const totalPages = stats?.totals.totalPages ?? 0;
 
   return (
     <div className="pb-[var(--page-pb)] lg:pb-8">
       {/* Header */}
       <div className="px-4 pt-4 pb-3">
         <h2 className="text-[#1E293B]" style={{ fontSize: 20, fontWeight: 700 }}>나의 독서 통계 📊</h2>
-        <p className="text-[#64748B]" style={{ fontSize: 13, marginTop: 2 }}>{dateRangeLabel}</p>
+        <p className="text-[#64748B]" style={{ fontSize: 13, marginTop: 2 }}>
+          {stats ? `완독 ${totalDone}권 · 읽는 중 ${totalReading}권 · Wish ${totalWish}권` : "통계를 불러오는 중..."}
+        </p>
       </div>
 
-      {/* CV-7: Loading state */}
+      {/* Loading state */}
       {isLoading && (
         <div className="px-4">
           <div className="grid grid-cols-2 gap-3 mb-4">
             {[...Array(4)].map((_, i) => <StatCardSkeleton key={i} />)}
           </div>
           <div className="flex flex-col gap-3">
+            <ChartSkeleton height={72} />
             <ChartSkeleton height={200} />
             <ChartSkeleton height={220} />
             <ChartSkeleton height={160} />
@@ -128,25 +103,22 @@ export function StatsPage() {
       {/* Error state */}
       {isError && !isLoading && (
         <div className="px-4 py-8 text-center">
-          <p className="text-red-500 text-sm">실패 시 돁돉 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.</p>
+          <p className="text-red-500 text-sm">데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.</p>
         </div>
       )}
 
-      {/* CV-7: Success state */}
-      {!isLoading && (
+      {/* Success state */}
+      {!isLoading && !isError && stats && (
         <>
-          {/* Summary Cards: 2×2 grid, 12px gap (CV-1: spec exact) */}
+          {/* Summary Cards: 2×2 grid */}
           <div className="px-4 mb-4" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            {/* 완독: indigo border, trend "+8권" (완독 only) */}
             <SummaryCard
               icon={<BookMarked size={18} color="#4F46E5" />}
               iconBg="#EEF2FF"
               borderColor="#4F46E5"
               label="완독한 책"
               value={`${totalDone}권`}
-              trend={doneTrend}
             />
-            {/* 읽는중: green border */}
             <SummaryCard
               icon={<BookOpen size={18} color="#10B981" />}
               iconBg="#D1FAE5"
@@ -154,7 +126,6 @@ export function StatsPage() {
               label="읽는 중"
               value={`${totalReading}권`}
             />
-            {/* Wish: amber border */}
             <SummaryCard
               icon={<Sparkles size={18} color="#F59E0B" />}
               iconBg="#FEF3C7"
@@ -162,7 +133,6 @@ export function StatsPage() {
               label="Wish 목록"
               value={`${totalWish}권`}
             />
-            {/* 총페이지: violet #8B5CF6 border */}
             <SummaryCard
               icon={<FileText size={18} color="#8B5CF6" />}
               iconBg="#EDE9FE"
@@ -172,82 +142,29 @@ export function StatsPage() {
             />
           </div>
 
+          {/* Streak Card */}
+          <div className="px-4 mb-3">
+            <StreakCard sessions={syntheticSessions} />
+          </div>
+
           {/* Charts */}
-          {/* Mobile: stacked | Desktop: 2-column dashboard (CV-3) */}
           <div className="px-4">
             {/* Mobile stacked */}
             <div className="lg:hidden flex flex-col gap-3">
               <MonthlyBarChart data={monthlyData} />
-              <GenreDonutChart allData={genreDataAll} doneData={genreDataDone} readingData={genreDataReading} />
-              <ReadingHeatmap sessions={sessions} />
+              <GenreDonutChart allData={genreDataAll} doneData={[]} readingData={[]} />
+              <ReadingHeatmap sessions={syntheticSessions} />
             </div>
 
-            {/* Desktop 2-col dashboard (CV-3: stats desktop layout) */}
+            {/* Desktop 2-col dashboard */}
             <div className="hidden lg:grid grid-cols-2 gap-5">
               <div className="flex flex-col gap-5">
                 <MonthlyBarChart data={monthlyData} />
-                <ReadingHeatmap sessions={sessions} />
+                <ReadingHeatmap sessions={syntheticSessions} />
               </div>
               <div className="flex flex-col gap-5">
-                <GenreDonutChart allData={genreDataAll} doneData={genreDataDone} readingData={genreDataReading} />
-                {/* Top Books — desktop right column */}
-                <div className="bg-white rounded-2xl border border-[#F1F5F9] shadow-sm p-4">
-                  <h3 className="text-[#1E293B] mb-3" style={{ fontSize: 15, fontWeight: 700 }}>
-                    ⭐ 최고 평점 책
-                  </h3>
-                  {doneBooks
-                    .filter((b) => (b.rating ?? 0) >= 5)
-                    .slice(0, 5)
-                    .map((book, i) => (
-                      <div key={book.id} className="flex items-center gap-3 py-2 border-b border-[#F8FAFC] last:border-0">
-                        <span className="w-6 h-6 rounded-full bg-[#FEF3C7] text-[#92400E] flex items-center justify-center flex-shrink-0"
-                          style={{ fontSize: 11, fontWeight: 700 }}>{i + 1}</span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[#1E293B] truncate" style={{ fontSize: 13, fontWeight: 600 }}>{book.title}</p>
-                          <p className="text-[#94A3B8]" style={{ fontSize: 11 }}>{book.author}</p>
-                        </div>
-                        <span style={{ fontSize: 13 }}>⭐ {book.rating?.toFixed(1)}</span>
-                      </div>
-                    ))}
-                </div>
+                <GenreDonutChart allData={genreDataAll} doneData={[]} readingData={[]} />
               </div>
-            </div>
-          </div>
-
-          {/* Mobile: Top Books */}
-          <div className="lg:hidden px-4 mt-3">
-            <div className="bg-white rounded-2xl border border-[#F1F5F9] shadow-sm p-4">
-              <h3 className="text-[#1E293B] mb-3" style={{ fontSize: 15, fontWeight: 700 }}>
-                ⭐ 최고 평점 책
-              </h3>
-              {doneBooks
-                .filter((b) => (b.rating ?? 0) >= 5)
-                .slice(0, 5)
-                .map((book, i) => (
-                  <div key={book.id} className="flex items-center gap-3 py-2 border-b border-[#F8FAFC] last:border-0">
-                    <span
-                      className="w-6 h-6 rounded-full bg-[#FEF3C7] text-[#92400E] flex items-center justify-center flex-shrink-0"
-                      style={{ fontSize: 11, fontWeight: 700 }}
-                    >
-                      {i + 1}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[#1E293B] truncate" style={{ fontSize: 13, fontWeight: 600 }}>
-                        {book.title}
-                      </p>
-                      <p className="text-[#94A3B8]" style={{ fontSize: 11 }}>
-                        {book.author}
-                      </p>
-                    </div>
-                    <div className="flex">
-                      {[1, 2, 3, 4, 5].map((s) => (
-                        <span key={s} style={{ fontSize: 12 }}>
-                          {s <= (book.rating ?? 0) ? "⭐" : ""}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
             </div>
           </div>
         </>
@@ -255,3 +172,5 @@ export function StatsPage() {
     </div>
   );
 }
+
+/* ─── END ─── */

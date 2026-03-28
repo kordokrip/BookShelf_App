@@ -16,6 +16,7 @@ export function useSessions(params?: { bookId?: string; limit?: number }) {
       });
       return res.data.map(normalizeSession);
     },
+    staleTime: 30_000, // 세션 데이터는 시간에 민감하므로 30초 유지
   });
 }
 

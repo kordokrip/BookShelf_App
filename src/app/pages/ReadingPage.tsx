@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, X, Target, Zap, BookOpen } from "lucide-react";
+import { Plus, X, Target, BookOpen, Play, Pause, RotateCcw, Timer } from "lucide-react";
 import type { UIBook, GenreKey } from "../../types/book";
 import { ALL_GENRES } from "../../types/book";
 import { ReadingBookCard, BookCover } from "../components/books/BookCard";
@@ -11,6 +11,7 @@ import { ReadingBookCardSkeleton, ErrorState } from "../components/ui/skeleton";
 import { useNavigate } from "react-router";
 import { useBooks, useUpdateBook } from "../../hooks/useBooks";
 import { useAddSession } from "../../hooks/useSessions";
+import { useReadingTimer } from "../../hooks/useReadingTimer";
 
 
 
@@ -192,7 +193,7 @@ function QuickActions({ onAction }: { onAction: (label: string) => void }) {
   const actions = [
     { icon: <BookOpen size={18} />, label: "오늘 독서 기록", bg: "#EEF2FF", color: "#4F46E5" },
     { icon: <Target size={18} />, label: "목표 설정", bg: "#FEF3C7", color: "#92400E" },
-    { icon: <Zap size={18} />, label: "독서 타이머", bg: "#ECFDF5", color: "#065F46" },
+    { icon: <Timer size={18} />, label: "독서 타이머", bg: "#ECFDF5", color: "#065F46" },
   ];
   return (
     <div className="px-4 mb-4 grid grid-cols-3 gap-2">
@@ -211,6 +212,71 @@ function QuickActions({ onAction }: { onAction: (label: string) => void }) {
   );
 }
 
+/* ─── Reading Timer Widget ─────────────────────────────────── */
+interface ReadingTimerWidgetProps {
+  displayTime: string;
+  isRunning: boolean;
+  onStart: () => void;
+  onPause: () => void;
+  onReset: () => void;
+  timerBook?: UIBook | null;
+}
+
+function ReadingTimerWidget({
+  displayTime,
+  isRunning,
+  onStart,
+  onPause,
+  onReset,
+  timerBook,
+}: ReadingTimerWidgetProps) {
+  return (
+    <div
+      className="mx-4 mb-4 rounded-2xl px-4 py-3 flex items-center gap-3"
+      style={{
+        background: "linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)",
+        border: "1px solid #A7F3D0",
+      }}
+    >
+      <Timer size={20} style={{ color: "#065F46", flexShrink: 0 }} />
+      <div className="flex-1 min-w-0">
+        {timerBook && (
+          <p className="truncate" style={{ fontSize: 11, color: "#065F46", fontWeight: 600, marginBottom: 1 }}>
+            {timerBook.title}
+          </p>
+        )}
+        <span
+          className="font-mono"
+          style={{ fontSize: 22, fontWeight: 800, color: "#065F46", letterSpacing: "0.04em" }}
+        >
+          {displayTime}
+        </span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <button
+          onClick={isRunning ? onPause : onStart}
+          className="w-9 h-9 rounded-full flex items-center justify-center transition-opacity hover:opacity-80 active:scale-95"
+          style={{ background: "#10B981" }}
+          aria-label={isRunning ? "일시정지" : "시작"}
+        >
+          {isRunning
+            ? <Pause size={16} color="white" fill="white" />
+            : <Play size={16} color="white" fill="white" />
+          }
+        </button>
+        <button
+          onClick={onReset}
+          className="w-9 h-9 rounded-full flex items-center justify-center transition-opacity hover:opacity-80 active:scale-95"
+          style={{ background: "#D1FAE5" }}
+          aria-label="초기화"
+        >
+          <RotateCcw size={15} style={{ color: "#065F46" }} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Page ─────────────────────────────────────────────────── */
 export function ReadingPage() {
   const { data: books = [], isLoading, isError, refetch } = useBooks({ status: 'reading' });
@@ -218,20 +284,30 @@ export function ReadingPage() {
   const addSession = useAddSession();
   const [selectedBook, setSelectedBook] = useState<UIBook | null>(null);
   const [selectedGenre, setSelectedGenre] = useState<GenreKey | null>(null);
+  const [timerBook, setTimerBook] = useState<UIBook | null>(null);
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const timer = useReadingTimer();
 
   function handleSave(page: number) {
     if (!selectedBook) return;
     const startPage = selectedBook.currentPage ?? 0;
 
-    // 실제 읽기 진행이 있으면 세션 기록
+    // 실제 읽기 진행이 있으면 세션 기록 (타이머 분 값 자동 반영)
     if (page > startPage) {
-      addSession.mutate({
-        bookId: selectedBook.id,
-        startPage,
-        endPage: page,
-      });
+      addSession.mutate(
+        {
+          bookId: selectedBook.id,
+          startPage,
+          endPage: page,
+          durationMinutes: timer.minutes > 0 ? timer.minutes : undefined,
+        },
+        {
+          onSuccess: () => {
+            timer.reset();
+          },
+        },
+      );
     }
 
     updateBook.mutate(
@@ -243,6 +319,14 @@ export function ReadingPage() {
         },
       },
     );
+  }
+
+  // 책 카드 클릭 시 해당 책으로 타이머 연동
+  function handleBookClick(book: UIBook) {
+    setSelectedBook(book);
+    if (!timer.isRunning && timer.elapsed === 0) {
+      setTimerBook(book);
+    }
   }
 
   // Genre counts for filter bar
@@ -259,6 +343,16 @@ export function ReadingPage() {
     <div className="pb-[var(--page-pb)] lg:pb-8">
       <ReadingOverviewBanner books={books} />
       <QuickActions onAction={(label) => showToast(`${label} 기능이 준비 중이에요 🛠️`, "info")} />
+
+      {/* 독서 타이머 위젯 */}
+      <ReadingTimerWidget
+        displayTime={timer.displayTime}
+        isRunning={timer.isRunning}
+        onStart={timer.start}
+        onPause={timer.pause}
+        onReset={timer.reset}
+        timerBook={timerBook}
+      />
 
       {/* Section header row */}
       <div className="flex items-center justify-between px-4 mb-2">
@@ -309,7 +403,7 @@ export function ReadingPage() {
               <ReadingBookCard
                 key={book.id}
                 book={book}
-                onClick={() => setSelectedBook(book)}
+                onClick={() => handleBookClick(book)}
               />
             ))}
           </div>
@@ -319,7 +413,7 @@ export function ReadingPage() {
               <ReadingBookCard
                 key={book.id}
                 book={book}
-                onClick={() => setSelectedBook(book)}
+                onClick={() => handleBookClick(book)}
               />
             ))}
           </div>

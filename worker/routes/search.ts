@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import type { Bindings } from '../types';
+import { rateLimit } from '../middleware/rateLimit';
 
 // ─── 카카오 API 응답 타입 ────────────────────────────────────
 interface KakaoDocument {
@@ -111,7 +112,7 @@ export const searchRouter = new Hono<{ Bindings: Bindings }>();
  * GET /api/search/books?q=&page=1&size=10
  * 카카오 도서 검색 → 실패 시 네이버 폴백
  */
-searchRouter.get('/books', async (c) => {
+searchRouter.get('/books', rateLimit({ limit: 20, windowMs: 60_000, keyPrefix: 'search' }), async (c) => {
   const q = c.req.query('q')?.trim();
   if (!q || q.length < 1) {
     return c.json({ error: '검색어를 입력해주세요 (q 파라미터 필수)' }, 400);
@@ -186,7 +187,7 @@ searchRouter.get('/books', async (c) => {
  * GET /api/search/books/isbn?isbn=
  * ISBN으로 단일 도서 조회 (카카오 → 네이버 폴백)
  */
-searchRouter.get('/books/isbn', async (c) => {
+searchRouter.get('/books/isbn', rateLimit({ limit: 10, windowMs: 60_000, keyPrefix: 'isbn' }), async (c) => {
   const isbn = c.req.query('isbn')?.trim();
   if (!isbn) {
     return c.json({ error: 'isbn 파라미터가 필요합니다' }, 400);

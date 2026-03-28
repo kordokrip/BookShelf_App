@@ -3,7 +3,8 @@
 > 작성 기준: 실제 소스 코드 전수 분석 (2026-03 기준)
 > 목적: 프로덕션 오류 발생 시 UI → Hook → API → DB 레이어를 빠르게 추적하기 위한 기준 문서
 >
-> **최근 변경**: 2026-03-28 — PROMPT-01~05 리팩토링 적용 (보안 미들웨어 교체, SplashPage 인증 분기, NotFoundPage, zod 검증, queryKey 팩토리, UISession 정규화)
+> **최근 변경**: 2026-03-28 — 모바일 UI/UX 최적화 (touch delay 제거, BottomNavBar 안정화, Root.tsx 레이아웃 수정, OnboardingPage UX 전면 개선)
+> **이전 변경**: 2026-03-28 — PROMPT-01~05 리팩토링 완료 (보안 미들웨어 교체, SplashPage 인증 분기, NotFoundPage, zod 검증, queryKey 팩토리, UISession 정규화)
 
 ---
 
@@ -21,8 +22,10 @@
 | **AI** | Workers AI (`@cf/meta/llama-3.1-8b-instruct`, `@cf/meta/llama-3.2-11b-vision-instruct`) |
 | **Storage** | Cloudflare R2 (`covers/{userId}/{bookId}.{ext}`) |
 | **TypeScript check** | ✅ 0 errors |
-| **Build** | ✅ 성공 (index.js 642KB 경고) |
+| **Build** | ✅ 성공 (index.js 643KB, 3.41s) |
 | **Production Health** | ✅ `{"status":"ok","env":"production"}` |
+| **GitHub 커밋** | `f059a00` (main) |
+| **Cloudflare Workers** | Version ID `827b4e20-0cce-4536-a50d-9bf4ba580665` |
 | **D1 Tables** | users, books, reading_sessions, notes, d1_migrations, _cf_KV, sqlite_sequence |
 
 ---
@@ -34,7 +37,7 @@
 | 경로 | 컴포넌트 | 보호 여부 | 비고 |
 |---|---|---|---|
 | `/splash` | `SplashPage` | 공개 | 2.8초 후 `authenticated`→`/`, else→`/onboarding` 분기 ✅ |
-| `/onboarding` | `OnboardingPage` | 공개 | 장르 선택 온보딩 |
+| `/onboarding` | `OnboardingPage` | 공개 | 스와이프 제스처(≥50px), 상단 ProgressBar, 장르 칩 44px 터치 타겟, 독서목표 슬라이더(1~100) ✅ |
 | `/login` | `LoginPage` | 공개 | 로컬 + 카카오 로그인 |
 | `/signup` | `SignUpPage` | 공개 | 로컬 회원가입 |
 | `/register-flow` | `RegisterFlowPage` | **보호** ✅ | `protected_()` 래핑 (2026-03-28 수정) |
@@ -80,10 +83,73 @@ UI(2.8초 타이머) → useAuthStore(s => s.status) 확인
 
 ### OnboardingPage (`/onboarding`)
 ```
-UI(장르 선택) → usersApi.updateProfile(favorite_genres)
-  → PATCH /api/users/profile
-    → D1: UPDATE users SET favorite_genres = ?
+UI(스와이프 ≥50px 또는 다음/이전 버튼 탭) → 슬라이드 전환 (총 4개 슬라이드)
+
+슬라이드 1: 환영 메시지
+슬라이드 2: 앱 기능 소개
+슬라이드 3: 장르 선택(minHeight:44px 칩) + 독서목표 슬라이더(range input, 1~100권)
+  → UI(슬라이드 3 완료 버튼) → usersApi.updateProfile({ favorite_genres, reading_goal })
+    → PATCH /api/users/profile
+      → D1: UPDATE users SET favorite_genres=?, reading_goal=?
   → navigate('/login')
+슬라이드 4: 시작하기 안내
+
+[진행 표시]
+상단 ProgressBar: 현재 슬라이드 번호(1~4) / 전체(4) 비율로 폭 결정
+  - 컬러 바 형식 (점 인디케이터 → ProgressBar로 교체)
+
+[스와이프 감지]
+touchStartX → handleTouchStart(e: React.TouchEvent)
+touchEndX   → handleTouchEnd(e: React.TouchEvent)
+deltaX = touchStartX - touchEndX
+  ≥ 50px  → 다음 슬라이드
+  ≤ -50px → 이전 슬라이드
+```
+
+---
+
+### Root 레이아웃 (`Root.tsx`)
+```
+<Root>
+  ├── <TopBar />      — fixed top, height: var(--topbar-h)
+  ├── <main>          — min-h: calc(100svh - var(--topbar-h))
+  │                     pb: var(--page-pb) (모바일)
+  │                     lg:pb-0             (데스크톱)
+  │   └── <Outlet />  — 각 페이지 렌더링
+  └── <BottomNavBar /> — fixed bottom, lg:hidden
+
+CSS 변수:
+  --topbar-h:     56px   (TopBar 높이)
+  --bottomnav-h:  64px   (BottomNavBar 높이)
+  --page-pb:      calc(var(--bottomnav-h) + 1rem)  (= 80px)
+
+핵심 수정 (BUG-013 수정):
+  main에 pb-[var(--page-pb)] lg:pb-0 추가
+  → 콘텐츠 하단이 BottomNavBar(64px)에 가려지지 않도록 보장
+```
+
+---
+
+### BottomNavBar (`src/app/components/navigation/BottomNavBar.tsx`)
+```
+[마운트]
+useBooks({ status: 'reading' }) → reading 버지 카운트 (동적)
+useBooks({ status: 'wish' })    → wish 배지 카운트 (동적)
+  - 99 초과 시 "99+" 표시
+
+[레이아웃]
+position: fixed bottom-0
+z-index: 50
+max-w: 640px (max-w-screen-sm), 가운데 정렬
+bg: white/95 + backdrop-blur-md (반투명 블러)
+
+[GPU 최적화]
+className="fixed-nav ..."
+  → transform: translateZ(0) (index.css .fixed-nav)
+  → iOS 스크롤 시 nav 떨림(jank) 방지
+
+[터치 피드백]
+active:scale-[0.92] 탭 시 미세 축소 애니메이션
 ```
 
 ---
@@ -831,6 +897,57 @@ maxAge: 86400 (24h)
 
 ---
 
+### BUG-013 `[FIXED]` — 콘텐츠가 BottomNavBar에 가려짐
+
+| 항목 | 내용 |
+|---|---|
+| **파일** | [src/app/Root.tsx](../src/app/Root.tsx) |
+| **문제** | `main` 엘리먼트에 padding-bottom이 없어 모바일에서 콘텐츠 최하단이 BottomNavBar(64px) 아래 숨겨짐 |
+| **수정** | `<main>` 클래스에 `pb-[var(--page-pb)] lg:pb-0` 추가 (`--page-pb = calc(--bottomnav-h + 1rem)`) |
+| **상태** | ✅ 수정 완료 (2026-03-28) |
+
+---
+
+### BUG-014 `[FIXED]` — 모바일 터치 300ms 딜레이 및 iOS nav 떨림
+
+| 항목 | 내용 |
+|---|---|
+| **파일** | [src/styles/index.css](../src/styles/index.css) |
+| **문제** | `touch-action` 미설정으로 300ms 탭 딜레이 존재 / iOS 스크롤 시 fixed nav 떨림(jank) 발생 |
+| **수정** | `* { touch-action: manipulation; -webkit-tap-highlight-color: transparent }` 전역 적용 |
+| **추가** | `.fixed-nav { transform: translateZ(0); will-change: transform }` — GPU 레이어 강제 |
+| **추가** | `input { font-size: max(16px, 1rem) }` — iOS Safari 자동 줌 방지 |
+| **추가** | `overscroll-behavior-y: contain` — 바운스 스크롤 격리 |
+| **상태** | ✅ 수정 완료 (2026-03-28) |
+
+---
+
+### BUG-015 `[FIXED]` — BottomNavBar 배지 하드코딩
+
+| 항목 | 내용 |
+|---|---|
+| **파일** | [src/app/components/navigation/BottomNavBar.tsx](../src/app/components/navigation/BottomNavBar.tsx) |
+| **문제** | 읽는 중(3), 위시리스트(15) 배지가 하드코딩되어 실제 데이터 미반영 |
+| **수정** | `useBooks({ status: 'reading' })`, `useBooks({ status: 'wish' })` 훅으로 동적 카운트, 99 초과 시 "99+" 처리 |
+| **상태** | ✅ 수정 완료 (2026-03-28) |
+
+---
+
+### UX-001 `[FIXED]` — OnboardingPage 터치 타겟 및 UX 개선
+
+| 항목 | 내용 |
+|---|---|
+| **파일** | [src/app/pages/OnboardingPage.tsx](../src/app/pages/OnboardingPage.tsx), [src/styles/theme.css](../src/styles/theme.css) |
+| **문제** | 장르 칩 높이 32px (WCAG 2.1 최소 44px 미충족) / 독서 목표 +/- 스테퍼 조작 불편 / 슬라이드 전환 시 스와이프 불가 / 점 인디케이터로 진행상황 불명확 |
+| **수정** | 장르 칩 `minHeight: 44px` 적용 |
+| **수정** | 독서 목표 스테퍼 → `<input type="range" min={1} max={100}>` 슬라이더로 교체 |
+| **수정** | `handleTouchStart` / `handleTouchEnd` 추가 — 50px 이상 수평 스와이프 시 슬라이드 전환 |
+| **수정** | 하단 점 인디케이터 → 상단 `ProgressBar` (컬러 바) 로 교체 |
+| **추가** | `theme.css`에 range input 크로스 브라우저 스타일 (`::-webkit-slider-thumb`, `::-moz-range-thumb`) |
+| **상태** | ✅ 수정 완료 (2026-03-28) |
+
+---
+
 ### BUG-010 `[RISK]` — D1.batch 트랜잭션 — 세션 INSERT 성공 + books UPDATE 실패 케이스
 
 | 항목 | 내용 |
@@ -898,4 +1015,11 @@ Global QueryClient 설정:
 ---
 
 *문서 생성: TRACE_MAP_PROMPT.md 기반 전수 코드 분석*
-*다음 갱신: 신규 라우트, 스키마 변경, 버그 수정 시*
+
+## 갱신 이력
+
+| 날짜 | 내용 |
+|---|---|
+| 2026-03-28 | 초기 전수 분석 작성 |
+| 2026-03-28 | PROMPT-01~05 리팩토링 반영 (BUG-001~009, ADD-001) — GitHub `a91fd2e` / Cloudflare `fd9814b4` |
+| 2026-03-28 | 모바일 UI/UX 최적화 반영 (BUG-013~015, UX-001) — GitHub `f059a00` / Cloudflare `827b4e20` |

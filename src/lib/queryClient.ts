@@ -9,12 +9,12 @@ import { ApiError } from './api';
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // 30초 캐시 신선도
-      staleTime: 1000 * 30,
+      // 60초 캐시 신선도 (모바일 창 포커스 refetch 최소화)
+      staleTime: 1000 * 60,
       // 가비지 컬렉션 5분
       gcTime: 1000 * 60 * 5,
-      // 창 포커스 시 자동 refetch
-      refetchOnWindowFocus: true,
+      // 창 포커스 시 자동 refetch 비활성화 (모바일에서 다른 앱 전환 후 복귀 시 불필요한 요청 방지)
+      refetchOnWindowFocus: false,
       // 오프라인 시 재시도 안 함
       retry: (failureCount, error) => {
         if (error instanceof ApiError && error.status < 500) return false;

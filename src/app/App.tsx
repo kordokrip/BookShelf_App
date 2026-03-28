@@ -5,6 +5,8 @@ import { queryClient } from "../lib/queryClient";
 import { useAuthStore } from "../stores/authStore";
 import { useViewport } from "../hooks/useViewport";
 import { router } from "./routes";
+import { ToastProvider, useToast } from "./components/ui/Toast";
+import { InstallBanner } from "./components/ui/InstallBanner";
 
 export default function App() {
   const checkAuth = useAuthStore((s) => s.checkAuth);
@@ -27,7 +29,39 @@ export default function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      {/* App-level ToastProvider: 오프라인/온라인 알림 전용 */}
+      <ToastProvider>
+        <AppInner />
+      </ToastProvider>
     </QueryClientProvider>
+  );
+}
+
+/** RouterProvider를 감싸는 내부 컴포넌트 — App-level ToastContext에 접근 가능 */
+function AppInner() {
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    function handleOffline() {
+      showToast('인터넷 연결이 끊어졌습니다. 일부 기능이 제한될 수 있습니다.', 'error');
+    }
+    function handleOnline() {
+      showToast('인터넷 연결이 복구되었습니다.', 'success');
+    }
+
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline);
+
+    return () => {
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [showToast]);
+
+  return (
+    <>
+      <RouterProvider router={router} />
+      <InstallBanner />
+    </>
   );
 }

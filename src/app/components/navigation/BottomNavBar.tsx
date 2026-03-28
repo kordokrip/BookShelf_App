@@ -1,16 +1,13 @@
 import { Link, useLocation } from "react-router";
 import { BookMarked, BookOpen, Star, BarChart2 } from "lucide-react";
-import { useBooks } from "../../../hooks/useBooks";
+import { useBookCount } from "../../../hooks/useBooks";
 
 export function BottomNavBar() {
   const location = useLocation();
 
-  // 동적 badge: 실제 읽는 중 / 위시리스트 수
-  const { data: readingBooks } = useBooks({ status: "reading" });
-  const { data: wishBooks } = useBooks({ status: "wish" });
-
-  const readingCount = readingBooks?.length ?? 0;
-  const wishCount = wishBooks?.length ?? 0;
+  // 동적 badge: 실제 읽는 중 / 위시리스트 수 (select 최적화로 count만 구독)
+  const { data: readingCount = 0 } = useBookCount('reading');
+  const { data: wishCount = 0 } = useBookCount('wish');
 
   const navItems = [
     {

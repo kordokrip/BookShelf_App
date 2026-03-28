@@ -34,6 +34,51 @@ notesRouter.get('/', optionalAuth, async (c) => {
   const limit = parseInt(c.req.query('limit') ?? '100');
   const offset = parseInt(c.req.query('offset') ?? '0');
 
+  // search 파라미터가 있을 때 FTS5 경로 (LIKE 폴백 포함)
+  if (search) {
+    // 사용자 입력 이스케이프: 큰따옴표를 두 개로 치환
+    const ftsQuery = `"${search.replace(/"/g, '""')}"*`;
+    const baseFilters: (string | number)[] = [userId];
+    let filterSql = 'AND n.user_id = ?';
+    if (bookId) { filterSql += ' AND n.book_id = ?'; baseFilters.push(bookId); }
+    if (type)   { filterSql += ' AND n.type = ?';   baseFilters.push(type); }
+
+    try {
+      const countResult = await c.env.DB.prepare(
+        `SELECT COUNT(*) as total FROM notes n
+         JOIN notes_fts f ON n.rowid = f.rowid
+         WHERE f.notes_fts MATCH ? ${filterSql}`,
+      ).bind(ftsQuery, ...baseFilters).first<{ total: number }>();
+
+      const { results } = await c.env.DB.prepare(
+        `SELECT n.* FROM notes n
+         JOIN notes_fts f ON n.rowid = f.rowid
+         WHERE f.notes_fts MATCH ? ${filterSql}
+         ORDER BY f.rank
+         LIMIT ? OFFSET ?`,
+      ).bind(ftsQuery, ...baseFilters, limit, offset).all<DbNote>();
+
+      return c.json({ notes: results, total: countResult?.total ?? 0 });
+    } catch {
+      // FTS5 테이블 미존재 또는 쿼리 오류 시 LIKE 폴백
+      const fallbackParams: (string | number)[] = [userId, `%${search}%`];
+      let fallbackSql = 'SELECT * FROM notes WHERE user_id = ? AND content LIKE ?';
+      if (bookId) { fallbackSql += ' AND book_id = ?'; fallbackParams.push(bookId); }
+      if (type)   { fallbackSql += ' AND type = ?';   fallbackParams.push(type); }
+
+      const countSql = fallbackSql.replace('SELECT *', 'SELECT COUNT(*) as total');
+      const countResult = await c.env.DB.prepare(countSql)
+        .bind(...fallbackParams).first<{ total: number }>();
+
+      const { results } = await c.env.DB.prepare(
+        `${fallbackSql} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      ).bind(...fallbackParams, limit, offset).all<DbNote>();
+
+      return c.json({ notes: results, total: countResult?.total ?? 0 });
+    }
+  }
+
+  // search 없는 일반 경로 (기존 로직 유지)
   let query = 'SELECT * FROM notes WHERE user_id = ?';
   const params: (string | number)[] = [userId];
 
@@ -44,10 +89,6 @@ notesRouter.get('/', optionalAuth, async (c) => {
   if (type) {
     query += ' AND type = ?';
     params.push(type);
-  }
-  if (search) {
-    query += ' AND content LIKE ?';
-    params.push(`%${search}%`);
   }
 
   // 전체 카운트

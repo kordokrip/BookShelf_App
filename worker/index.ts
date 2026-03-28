@@ -11,6 +11,7 @@ import { notesRouter } from './routes/notes';
 import { searchRouter } from './routes/search';
 import { authRouter } from './routes/auth';
 import aiRouter from './routes/ai';
+import { statsRouter } from './routes/stats';
 
 // ─── App 인스턴스 ─────────────────────────────────────────────
 const app = new Hono<{ Bindings: Bindings }>();
@@ -55,6 +56,7 @@ app.route('/api/sessions', sessionsRouter);
 app.route('/api/notes', notesRouter);
 app.route('/api/search', searchRouter);
 app.route('/api/ai', aiRouter);
+app.route('/api/stats', statsRouter);
 
 // ─── SPA 폴백 — PWA dist 파일 서빙 ───────────────────────────
 app.get('*', async (c) => {

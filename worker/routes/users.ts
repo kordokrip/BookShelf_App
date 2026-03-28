@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { HTTPException } from 'hono/http-exception';
 import type { Bindings, DbUser } from '../types';
 import { hashPassword, verifyPassword, createToken, authMiddleware } from '../auth';
+import { rateLimit } from '../middleware/rateLimit';
 
 export const usersRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -35,6 +36,7 @@ export function safeUser(user: DbUser) {
 // ─── POST /api/users/register ─────────────────────────────────
 usersRouter.post(
   '/register',
+  rateLimit({ limit: 3, windowMs: 60_000, keyPrefix: 'register' }),
   zValidator('json', registerSchema),
   async (c) => {
     const { name, email, password } = c.req.valid('json');
@@ -69,6 +71,7 @@ usersRouter.post(
 // ─── POST /api/users/login ────────────────────────────────────
 usersRouter.post(
   '/login',
+  rateLimit({ limit: 5, windowMs: 60_000, keyPrefix: 'login' }),
   zValidator('json', loginSchema),
   async (c) => {
     const { email, password } = c.req.valid('json');
@@ -87,6 +90,14 @@ usersRouter.post(
     const valid = await verifyPassword(password, user.password_hash);
     if (!valid) {
       return c.json({ error: '이메일 또는 비밀번호가 올바르지 않습니다.' }, 401);
+    }
+
+    // 레거시 SHA-256 해시 → PBKDF2 투명 마이그레이션
+    if (!user.password_hash.startsWith('pbkdf2:')) {
+      const newHash = await hashPassword(password);
+      await c.env.DB.prepare(
+        'UPDATE users SET password_hash = ? WHERE id = ?',
+      ).bind(newHash, user.id).run();
     }
 
     const token = await createToken({ sub: user.id, email }, c.env.JWT_SECRET);

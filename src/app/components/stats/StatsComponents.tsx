@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { ArrowUp } from "lucide-react";
+import { ArrowUp, Flame } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   PieChart, Pie,
@@ -536,6 +536,128 @@ export function ReadingHeatmap({ sessions }: ReadingHeatmapProps) {
           <div key={i} style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: color }} />
         ))}
         <span style={{ fontSize: 11, color: C.slate6 }}>많음</span>
+      </div>
+    </div>
+  );
+}
+
+/* ─── calcReadingStreak ──────────────────────────────────────── */
+
+export function calcReadingStreak(sessions: UISession[]): {
+  currentStreak: number;
+  longestStreak: number;
+  totalDays: number;
+} {
+  if (sessions.length === 0) return { currentStreak: 0, longestStreak: 0, totalDays: 0 };
+
+  const uniqueDates = [
+    ...new Set(sessions.map((s) => s.sessionDate)),
+  ].sort((a, b) => b.localeCompare(a));
+
+  const totalDays = uniqueDates.length;
+
+  // currentStreak: 오늘 또는 어제부터 역방향 계산
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = today.toISOString().slice(0, 10);
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+  let currentStreak = 0;
+  if (uniqueDates[0] === todayStr || uniqueDates[0] === yesterdayStr) {
+    let checkDate = new Date(uniqueDates[0]!);
+    for (const dateStr of uniqueDates) {
+      const d = new Date(dateStr);
+      const diff = Math.round((checkDate.getTime() - d.getTime()) / 86_400_000);
+      if (diff === 0 || diff === 1) {
+        currentStreak++;
+        checkDate = d;
+      } else {
+        break;
+      }
+    }
+  }
+
+  // longestStreak: 전체에서 최장 연속
+  let longestStreak = 1;
+  let streak = 1;
+  for (let i = 1; i < uniqueDates.length; i++) {
+    const prev = new Date(uniqueDates[i - 1]!);
+    const curr = new Date(uniqueDates[i]!);
+    const diff = Math.round((prev.getTime() - curr.getTime()) / 86_400_000);
+    if (diff === 1) {
+      streak++;
+      if (streak > longestStreak) longestStreak = streak;
+    } else {
+      streak = 1;
+    }
+  }
+  longestStreak = Math.max(longestStreak, currentStreak);
+
+  return { currentStreak, longestStreak, totalDays };
+}
+
+/* ─── Streak Card ────────────────────────────────────────────── */
+
+export function StreakCard({ sessions }: { sessions: UISession[] }) {
+  const { currentStreak, longestStreak, totalDays } = calcReadingStreak(sessions);
+
+  return (
+    <div style={{
+      backgroundColor: C.white,
+      borderRadius: 12,
+      boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+      border: `1px solid ${C.slate9}`,
+      padding: 16,
+      borderLeft: `3px solid ${C.amber}`,
+    }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: "50%",
+            backgroundColor: "#FEF3C7",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            flexShrink: 0,
+          }}>
+            <Flame size={18} color={C.amber} />
+          </div>
+          <p style={{ fontSize: 12, fontWeight: 400, color: C.slate5 }}>독서 스트릭</p>
+        </div>
+        {currentStreak > 0 && (
+          <span style={{
+            fontSize: 11, fontWeight: 600,
+            backgroundColor: "#FEF3C7", color: "#92400E",
+            padding: "3px 10px", borderRadius: 9999,
+          }}>
+            현재 {currentStreak}일 연속 🔥
+          </span>
+        )}
+      </div>
+
+      {/* Stats row */}
+      <div style={{ display: "flex", gap: 16 }}>
+        <div style={{ flex: 1, textAlign: "center" }}>
+          <p style={{ fontSize: 24, fontWeight: 700, color: C.slate1, lineHeight: 1.2 }}>
+            {currentStreak}
+          </p>
+          <p style={{ fontSize: 11, color: C.slate6, marginTop: 2 }}>현재 연속</p>
+        </div>
+        <div style={{ width: 1, backgroundColor: C.slate8, alignSelf: "stretch" }} />
+        <div style={{ flex: 1, textAlign: "center" }}>
+          <p style={{ fontSize: 24, fontWeight: 700, color: C.slate1, lineHeight: 1.2 }}>
+            {longestStreak}
+          </p>
+          <p style={{ fontSize: 11, color: C.slate6, marginTop: 2 }}>최장 연속</p>
+        </div>
+        <div style={{ width: 1, backgroundColor: C.slate8, alignSelf: "stretch" }} />
+        <div style={{ flex: 1, textAlign: "center" }}>
+          <p style={{ fontSize: 24, fontWeight: 700, color: C.slate1, lineHeight: 1.2 }}>
+            {totalDays}
+          </p>
+          <p style={{ fontSize: 11, color: C.slate6, marginTop: 2 }}>총 독서일</p>
+        </div>
       </div>
     </div>
   );

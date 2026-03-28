@@ -60,11 +60,11 @@ export interface ApiResponse<T> {
 }
 
 export interface StatsResponse {
-  data: {
-    counts: { status: BookStatus; count: number }[];
-    genre_stats: { genre: string; count: number }[];
-    monthly_stats: { month: string; count: number }[];
-  };
+  monthly: Array<{ month: string; count: number }>;
+  genres: Array<{ genre: string; count: number }>;
+  statusCounts: { done: number; reading: number; wish: number };
+  sessionDates: string[];
+  totals: { totalPages: number; totalMinutes: number };
 }
 
 export type CreateBookInput = Omit<
@@ -359,9 +359,13 @@ export const searchApi = {
     ),
 };
 
+// ─── Stats API ────────────────────────────────────────────────
+export const statsApi = {
+  getStats: () => apiFetch<StatsResponse>('/api/stats'),
+};
+
 // ─── OCR API ──────────────────────────────────────────────────
-export const ocrApi = {
-  /** 이미지에서 텍스트 추출 (Workers AI Vision) */
+export const ocrApi = {  /** 이미지에서 텍스트 추출 (Workers AI Vision) */
   extractText: async (imageFile: File): Promise<{ text: string }> => {
     const formData = new FormData();
     formData.append('image', imageFile);
@@ -416,5 +420,9 @@ export const queryKeys = {
     all: ['ai'] as const,
     recommendations: () => [...queryKeys.ai.all, 'recommendations'] as const,
     summary: (isbn: string) => [...queryKeys.ai.all, 'summary', isbn] as const,
+  },
+  stats: {
+    all: ['stats'] as const,
+    user: () => [...queryKeys.stats.all, 'user'] as const,
   },
 };
