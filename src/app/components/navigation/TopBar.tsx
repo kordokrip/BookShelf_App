@@ -23,8 +23,8 @@ export function TopBar() {
       {/* iOS 노치 / PWA 스탠드얼론 모드에서 상단 안전 영역 여백 */}
       <div aria-hidden style={{ height: "var(--safe-top)" }} />
       <div className="flex items-center justify-between px-4 h-14">
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-1.5 no-underline">
+        {/* Logo — 모바일/태블릿(SideNav 없음)에서만 표시 */}
+        <Link to="/" className="lg:hidden flex items-center gap-1.5 no-underline">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] flex items-center justify-center shadow-sm">
             <span className="text-white text-sm">📚</span>
           </div>
@@ -35,6 +35,8 @@ export function TopBar() {
             BookShelf
           </span>
         </Link>
+        {/* 데스크톱: 로고 숨김(SideNav에 이미 있음) → 우측 액션 버튼 균형 맞춤용 스페이서 */}
+        <div className="hidden lg:block w-8" aria-hidden />
 
         {/* Center Title */}
         <h1
