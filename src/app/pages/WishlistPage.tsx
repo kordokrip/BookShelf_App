@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Plus, ChevronDown, Search, X, ScanLine, RefreshCw } from "lucide-react";
 import ISBNScanner from "../components/books/ISBNScanner";
 import type { GenreKey } from "../../types/book";
@@ -85,9 +85,15 @@ export function WishlistPage() {
   const searchResults = searchData?.books ?? [];
 
   // 위시리스트에 이미 있는 책 제목 Set — AI 추천 필터링에 사용
-  const wishTitleSet = new Set(books.map((b) => b.title.toLowerCase()));
-  const visibleRecs = (aiData?.recommendations ?? []).filter(
-    (r) => !wishTitleSet.has(r.title.toLowerCase()),
+  const wishTitleSet = useMemo(
+    () => new Set(books.map((b) => b.title.toLowerCase())),
+    [books],
+  );
+  const visibleRecs = useMemo(
+    () => (aiData?.recommendations ?? []).filter(
+      (r) => !wishTitleSet.has(r.title.toLowerCase()),
+    ),
+    [aiData, wishTitleSet],
   );
 
   useEffect(() => {

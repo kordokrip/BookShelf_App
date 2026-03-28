@@ -55,6 +55,7 @@ binding = "AI"
 ENVIRONMENT = "production"
 APP_NAME = "BookShelf"
 FRONTEND_URL = "https://bookshelf-api.kordokrip.workers.dev"
+ALLOWED_EMAILS = ""  # wrangler secret put ALLOWED_EMAILS 로 실제 값 설정
 
 # ─── 옵저버빌리티 ────────────────────────────────────────────
 [observability]

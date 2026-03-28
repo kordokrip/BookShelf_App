@@ -124,4 +124,5 @@ export interface Bindings {
   NAVER_CLIENT_SECRET: string;
   GOOGLE_CLIENT_ID: string;
   GOOGLE_CLIENT_SECRET: string;
+  ALLOWED_EMAILS: string;  // 세미콜론 구분 허용 이메일 목록
 }

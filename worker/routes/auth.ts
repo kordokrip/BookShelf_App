@@ -4,123 +4,6 @@ import { createToken } from '../auth';
 
 const authRouter = new Hono<{ Bindings: Bindings }>();
 
-// ─── GET /api/auth/kakao/callback ─────────────────────────────
-// 카카오 OAuth 서버 → code 수신 → JWT 발급 → 프론트엔드 리다이렉트
-authRouter.get('/kakao/callback', async (c) => {
-  const code = c.req.query('code');
-  const kakaoError = c.req.query('error');
-  const frontendUrl = c.env.FRONTEND_URL;
-
-  if (kakaoError || !code) {
-    return c.redirect(`${frontendUrl}/login?error=kakao_cancelled`);
-  }
-
-  // redirect_uri는 프론트엔드 JS SDK가 authorize()에 넘긴 값과 동일해야 함.
-  // FRONTEND_URL + 콜백 경로로 일치시킴 (로컬: localhost:5173, 프로덕션: workers.dev)
-  const redirectUri = `${frontendUrl}/api/auth/kakao/callback`;
-
-  try {
-    // 1. 카카오 액세스 토큰 교환
-    const tokenRes = await fetch('https://kauth.kakao.com/oauth/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        client_id: c.env.KAKAO_REST_API_KEY,
-        redirect_uri: redirectUri,
-        code,
-      }),
-    });
-
-    if (!tokenRes.ok) {
-      console.error('[Kakao] token exchange failed:', await tokenRes.text());
-      return c.redirect(`${frontendUrl}/login?error=kakao_token`);
-    }
-
-    const tokenData = await tokenRes.json<{ access_token: string; refresh_token: string }>();
-
-    // 2. 카카오 사용자 정보 조회
-    const userRes = await fetch('https://kapi.kakao.com/v2/user/me', {
-      headers: {
-        Authorization: `Bearer ${tokenData.access_token}`,
-        'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
-      },
-    });
-
-    if (!userRes.ok) {
-      console.error('[Kakao] user info failed:', await userRes.text());
-      return c.redirect(`${frontendUrl}/login?error=kakao_userinfo`);
-    }
-
-    const kakaoUser = await userRes.json<{
-      id: number;
-      kakao_account?: {
-        email?: string;
-        profile?: { nickname?: string; profile_image_url?: string };
-      };
-    }>();
-
-    const kakaoId = String(kakaoUser.id);
-    const kakaoEmail = kakaoUser.kakao_account?.email;
-    const name = kakaoUser.kakao_account?.profile?.nickname ?? '카카오 사용자';
-    const avatarUrl = kakaoUser.kakao_account?.profile?.profile_image_url ?? null;
-    const now = new Date().toISOString();
-
-    // 3. kakao_id로 기존 계정 조회
-    let user = await c.env.DB.prepare(
-      'SELECT * FROM users WHERE kakao_id = ?',
-    ).bind(kakaoId).first<DbUser>();
-
-    if (!user) {
-      // 3a. 이메일이 있으면 기존 로컬 계정과 연결
-      if (kakaoEmail) {
-        const existing = await c.env.DB.prepare(
-          'SELECT * FROM users WHERE email = ?',
-        ).bind(kakaoEmail).first<DbUser>();
-
-        if (existing) {
-          await c.env.DB.prepare(
-            `UPDATE users
-             SET kakao_id = ?, auth_provider = 'kakao', avatar_url = COALESCE(?, avatar_url), updated_at = ?
-             WHERE id = ?`,
-          ).bind(kakaoId, avatarUrl, now, existing.id).run();
-          user = { ...existing, kakao_id: kakaoId, auth_provider: 'kakao' };
-        }
-      }
-
-      // 3b. 연결할 계정 없음 → 새 계정 생성
-      if (!user) {
-        const newId = crypto.randomUUID();
-        const email = kakaoEmail ?? `kakao_${kakaoId}@bookshelf.app`;
-        await c.env.DB.prepare(
-          `INSERT INTO users (id, email, name, avatar_url, kakao_id, auth_provider, password_hash, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, 'kakao', NULL, ?, ?)`,
-        ).bind(newId, email, name, avatarUrl, kakaoId, now, now).run();
-        user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(newId).first<DbUser>();
-      }
-    } else {
-      // 3c. 기존 카카오 계정 — 프로필 최신화
-      await c.env.DB.prepare(
-        `UPDATE users SET name = ?, avatar_url = COALESCE(?, avatar_url), updated_at = ? WHERE id = ?`,
-      ).bind(name, avatarUrl, now, user.id).run();
-    }
-
-    if (!user) {
-      return c.redirect(`${frontendUrl}/login?error=kakao_db`);
-    }
-
-    // 4. JWT 발급 → 프론트엔드로 리다이렉트
-    const token = await createToken(
-      { sub: user.id, email: user.email },
-      c.env.JWT_SECRET,
-    );
-    return c.redirect(`${frontendUrl}/?token=${encodeURIComponent(token)}&provider=kakao`);
-  } catch (err) {
-    console.error('[Kakao callback error]', err);
-    return c.redirect(`${frontendUrl}/login?error=kakao_unknown`);
-  }
-});
-
 // ─── GET /api/auth/google/callback ────────────────────────────
 // Google OAuth 서버 → code 수신 → JWT 발급 → 프론트엔드 리다이렉트
 authRouter.get('/google/callback', async (c) => {
@@ -178,13 +61,29 @@ authRouter.get('/google/callback', async (c) => {
     const avatarUrl = googleUser.picture ?? null;
     const now = new Date().toISOString();
 
-    // 3. google_id로 기존 계정 조회
+    // ★ STEP 3: 화이트리스트 검증
+    const allowedEmails = (c.env.ALLOWED_EMAILS ?? '')
+      .split(';')
+      .map(e => e.trim().toLowerCase())
+      .filter(e => e.length > 0);
+
+    if (allowedEmails.length === 0) {
+      console.warn('[Google] ALLOWED_EMAILS가 비어있습니다. 관리자 설정 필요.');
+      return c.redirect(`${frontendUrl}/auth/google/callback?error=not_allowed`);
+    }
+
+    if (!allowedEmails.includes(email.toLowerCase())) {
+      console.warn(`[Google] 미허가 이메일 접근 시도: ${email}`);
+      return c.redirect(`${frontendUrl}/auth/google/callback?error=not_allowed`);
+    }
+
+    // 4. google_id로 기존 계정 조회
     let user = await c.env.DB.prepare(
       'SELECT * FROM users WHERE google_id = ?',
     ).bind(googleId).first<DbUser>();
 
     if (!user) {
-      // 3a. 이메일로 기존 로컬/카카오 계정 조회 → google_id 연결
+      // 4a. 이메일로 기존 로친 계정 조회 → google_id 연결
       if (email) {
         const existing = await c.env.DB.prepare(
           'SELECT * FROM users WHERE email = ?',
@@ -200,7 +99,7 @@ authRouter.get('/google/callback', async (c) => {
         }
       }
 
-      // 3b. 완전히 새로운 계정 생성
+      // 4b. 완전히 새로운 계정 생성
       if (!user) {
         const newId = crypto.randomUUID();
         const userEmail = email ?? `google_${googleId}@bookshelf.app`;
@@ -211,7 +110,7 @@ authRouter.get('/google/callback', async (c) => {
         user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(newId).first<DbUser>();
       }
     } else {
-      // 3c. 기존 Google 계정 — 프로필 최신화
+      // 4c. 기존 Google 계정 — 프로필 최신화
       await c.env.DB.prepare(
         `UPDATE users SET name = ?, avatar_url = COALESCE(?, avatar_url), updated_at = ? WHERE id = ?`,
       ).bind(name, avatarUrl, now, user.id).run();

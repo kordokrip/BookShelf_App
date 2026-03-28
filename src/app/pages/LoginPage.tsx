@@ -43,14 +43,6 @@ function GoogleLogo() {
   );
 }
 
-function KakaoLogo() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-      <path d="M9 0C4.029 0 0 3.186 0 7.12c0 2.51 1.638 4.71 4.102 5.967l-.896 3.337a.375.375 0 00.572.403L8.023 14.2A10.575 10.575 0 009 14.24c4.971 0 9-3.186 9-7.12S13.971 0 9 0z" fill="#3A1D1D"/>
-    </svg>
-  );
-}
-
 function EyeToggle({ show, onToggle }: { show: boolean; onToggle: () => void }) {
   return (
     <button
@@ -103,24 +95,21 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
     return "";
   };
 
-  const handleKakaoLogin = () => {
-    const jsKey = import.meta.env.VITE_KAKAO_JS_KEY as string | undefined;
-    if (!jsKey) {
-      alert('카카오 로그인이 설정되지 않았습니다.');
+  const handleGoogleLogin = () => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+    if (!clientId) {
+      console.error('VITE_GOOGLE_CLIENT_ID가 설정되지 않았습니다');
       return;
     }
-    if (!window.Kakao?.isInitialized()) {
-      window.Kakao?.init(jsKey);
-    }
-    // redirect_uri: 프론트엔드 origin + Vite프록시(/api) → Worker
-    // 로컀: VITE_KAKAO_REDIRECT_URI로 오버라이드 가능
-    const redirectUri =
-      (import.meta.env.VITE_KAKAO_REDIRECT_URI as string | undefined) ??
-      `${window.location.origin}/api/auth/kakao/callback`;
-    window.Kakao?.Auth.authorize({
-      redirectUri,
-      scope: 'profile_nickname,account_email',
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: `${window.location.origin}/api/auth/google/callback`,
+      response_type: 'code',
+      scope: 'openid email profile',
+      access_type: 'offline',
+      prompt: 'select_account',
     });
+    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
   };
 
   const handleLogin = async () => {
@@ -251,50 +240,24 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
         <div className="flex-1 h-px bg-[#E2E8F0]" />
       </div>
 
-      {/* Google - 준비 중 */}
-      <div className="relative">
-        <button
-          type="button"
-          disabled
-          className="w-full rounded-2xl flex items-center justify-center gap-2.5 opacity-40 cursor-not-allowed"
-          style={{
-            height: 48,
-            border: "1.5px solid #E2E8F0",
-            backgroundColor: "white",
-            fontFamily: "var(--font-pretendard)",
-            fontWeight: 600,
-            color: "#374151",
-            fontSize: 14,
-          }}
-        >
-          <GoogleLogo />
-          Google로 계속하기
-        </button>
-        <span
-          className="absolute -top-2 right-3 px-1.5 py-0.5 rounded text-white font-bold"
-          style={{ backgroundColor: "#94A3B8", fontSize: 10, fontFamily: "var(--font-pretendard)" }}
-        >
-          준비 중
-        </span>
-      </div>
-
-      {/* Kakao */}
+      {/* Google */}
       <button
-        onClick={handleKakaoLogin}
+        type="button"
+        onClick={handleGoogleLogin}
         disabled={isLoading}
         className="w-full rounded-2xl flex items-center justify-center gap-2.5 transition-opacity hover:opacity-90 disabled:opacity-50"
         style={{
           height: 48,
-          backgroundColor: "#FEE500",
+          border: "1.5px solid #E2E8F0",
+          backgroundColor: "white",
           fontFamily: "var(--font-pretendard)",
-          fontWeight: 700,
-          color: "#3C1E1E",
+          fontWeight: 600,
+          color: "#374151",
           fontSize: 14,
-          border: "none",
         }}
       >
-        <KakaoLogo />
-        Kakao로 계속하기
+        <GoogleLogo />
+        Google로 계속하기
       </button>
 
       {/* Sign up link */}

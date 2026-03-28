@@ -13,7 +13,7 @@ import { SignUpPage } from "./pages/SignUpPage";
 import { BookDetailPage } from "./pages/BookDetailPage";
 import { RegisterFlowPage } from "./pages/RegisterFlowPage";
 import { NotesSearchPage } from "./pages/NotesSearchPage";
-import { KakaoCallbackPage } from "./pages/KakaoCallbackPage";
+import { GoogleCallbackPage } from "./pages/GoogleCallbackPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { RouteErrorFallback } from "./components/RouteErrorFallback";
 
@@ -83,8 +83,8 @@ export const router = createBrowserRouter([
     ErrorBoundary: EB,
   },
   {
-    path: "/auth/kakao/callback",
-    Component: KakaoCallbackPage,
+    path: "/auth/google/callback",
+    Component: GoogleCallbackPage,
     ErrorBoundary: EB,
   },
   // ─── 보호된 라우트 ───────────────────────────────────────

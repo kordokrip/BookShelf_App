@@ -14,7 +14,7 @@ export default function App() {
   useViewport();
 
   useEffect(() => {
-    // 카카오 서버사이드 콜백 후 /?token=xxx&provider=kakao 파라미터 처리
+    // OAuth 콜백 후 /?token=xxx&provider=google 파라미터 처리
     const url = new URL(window.location.href);
     const oauthToken = url.searchParams.get('token');
     if (oauthToken) {

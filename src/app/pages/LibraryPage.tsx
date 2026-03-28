@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { ChevronDown, Plus, ChevronRight } from "lucide-react";
 import type { UIBook, GenreKey } from "../../types/book";
 import { ALL_GENRES } from "../../types/book";
@@ -139,15 +139,15 @@ export function LibraryPage() {
     return acc;
   }, {} as Record<string, number>);
 
-  const filtered = books
+  const filtered = useMemo(() => books
     .filter((b) => !selectedGenre || b.genre === selectedGenre)
     .sort((a, b) => {
       if (sortBy === "rating") return (b.rating ?? 0) - (a.rating ?? 0);
       if (sortBy === "title") return a.title.localeCompare(b.title, "ko");
       return (b.finishedDate ?? "").localeCompare(a.finishedDate ?? "");
-    });
+    }), [books, selectedGenre, sortBy]);
 
-  const grouped = groupByMonth(filtered);
+  const grouped = useMemo(() => groupByMonth(filtered), [filtered]);
   const monthKeys = Array.from(grouped.keys());
 
   const visibleKeys = showAll ? monthKeys : monthKeys.slice(0, 2);

@@ -3,8 +3,8 @@
 > 작성 기준: 실제 소스 코드 전수 분석 (2026-03 기준)
 > 목적: 프로덕션 오류 발생 시 UI → Hook → API → DB 레이어를 빠르게 추적하기 위한 기준 문서
 >
-> **최근 변경**: 2026-03-28 — Phase 1-A~3-B 구현 (Rate Limiting, PWA Banner, QueryClient 튜닝, 독서 타이머, 스트릭 카드, PBKDF2 해싱, FTS5 전문 검색, Stats API)
-> **이전 변경**: 2026-03-28 — 모바일 UI/UX 최적화 (touch delay 제거, BottomNavBar 안정화, Root.tsx 레이아웃 수정, OnboardingPage UX 전면 개선)
+> **최근 변경**: 2026-03-28 — 11차 업데이트 (AI 추천 개선: reading+done 통합·위시 제외·refresh=true·개인화 reason, 위시리스트 10권 제한·중복 방지, useRefreshAIRecommendations, visibleRecs 자동 필터)
+> **이전 변경**: 2026-03-28 — Phase 1-A~3-B 구현 (Rate Limiting, PWA Banner, QueryClient 튜닝, 독서 타이머, 스트릭 카드, PBKDF2 해싱, FTS5 전문 검색, Stats API)
 
 ---
 
@@ -24,8 +24,8 @@
 | **TypeScript check** | ✅ 0 errors |
 | **Build** | ✅ 성공 (built in 3.04s) |
 | **Production Health** | ✅ `{"status":"ok","env":"production"}` |
-| **GitHub 커밋** | `8131eeb` (main) |
-| **Cloudflare Workers** | Version ID `40506e74-10d7-4a7d-bc37-6fd998677739` |
+| **GitHub 커밋** | `0e0211f` (main) |
+| **Cloudflare Workers** | Version ID `4b940c94-6430-4ffb-bb10-b300e99a8706` |
 | **D1 Tables** | users, books, reading_sessions, notes, notes_fts (FTS5), d1_migrations, _cf_KV, sqlite_sequence |
 
 ---
@@ -332,10 +332,37 @@ UI(ISBNScanner) → searchApi.searchByIsbn(isbn)
 
 [AI 추천]
 UI(마운트) → useAIRecommendations()
-  → GET /api/ai/recommend?limit=3
-    → D1: SELECT genre, title, author FROM books WHERE status='done'
-    → KV: 캐시 확인(1시간 TTL)
-    → Workers AI: 독서 패턴 → JSON 추천 목록
+  → GET /api/ai/recommend?limit=5  ★ (11차, 기존 limit=3)
+    → D1: SELECT genre, title, author FROM books WHERE status IN ('done', 'reading')  ★ (11차)
+    → D1: SELECT title FROM books WHERE status = 'wish' → wishTitles (제외 목록)  ★ (11차)
+    → forceRefresh=true 시 → KV.delete(cacheKey)  ★ (11차)
+    → KV: 캐시 확인(1시간 TTL, 키: ai_recommend:{userId}:{topGenres})
+    → Workers AI(llama-3.1-8b-instruct): 독서 패턴 → JSON 추천 목록
+      systemPrompt: reason에 읽은 특정 책 언급, wishTitles 제외, max_tokens 800  ★ (11차)
+
+[visibleRecs 자동 필터링] ★ (11차)
+wishTitleSet = new Set(books.map(b => b.title.toLowerCase()))
+visibleRecs = aiData.recommendations.filter(r => !wishTitleSet.has(r.title.toLowerCase()))
+→ 위시리스트에 이미 추가된 책은 추천 카드에서 자동 제거
+→ 추가 완료 후 remaining.length === 0 → refreshRecs.mutate() 자동 호출
+
+[AI 새로고침] ★ (11차)
+UI("새로운 추천" 버튼 클릭) → refreshRecs.mutate() → useRefreshAIRecommendations()
+  → GET /api/ai/recommend?limit=5&refresh=true
+    → KV 캐시 삭제 → Workers AI 재요청 → setQueryData(recommendations) → UI 갱신
+  → 로딩 중: RefreshCw 아이콘 animate-spin
+
+[위시 추가 — 제한 및 중복 방지] ★ (11차)
+UI(검색/AI 결과에서 추가) → useAddBook.mutate({ ..., status: 'wish' })
+  → POST /api/books
+    → wish 10권 제한 체크: SELECT COUNT(*) FROM books WHERE user_id=? AND status='wish'
+      → COUNT ≥ 10 → 400 { error: '위시리스트는 최대 10권까지 등록 가능합니다.' }
+    → 동일 제목 중복 체크: SELECT id FROM books WHERE user_id=? AND status='wish' AND title=?
+      → 발견 시   → 409 { error: '이미 위시리스트에 있는 책입니다.' }
+    → DB INSERT → 201 { data: Book }
+  → 에러 처리:
+      409 → Toast "이미 위시리스트에 있는 책입니다."
+      400 → Toast err.message  (10권 제한 메시지)
 
 [위시 → 독서 중 상태 변경]
 UI(책 선택 후 추가) → useUpdateBook.mutate({ id, data: { status: 'reading' } })
@@ -416,7 +443,7 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 |---|---|---|---|---|---|
 | GET | `/api/books` | optionalAuth | `?status=&genre=&limit=&offset=` | `{data:Book[], count}` | `routes/books.ts` |
 | GET | `/api/books/:id` | optionalAuth | — | `{data: Book}` | `routes/books.ts` |
-| POST | `/api/books` | **authMiddleware** ✅ | CreateBookBody | `{data: Book}` 201 | `routes/books.ts` |
+| POST | `/api/books` | **authMiddleware** ✅ | CreateBookBody | `{data: Book}` 201 / `400`(wish 10권 초과) / `409`(wish 중복 제목) ★ | `routes/books.ts` |
 | PUT | `/api/books/:id` | **authMiddleware** ✅ | UpdateBookBody (partial) | `{data: Book}` | `routes/books.ts` |
 | DELETE | `/api/books/:id` | **authMiddleware** ✅ | — | `{success: true}` | `routes/books.ts` |
 | POST | `/api/books/:id/cover` | **authMiddleware** ✅ | ArrayBuffer (`Content-Type: image/*`) | `{success, r2Key, coverUrl}` | `routes/books.ts` |
@@ -451,7 +478,7 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 | Method | 경로 | 인증 | 요청 | 응답 | 캐시 |
 |---|---|---|---|---|---|
 | POST | `/api/ai/summarize` | optionalAuth | `{description, title, author}` | `{summary, cached}` | KV 1일 TTL |
-| GET | `/api/ai/recommend` | optionalAuth | `?limit=3` | `{recommendations, topGenres, cached}` | KV 1시간 TTL |
+| GET | `/api/ai/recommend` | optionalAuth | `?limit=5` (`&refresh=true` 지원 ★) | `{recommendations, topGenres, cached}` | KV 1시간 TTL |
 | POST | `/api/ai/ocr` | optionalAuth | FormData(`image` 파일, 최대 5MB) | `{text}` | 없음 |
 
 ### 통계 (`/api/stats`) ★ 신규 (2026-03-28)
@@ -790,11 +817,11 @@ favorite_genres: DB TEXT ('["k","s"]') → authStore.login() / checkAuth()
 
 | 코드 | 트리거 상황 |
 |---|---|
-| `400` | zod 스키마 검증 실패, 잘못된 파라미터 |
+| `400` | zod 스키마 검증 실패, 잘못된 파라미터, wish 10권 초과 ★ (11차) |
 | `401` | 토큰 없음 / 검증 실패 (authMiddleware), 소셜 계정에 비밀번호 로그인 시도 |
 | `403` | 다른 사용자의 노트/책 접근 |
 | `404` | 책/노트/사용자 ID 없음 |
-| `409` | 이메일 중복 (register) |
+| `409` | 이메일 중복 (register), wish 중복 제목 (books POST) ★ (11차) |
 | `422` | OCR 텍스트 인식 실패 |
 | `429` | Rate Limiting 초과 (login: 5회/60s, search: 20회/60s, ai: 10회/60s) ★ (2026-03-28) |
 | `500` | Workers AI 오류, DB 오류 |
@@ -1089,3 +1116,4 @@ Global QueryClient 설정:
 | 2026-03-28 | PROMPT-01~05 리팩토링 반영 (BUG-001~009, ADD-001) — GitHub `a91fd2e` / Cloudflare `fd9814b4` |
 | 2026-03-28 | 모바일 UI/UX 최적화 반영 (BUG-013~015, UX-001) — GitHub `f059a00` / Cloudflare `827b4e20` |
 | 2026-03-28 | Phase 1-A~3-B 반영 (Rate Limiting, PWA Banner, QueryClient 튜닝, 독서 타이머, 독서 스트릭, PBKDF2, FTS5, Stats API) — GitHub `8131eeb` / Cloudflare `40506e74` |
+| 2026-03-28 | 11차 반영 (AI 추천 개선: reading+done 통합·위시 제외·refresh=true·개인화 reason, 위시리스트 10권 제한·중복 방지, useRefreshAIRecommendations, visibleRecs 자동 필터) — GitHub `0e0211f` / Cloudflare `4b940c94` |
