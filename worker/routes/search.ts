@@ -70,7 +70,12 @@ export interface SearchBooksResponse {
 }
 
 // ─── 변환 헬퍼 ───────────────────────────────────────────────
-function kakaoDocToSearchBook(doc: KakaoDocument): SearchBook {
+function toProxyCoverUrl(originalUrl: string | undefined | null, proxyOrigin: string): string | null {
+  if (!originalUrl) return null;
+  return `${proxyOrigin}/api/cover-proxy?url=${encodeURIComponent(originalUrl)}`;
+}
+
+function kakaoDocToSearchBook(doc: KakaoDocument, proxyOrigin: string): SearchBook {
   // isbn 필드는 "ISBN10 ISBN13" 형태일 수 있으므로 두 번째 값(ISBN13) 우선 사용
   const isbnParts = doc.isbn.trim().split(/\s+/);
   const isbn = isbnParts.length >= 2 ? (isbnParts[1] ?? '') : (isbnParts[0] ?? '');
@@ -79,7 +84,7 @@ function kakaoDocToSearchBook(doc: KakaoDocument): SearchBook {
     title: doc.title,
     author: doc.authors.join(', '),
     isbn,
-    coverImage: doc.thumbnail || null,
+    coverImage: toProxyCoverUrl(doc.thumbnail, proxyOrigin),
     publisher: doc.publisher || null,
     publishedDate: doc.datetime ? doc.datetime.slice(0, 10) : null,
     pageCount: null,   // 카카오 API는 페이지 수 미제공
@@ -87,7 +92,7 @@ function kakaoDocToSearchBook(doc: KakaoDocument): SearchBook {
   };
 }
 
-function naverItemToSearchBook(item: NaverBook): SearchBook {
+function naverItemToSearchBook(item: NaverBook, proxyOrigin: string): SearchBook {
   // HTML 태그 제거
   const clean = (s: string) => s.replace(/<[^>]*>/g, '').trim();
 
@@ -95,7 +100,7 @@ function naverItemToSearchBook(item: NaverBook): SearchBook {
     title: clean(item.title),
     author: clean(item.author),
     isbn: item.isbn ?? '',
-    coverImage: item.image || null,
+    coverImage: toProxyCoverUrl(item.image, proxyOrigin),
     publisher: item.publisher || null,
     publishedDate: item.pubdate
       ? `${item.pubdate.slice(0, 4)}-${item.pubdate.slice(4, 6)}-${item.pubdate.slice(6, 8)}`
@@ -120,6 +125,7 @@ searchRouter.get('/books', rateLimit({ limit: 20, windowMs: 60_000, keyPrefix: '
 
   const page = Math.max(1, parseInt(c.req.query('page') ?? '1', 10));
   const size = Math.min(50, Math.max(1, parseInt(c.req.query('size') ?? '10', 10)));
+  const proxyOrigin = new URL(c.req.url).origin;
 
   // ── 카카오 도서 검색 ──────────────────────────────────────
   const kakaoKey = c.env.KAKAO_REST_API_KEY;
@@ -138,7 +144,7 @@ searchRouter.get('/books', rateLimit({ limit: 20, windowMs: 60_000, keyPrefix: '
       if (kakaoRes.ok) {
         const data = await kakaoRes.json<KakaoSearchResponse>();
         const response: SearchBooksResponse = {
-          books: data.documents.map(kakaoDocToSearchBook),
+          books: data.documents.map((doc) => kakaoDocToSearchBook(doc, proxyOrigin)),
           total: data.meta.total_count,
           isEnd: data.meta.is_end,
         };
@@ -169,7 +175,7 @@ searchRouter.get('/books', rateLimit({ limit: 20, windowMs: 60_000, keyPrefix: '
       if (naverRes.ok) {
         const data = await naverRes.json<NaverSearchResponse>();
         const response: SearchBooksResponse = {
-          books: data.items.map(naverItemToSearchBook),
+          books: data.items.map((item) => naverItemToSearchBook(item, proxyOrigin)),
           total: data.total,
           isEnd: page * size >= data.total,
         };
@@ -192,6 +198,7 @@ searchRouter.get('/books/isbn', rateLimit({ limit: 10, windowMs: 60_000, keyPref
   if (!isbn) {
     return c.json({ error: 'isbn 파라미터가 필요합니다' }, 400);
   }
+  const proxyOrigin = new URL(c.req.url).origin;
 
   // ── 카카오 ISBN 검색 ──────────────────────────────────────
   const kakaoKey = c.env.KAKAO_REST_API_KEY;
@@ -209,7 +216,7 @@ searchRouter.get('/books/isbn', rateLimit({ limit: 10, windowMs: 60_000, keyPref
       if (kakaoRes.ok) {
         const data = await kakaoRes.json<KakaoSearchResponse>();
         if (data.documents.length > 0 && data.documents[0]) {
-          return c.json({ book: kakaoDocToSearchBook(data.documents[0]) });
+          return c.json({ book: kakaoDocToSearchBook(data.documents[0], proxyOrigin) });
         }
       }
     } catch {
@@ -236,7 +243,7 @@ searchRouter.get('/books/isbn', rateLimit({ limit: 10, windowMs: 60_000, keyPref
       if (naverRes.ok) {
         const data = await naverRes.json<NaverSearchResponse>();
           if (data.items.length > 0 && data.items[0]) {
-          return c.json({ book: naverItemToSearchBook(data.items[0]) });
+          return c.json({ book: naverItemToSearchBook(data.items[0], proxyOrigin) });
         }
       }
     } catch {

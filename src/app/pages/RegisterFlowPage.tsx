@@ -327,6 +327,41 @@ function StepBookInfo({
               })}
             </div>
           </div>
+
+          {/* 책 표지 */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1.5">책 표지</label>
+            {form.coverImage ? (
+              <div className="flex items-start gap-3">
+                <img
+                  src={form.coverImage}
+                  alt="책 표지"
+                  className="w-14 h-20 rounded-lg object-cover shadow-sm border border-border"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+                <div className="flex flex-col gap-1 pt-1">
+                  <p className="text-xs text-muted-foreground">검색에서 가져온 표지</p>
+                  <button
+                    type="button"
+                    onClick={() => update({ coverImage: "" })}
+                    className="text-xs text-destructive/70 hover:text-destructive text-left"
+                  >
+                    제거
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <input
+                type="url"
+                value={form.coverImage}
+                onChange={(e) => update({ coverImage: e.target.value })}
+                placeholder="표지 이미지 URL (선택)"
+                className={inputClass}
+              />
+            )}
+          </div>
         </div>
       </div>
 

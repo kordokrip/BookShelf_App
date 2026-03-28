@@ -48,6 +48,56 @@ app.get('/api/health', (c) =>
   }),
 );
 
+// ─── 책 표지 이미지 프록시 ────────────────────────────────────
+// 카카오/네이버 CDN 이미지를 CORS 없이 서빙 (PWA 서비스워커 캐시 문제 해결)
+const COVER_PROXY_ALLOWED_DOMAINS = [
+  'search1.kakaocdn.net',
+  'search2.kakaocdn.net',
+  'shopping.phinf.naver.net',
+  'books.google.com',
+  'covers.openlibrary.org',
+];
+
+app.get('/api/cover-proxy', async (c) => {
+  const rawUrl = c.req.query('url');
+  if (!rawUrl) return c.json({ error: 'url 파라미터가 필요합니다.' }, 400);
+
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(rawUrl);
+  } catch {
+    return c.json({ error: '잘못된 URL 인코딩입니다.' }, 400);
+  }
+
+  let hostname: string;
+  try {
+    hostname = new URL(decoded).hostname;
+  } catch {
+    return c.json({ error: '잘못된 URL 형식입니다.' }, 400);
+  }
+
+  const isAllowed = COVER_PROXY_ALLOWED_DOMAINS.some(
+    (d) => hostname === d || hostname.endsWith('.' + d),
+  );
+  if (!isAllowed) return c.json({ error: '허용되지 않는 도메인입니다.' }, 403);
+
+  try {
+    const upstream = await fetch(decoded);
+    if (!upstream.ok) return c.json({ error: '이미지를 가져오는데 실패했습니다.' }, 502);
+
+    const contentType = upstream.headers.get('content-type') ?? 'image/jpeg';
+    return new Response(upstream.body, {
+      headers: {
+        'Content-Type': contentType,
+        'Cache-Control': 'public, max-age=604800, stale-while-revalidate=86400',
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
+  } catch {
+    return c.json({ error: '이미지를 가져오는데 실패했습니다.' }, 502);
+  }
+});
+
 // ─── API 라우터 마운트 ────────────────────────────────────────
 app.route('/api/auth', authRouter);
 app.route('/api/users', usersRouter);

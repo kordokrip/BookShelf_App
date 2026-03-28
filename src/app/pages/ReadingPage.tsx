@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, X, Target, BookOpen, Play, Pause, RotateCcw, Timer } from "lucide-react";
 import type { UIBook, GenreKey } from "../../types/book";
 import { ALL_GENRES } from "../../types/book";
@@ -9,7 +9,7 @@ import { useToast } from "../components/ui/Toast";
 import { NumberStepper } from "../components/ui/NumberStepper";
 import { ReadingBookCardSkeleton, ErrorState } from "../components/ui/skeleton";
 import { useNavigate } from "react-router";
-import { useBooks, useUpdateBook } from "../../hooks/useBooks";
+import { useBooks, useUpdateBook, useRefreshBookCovers } from "../../hooks/useBooks";
 import { useAddSession } from "../../hooks/useSessions";
 import { useReadingTimer } from "../../hooks/useReadingTimer";
 
@@ -288,6 +288,17 @@ export function ReadingPage() {
   const { showToast } = useToast();
   const navigate = useNavigate();
   const timer = useReadingTimer();
+  const refreshCovers = useRefreshBookCovers();
+
+  // 세션 1회: isbn은 있으나 커버가 없는 책 자동 백필
+  useEffect(() => {
+    const KEY = 'covers_refreshed_v1';
+    if (!sessionStorage.getItem(KEY)) {
+      sessionStorage.setItem(KEY, '1');
+      refreshCovers.mutate();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handleSave(page: number) {
     if (!selectedBook) return;

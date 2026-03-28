@@ -166,6 +166,10 @@ export const booksApi = {
     apiFetch<{ success: boolean }>(`/api/books/${id}`, {
       method: 'DELETE',
     }),
+
+  /** isbn은 있으나 커버 이미지가 없는 책을 카카오 API로 일괄 백필 */
+  refreshCovers: () =>
+    apiFetch<{ updated: number }>('/api/books/refresh-covers', { method: 'POST' }),
 };
 
 // ─── Cover API — R2 표지 이미지 업로드 ───────────────────────

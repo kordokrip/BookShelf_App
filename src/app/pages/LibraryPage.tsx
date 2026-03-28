@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronDown, Plus, ChevronRight } from "lucide-react";
 import type { UIBook, GenreKey } from "../../types/book";
 import { ALL_GENRES } from "../../types/book";
-import { useBooks } from "../../hooks/useBooks";
+import { useBooks, useRefreshBookCovers } from "../../hooks/useBooks";
 import { DoneBookCard } from "../components/books/BookCard";
 import { GenreFilterBar } from "../components/books/GenreFilterBar";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -120,6 +120,18 @@ export function LibraryPage() {
   const { data: books = [], isLoading, isError, refetch } = useBooks({ status: 'done' });
   const loadState = isLoading ? "loading" : isError ? "error" : "success";
   const navigate = useNavigate();
+  const refreshCovers = useRefreshBookCovers();
+
+  // 세션 1회: isbn은 있으나 커버가 없는 책 자동 백필
+  useEffect(() => {
+    const KEY = 'covers_refreshed_v1';
+    if (!sessionStorage.getItem(KEY)) {
+      sessionStorage.setItem(KEY, '1');
+      refreshCovers.mutate();
+    }
+  // refreshCovers.mutate는 안정적이므로 deps 생략
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Genre counts for filter bar
   const genreCounts = ALL_GENRES.reduce((acc, g) => {

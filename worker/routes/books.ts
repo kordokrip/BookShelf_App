@@ -31,6 +31,60 @@ const createBookSchema = z.object({
 
 const updateBookSchema = createBookSchema.partial();
 
+// ─── POST /api/books/refresh-covers — 기존 책 표지 일괄 백필 ─
+// isbn은 있으나 커버 이미지가 없는 책을 카카오 API로 일괄 조회하여 업데이트
+// /:id 라우트보다 반드시 앞에 선언해야 충돌 없음
+booksRouter.post('/refresh-covers', authMiddleware, async (c) => {
+  const userId = c.get('userId');
+  const proxyOrigin = new URL(c.req.url).origin;
+
+  const { results } = await c.env.DB.prepare(
+    `SELECT id, isbn, title FROM books
+     WHERE user_id = ?
+       AND (cover_image IS NULL OR cover_image = '')
+       AND isbn IS NOT NULL AND isbn != ''
+     LIMIT 20`,
+  )
+    .bind(userId)
+    .all<{ id: string; isbn: string; title: string }>();
+
+  if (!results || results.length === 0) return c.json({ updated: 0 });
+
+  const kakaoKey = c.env.KAKAO_REST_API_KEY;
+  let updated = 0;
+
+  for (const book of results) {
+    try {
+      const kakaoUrl = new URL('https://dapi.kakao.com/v3/search/book');
+      kakaoUrl.searchParams.set('query', book.isbn);
+      kakaoUrl.searchParams.set('target', 'isbn');
+      kakaoUrl.searchParams.set('size', '1');
+
+      const res = await fetch(kakaoUrl.toString(), {
+        headers: { Authorization: `KakaoAK ${kakaoKey}` },
+      });
+      if (!res.ok) continue;
+
+      const data = await res.json<{ documents: Array<{ thumbnail: string }> }>();
+      const thumbnail = data.documents[0]?.thumbnail;
+      if (!thumbnail) continue;
+
+      const proxyUrl = `${proxyOrigin}/api/cover-proxy?url=${encodeURIComponent(thumbnail)}`;
+      await c.env.DB.prepare(
+        `UPDATE books SET cover_image = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?`,
+      )
+        .bind(proxyUrl, book.id, userId)
+        .run();
+
+      updated++;
+    } catch {
+      // 개별 실패는 건너뜀
+    }
+  }
+
+  return c.json({ updated });
+});
+
 // ─── GET /api/books ───────────────────────────────────────────
 // 사용자의 전체 책 목록 조회 (status 필터 가능)
 booksRouter.get('/', optionalAuth, async (c) => {

@@ -70,3 +70,16 @@ export function useDeleteBook() {
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.books.all }),
   });
 }
+
+/** isbn은 있으나 커버가 없는 책 일괄 백필 */
+export function useRefreshBookCovers() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => booksApi.refreshCovers(),
+    onSuccess: (data) => {
+      if (data.updated > 0) {
+        qc.invalidateQueries({ queryKey: queryKeys.books.all });
+      }
+    },
+  });
+}
