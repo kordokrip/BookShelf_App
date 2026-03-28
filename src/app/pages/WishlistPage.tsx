@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from "react";
-import { Plus, ChevronDown, Search, X, ScanLine } from "lucide-react";
+import { Plus, ChevronDown, Search, X, ScanLine, RefreshCw } from "lucide-react";
 import ISBNScanner from "../components/books/ISBNScanner";
 import type { GenreKey } from "../../types/book";
 import { ALL_GENRES } from "../../types/book";
 import type { SearchBook } from "../../lib/api";
-import { searchApi } from "../../lib/api";
+import { searchApi, ApiError } from "../../lib/api";
 import { WishBookCard } from "../components/books/BookCard";
 import { GenreFilterBar } from "../components/books/GenreFilterBar";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -13,7 +13,7 @@ import { useNavigate } from "react-router";
 import { WishBookCardSkeleton, ErrorState } from "../components/ui/skeleton";
 import { useBooks, useDeleteBook, useUpdateBook, useAddBook } from "../../hooks/useBooks";
 import { useBookSearch } from "../../hooks/useBookSearch";
-import { useAIRecommendations } from "../../hooks/useAI";
+import { useAIRecommendations, useRefreshAIRecommendations } from "../../hooks/useAI";
 
 
 
@@ -81,7 +81,14 @@ export function WishlistPage() {
 
   const { data: searchData, isLoading: isSearching } = useBookSearch(searchQuery);
   const { data: aiData } = useAIRecommendations();
+  const refreshRecs = useRefreshAIRecommendations();
   const searchResults = searchData?.books ?? [];
+
+  // 위시리스트에 이미 있는 책 제목 Set — AI 추천 필터링에 사용
+  const wishTitleSet = new Set(books.map((b) => b.title.toLowerCase()));
+  const visibleRecs = (aiData?.recommendations ?? []).filter(
+    (r) => !wishTitleSet.has(r.title.toLowerCase()),
+  );
 
   useEffect(() => {
     if (showSearch) {
@@ -107,7 +114,15 @@ export function WishlistPage() {
           showToast(`"${book.title}" 위시리스트에 추가됨 💫`, "success");
           setShowSearch(false);
         },
-        onError: () => showToast("추가에 실패했어요. 다시 시도해주세요.", "error"),
+        onError: (err) => {
+          if (err instanceof ApiError && err.status === 409) {
+            showToast("이미 위시리스트에 있는 책입니다.", "error");
+          } else if (err instanceof ApiError && err.status === 400) {
+            showToast(err.message, "error");
+          } else {
+            showToast("추가에 실패했어요. 다시 시도해주세요.", "error");
+          }
+        },
       },
     );
   }
@@ -120,6 +135,28 @@ export function WishlistPage() {
 
   // AI 추천 위시리스트 추가 — 카카오로 실제 커버 이미지 포함와서 저장
   async function handleAddAIRecommendation(rec: { title: string; author: string; genre: string; reason: string }) {
+    const doAdd = (payload: Parameters<typeof addBook.mutate>[0]) => {
+      addBook.mutate(payload, {
+        onSuccess: () => {
+          showToast(`"${rec.title}" 위시리스트에 추가됨 💫`, 'success');
+          // 추가 후 남은 추천이 없으면 자동 새로고침
+          const remaining = visibleRecs.filter(r => r.title !== rec.title);
+          if (remaining.length === 0) {
+            refreshRecs.mutate();
+          }
+        },
+        onError: (err) => {
+          if (err instanceof ApiError && err.status === 409) {
+            showToast("이미 위시리스트에 있는 책입니다.", "error");
+          } else if (err instanceof ApiError && err.status === 400) {
+            showToast(err.message, "error");
+          } else {
+            showToast("추가에 실패했어요. 다시 시도해주세요.", "error");
+          }
+        },
+      });
+    };
+
     try {
       const result = await searchApi.searchBooks(rec.title, 1, 3);
       const matched =
@@ -128,28 +165,22 @@ export function WishlistPage() {
           rec.title.toLowerCase().includes(b.title.toLowerCase()),
         ) ?? result.books[0];
       if (matched) {
-        addBook.mutate(
-          {
-            title: matched.title,
-            author: matched.author || rec.author,
-            genre: (rec.genre as GenreKey) ?? '기타',
-            isbn: matched.isbn || undefined,
-            coverImage: matched.coverImage || undefined,
-            publisher: matched.publisher || undefined,
-            status: 'wish',
-          },
-          { onSuccess: () => showToast(`"${rec.title}" 위시리스트에 추가됨 💫`, 'success') },
-        );
+        doAdd({
+          title: matched.title,
+          author: matched.author || rec.author,
+          genre: (rec.genre as GenreKey) ?? '기타',
+          isbn: matched.isbn || undefined,
+          coverImage: matched.coverImage || undefined,
+          publisher: matched.publisher || undefined,
+          status: 'wish',
+        });
         return;
       }
     } catch {
       // 검색 실패 시 아래 기본 추가로 폴백
     }
     // 검색 실패 폴백: AI 데이터만으로 추가
-    addBook.mutate(
-      { title: rec.title, author: rec.author, genre: rec.genre as GenreKey, status: 'wish' },
-      { onSuccess: () => showToast(`"${rec.title}" 위시리스트에 추가됨 💫`, 'success') },
-    );
+    doAdd({ title: rec.title, author: rec.author, genre: rec.genre as GenreKey, status: 'wish' });
   }
 
   const filtered = selectedGenre
@@ -307,37 +338,55 @@ export function WishlistPage() {
       )}
 
       {/* AI 추천 섹션 */}
-      {aiData?.recommendations && aiData.recommendations.length > 0 && (
+      {(visibleRecs.length > 0 || refreshRecs.isPending) && (
         <div className="mx-4 mb-5">
-          <p
-            className="mb-3"
-            style={{ fontSize: 13, fontWeight: 600, color: "#64748B" }}
-          >
-            ✨ AI 추천 — {aiData.topGenres?.join(', ')} 기반
-          </p>
+          <div className="flex items-center justify-between mb-3">
+            <p
+              style={{ fontSize: 13, fontWeight: 600, color: "#64748B" }}
+            >
+              ✨ AI 추천 — {aiData?.topGenres?.join(', ')} 기반
+            </p>
+            <button
+              onClick={() => refreshRecs.mutate()}
+              disabled={refreshRecs.isPending}
+              className="flex items-center gap-1 disabled:opacity-50 transition-opacity"
+              style={{ fontSize: 12, color: "#7C3AED", fontWeight: 600 }}
+            >
+              <RefreshCw size={12} className={refreshRecs.isPending ? "animate-spin" : ""} />
+              새로운 추천
+            </button>
+          </div>
           <div className="flex flex-col gap-2">
-            {aiData.recommendations.map((rec, i) => (
-              <div
-                key={i}
-                className="rounded-2xl p-3 border"
-                style={{
-                  background: "linear-gradient(135deg, #F5F3FF 0%, #FAFAFA 100%)",
-                  borderColor: "#DDD6FE",
-                }}
-              >
-                <p style={{ fontSize: 14, fontWeight: 700, color: "#1E293B" }}>{rec.title}</p>
-                <p style={{ fontSize: 12, color: "#64748B" }}>{rec.author} · {rec.genre}</p>
-                <p style={{ fontSize: 12, color: "#475569", marginTop: 4 }}>{rec.reason}</p>
-                <button
-                  onClick={() => handleAddAIRecommendation(rec)}
-                  disabled={addBook.isPending}
-                  className="mt-2 disabled:opacity-50"
-                  style={{ fontSize: 12, fontWeight: 600, color: "#7C3AED" }}
+            {refreshRecs.isPending ? (
+              <>
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="rounded-2xl p-3 border border-[#DDD6FE] bg-[#F5F3FF] animate-pulse h-24" />
+                ))}
+              </>
+            ) : (
+              visibleRecs.map((rec, i) => (
+                <div
+                  key={i}
+                  className="rounded-2xl p-3 border"
+                  style={{
+                    background: "linear-gradient(135deg, #F5F3FF 0%, #FAFAFA 100%)",
+                    borderColor: "#DDD6FE",
+                  }}
                 >
-                  + 위시리스트에 추가
-                </button>
-              </div>
-            ))}
+                  <p style={{ fontSize: 14, fontWeight: 700, color: "#1E293B" }}>{rec.title}</p>
+                  <p style={{ fontSize: 12, color: "#64748B" }}>{rec.author} · {rec.genre}</p>
+                  <p style={{ fontSize: 12, color: "#475569", marginTop: 4 }}>{rec.reason}</p>
+                  <button
+                    onClick={() => handleAddAIRecommendation(rec)}
+                    disabled={addBook.isPending}
+                    className="mt-2 disabled:opacity-50"
+                    style={{ fontSize: 12, fontWeight: 600, color: "#7C3AED" }}
+                  >
+                    + 위시리스트에 추가
+                  </button>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}

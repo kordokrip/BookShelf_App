@@ -54,18 +54,19 @@ aiRouter.post('/summarize', rateLimit({ limit: 5, windowMs: 60_000, keyPrefix: '
 aiRouter.get('/recommend', rateLimit({ limit: 10, windowMs: 60_000, keyPrefix: 'ai' }), optionalAuth, async (c) => {
   const userId = c.get('userId') ?? 'demo-user';
   const limit = Math.min(parseInt(c.req.query('limit') ?? '3', 10), 10);
+  const forceRefresh = c.req.query('refresh') === 'true';
 
-  const completedBooks = await c.env.DB.prepare(
+  const readBooks = await c.env.DB.prepare(
     `SELECT genre, title, author, rating
      FROM books
-     WHERE user_id = ? AND status = 'done' AND genre IS NOT NULL
+     WHERE user_id = ? AND status IN ('done', 'reading') AND genre IS NOT NULL
      ORDER BY created_at DESC
      LIMIT 10`,
   ).bind(userId).all();
 
-  if (!completedBooks.results || completedBooks.results.length === 0) {
+  if (!readBooks.results || readBooks.results.length === 0) {
     return c.json({
-      message: '완독한 책이 없습니다. 책을 읽고 나면 맞춤 추천을 받을 수 있습니다.',
+      message: '읽은 책이 없습니다. 책을 등록하고 나면 맞춤 추천을 받을 수 있습니다.',
       recommendations: [],
       topGenres: [],
     });
@@ -73,7 +74,7 @@ aiRouter.get('/recommend', rateLimit({ limit: 10, windowMs: 60_000, keyPrefix: '
 
   // 장르별 빈도 분석
   const genreCounts: Record<string, number> = {};
-  for (const book of completedBooks.results) {
+  for (const book of readBooks.results) {
     const g = book.genre as string;
     genreCounts[g] = (genreCounts[g] ?? 0) + 1;
   }
@@ -83,21 +84,42 @@ aiRouter.get('/recommend', rateLimit({ limit: 10, windowMs: 60_000, keyPrefix: '
     .slice(0, 3)
     .map(([genre]) => genre);
 
-  // KV 캐시 확인
+  // 이미 위시리스트에 있는 책 목록 조회 → AI 프롬프트에서 제외
+  const wishResult = await c.env.DB.prepare(
+    `SELECT title FROM books WHERE user_id = ? AND status = 'wish'`,
+  ).bind(userId).all<{ title: string }>();
+  const wishTitles = wishResult.results?.map((b) => b.title as string) ?? [];
+
+  // KV 캐시 확인 (refresh=true 이면 기존 캐시 삭제)
   const cacheKey = `ai_recommend:${userId}:${topGenres.join(',')}`;
-  const cached = await c.env.KV.get(cacheKey);
-  if (cached) {
-    return c.json({ recommendations: JSON.parse(cached), cached: true, topGenres });
+  if (forceRefresh) {
+    await c.env.KV.delete(cacheKey);
+  } else {
+    const cached = await c.env.KV.get(cacheKey);
+    if (cached) {
+      return c.json({ recommendations: JSON.parse(cached), cached: true, topGenres });
+    }
   }
 
-  const booksContext = completedBooks.results
+  const booksContext = readBooks.results
     .slice(0, 5)
     .map((b) => `"${b.title}" (${b.author}, 장르:${b.genre}, 별점:${b.rating ?? '?'}/5)`)
     .join('\n');
 
+  const wishExclude = wishTitles.length > 0
+    ? `\n이미 위시리스트에 있으므로 추천하지 말 것: ${wishTitles.join(', ')}`
+    : '';
+
+  // 대표 책 제목 (개인화 reason 작성에 활용)
+  const topBookTitle = (readBooks.results[0]?.title ?? '') as string;
+
   try {
     const model = '@cf/meta/llama-3.1-8b-instruct' as Parameters<Ai['run']>[0];
-    const systemPrompt = `당신은 독서 전문가입니다. 사용자의 독서 이력을 분석하여 읽을 만한 책 ${limit}권을 추천해주세요.\n반드시 JSON 배열 형식으로만 응답하세요:\n[{"title":"책제목","author":"저자","reason":"추천이유(1문장)","genre":"장르"}]`;
+    const systemPrompt = `당신은 독서 전문가입니다. 사용자의 독서 이력을 분석하여 다음에 읽을 책 ${limit}권을 추천해주세요.
+반드시 아래 JSON 배열 형식으로만 응답하세요(다른 텍스트 금지):
+[{"title":"책제목","author":"저자","reason":"추천 이유(사용자가 읽은 '${topBookTitle}'처럼 구체적인 책 이름을 언급하며 1~2문장으로 개인화하여 작성)","genre":"장르"}]
+${wishExclude}
+추천 책은 실제 존재하는 책이어야 하며, 이미 읽은 책과 위시리스트에 있는 책은 절대 추천하지 마세요.`;
     const response = await c.env.AI.run(model, {
       messages: [
         { role: 'system', content: systemPrompt },
@@ -106,7 +128,7 @@ aiRouter.get('/recommend', rateLimit({ limit: 10, windowMs: 60_000, keyPrefix: '
           content: `최근 읽은 책들:\n${booksContext}\n\n선호 장르: ${topGenres.join(', ')}\n\n위 내용을 바탕으로 다음에 읽을 책 ${limit}권을 추천해주세요.`,
         },
       ],
-      max_tokens: 500,
+      max_tokens: 800,
     });
 
     const text = (response as { response?: string }).response?.trim() ?? '[]';

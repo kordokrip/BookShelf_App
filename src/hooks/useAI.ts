@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, queryKeys } from '../lib/api';
 
 export interface AIRecommendation {
@@ -41,8 +41,20 @@ export function useAIRecommendations() {
   return useQuery({
     queryKey: queryKeys.ai.recommendations(),
     queryFn: () =>
-      apiFetch<RecommendResponse>('/api/ai/recommend?limit=3'),
+      apiFetch<RecommendResponse>('/api/ai/recommend?limit=5'),
     staleTime: 60 * 60 * 1000, // 1시간
     retry: false,
+  });
+}
+
+/** AI 추천 강제 새로고침 (KV 캐시 무효화) */
+export function useRefreshAIRecommendations() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiFetch<RecommendResponse>('/api/ai/recommend?limit=5&refresh=true'),
+    onSuccess: (data) => {
+      queryClient.setQueryData(queryKeys.ai.recommendations(), data);
+    },
   });
 }

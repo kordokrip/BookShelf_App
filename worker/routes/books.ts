@@ -158,6 +158,23 @@ booksRouter.get('/:id', optionalAuth, async (c) => {
 booksRouter.post('/', authMiddleware, zValidator('json', createBookSchema), async (c) => {
   const userId = c.get('userId');
   const body = c.req.valid('json');
+
+  // 위시리스트 제한 및 중복 체크
+  if (body.status === 'wish') {
+    const countResult = await c.env.DB.prepare(
+      `SELECT COUNT(*) as cnt FROM books WHERE user_id = ? AND status = 'wish'`,
+    ).bind(userId).first<{ cnt: number }>();
+    if ((countResult?.cnt ?? 0) >= 10) {
+      return c.json({ error: '위시리스트는 최대 10권까지 등록 가능합니다.' }, 400);
+    }
+    const dup = await c.env.DB.prepare(
+      `SELECT id FROM books WHERE user_id = ? AND status = 'wish' AND title = ?`,
+    ).bind(userId, body.title).first();
+    if (dup) {
+      return c.json({ error: '이미 위시리스트에 있는 책입니다.' }, 409);
+    }
+  }
+
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
 
