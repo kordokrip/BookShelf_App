@@ -4,6 +4,7 @@ import ISBNScanner from "../components/books/ISBNScanner";
 import type { GenreKey } from "../../types/book";
 import { ALL_GENRES } from "../../types/book";
 import type { SearchBook } from "../../lib/api";
+import { searchApi } from "../../lib/api";
 import { WishBookCard } from "../components/books/BookCard";
 import { GenreFilterBar } from "../components/books/GenreFilterBar";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -116,6 +117,40 @@ export function WishlistPage() {
     if (sortBy === "title") return a.title.localeCompare(b.title, "ko");
     return b.addedDate.localeCompare(a.addedDate);
   });
+
+  // AI 추천 위시리스트 추가 — 카카오로 실제 커버 이미지 포함와서 저장
+  async function handleAddAIRecommendation(rec: { title: string; author: string; genre: string; reason: string }) {
+    try {
+      const result = await searchApi.searchBooks(rec.title, 1, 3);
+      const matched =
+        result.books.find((b) =>
+          b.title.toLowerCase().includes(rec.title.toLowerCase()) ||
+          rec.title.toLowerCase().includes(b.title.toLowerCase()),
+        ) ?? result.books[0];
+      if (matched) {
+        addBook.mutate(
+          {
+            title: matched.title,
+            author: matched.author || rec.author,
+            genre: (rec.genre as GenreKey) ?? '기타',
+            isbn: matched.isbn || undefined,
+            coverImage: matched.coverImage || undefined,
+            publisher: matched.publisher || undefined,
+            status: 'wish',
+          },
+          { onSuccess: () => showToast(`"${rec.title}" 위시리스트에 추가됨 💫`, 'success') },
+        );
+        return;
+      }
+    } catch {
+      // 검색 실패 시 아래 기본 추가로 폴백
+    }
+    // 검색 실패 폴백: AI 데이터만으로 추가
+    addBook.mutate(
+      { title: rec.title, author: rec.author, genre: rec.genre as GenreKey, status: 'wish' },
+      { onSuccess: () => showToast(`"${rec.title}" 위시리스트에 추가됨 💫`, 'success') },
+    );
+  }
 
   const filtered = selectedGenre
     ? sorted.filter((b) => b.genre === selectedGenre)
@@ -294,12 +329,7 @@ export function WishlistPage() {
                 <p style={{ fontSize: 12, color: "#64748B" }}>{rec.author} · {rec.genre}</p>
                 <p style={{ fontSize: 12, color: "#475569", marginTop: 4 }}>{rec.reason}</p>
                 <button
-                  onClick={() =>
-                    addBook.mutate(
-                      { title: rec.title, author: rec.author, genre: rec.genre as GenreKey, status: 'wish' },
-                      { onSuccess: () => showToast(`"${rec.title}" 위시리스트에 추가됨 💫`, 'success') },
-                    )
-                  }
+                  onClick={() => handleAddAIRecommendation(rec)}
                   disabled={addBook.isPending}
                   className="mt-2 disabled:opacity-50"
                   style={{ fontSize: 12, fontWeight: 600, color: "#7C3AED" }}

@@ -32,12 +32,38 @@ const createBookSchema = z.object({
 const updateBookSchema = createBookSchema.partial();
 
 // ─── POST /api/books/refresh-covers — 기존 책 표지 일괄 백필 ─
-// isbn은 있으나 커버 이미지가 없는 책을 카카오 API로 일괄 조회하여 업데이트
+// 1단계: 직접 CDN URL 저장된 책 → 프록시 URL로 교체 (CORS 해결)
+// 2단계: isbn 있고 커버 없는 책 → 카카오 API로 조회하여 업데이트
 // /:id 라우트보다 반드시 앞에 선언해야 충돌 없음
 booksRouter.post('/refresh-covers', authMiddleware, async (c) => {
   const userId = c.get('userId');
   const proxyOrigin = new URL(c.req.url).origin;
+  let migrated = 0;
+  let updated = 0;
 
+  // ── Step 1: 직접 CDN URL → 프록시 URL 변환 ──────────────────
+  // 이미 커버가 있지만 직접 CDN URL(CORS 오류 발생)인 책들을 프록시 URL로 교체
+  const CDN_PATTERNS = [
+    'https://search1.kakaocdn.net/%',
+    'https://search2.kakaocdn.net/%',
+    'https://shopping.phinf.naver.net/%',
+  ];
+
+  for (const pattern of CDN_PATTERNS) {
+    const { results: cdnBooks } = await c.env.DB.prepare(
+      `SELECT id, cover_image FROM books WHERE user_id = ? AND cover_image LIKE ?`,
+    ).bind(userId, pattern).all<{ id: string; cover_image: string }>();
+
+    for (const book of cdnBooks ?? []) {
+      const proxyUrl = `${proxyOrigin}/api/cover-proxy?url=${encodeURIComponent(book.cover_image)}`;
+      await c.env.DB.prepare(
+        `UPDATE books SET cover_image = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?`,
+      ).bind(proxyUrl, book.id, userId).run();
+      migrated++;
+    }
+  }
+
+  // ── Step 2: ISBN 있고 커버 없는 책 → 카카오 검색 ────────────
   const { results } = await c.env.DB.prepare(
     `SELECT id, isbn, title FROM books
      WHERE user_id = ?
@@ -48,41 +74,39 @@ booksRouter.post('/refresh-covers', authMiddleware, async (c) => {
     .bind(userId)
     .all<{ id: string; isbn: string; title: string }>();
 
-  if (!results || results.length === 0) return c.json({ updated: 0 });
+  if (results && results.length > 0) {
+    const kakaoKey = c.env.KAKAO_REST_API_KEY;
+    for (const book of results) {
+      try {
+        const kakaoUrl = new URL('https://dapi.kakao.com/v3/search/book');
+        kakaoUrl.searchParams.set('query', book.isbn);
+        kakaoUrl.searchParams.set('target', 'isbn');
+        kakaoUrl.searchParams.set('size', '1');
 
-  const kakaoKey = c.env.KAKAO_REST_API_KEY;
-  let updated = 0;
+        const res = await fetch(kakaoUrl.toString(), {
+          headers: { Authorization: `KakaoAK ${kakaoKey}` },
+        });
+        if (!res.ok) continue;
 
-  for (const book of results) {
-    try {
-      const kakaoUrl = new URL('https://dapi.kakao.com/v3/search/book');
-      kakaoUrl.searchParams.set('query', book.isbn);
-      kakaoUrl.searchParams.set('target', 'isbn');
-      kakaoUrl.searchParams.set('size', '1');
+        const data = await res.json<{ documents: Array<{ thumbnail: string }> }>();
+        const thumbnail = data.documents[0]?.thumbnail;
+        if (!thumbnail) continue;
 
-      const res = await fetch(kakaoUrl.toString(), {
-        headers: { Authorization: `KakaoAK ${kakaoKey}` },
-      });
-      if (!res.ok) continue;
+        const proxyUrl = `${proxyOrigin}/api/cover-proxy?url=${encodeURIComponent(thumbnail)}`;
+        await c.env.DB.prepare(
+          `UPDATE books SET cover_image = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?`,
+        )
+          .bind(proxyUrl, book.id, userId)
+          .run();
 
-      const data = await res.json<{ documents: Array<{ thumbnail: string }> }>();
-      const thumbnail = data.documents[0]?.thumbnail;
-      if (!thumbnail) continue;
-
-      const proxyUrl = `${proxyOrigin}/api/cover-proxy?url=${encodeURIComponent(thumbnail)}`;
-      await c.env.DB.prepare(
-        `UPDATE books SET cover_image = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?`,
-      )
-        .bind(proxyUrl, book.id, userId)
-        .run();
-
-      updated++;
-    } catch {
-      // 개별 실패는 건너뜀
+        updated++;
+      } catch {
+        // 개별 실패는 건너뜀
+      }
     }
   }
 
-  return c.json({ updated });
+  return c.json({ updated, migrated });
 });
 
 // ─── GET /api/books ───────────────────────────────────────────
