@@ -93,7 +93,7 @@ CREATE TABLE IF NOT EXISTS notes (
   book_id     TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
   user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   type        TEXT NOT NULL DEFAULT 'memo'
-              CHECK (type IN ('memo', 'highlight', 'quote')),
+              CHECK (type IN ('memo', 'highlight', 'quote', 'review')),
   content     TEXT NOT NULL,
   page_number INTEGER,
   color       TEXT DEFAULT 'yellow',             -- 하이라이트 색상

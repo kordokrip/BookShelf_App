@@ -80,7 +80,7 @@ export interface CreateSessionBody {
 }
 
 // Note (메모/하이라이트) 관련 타입
-export type NoteType = 'memo' | 'highlight' | 'quote';
+export type NoteType = 'memo' | 'highlight' | 'quote' | 'review';
 
 export interface DbNote {
   id: string;

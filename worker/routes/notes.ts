@@ -9,16 +9,18 @@ export const notesRouter = new Hono<{ Bindings: Bindings; Variables: { userId: s
 
 
 // ─── 스키마 검증 ──────────────────────────────────────────────
+const NOTE_TYPES = ['memo', 'highlight', 'quote', 'review'] as const;
+
 const createNoteSchema = z.object({
   book_id: z.string().uuid(),
-  type: z.enum(['memo', 'highlight', 'quote']).optional().default('memo'),
+  type: z.enum(NOTE_TYPES).optional().default('memo'),
   content: z.string().min(1).max(5000),
   page_number: z.number().int().positive().optional(),
   color: z.string().max(30).optional().default('yellow'),
 });
 
 const updateNoteSchema = z.object({
-  type: z.enum(['memo', 'highlight', 'quote']).optional(),
+  type: z.enum(NOTE_TYPES).optional(),
   content: z.string().min(1).max(5000).optional(),
   page_number: z.number().int().positive().nullable().optional(),
   color: z.string().max(30).optional(),
@@ -28,7 +30,7 @@ const updateNoteSchema = z.object({
 // 사용자 노트 목록 조회 (bookId, type, search 필터)
 notesRouter.get('/', optionalAuth, async (c) => {
   const userId = c.get('userId');
-  const bookId = c.req.query('bookId');
+  const bookId = c.req.query('book_id');
   const type = c.req.query('type');
   const search = c.req.query('search');
   const limit = parseInt(c.req.query('limit') ?? '100');
@@ -58,7 +60,7 @@ notesRouter.get('/', optionalAuth, async (c) => {
          LIMIT ? OFFSET ?`,
       ).bind(ftsQuery, ...baseFilters, limit, offset).all<DbNote>();
 
-      return c.json({ notes: results, total: countResult?.total ?? 0 });
+      return c.json({ data: results, count: countResult?.total ?? 0 });
     } catch {
       // FTS5 테이블 미존재 또는 쿼리 오류 시 LIKE 폴백
       const fallbackParams: (string | number)[] = [userId, `%${search}%`];
@@ -74,7 +76,7 @@ notesRouter.get('/', optionalAuth, async (c) => {
         `${fallbackSql} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
       ).bind(...fallbackParams, limit, offset).all<DbNote>();
 
-      return c.json({ notes: results, total: countResult?.total ?? 0 });
+      return c.json({ data: results, count: countResult?.total ?? 0 });
     }
   }
 
@@ -104,7 +106,7 @@ notesRouter.get('/', optionalAuth, async (c) => {
     .bind(...params)
     .all<DbNote>();
 
-  return c.json({ notes: results, total: countResult?.total ?? 0 });
+  return c.json({ data: results, count: countResult?.total ?? 0 });
 });
 
 // ─── GET /api/notes/:id ──────────────────────────────────────
@@ -120,7 +122,7 @@ notesRouter.get('/:id', optionalAuth, async (c) => {
 
   if (!note) throw new HTTPException(404, { message: '노트를 찾을 수 없습니다.' });
 
-  return c.json({ note });
+  return c.json({ data: note });
 });
 
 // ─── POST /api/notes ─────────────────────────────────────────
@@ -149,7 +151,7 @@ notesRouter.post('/', authMiddleware, zValidator('json', createNoteSchema), asyn
     .bind(id)
     .first<DbNote>();
 
-  return c.json({ note: created }, 201);
+  return c.json({ data: created }, 201);
 });
 
 // ─── PUT /api/notes/:id ──────────────────────────────────────
@@ -202,7 +204,7 @@ notesRouter.put('/:id', authMiddleware, zValidator('json', updateNoteSchema), as
     .bind(id)
     .first<DbNote>();
 
-  return c.json({ note: updated });
+  return c.json({ data: updated });
 });
 
 // ─── DELETE /api/notes/:id ───────────────────────────────────
