@@ -8,6 +8,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   google_db: '계정 처리 중 오류가 발생했습니다.',
   google_unknown: '구글 로그인 중 오류가 발생했습니다.',
   not_allowed: '접근이 허용되지 않은 계정입니다. 관리자에게 문의하세요.',
+  not_registered: '가입되지 않은 계정입니다. 먼저 회원가입을 완료해주세요.',
 };
 
 export function GoogleCallbackPage() {
@@ -21,7 +22,7 @@ export function GoogleCallbackPage() {
     if (error) {
       const msg = ERROR_MESSAGES[error] ?? '로그인 중 오류가 발생했습니다.';
       setErrorMessage(msg);
-      const delay = error === 'not_allowed' ? 4000 : 2500;
+      const delay = (error === 'not_allowed' || error === 'not_registered') ? 4000 : 2500;
       setTimeout(() => navigate('/login', { replace: true }), delay);
       return;
     }

@@ -7,6 +7,22 @@ import { authMiddleware, optionalAuth } from '../auth';
 
 export const booksRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
+// ─── cover_image URL 정규화 ───────────────────────────────────
+// 직접 CDN URL(CORS 오류)을 /api/cover-proxy 경유 URL로 변환
+function normalizeCoverUrl(coverImage: string | null, origin: string): string | null {
+  if (!coverImage) return null;
+  if (coverImage.startsWith('/api/cover-proxy') || coverImage.startsWith(origin)) return coverImage;
+  const CDN_ORIGINS = [
+    'https://search1.kakaocdn.net',
+    'https://search2.kakaocdn.net',
+    'https://shopping.phinf.naver.net',
+  ];
+  if (CDN_ORIGINS.some((cdn) => coverImage.startsWith(cdn))) {
+    return `${origin}/api/cover-proxy?url=${encodeURIComponent(coverImage)}`;
+  }
+  return coverImage;
+}
+
 
 // ─── 스키마 검증 ──────────────────────────────────────────────
 const createBookSchema = z.object({
@@ -115,6 +131,7 @@ booksRouter.get('/', optionalAuth, async (c) => {
   const userId = c.get('userId');
   const status = c.req.query('status');
   const genre = c.req.query('genre');
+  const sort = c.req.query('sort') ?? 'created_at_desc';
   const limit = parseInt(c.req.query('limit') ?? '100');
   const offset = parseInt(c.req.query('offset') ?? '0');
 
@@ -130,12 +147,25 @@ booksRouter.get('/', optionalAuth, async (c) => {
     params.push(genre);
   }
 
-  query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+  // sort 파라미터: created_at_desc | title_asc | author_asc | rating_desc | finished_date_desc
+  const ORDER_MAP: Record<string, string> = {
+    created_at_desc:    'created_at DESC',
+    title_asc:          'title ASC',
+    author_asc:         'author ASC',
+    rating_desc:        'rating DESC NULLS LAST',
+    finished_date_desc: 'finished_date DESC NULLS LAST',
+  };
+  const orderClause = ORDER_MAP[sort] ?? 'created_at DESC';
+  query += ` ORDER BY ${orderClause} LIMIT ? OFFSET ?`;
   params.push(limit, offset);
 
   const { results } = await c.env.DB.prepare(query).bind(...params).all<DbBook>();
 
-  return c.json({ data: results, count: results.length });
+  const origin = new URL(c.req.url).origin;
+  return c.json({
+    data: results.map((b) => ({ ...b, cover_image: normalizeCoverUrl(b.cover_image, origin) })),
+    count: results.length,
+  });
 });
 
 // ─── GET /api/books/:id ───────────────────────────────────────
@@ -151,7 +181,8 @@ booksRouter.get('/:id', optionalAuth, async (c) => {
 
   if (!book) throw new HTTPException(404, { message: '책을 찾을 수 없습니다.' });
 
-  return c.json({ data: book });
+  const origin = new URL(c.req.url).origin;
+  return c.json({ data: { ...book, cover_image: normalizeCoverUrl(book.cover_image, origin) } });
 });
 
 // ─── POST /api/books ──────────────────────────────────────────
@@ -237,6 +268,12 @@ booksRouter.put('/:id', authMiddleware, zValidator('json', updateBookSchema), as
       setClauses.push(`${col} = ?`);
       values.push((body as Record<string, unknown>)[key] ?? null);
     }
+  }
+
+  // DB-103: status → 'done' 전환 시 finished_date 자동 설정 (명시적으로 전달되지 않은 경우)
+  if (body.status === 'done' && !('finished_date' in body)) {
+    setClauses.push('finished_date = ?');
+    values.push(new Date().toISOString().slice(0, 10));
   }
 
   if (setClauses.length === 0) return c.json({ data: existing });

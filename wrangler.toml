@@ -22,6 +22,8 @@ database_id = "013db269-dc7a-4a60-9920-ed40c12ab623"
 migrations_dir = "worker/db/migrations"
 
 # ─── KV Namespaces ───────────────────────────────────────────
+# @deprecated: JWT Refresh Token 저장 용도는 KV 바인딩으로 이전됨.
+# SESSIONS 바인딩은 현재 사용되지 않으며 차후 제거 예정.
 # 세션 / JWT Refresh Token 저장
 [[kv_namespaces]]
 binding = "SESSIONS"
@@ -55,7 +57,7 @@ binding = "AI"
 ENVIRONMENT = "production"
 APP_NAME = "BookShelf"
 FRONTEND_URL = "https://bookshelf-api.kordokrip.workers.dev"
-ALLOWED_EMAILS = ""  # wrangler secret put ALLOWED_EMAILS 로 실제 값 설정
+# ALLOWED_EMAILS 는 wrangler secret put ALLOWED_EMAILS 로 등록 (vars와 동시 사용 불가)
 
 # ─── 옵저버빌리티 ────────────────────────────────────────────
 [observability]

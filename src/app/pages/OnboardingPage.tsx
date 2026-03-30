@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { AuthPreviewNav } from "../components/auth/AuthPreviewNav";
 import { GENRE_CONFIG } from "../../types/book";
 import { usersApi } from "../../lib/api";
+import { useToast } from "../components/ui/Toast";
 
 /* ─── Slide 1: Isometric Bookshelf ──────────────────────────── */
 function BookshelfIllustration() {
@@ -240,6 +241,7 @@ export function OnboardingPage() {
   // 스와이프 제스처 상태
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   const TOTAL_SLIDES = 4;
 
@@ -249,7 +251,7 @@ export function OnboardingPage() {
   const goPrev = () => {
     if (current > 0) setCurrent(current - 1);
   };
-  const goLogin = () => navigate("/login");
+  const goLastSlide = () => setCurrent(TOTAL_SLIDES - 1);
 
   // 스와이프 제스처 핸들러
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -269,6 +271,10 @@ export function OnboardingPage() {
   };
 
   const handleOnboardingComplete = async () => {
+    if (selectedGenres.length === 0) {
+      showToast("최소 1개의 장르를 선택해주세요 📚", "error");
+      return;
+    }
     const token = localStorage.getItem("auth_token");
     if (token) {
       setIsSaving(true);
@@ -321,7 +327,7 @@ export function OnboardingPage() {
       {/* 건너뛰기 버튼 */}
       <div className="flex justify-end px-6 pt-2 pb-1" style={{ minHeight: 44 }}>
         <button
-          onClick={goLogin}
+          onClick={goLastSlide}
           style={{
             fontSize: 14,
             color: "#64748B",

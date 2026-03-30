@@ -10,10 +10,18 @@ export interface UseReadingTimerReturn {
   reset: () => void;
 }
 
-export function useReadingTimer(): UseReadingTimerReturn {
+export function useReadingTimer(onStop?: (elapsedMinutes: number) => void): UseReadingTimerReturn {
   const [elapsed, setElapsed] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const elapsedRef = useRef(0);
+  const onStopRef = useRef(onStop);
+  onStopRef.current = onStop;
+
+  // elapsed를 ref에 동기화
+  useEffect(() => {
+    elapsedRef.current = elapsed;
+  }, [elapsed]);
 
   // 컴포넌트 언마운트 시 interval 정리
   useEffect(() => {
@@ -38,6 +46,10 @@ export function useReadingTimer(): UseReadingTimerReturn {
       intervalRef.current = null;
     }
     setIsRunning(false);
+    const minutes = Math.floor(elapsedRef.current / 60);
+    if (minutes >= 1) {
+      onStopRef.current?.(minutes);
+    }
   }, []);
 
   const reset = useCallback(() => {
@@ -47,6 +59,7 @@ export function useReadingTimer(): UseReadingTimerReturn {
     }
     setIsRunning(false);
     setElapsed(0);
+    elapsedRef.current = 0;
   }, []);
 
   const minutes = Math.floor(elapsed / 60);

@@ -53,3 +53,4 @@ coverage/
 # ─── 스크린샷 (PWA manifest용 생성 파일) ─────────────────────
 public/screenshots/
 .dev.vars
+oracleJdk-26.jdk/

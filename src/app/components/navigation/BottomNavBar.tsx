@@ -44,7 +44,7 @@ export function BottomNavBar() {
     /* fixed-nav: GPU 합성 레이어 강제 → iOS Safari에서 스크롤 시 떨림 방지
        transform: translateZ(0) 는 index.css의 .fixed-nav 클래스에서 적용 */
     <nav
-      className="fixed-nav fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#E2E8F0] lg:hidden"
+      className="fixed-nav fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-md border-t border-[#E2E8F0] dark:border-[#334155] lg:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       aria-label="하단 네비게이션"
     >

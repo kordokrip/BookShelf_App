@@ -65,6 +65,7 @@ export interface StatsResponse {
   statusCounts: { done: number; reading: number; wish: number };
   sessionDates: string[];
   totals: { totalPages: number; totalMinutes: number };
+  weekly: Array<{ week: string; pages: number }>;
 }
 
 export type CreateBookInput = Omit<
@@ -131,12 +132,14 @@ export const booksApi = {
   list: (params: {
     status?: BookStatus;
     genre?: string;
+    sort?: 'created_at_desc' | 'title_asc' | 'author_asc' | 'rating_desc' | 'finished_date_desc';
     limit?: number;
     offset?: number;
   } = {}) => {
     const qs = new URLSearchParams();
     if (params.status) qs.set('status', params.status);
     if (params.genre) qs.set('genre', params.genre);
+    if (params.sort) qs.set('sort', params.sort);
     if (params.limit) qs.set('limit', String(params.limit));
     if (params.offset) qs.set('offset', String(params.offset));
     const query = qs.toString() ? `?${qs.toString()}` : '';
@@ -274,6 +277,12 @@ export const sessionsApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+
+  /** 독서 세션 삭제 */
+  delete: (id: string) =>
+    apiFetch<{ success: boolean }>(`/api/sessions/${id}`, {
+      method: 'DELETE',
+    }),
 };
 
 // ─── Notes API ────────────────────────────────────────────────
@@ -329,6 +338,17 @@ export const notesApi = {
     apiFetch<{ success: boolean }>(`/api/notes/${id}`, {
       method: 'DELETE',
     }),
+
+  /** 특정 책(또는 전체) 노트를 Markdown으로 내보내기 — Blob 반환 */
+  exportNotes: async (bookId?: string): Promise<Blob> => {
+    const qs = bookId ? `?book_id=${bookId}` : '';
+    const token = localStorage.getItem('auth_token');
+    const resp = await fetch(`/api/notes/export${qs}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!resp.ok) throw new ApiError(resp.status, `export failed: ${resp.status}`);
+    return resp.blob();
+  },
 };
 
 // ─── Search API ───────────────────────────────────────────────
@@ -370,7 +390,7 @@ export const statsApi = {
 
 // ─── OCR API ──────────────────────────────────────────────────
 export const ocrApi = {  /** 이미지에서 텍스트 추출 (Workers AI Vision) */
-  extractText: async (imageFile: File): Promise<{ text: string }> => {
+  extractText: async (imageFile: File): Promise<{ text: string; confidence?: number }> => {
     const formData = new FormData();
     formData.append('image', imageFile);
     const token = localStorage.getItem('auth_token');

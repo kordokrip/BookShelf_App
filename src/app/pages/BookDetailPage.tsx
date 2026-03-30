@@ -1,6 +1,7 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
+import { motion } from "framer-motion";
 import { useNavigate, useParams } from "react-router";
-import { ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, BookMarked, BookOpen, Heart, ScanLine } from "lucide-react";
+import { ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, BookMarked, BookOpen, Heart, ScanLine, Clock, Search, Share2 } from "lucide-react";
 import type { BookNote } from "../../types/book";
 import type { UIBook } from "../../types/book";
 import { BookCover } from "../components/books/BookCard";
@@ -8,6 +9,7 @@ import { GenreBadge } from "../components/ui/GenreBadge";
 import { useToast } from "../components/ui/Toast";
 import { useBookDetail, useDeleteBook, useUpdateBook } from "../../hooks/useBooks";
 import { useBookNotes, useAddNote, useUpdateNote, useDeleteNote } from "../../hooks/useNotes";
+import { useSessions, useDeleteSession } from "../../hooks/useSessions";
 import { useBookSummary as useBookSummaryMutation } from "../../hooks/useAI";
 import { coverApi, queryKeys } from "../../lib/api";
 import { useQueryClient } from "@tanstack/react-query";
@@ -22,15 +24,22 @@ import { Button } from "../components/ui/button";
 import { cn } from "../components/ui/utils";
 import { CameraOCRSheet } from "../components/books/CameraOCRSheet";
 
-/* ─── Star display ──────────────────────────────────────────── */
-function StarRow({ value }: { value: number }) {
+/* ─── Star display / input ──────────────────────────────────── */
+function StarRow({ value, onRate }: { value: number; onRate?: (n: number) => void }) {
+  const [hover, setHover] = useState(0);
+  const display = hover || value;
   return (
     <div className="flex items-center gap-1">
       {[1, 2, 3, 4, 5].map((i) => {
-        const lit = i <= Math.round(value);
+        const lit = i <= Math.round(display);
         return (
-          // Spec: 18px stars, display only
-          <span key={i} style={{ fontSize: 18, color: lit ? "#F59E0B" : "#E2E8F0" }}>★</span>
+          <span
+            key={i}
+            style={{ fontSize: 18, color: lit ? "#F59E0B" : "#E2E8F0", cursor: onRate ? "pointer" : "default" }}
+            onMouseEnter={() => onRate && setHover(i)}
+            onMouseLeave={() => onRate && setHover(0)}
+            onClick={() => onRate?.(i)}
+          >★</span>
         );
       })}
       <span className="ml-1 text-[#64748B]" style={{ fontSize: 14, fontWeight: 600 }}>
@@ -140,12 +149,17 @@ interface NoteForm {
 }
 
 /* ─── Notes Tab ──────────────────────────────────────────────── */
-function NotesTab({ notes, bookId }: { notes: BookNote[]; bookId: string }) {
+function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: string; currentPage?: number }) {
   const [expandedReview, setExpandedReview] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [showOCR, setShowOCR] = useState(false);
   const [editingNote, setEditingNote] = useState<BookNote | null>(null);
   const [form, setForm] = useState<NoteForm>({ type: "memo", content: "", page: "" });
+
+  // 빠른 노트 캡처 바 상태
+  const [quickText, setQuickText] = useState("");
+  const [quickType, setQuickType] = useState<NoteFormType>("memo");
+  const quickTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const addMutation = useAddNote();
   const updateMutation = useUpdateNote();
@@ -189,6 +203,27 @@ function NotesTab({ notes, bookId }: { notes: BookNote[]; bookId: string }) {
     closeSheet();
   };
 
+  const handleQuickSave = useCallback(async () => {
+    const text = quickText.trim();
+    if (!text) return;
+    await addMutation.mutateAsync({
+      book_id: bookId,
+      type: quickType,
+      content: text,
+      page_number: currentPage && currentPage > 0 ? currentPage : undefined,
+    });
+    setQuickText("");
+    quickTextareaRef.current?.focus();
+  }, [quickText, quickType, bookId, currentPage, addMutation]);
+
+  // Ctrl+Enter / Cmd+Enter 단축키
+  const handleQuickKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      e.preventDefault();
+      void handleQuickSave();
+    }
+  }, [handleQuickSave]);
+
   const handleDelete = async (id: string) => {
     if (!confirm("이 노트를 삭제할까요?")) return;
     await deleteMutation.mutateAsync(id);
@@ -199,6 +234,27 @@ function NotesTab({ notes, bookId }: { notes: BookNote[]; bookId: string }) {
   const quotes = notes.filter((n) => n.type === "quote");
   const memos = notes.filter((n) => n.type === "memo");
   const reviews = notes.filter((n) => n.type === "review");
+
+  // UX-106: 필터 탭 + 인라인 검색
+  const [noteFilter, setNoteFilter] = useState<"all" | NoteFormType>("all");
+  const [noteSearch, setNoteSearch] = useState("");
+
+  const NOTE_COLOR: Record<string, string> = {
+    quote: "#7C3AED",
+    memo: "#4F46E5",
+    review: "#0891B2",
+  };
+
+  const filteredNotes = notes
+    .filter((n) => noteFilter === "all" || n.type === noteFilter)
+    .filter((n) => !noteSearch || n.content.toLowerCase().includes(noteSearch.toLowerCase()));
+
+  const NOTE_TAB_ITEMS: { value: "all" | NoteFormType; label: string; count: number }[] = [
+    { value: "all", label: "전체", count: notes.length },
+    { value: "quote", label: "💬 문구", count: quotes.length },
+    { value: "memo", label: "📝 메모", count: memos.length },
+    { value: "review", label: "✍️ 독후감", count: reviews.length },
+  ];
 
   function SectionHeader({ title, type }: { title: string; type: NoteFormType }) {
     return (
@@ -246,7 +302,61 @@ function NotesTab({ notes, bookId }: { notes: BookNote[]; bookId: string }) {
 
   return (
     <>
-      <div className="flex flex-col gap-6 px-4 py-4">
+      <div className="flex flex-col gap-4 px-4 py-4">
+        {/* ── 빠른 노트 캡처 바 ── */}
+        <div
+          className="rounded-2xl p-3 border"
+          style={{ backgroundColor: "#FAFBFF", borderColor: "#C7D2FE" }}
+        >
+          {/* 타입 칩 */}
+          <div className="flex gap-1.5 mb-2">
+            {([
+              { value: "memo" as NoteFormType, label: "📝 메모" },
+              { value: "quote" as NoteFormType, label: "💬 문구" },
+              { value: "review" as NoteFormType, label: "✍️ 독후감" },
+            ] as const).map((t) => (
+              <button
+                key={t.value}
+                onClick={() => setQuickType(t.value)}
+                className="rounded-full px-2.5 py-1 transition-all"
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  backgroundColor: quickType === t.value ? "#4F46E5" : "#EEF2FF",
+                  color: quickType === t.value ? "white" : "#4F46E5",
+                }}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <textarea
+            ref={quickTextareaRef}
+            rows={2}
+            value={quickText}
+            onChange={(e) => setQuickText(e.target.value)}
+            onKeyDown={handleQuickKeyDown}
+            placeholder="빠른 노트를 입력하세요... (⌘+Enter로 저장)"
+            className="w-full bg-white rounded-xl border border-[#E2E8F0] outline-none focus:border-[#4F46E5] resize-none px-3 py-2 transition-colors"
+            style={{ fontSize: 13, color: "#1E293B" }}
+          />
+          <div className="flex items-center justify-between mt-2">
+            {currentPage && currentPage > 0 ? (
+              <span style={{ fontSize: 11, color: "#94A3B8" }}>📄 현재 {currentPage}p 자동 반영</span>
+            ) : (
+              <span />
+            )}
+            <button
+              onClick={() => void handleQuickSave()}
+              disabled={!quickText.trim() || addMutation.isPending}
+              className="rounded-xl text-white px-3 py-1.5 transition-opacity hover:opacity-90 active:scale-[0.97] disabled:opacity-40"
+              style={{ fontSize: 12, fontWeight: 700, background: "linear-gradient(135deg, #4F46E5, #7C3AED)" }}
+            >
+              {addMutation.isPending ? "저장 중..." : "저장"}
+            </button>
+          </div>
+        </div>
+
         {/* OCR 노트 추가 버튼 */}
         <button
           onClick={() => setShowOCR(true)}
@@ -257,65 +367,98 @@ function NotesTab({ notes, bookId }: { notes: BookNote[]; bookId: string }) {
           사진으로 노트 추가 (OCR)
         </button>
 
-        {/* Quotes */}
-        <div>
-          <SectionHeader title="좋은 문구" type="quote" />
-          <div className="flex flex-col gap-3">
-            {quotes.length === 0 ? (
-              <p className="text-[#94A3B8] text-center py-4" style={{ fontSize: 14 }}>
-                아직 저장한 문구가 없어요 ✍️
-              </p>
-            ) : (
-              quotes.map((n) => (
-                <div key={n.id}>
-                  <QuoteCard note={n} />
-                  <NoteActions note={n} />
-                </div>
-              ))
-            )}
-          </div>
+        {/* UX-106: 필터 탭 (count 배지 포함) */}
+        <div className="flex gap-2 overflow-x-auto no-scrollbar">
+          {NOTE_TAB_ITEMS.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => setNoteFilter(tab.value)}
+              className={cn(
+                "flex-shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border transition-all",
+                noteFilter === tab.value
+                  ? "bg-[#4F46E5] text-white border-[#4F46E5]"
+                  : "border-[#E2E8F0] text-[#64748B] bg-white"
+              )}
+              style={{ fontSize: 12, fontWeight: 600 }}
+            >
+              {tab.label}
+              <span
+                className={cn(
+                  "rounded-full px-1.5 py-0.5",
+                  noteFilter === tab.value ? "bg-white/20 text-white" : "bg-[#F1F5F9] text-[#64748B]"
+                )}
+                style={{ fontSize: 10, fontWeight: 700 }}
+              >
+                {tab.count}
+              </span>
+            </button>
+          ))}
         </div>
 
-        {/* Memos */}
-        <div>
-          <SectionHeader title="메모" type="memo" />
-          <div className="flex flex-col gap-3">
-            {memos.length === 0 ? (
-              <p className="text-[#94A3B8] text-center py-4" style={{ fontSize: 14 }}>
-                아직 메모가 없어요 📝
-              </p>
-            ) : (
-              memos.map((n) => (
-                <div key={n.id}>
-                  <MemoCard note={n} />
-                  <NoteActions note={n} />
-                </div>
-              ))
-            )}
-          </div>
+        {/* UX-106: 인라인 검색 */}
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
+          <input
+            type="search"
+            value={noteSearch}
+            onChange={(e) => setNoteSearch(e.target.value)}
+            placeholder="노트 내용 검색..."
+            className="w-full pl-8 pr-4 py-2 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] outline-none focus:border-[#4F46E5] transition-colors"
+            style={{ fontSize: 13 }}
+          />
         </div>
 
-        {/* Reviews */}
-        <div>
-          <SectionHeader title="독후감" type="review" />
+        {/* UX-106: 통합 노트 목록 (좌측 색상 바 포함) */}
+        {filteredNotes.length === 0 ? (
+          <p className="text-center text-[#94A3B8] py-8" style={{ fontSize: 14 }}>
+            {noteSearch ? `"${noteSearch}" 검색 결과가 없어요` : "노트를 추가해 보세요 ✍️"}
+          </p>
+        ) : (
           <div className="flex flex-col gap-3">
-            {reviews.length === 0 ? (
-              <p className="text-[#94A3B8] text-center py-4" style={{ fontSize: 14 }}>
-                아직 독후감이 없어요 🌟
-              </p>
-            ) : (
-              reviews.map((n) => (
-                <div key={n.id}>
-                  <ReviewCard
-                    note={n}
-                    expanded={expandedReview}
-                    onToggle={() => setExpandedReview((v) => !v)}
-                  />
+            {filteredNotes.map((n, idx) => (
+              <motion.div
+                key={n.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2, delay: idx * 0.05 }}
+                className="flex gap-0 overflow-hidden rounded-2xl border border-[#E2E8F0]"
+              >
+                {/* 좌측 색상 바 */}
+                <div
+                  className="flex-shrink-0 w-1"
+                  style={{ backgroundColor: NOTE_COLOR[n.type] ?? "#94A3B8" }}
+                />
+                <div className="flex-1 min-w-0">
+                  {n.type === "quote" ? (
+                    <QuoteCard note={n} />
+                  ) : n.type === "review" ? (
+                    <ReviewCard
+                      note={n}
+                      expanded={expandedReview}
+                      onToggle={() => setExpandedReview((v) => !v)}
+                    />
+                  ) : (
+                    <MemoCard note={n} />
+                  )}
                   <NoteActions note={n} />
                 </div>
-              ))
-            )}
+              </motion.div>
+            ))}
           </div>
+        )}
+
+        {/* 타입별 노트 추가 버튼 */}
+        <div className="flex gap-2">
+          {NOTE_TYPES.map((t) => (
+            <button
+              key={t.value}
+              onClick={() => openAdd(t.value)}
+              className="flex-1 py-2.5 rounded-2xl border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC] transition-colors"
+              style={{ fontSize: 12, fontWeight: 600 }}
+            >
+              + {t.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -393,7 +536,13 @@ function NotesTab({ notes, bookId }: { notes: BookNote[]; bookId: string }) {
 function BookInfoTab({ book }: { book: UIBook }) {
   const [descInput, setDescInput] = useState("");
   const [summaryResult, setSummaryResult] = useState<string | null>(null);
+  const [goalDateVal, setGoalDateVal] = useState(book.goalDate ?? "");
   const summarizeMutation = useBookSummaryMutation();
+  const updateBook = useUpdateBook();
+  const { showToast } = useToast();
+
+  const { data: sessions = [], isLoading: sessionsLoading } = useSessions({ bookId: book.id });
+  const deleteSession = useDeleteSession();
 
   const rows = [
     { label: "저자", value: book.author },
@@ -420,6 +569,22 @@ function BookInfoTab({ book }: { book: UIBook }) {
     }
   };
 
+  const handleRate = async (rating: number) => {
+    await updateBook.mutateAsync({ id: book.id, data: { rating } });
+    showToast(`별점 ${rating}점 저장됐어요 ⭐`, "success");
+  };
+
+  const handleGoalDateSave = async () => {
+    await updateBook.mutateAsync({ id: book.id, data: { goalDate: goalDateVal || undefined } });
+    showToast("목표 날짜가 저장됐어요 📅", "success");
+  };
+
+  const handleDeleteSession = async (sessionId: string) => {
+    if (!confirm("이 독서 기록을 삭제할까요? 진행 페이지도 되돌아갑니다.")) return;
+    await deleteSession.mutateAsync(sessionId);
+    showToast("독서 기록이 삭제됐어요", "success");
+  };
+
   return (
     <div className="px-4 py-4 flex flex-col gap-4">
       {/* 기본 정보 */}
@@ -436,6 +601,36 @@ function BookInfoTab({ book }: { book: UIBook }) {
         ))}
       </div>
 
+      {/* 별점 입력 */}
+      <div className="rounded-2xl border border-[#F1F5F9] px-4 py-3.5 flex items-center justify-between" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+        <span className="text-[#94A3B8]" style={{ fontSize: 13 }}>별점</span>
+        <StarRow value={book.rating ?? 0} onRate={handleRate} />
+      </div>
+
+      {/* 목표 날짜 */}
+      {(book.status === "reading" || book.goalDate) && (
+        <div className="rounded-2xl border border-[#F1F5F9] px-4 py-3" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+          <p className="text-[#94A3B8] mb-2" style={{ fontSize: 12, fontWeight: 600 }}>완독 목표일</p>
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={goalDateVal}
+              onChange={(e) => setGoalDateVal(e.target.value)}
+              className="flex-1 border border-[#E2E8F0] rounded-xl px-3 py-2 text-[#1E293B] bg-[#F8FAFC] outline-none focus:border-[#4F46E5]"
+              style={{ fontSize: 13 }}
+            />
+            <Button
+              size="sm"
+              onClick={handleGoalDateSave}
+              disabled={updateBook.isPending}
+              className="bg-[#4F46E5] hover:bg-[#4338CA] text-white shrink-0"
+            >
+              저장
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* 한 줄 감상 */}
       {book.note && (
         <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0]">
@@ -443,6 +638,50 @@ function BookInfoTab({ book }: { book: UIBook }) {
           <p className="text-[#1E293B] leading-relaxed" style={{ fontSize: 14 }}>{book.note}</p>
         </div>
       )}
+
+      {/* 독서 세션 기록 */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <Clock size={14} className="text-[#64748B]" />
+          <h3 className="text-[#1E293B]" style={{ fontSize: 14, fontWeight: 700 }}>독서 기록</h3>
+          <span className="text-[#94A3B8]" style={{ fontSize: 12 }}>({sessions.length}건)</span>
+        </div>
+        {sessionsLoading ? (
+          <div className="h-16 rounded-xl bg-[#F1F5F9] animate-pulse" />
+        ) : sessions.length === 0 ? (
+          <p className="text-[#94A3B8] text-center py-4" style={{ fontSize: 14 }}>
+            아직 독서 기록이 없어요 📖
+          </p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {sessions.slice(0, 10).map((s) => (
+              <div
+                key={s.id}
+                className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-white border border-[#F1F5F9]"
+                style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+              >
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[#1E293B]" style={{ fontSize: 13, fontWeight: 600 }}>
+                    +{s.pagesRead}p
+                  </span>
+                  <span className="text-[#94A3B8]" style={{ fontSize: 11 }}>
+                    {s.sessionDate.replace(/-/g, ".")}
+                    {s.durationMin ? ` · ${s.durationMin}분` : ""}
+                  </span>
+                </div>
+                <button
+                  onClick={() => handleDeleteSession(s.id)}
+                  disabled={deleteSession.isPending}
+                  className="p-1.5 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+                  aria-label="기록 삭제"
+                >
+                  <Trash2 size={13} className="text-[#FDA5A5]" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* AI 요약 섹션 */}
       <div className="rounded-2xl border border-[#DDD6FE] overflow-hidden" style={{ background: "linear-gradient(135deg, #F5F3FF 0%, #FAFAFA 100%)" }}>
@@ -507,8 +746,28 @@ export function BookDetailPage() {
   const handleChangeStatus = async (status: 'done' | 'reading' | 'wish') => {
     if (!book || book.status === status) return;
     await updateBook.mutateAsync({ id: book.id, data: { status } });
-    const label = status === 'done' ? '완독' : status === 'reading' ? '읽는 중' : '위시리스트';
-    showToast(`"${book.title}" → ${label}로 변경됐어요`, 'success');
+    if (status === 'done') {
+      showToast(`🎉 "${book.title}" 완독을 축하해요!`, 'success');
+    } else {
+      const label = status === 'reading' ? '읽는 중' : '위시리스트';
+      showToast(`"${book.title}" → ${label}로 변경됐어요`, 'success');
+    }
+  };
+
+  // FEAT-103: Web Share API
+  const handleShare = async () => {
+    if (!book) return;
+    const text = `📚 "${book.title}"${book.author ? ` - ${book.author}` : ''} 완독했어요! BookShelf에서 기록 중 🎉`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: book.title, text });
+      } catch {
+        // 사용자가 취소한 경우 무시
+      }
+    } else {
+      await navigator.clipboard.writeText(text);
+      showToast('독서 카드가 클립보드에 복사됐어요 📋', 'success');
+    }
   };
 
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -572,7 +831,19 @@ export function BookDetailPage() {
           <ChevronLeft size={20} />
           뒤로
         </button>
-        <DropdownMenu>
+        <div className="flex items-center gap-1">
+          {/* FEAT-103: 완독 도서 공유 버튼 */}
+          {book?.status === 'done' && (
+            <button
+              onClick={handleShare}
+              className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#F1F5F9] transition-colors"
+              style={{ color: "#4F46E5" }}
+              aria-label="공유"
+            >
+              <Share2 size={18} />
+            </button>
+          )}
+          <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#F1F5F9] transition-colors"
@@ -611,11 +882,15 @@ export function BookDetailPage() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
       </div>
 
       <div className="max-w-2xl mx-auto lg:max-w-3xl">
         {/* ── Hero section ── */}
-        <div className="bg-white px-4 py-8 flex flex-col items-center gap-4 border-b border-[#F1F5F9]">
+        <div
+          className="px-4 py-8 flex flex-col items-center gap-4 border-b border-[#F1F5F9]"
+          style={{ background: "linear-gradient(180deg, #EEF2FF 0%, #FFFFFF 60%)" }}
+        >
           {/* Cover: 120×168px — 클릭 시 표지 이미지 업로드 */}
           <div
             className="relative cursor-pointer group"
@@ -718,7 +993,7 @@ export function BookDetailPage() {
         {/* ── Tab content ── */}
         <div className="pb-[var(--page-pb)] lg:pb-12">
           {activeTab === "notes" ? (
-            <NotesTab notes={notes} bookId={id!} />
+            <NotesTab notes={notes} bookId={id!} currentPage={book?.currentPage ?? undefined} />
           ) : (
             <BookInfoTab book={book} />
           )}

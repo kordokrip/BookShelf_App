@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { ChevronDown, Plus, ChevronRight } from "lucide-react";
+import { ChevronDown, Plus, ChevronRight, LayoutGrid, List, GitBranch, Search, X } from "lucide-react";
 import type { UIBook, GenreKey } from "../../types/book";
 import { ALL_GENRES } from "../../types/book";
 import { useBooks, useRefreshBookCovers } from "../../hooks/useBooks";
@@ -30,6 +30,50 @@ function groupByMonth(books: UIBook[]) {
 
 
 
+/* ─── Timeline View ──────────────────────────────── */
+function TimelineView({ grouped, monthKeys, onBookClick }: {
+  grouped: Map<string, UIBook[]>;
+  monthKeys: string[];
+  onBookClick: (id: string) => void;
+}) {
+  return (
+    <div className="px-4 pt-2">
+      {monthKeys.map((key, idx) => {
+        const booksInMonth = grouped.get(key) ?? [];
+        return (
+          <div key={key} className="flex gap-3">
+            {/* 타임라인 선 */}
+            <div className="flex flex-col items-center" style={{ width: 24 }}>
+              <div
+                className="rounded-full shrink-0"
+                style={{ width: 12, height: 12, backgroundColor: "#4F46E5", marginTop: 2 }}
+              />
+              {idx < monthKeys.length - 1 && (
+                <div className="flex-1 mt-1" style={{ width: 2, backgroundColor: "#E2E8F0", minHeight: 20 }} />
+              )}
+            </div>
+            {/* 콘텐츠 */}
+            <div className="flex-1 pb-6 min-w-0">
+              <p className="text-[#4F46E5] mb-3" style={{ fontSize: 13, fontWeight: 700, marginTop: 0 }}>
+                {key} · {booksInMonth.length}권
+              </p>
+              <div className="flex flex-col gap-3">
+                {booksInMonth.map((book) => (
+                  <DoneBookCard
+                    key={book.id}
+                    book={book}
+                    onClick={() => onBookClick(book.id)}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 const SORT_OPTIONS = [
   { value: "date" as const, label: "최근순" },
   { value: "rating" as const, label: "평점순" },
@@ -40,7 +84,7 @@ const SORT_OPTIONS = [
 function MonthGroupHeader({ label, count }: { label: string; count: number }) {
   return (
     <div
-      className="flex items-center px-4 w-full"
+      className="flex items-center px-4 w-full sticky top-0 z-10"
       style={{ height: 36, backgroundColor: "#F8FAFC" }}
     >
       {/* Spec: "2025년 3월 · 3권" format, 13px SemiBold #64748B */}
@@ -117,6 +161,8 @@ export function LibraryPage() {
   const [selectedGenre, setSelectedGenre] = useState<GenreKey | null>(null);
   const [sortBy, setSortBy] = useState<"date" | "rating" | "title">("date");
   const [showAll, setShowAll] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "list" | "timeline">("list");
+  const [searchQuery, setSearchQuery] = useState("");
   const { data: books = [], isLoading, isError, refetch } = useBooks({ status: 'done' });
   const loadState = isLoading ? "loading" : isError ? "error" : "success";
   const navigate = useNavigate();
@@ -141,11 +187,16 @@ export function LibraryPage() {
 
   const filtered = useMemo(() => books
     .filter((b) => !selectedGenre || b.genre === selectedGenre)
+    .filter((b) => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.trim().toLowerCase();
+      return b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q);
+    })
     .sort((a, b) => {
       if (sortBy === "rating") return (b.rating ?? 0) - (a.rating ?? 0);
       if (sortBy === "title") return a.title.localeCompare(b.title, "ko");
       return (b.finishedDate ?? "").localeCompare(a.finishedDate ?? "");
-    }), [books, selectedGenre, sortBy]);
+    }), [books, selectedGenre, sortBy, searchQuery]);
 
   const grouped = useMemo(() => groupByMonth(filtered), [filtered]);
   const monthKeys = Array.from(grouped.keys());
@@ -177,6 +228,30 @@ export function LibraryPage() {
           </span>
         </div>
         <div className="flex items-center gap-3">
+          {/* 뷰 모드 토글 */}
+          <div className="flex items-center gap-0.5 bg-[#F1F5F9] rounded-xl p-0.5">
+            {([
+              { v: "list" as const, icon: <List size={14} />, label: "리스트" },
+              { v: "grid" as const, icon: <LayoutGrid size={14} />, label: "그리드" },
+              { v: "timeline" as const, icon: <GitBranch size={14} />, label: "타임라인" },
+            ] as const).map(({ v, icon, label }) => (
+              <button
+                key={v}
+                onClick={() => setViewMode(v)}
+                aria-label={label}
+                title={label}
+                className="flex items-center justify-center rounded-lg transition-all"
+                style={{
+                  width: 30, height: 28,
+                  backgroundColor: viewMode === v ? "white" : "transparent",
+                  color: viewMode === v ? "#4F46E5" : "#94A3B8",
+                  boxShadow: viewMode === v ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                }}
+              >
+                {icon}
+              </button>
+            ))}
+          </div>
           <SortDropdown value={sortBy} onChange={setSortBy} />
           <AddBookButton onClick={() => navigate("/register-flow")} />
         </div>
@@ -200,6 +275,29 @@ export function LibraryPage() {
       {/* CV-7: Success state — book list */}
       {loadState === "success" && (
         <>
+          {/* ── 인라인 검색 바 ── */}
+          <div className="px-4 mb-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8] pointer-events-none" />
+              <input
+                type="text"
+                placeholder="제목 또는 저자로 검색..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full h-10 bg-[#F1F5F9] rounded-xl pl-9 pr-9 text-sm outline-none border border-transparent focus:border-[#4F46E5]/30 focus:bg-white transition-colors"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  aria-label="검색어 지우기"
+                >
+                  <X className="h-4 w-4 text-[#94A3B8]" />
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* ── Genre filter bar (shared component) ── */}
           <div className="mb-4">
             <GenreFilterBar
@@ -219,6 +317,13 @@ export function LibraryPage() {
               subtext="첫 번째 책을 등록해볼까요?"
               ctaLabel="책 등록하기"
               onCta={() => navigate("/register-flow")}
+            />
+          ) : viewMode === "timeline" ? (
+            /* ── 타임라인 뷰 ── */
+            <TimelineView
+              grouped={groupByMonth(filtered.slice().sort((a, b) => (b.finishedDate ?? "").localeCompare(a.finishedDate ?? "")))}
+              monthKeys={Array.from(groupByMonth(filtered.slice().sort((a, b) => (b.finishedDate ?? "").localeCompare(a.finishedDate ?? ""))).keys())}
+              onBookClick={(id) => navigate(`/book/${id}`)}
             />
           ) : (
             <>
@@ -253,13 +358,13 @@ export function LibraryPage() {
               </div>
 
               {/* Mobile: single column */}
-              <div className="lg:hidden">
+              <div className={viewMode === "grid" ? "lg:hidden" : ""}>
                 {sortBy === "date" ? (
                   <>
                     {visibleKeys.map((key) => (
                       <div key={key}>
                         <MonthGroupHeader label={key} count={grouped.get(key)!.length} />
-                        <div className="px-4 py-3 flex flex-col gap-3">
+                        <div className={`px-4 py-3 ${viewMode === "grid" ? "grid grid-cols-2 gap-3" : "flex flex-col gap-3"}`}>
                           {grouped.get(key)!.map((book) => (
                             <DoneBookCard
                               key={book.id}
@@ -284,7 +389,7 @@ export function LibraryPage() {
                     )}
                   </>
                 ) : (
-                  <div className="px-4 py-2 flex flex-col gap-3">
+                  <div className={`px-4 py-2 ${viewMode === "grid" ? "grid grid-cols-2 gap-3" : "flex flex-col gap-3"}`}>
                     {filtered.map((book) => (
                       <DoneBookCard
                         key={book.id}

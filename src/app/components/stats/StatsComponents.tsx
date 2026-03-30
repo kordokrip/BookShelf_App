@@ -4,6 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   PieChart, Pie,
 } from "recharts";
+import { motion, AnimatePresence } from "framer-motion";
 import type { UISession } from "../../../types/book";
 
 /* ─── Design Tokens ─────────────────────────────────────────── */
@@ -123,6 +124,12 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
 
 export function MonthlyBarChart({ data: monthlyData }: { data: { month: string; books: number; pages: number; status: string }[] }) {
   const maxY = Math.max(monthlyData.reduce((m, d) => d.books > m ? d.books : m, 0), 4);
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+  const selectedData = selectedMonth ? monthlyData.find(d => d.month === selectedMonth) : null;
+
+  const currentYear = new Date().getFullYear();
+  const monthIndex = selectedMonth ? monthlyData.findIndex(d => d.month === selectedMonth) : -1;
+
   return (
     <div style={{
       backgroundColor: C.white, borderRadius: 12,
@@ -137,7 +144,7 @@ export function MonthlyBarChart({ data: monthlyData }: { data: { month: string; 
           border: `1px solid ${C.slate8}`, borderRadius: 8,
           padding: "4px 10px", backgroundColor: C.slate9,
         }}>
-          {new Date().getFullYear()}년
+          {currentYear}년
         </span>
       </div>
 
@@ -146,6 +153,11 @@ export function MonthlyBarChart({ data: monthlyData }: { data: { month: string; 
           data={monthlyData}
           barSize={18}
           margin={{ top: 4, right: 4, left: -20, bottom: 0 }}
+          onClick={(e) => {
+            if (e && e.activeLabel) {
+              setSelectedMonth(prev => prev === e.activeLabel ? null : (e.activeLabel ?? null));
+            }
+          }}
         >
           <XAxis
             dataKey="month"
@@ -162,16 +174,55 @@ export function MonthlyBarChart({ data: monthlyData }: { data: { month: string; 
             ticks={Array.from({ length: maxY + 1 }, (_, i) => i)}
           />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: "#F8FAFC" }} />
-          <Bar dataKey="books" radius={[4, 4, 0, 0]}>
-            {monthlyData.map((entry, i) => (
-              <Cell
-                key={i}
-                fill={BAR_COLORS[entry.status] || C.slate9}
-              />
-            ))}
+          <Bar dataKey="books" radius={[4, 4, 0, 0]} style={{ cursor: "pointer" }}>
+            {monthlyData.map((entry, i) => {
+              const isSelected = selectedMonth === entry.month;
+              const isOtherSelected = selectedMonth !== null && !isSelected;
+              const baseColor = BAR_COLORS[entry.status] || C.slate9;
+              return (
+                <Cell
+                  key={i}
+                  fill={isSelected ? C.violet : isOtherSelected ? "#E0E7FF" : baseColor}
+                />
+              );
+            })}
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+
+      {/* Selected month detail card */}
+      <AnimatePresence>
+        {selectedData && monthIndex >= 0 && (
+          <motion.div
+            key={selectedMonth}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            style={{ overflow: "hidden" }}
+          >
+            <div
+              style={{
+                marginTop: 10,
+                borderRadius: 10,
+                backgroundColor: "#EEF2FF",
+                border: `1px solid #C7D2FE`,
+                padding: "10px 14px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <span style={{ fontSize: 13, fontWeight: 600, color: C.indigo }}>
+                {currentYear}년 {selectedMonth}
+              </span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: C.slate1 }}>
+                {selectedData.books > 0 ? `${selectedData.books}권 완독` : "독서 기록 없음"}
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Legend row */}
       <div style={{ display: "flex", gap: 16, marginTop: 8 }}>

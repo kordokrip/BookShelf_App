@@ -26,6 +26,101 @@ const updateNoteSchema = z.object({
   color: z.string().max(30).optional(),
 });
 
+// ─── GET /api/notes/export ───────────────────────────────────
+// 특정 책(또는 전체)의 노트를 Markdown 파일로 내보내기
+// export 라우트는 반드시 /:id 보다 앞에 선언
+notesRouter.get('/export', authMiddleware, async (c) => {
+  const userId = c.get('userId');
+  const bookId = c.req.query('book_id');
+
+  let query =
+    `SELECT n.*, b.title AS book_title, b.author AS book_author
+     FROM notes n
+     LEFT JOIN books b ON b.id = n.book_id
+     WHERE n.user_id = ?`;
+  const params: (string | number)[] = [userId];
+
+  if (bookId) {
+    query += ' AND n.book_id = ?';
+    params.push(bookId);
+  }
+
+  query += ' ORDER BY n.book_id, n.created_at ASC';
+
+  type ExportRow = {
+    id: string;
+    book_id: string;
+    book_title: string | null;
+    book_author: string | null;
+    type: string;
+    content: string;
+    page_number: number | null;
+    created_at: string;
+  };
+
+  const { results } = await c.env.DB.prepare(query)
+    .bind(...params)
+    .all<ExportRow>();
+
+  if (!results || results.length === 0) {
+    c.header('Content-Type', 'text/markdown; charset=utf-8');
+    c.header('Content-Disposition', 'attachment; filename="bookshelf-notes.md"');
+    return c.body('# BookShelf 노트\n\n내보낼 노트가 없습니다.\n');
+  }
+
+  const TYPE_LABEL: Record<string, string> = {
+    memo: '📝 메모',
+    highlight: '🖍️ 하이라이트',
+    quote: '💬 인용',
+    review: '⭐ 리뷰',
+  };
+
+  // 책별로 그룹화
+  const grouped = new Map<string, typeof results>();
+  for (const row of results) {
+    const key = row.book_id;
+    const arr = grouped.get(key) ?? [];
+    arr.push(row);
+    grouped.set(key, arr);
+  }
+
+  const lines: string[] = ['# BookShelf 노트', ''];
+
+  for (const [, notes] of grouped) {
+    if (!notes[0]) continue;
+    const first = notes[0];
+    lines.push(`## 📚 ${first.book_title ?? '제목 없음'}`);
+    if (first.book_author) lines.push(`*저자: ${first.book_author}*`);
+    lines.push('');
+
+    for (const note of notes) {
+      const label = TYPE_LABEL[note.type] ?? note.type;
+      const page = note.page_number ? ` (p.${note.page_number})` : '';
+      lines.push(`### ${label}${page}`);
+      lines.push('');
+      lines.push(note.content);
+      lines.push('');
+      lines.push(`*${note.created_at.slice(0, 10)}*`);
+      lines.push('');
+      lines.push('---');
+      lines.push('');
+    }
+  }
+
+  const markdown = lines.join('\n');
+  const safeTitle =
+    bookId && results[0]?.book_title
+      ? results[0].book_title.replace(/[^a-zA-Z0-9가-힣]/g, '_').slice(0, 40)
+      : 'all';
+
+  c.header('Content-Type', 'text/markdown; charset=utf-8');
+  c.header(
+    'Content-Disposition',
+    `attachment; filename="bookshelf-notes-${safeTitle}.md"`,
+  );
+  return c.body(markdown);
+});
+
 // ─── GET /api/notes ───────────────────────────────────────────
 // 사용자 노트 목록 조회 (bookId, type, search 필터)
 notesRouter.get('/', optionalAuth, async (c) => {

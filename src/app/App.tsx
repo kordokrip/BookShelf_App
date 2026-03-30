@@ -3,6 +3,7 @@ import { RouterProvider } from "react-router";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "../lib/queryClient";
 import { useAuthStore } from "../stores/authStore";
+import { useUiStore } from "../stores/uiStore";
 import { useViewport } from "../hooks/useViewport";
 import { router } from "./routes";
 import { ToastProvider, useToast } from "./components/ui/Toast";
@@ -10,8 +11,14 @@ import { InstallBanner } from "./components/ui/InstallBanner";
 
 export default function App() {
   const checkAuth = useAuthStore((s) => s.checkAuth);
+  const theme = useUiStore((s) => s.theme);
   // 실제 디바이스 뷰포트 크기를 CSS 변수로 주입 (iOS Safari, Android Chrome 대응)
   useViewport();
+
+  // 다크모드 class 적용
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+  }, [theme]);
 
   useEffect(() => {
     // OAuth 콜백 후 /?token=xxx&provider=google 파라미터 처리
@@ -40,12 +47,15 @@ export default function App() {
 /** RouterProvider를 감싸는 내부 컴포넌트 — App-level ToastContext에 접근 가능 */
 function AppInner() {
   const { showToast } = useToast();
+  const setOnline = useUiStore((s) => s.setOnline);
 
   useEffect(() => {
     function handleOffline() {
+      setOnline(false);
       showToast('인터넷 연결이 끊어졌습니다. 일부 기능이 제한될 수 있습니다.', 'error');
     }
     function handleOnline() {
+      setOnline(true);
       showToast('인터넷 연결이 복구되었습니다.', 'success');
     }
 
@@ -56,7 +66,7 @@ function AppInner() {
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('online', handleOnline);
     };
-  }, [showToast]);
+  }, [showToast, setOnline]);
 
   return (
     <>

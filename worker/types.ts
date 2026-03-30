@@ -108,6 +108,7 @@ export type UpdateNoteBody = Partial<Omit<CreateNoteBody, 'book_id'>>;
 export interface Bindings {
   // 스토리지
   DB: D1Database;
+  /** @deprecated JWT Refresh Token 저장 용도는 KV로 이전됨. 차후 제거 예정. */
   SESSIONS: KVNamespace;
   KV: KVNamespace;
   R2: R2Bucket;

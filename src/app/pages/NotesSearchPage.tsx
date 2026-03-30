@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { ArrowLeft, Search, X, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Clock, Search, X, Pencil, Trash2 } from "lucide-react";
 import { useNotes, useUpdateNote, useDeleteNote } from "../../hooks/useNotes";
+import { useRecentSearches } from "../../hooks/useRecentSearches";
+
+const NOTES_RECENT_KEY = "notes_recent_searches";
 import type { BookNote } from "../../types/book";
 import { Skeleton } from "../components/ui/skeleton";
 import {
@@ -66,14 +69,22 @@ export function NotesSearchPage() {
   const [isEditSheetOpen, setIsEditSheetOpen]       = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
+  const { recents, addSearch, removeSearch, clearAll } = useRecentSearches(NOTES_RECENT_KEY, 5);
+
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(searchQuery), 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  useEffect(() => {
+    if (debouncedQuery.trim().length >= 2) {
+      addSearch(debouncedQuery.trim());
+    }
+  }, [debouncedQuery, addSearch]);
+
   const notesFilter = {
-    ...(debouncedQuery.length >= 1 && { search: debouncedQuery }),
-    ...(activeType !== "all"        && { type: activeType }),
+    ...(debouncedQuery.trim().length >= 2 && { search: debouncedQuery.trim() }),
+    ...(activeType !== "all"              && { type: activeType }),
   };
   const { data: notes = [], isLoading, isError } = useNotes(notesFilter);
   const updateNoteMutation = useUpdateNote();
@@ -135,15 +146,58 @@ export function NotesSearchPage() {
 
         {!isLoading && (
           <p className="text-xs text-muted-foreground mt-2">
-            {debouncedQuery
-              ? `"${debouncedQuery}" 검색 결과 ${notes.length}개`
+            {debouncedQuery.trim().length >= 2
+              ? `"${debouncedQuery.trim()}" 검색 결과 ${notes.length}개`
               : `전체 ${notes.length}개`}
+          </p>
+        )}
+        {searchQuery.trim().length === 1 && (
+          <p className="text-xs text-amber-500 mt-1">
+            한 글자 더 입력하면 검색이 시작돼요
           </p>
         )}
       </div>
 
       {/* ── 목록 영역 ── */}
       <div className="flex-1 overflow-y-auto">
+        {/* 최근 검색어 — 검색어 없을 때만 표시 */}
+        {!searchQuery && recents.length > 0 && (
+          <div className="px-4 pt-4 pb-2">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">최근 검색</span>
+              <button
+                onClick={clearAll}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                전체 삭제
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {recents.map((r) => (
+                <div
+                  key={r}
+                  className="flex items-center gap-1 bg-muted rounded-full pl-2.5 pr-1.5 py-1"
+                >
+                  <Clock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                  <button
+                    onClick={() => setSearchQuery(r)}
+                    className="text-sm text-foreground px-1"
+                  >
+                    {r}
+                  </button>
+                  <button
+                    onClick={() => removeSearch(r)}
+                    aria-label={`${r} 삭제`}
+                    className="p-0.5 rounded-full hover:bg-muted-foreground/20 transition-colors"
+                  >
+                    <X className="h-3 w-3 text-muted-foreground" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {isLoading && (
           <div className="px-4 pt-4 space-y-3">
             {Array.from({ length: 5 }).map((_, i) => (

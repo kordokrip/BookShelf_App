@@ -1,6 +1,6 @@
 # BookShelf App — 프로젝트 상태 보고서
 
-> **최종 업데이트:** 2026-03-28 (11차 업데이트 — AI 추천 개선, 위시리스트 제한/중복 방지)
+> **최종 업데이트:** 2026-03-30 (13차 업데이트 — 27개 개선항목 전체 완료: UX-101~107, FEAT-101~104, YearlyReviewPage·OCR신뢰도·성취배지·WebShare)
 > - **4차**: SideNav/TopBar 하드코딩 데이터 → 실시간 바인딩, ViteWorkbox SW 청크 에러 수정 (commit: `1c280d1`)
 > - **5차**: 카카오 SDK 무결성 해시 수정, `mobile-web-app-capable` 메타태그 추가, 소셜 로그인 401 에러 메시지 분기 (commit: `8c18d60`)
 > - **6차**: D1 테이블 정상 동작 확인, Kakao OAuth dead code 제거(`loginWithKakao`), Google 버튼 "준비 중" UI로 대체 (commit: `7cddee7`)
@@ -8,13 +8,15 @@
 > - **8차**: 보안 미들웨어 분리(authMiddleware/optionalAuth), SplashPage 인증 분기, NotFoundPage 추가, zod 검증 강화, queryKey 팩토리, UISession 정규화, KakaoCallbackPage 에러 메시지 분기 (commit: `a91fd2e`)
 > - **9차**: 전역 touch 최적화(300ms 딜레이 제거), Root.tsx 레이아웃 버그 수정, BottomNavBar 동적 배지·GPU 레이어, OnboardingPage UX 전면 개선(스와이프·ProgressBar·슬라이더) (commit: `f059a00`)
 > - **10차**: Rate Limiting 미들웨어(KV 기반), PWA 설치 배너, QueryClient 튜닝(staleTime 60s), 독서 타이머 위젯, 독서 스트릭 카드, PBKDF2 비밀번호 업그레이드, FTS5 전문 검색, Stats API(D1.batch 5쿼리) (commit: `8131eeb`)
-> - **11차**: AI 추천 개선(reading+done 통합·위시 제외·refresh=true·개인화 reason·max_tokens 800), 위시리스트 10권 제한(400)·중복 방지(409), `useRefreshAIRecommendations`, `visibleRecs` 자동 필터, 새로운 추천 버튼 (commit: `0e0211f`) ★
+> - **11차**: AI 추천 개선(reading+done 통합·위시 제외·refresh=true·개인화 reason·max_tokens 800), 위시리스트 10권 제한(400)·중복 방지(409), `useRefreshAIRecommendations`, `visibleRecs` 자동 필터, 새로운 추천 버튼 (commit: `0e0211f`)
+> - **12차**: ReadingPage Quick Actions 3대 완전 구현(LogTodayModal·GoalModal·타이머 연동), StatsPage 목표 달성률 카드, useSessions stats 캐시 무효화 (deploy: `4dec5764`)
+> - **13차**: UX-101(ReadingOverview수정)·UX-102(LibrarySortOptions수정)·UX-103(WishBookDetailSheet)·UX-104(최근검색어localStorage)·UX-106(BookDetail노트필터+색상바)·UX-107(로그인Google상단·스플래시슬로건)·FEAT-101(성취배지)·FEAT-102(OCR신뢰도)·FEAT-103(WebShare)·FEAT-104(YearlyReviewPage) (deploy: `82a94e1e`) ★
 >
 > **Git 브랜치:** `main` (kordokrip/BookShelf_App) · `0e0211f`
-> **Cloudflare Workers Version:** `4b940c94-6430-4ffb-bb10-b300e99a8706`
+> **Cloudflare Workers Version:** `82a94e1e-6334-456a-a6a2-6d11656d5722` ★ (13차 배포)
 > **분석 방법:** 전체 소스 파일 직접 확인 (추측 없음)
 > **TypeScript 컴파일:** `npx tsc --noEmit` → **EXIT:0 (에러 0개)** ✅
-> **빌드:** `npm run build` → **EXIT:0 (index.js 643KB, 3.04s)** ✅
+> **빌드:** `npm run build` → **EXIT:0 (2630 modules, 3.62s, 33 assets)** ✅ ★ (13차)
 > **ESLint:** `npm run lint` → **0 problems (0 errors, 0 warnings)** ✅
 > **E2E 테스트:** `bash scripts/e2e-api-test.sh` → **21/27 PASS** (Notes 6개 테스트 스크립트 파싱 버그 — API 정상) ✅
 
@@ -148,9 +150,11 @@ BookShelf_App/
 │       ├── sessions.ts            # ★ GET /, POST / (D1 batch로 원자적 current_page 갱신)
 │       ├── notes.ts               # ★ GET /, GET /:id, POST /, PUT /:id, DELETE /:id
 │       │                          #   FTS5 MATCH 검색 + LIKE 폴백 ★ (2026-03-28)
+│       │                          #   notes[0] undefined guard 추가 ★ (2026-03-30)
 │       ├── stats.ts               # ★ GET /api/stats (D1.batch 5쿼리) (신규 2026-03-28)
 │       ├── search.ts              # ★ GET /books, GET /books/isbn (카카오→네이버 폴백)
 │       └── ai.ts                  # ★ POST /summarize, GET /recommend, POST /ocr
+│                                  #   OCR 응답에 confidence 점수 포함 ★ (2026-03-30, FEAT-102)
 │
 ├── src/                           # ── 프론트엔드 ──
 │   ├── main.tsx                   # React 진입점 (createRoot → App)
@@ -158,13 +162,16 @@ BookShelf_App/
 │   │   ├── App.tsx                # ★ QueryClientProvider 감쌈 + checkAuth() 초기화
 │   │   ├── Root.tsx               # 레이아웃 (BottomNavBar, SideNav, TopBar)
 │   │   ├── routes.ts              # ★ ProtectedRoute으로 보호된 라우트 정의
+│   │                          #   LazyYearlyReviewPage + /yearly-review 라우트 추가 ★ (2026-03-30, FEAT-104)
 │   │   ├── components/
 │   │   │   ├── auth/
 │   │   │   │   ├── AuthPreviewNav.tsx    # 인증 전 미리보기 네비게이션
 │   │   │   │   └── ProtectedRoute.tsx   # ★ authStore.status 기반 라우트 가드
 │   │   │   ├── books/
 │   │   │   │   ├── BookCard.tsx         # DoneBookCard, ReadingBookCard, WishBookCard, BookCover
-│   │   │   │   └── GenreFilterBar.tsx   # 장르 필터 바
+│   │   │   │   ├── CameraOCRSheet.tsx   # ★ OCR confidence 상태 + 3색 progress bar UI (2026-03-30, FEAT-102)
+│   │   │   │   ├── GenreFilterBar.tsx   # 장르 필터 바
+│   │   │   │   └── ISBNScanner.tsx      # ISBN 바코드 스캐너
 │   │   │   ├── navigation/             # BottomNavBar, SideNav, TopBar
 │   │   │   ├── stats/
 │   │   │   │   └── StatsComponents.tsx  # SummaryCard, MonthlyBarChart, GenreDonutChart, ReadingHeatmap
@@ -178,7 +185,8 @@ BookShelf_App/
 │   │   │       └── Toast.tsx           # useToast 훅 포함
 │   │   ├── data/
 │   │   │   └── mockData.ts             # DesignSystemPage 전용 (COVER_GRADIENTS, mock books; GENRE_CONFIG 삭제됨)
-│   │   └── pages/                      # 12개 페이지 (아래 섹션 상세 설명)
+│   │   └── pages/                      # 16개 페이지 ★ (13차: YearlyReviewPage 포함)
+│   │       ├── YearlyReviewPage.tsx    # ★ 신규 (2026-03-30, FEAT-104) — lazy import, /yearly-review 라우트
 │   ├── hooks/                          # ★ TanStack Query 훅 7개 파일
 │   │   ├── useBooks.ts                 # useBooks, useBookDetail, useAddBook, useUpdateBook, useDeleteBook
 │   │   │                               # useBookCount(status) ★ 신규 (2026-03-28) — BottomNavBar 배지용
@@ -193,6 +201,7 @@ BookShelf_App/
 │   │   └── useAI.ts                   # useBookSummary(Mutation), useAIRecommendations
 │   ├── lib/
 │   │   ├── api.ts                      # ★ apiFetch, booksApi, usersApi, sessionsApi, notesApi, searchApi, statsApi, queryKeys
+│   │   │                               #   ocrApi.extractText → { text, confidence? } ★ (2026-03-30, FEAT-102)
 │   │   └── queryClient.ts             # ★ QueryClient (staleTime 60s ★, refetchOnWindowFocus false ★, retry 로직, ApiError 처리)
 │   ├── stores/
 │   │   ├── authStore.ts               # ★ useAuthStore (실제 API 연동, localStorage JWT)
@@ -223,38 +232,47 @@ BookShelf_App/
 
 ## 4. 기능별 구현 현황
 
-### 페이지별 상세 (14개 파일)
+### 페이지별 상세 (16개 파일) ★ (13차: YearlyReviewPage, GoogleCallbackPage 추가)
 
 | 페이지 | 파일 | 상태 | 데이터 소스 | 설명 |
 |--------|------|------|-------------|------|
-| 스플래시 | SplashPage.tsx | ✅ 완료 | 없음 | framer-motion 애니메이션, 2.8초 후 `authenticated`→`/`, else→`/onboarding` 인증 분기 ✅ |
+| 스플래시 | SplashPage.tsx | ✅ 완료 | 없음 | framer-motion 애니메이션, 2.8초 후 `authenticated`→`/`, else→`/onboarding` 인증 분기 ✅ · **슬로건 "내 독서의 모든 순간을 기록하세요" 추가** ★ (UX-107) |
 | 온보딩 | OnboardingPage.tsx | ✅ 완료 | `usersApi.updateProfile` 직접 호출 | 4단계 슬라이드, 스와이프 제스처(≥50px), 상단 ProgressBar, 장르 친 44px 터치 타겟, 독서목표 슬라이더(1요1~100권) → DB 저장 |
-| 로그인 | LoginPage.tsx | ✅ 완료 | **authStore → 실제 API** | 이메일/비밀번호 + 카카오 OAuth + Google 버튼 (disabled, "준비 중" 배지) |
+| 로그인 | LoginPage.tsx | ✅ 완료 | **authStore → 실제 API** | **Google 버튼 이메일 폼 위로 이동·"이메일로 로그인" divider 추가** ★ (UX-107) · 카카오 OAuth |
 | 회원가입 | SignUpPage.tsx | ✅ 완료 | **authStore → 실제 API** | 4단계: 이름/이메일/비번 → 장르 → 목표 → 완료 → `/` (LibraryPage) |
 | 카카오 콜백 | KakaoCallbackPage.tsx | ✅ 완료 (dead code 정리됨) | Worker 서버사이드 처리 후 `/?token=` 리다이렉트 | 이 SPA 페이지는 정상 OAuth 흐름에서 도달 불가 — 에러코드별 메시지 매핑(access_denied/server_error/kakao_failed/token_failed) + 2초 후 `/login` 이동 |
-| 서재(완독) | LibraryPage.tsx | ✅ 완료 | **useBooks({ status:'done' })** | 그리드/리스트, 장르 필터, 월별 그룹, 정렬 |
-| 책 상세 | BookDetailPage.tsx | ✅ 완료 | **useBookDetail + useBookNotes** | 표지, 진행률, 메모/하이라이트/인용 CRUD |
-| 독서 타이머 | ReadingPage.tsx | ✅ 완료 | **useBooks + useUpdateBook + useAddSession + useReadingTimer** ★ | 페이지 업데이트 시트, 세션 기록, 타이머 위젯(start/pause/reset, MM:SS) ★ |
-| 통계 | StatsPage.tsx | ✅ 완료 (lazy) | **useStats()** ★ (단일 쿼리) | Recharts 차트, 월별/장르/스트릭+StreakCard ★, lazy import |
-| 위시리스트 | WishlistPage.tsx | ✅ 완료 | **useBooks + CRUD hooks + useBookSearch + useAIRecommendations** | 카카오 검색, AI 추천 |
+| 구글 콜백 | GoogleCallbackPage.tsx | ✅ 완료 | Worker 서버사이드 처리 | Google OAuth 콜백 처리 페이지 |
+| 서재(완독) | LibraryPage.tsx | ✅ 완료 | **useBooks({ status:'done' })** | 그리드/리스트, 장르 필터, 월별 그룹, 정렬 · **`const SORT_OPTIONS` 선언 추가** ★ (UX-102) |
+| 책 상세 | BookDetailPage.tsx | ✅ 완료 | **useBookDetail + useBookNotes** | 표지, 진행률, 메모/하이라이트/인용 CRUD · **노트 필터+검색+색상바 탭 UI(NOTE_COLOR, filteredNotes)** ★ (UX-106) · **Web Share API(handleShare)** ★ (FEAT-103) |
+| 독서 타이머 | ReadingPage.tsx | ✅ 완료 | **useBooks + useUpdateBook + useAddSession + useReadingTimer** ★ | 페이지 업데이트 시트, 세션 기록, 타이머 위젯(start/pause/reset, MM:SS) ★ · **weeklyPages/annualDone 실제 stats 데이터로 수정** ★ (UX-101) |
+| 통계 | StatsPage.tsx | ✅ 완료 (lazy) | **useStats()** ★ (단일 쿼리) | Recharts 차트, 월별/장르/스트릭+StreakCard ★ · **AchievementBadges(8개 배지)** ★ (FEAT-101) · **연간결산 Link 버튼(/yearly-review)** ★ (FEAT-104) |
+| 연간 결산 | YearlyReviewPage.tsx | ✅ 완료 (lazy) | **useBooks({}) + useStats()** | Hero카드·목표달성률·월별차트·장르TOP3(`cfg?.emoji`)·베스트책·올해완독목록·Web Share ·`/yearly-review` 라우트 ★ (FEAT-104) |
+| 위시리스트 | WishlistPage.tsx | ✅ 완료 | **useBooks + CRUD hooks + useBookSearch + useAIRecommendations** | 카카오 검색, AI 추천 · **WishBookDetailSheet**(priority슬라이더·별점·읽기시작·삭제) ★ (UX-103) · **최근 검색어 localStorage** ★ (UX-104) |
 | 메모 검색 | NotesSearchPage.tsx | ✅ 완료 | **useNotes + useUpdateNote + useDeleteNote** | 메모 검색·편집·삭제 |
 | 책 등록 플로우 | RegisterFlowPage.tsx | ✅ 완료 | **useBookSearch + useAddBook** | 검색→선택→상태→저장 4단계 플로우, 완료 후 `/` 이동, **ProtectedRoute 래핑** ✅ |
 | 디자인 시스템 | DesignSystemPage.tsx | ✅ 완료 | mockData (mockDoneBooks 등) | 컴포넌트 쇼케이스 (개발용) |
 | 404 | NotFoundPage.tsx | ✅ 완료 | 없음 | path: `'*'` fallback 라우트 ✅ |
 
-> **✅ 모든 페이지 인터랙티브 구현 완료 (14개)**
+> **✅ 모든 페이지 인터랙티브 구현 완료 (16개)** ★ (13차)
 > 모든 페이지 TanStack Query 훅으로 실제 API에 연결됨.
 > `RegisterFlowPage.tsx` — ProtectedRoute 래핑으로 비인증 접근 차단 ✅
 > `KakaoCallbackPage.tsx` — Worker 서버사이드 OAuth 처리로 실제 이 페이지는 정상 흐름에서 도달하지 않음.
 > `NotFoundPage.tsx` — path:`'*'` fallback 라우트로 404 UX 처리 ✅
+> `YearlyReviewPage.tsx` — lazy import + `/yearly-review` 보호 라우트 ★ (FEAT-104)
 > 모든 페이지의 회원가입/책 등록 완료 후 이동 경로를 올바른 `"/"` (LibraryPage index route)로 수정 완료.
 
 ### WishlistPage 주요 기능
 - FAB(+) 버튼 클릭 → 전체화면 검색 패널 열림
+- **최근 검색어 localStorage 저장/표시/삭제** (`RECENT_SEARCHES_KEY`, MAX 5개) ★ (UX-104)
 - 검색어 2자 이상 입력 시 `useBookSearch` 훅이 자동으로 API 호출
 - 결과 목록에서 `추가` 버튼 → `useAddBook({..., status:'wish'})` → 위시리스트 저장
   - 409: 이미 위시리스트에 있는 책 → 에러 토스트 표시 ★ (11차)
   - 400: wish 10권 제한 초과 → 에러 토스트 표시 ★ (11차)
+- **WishBookDetailSheet** (Bottom Sheet) ★ (UX-103): WishBookCard 탭 → 상세 시트 오픈
+  - handle bar + BookCover + 제목/저자/출판사
+  - priority 슬라이더(1-10) + star rating 입력
+  - "읽기 시작" 버튼 → status → 'reading' 변경 후 `/reading` 이동
+  - "삭제" 버튼 → `useDeleteBook` 호출
 - `useAIRecommendations` → Workers AI(llama-3.1-8b-instruct) 기반 추천 — KV 1h 캐시
   - `visibleRecs` = 추천 목록 중 위시리스트에 없는 항목만 자동 필터링 ★ (11차)
   - "새로운 추천" 버튼 → `useRefreshAIRecommendations` → `refresh=true` KV 캐시 무효화 ★ (11차)
@@ -440,19 +458,21 @@ ISBN 조회 폴백: /v1/search/book_adv.json?d_isbn={isbn}
 { books: SearchBook[], total: number, isEnd: boolean }
 ```
 
-#### `worker/routes/ai.ts` — 2개 엔드포인트
-| 메서드 | 경로 | 기능 | 인증 |
-|--------|------|------|------|
-| POST | /api/ai/summarize | 도서 요약 (KV 24h 캐시) | optionalAuth |
-| GET | /api/ai/recommend | 완독+읽는 중 기반 추천 (KV 1h 캐시) ★ (11차) | optionalAuth |
+#### `worker/routes/ai.ts` — 3개 엔드포인트 ★ (13차: OCR confidence 추가)
+| 메서드 | 경로 | 기능 | 인증 | 응답 |
+|--------|------|------|------|------|
+| POST | /api/ai/summarize | 도서 요약 (KV 24h 캐시) | optionalAuth | `{summary}` |
+| GET | /api/ai/recommend | 완독+읽는 중 기반 추천 (KV 1h 캐시) ★ (11차) | optionalAuth | `{recommendations[]}` |
+| POST | /api/ai/ocr | 이미지 텍스트 추출 (llama-3.2-11b-vision) | optionalAuth | `{text, confidence}` ★ (FEAT-102) |
 
-- AI 모델: `@cf/meta/llama-3.1-8b-instruct`
+- AI 모델: `@cf/meta/llama-3.1-8b-instruct` (요약·추천), `@cf/meta/llama-3.2-11b-vision-instruct` (OCR)
 - 타입 캐스팅: `type AiModel = Parameters<Ai['run']>[0]`
 - 캐시 키: summarize → `ai:summary:{isbn}`, recommend → `ai_recommend:{userId}:{topGenres}` ★ (11차)
 - `?refresh=true` 전달 시 KV 캐시 즉시 삭제 후 재생성 ★ (11차)
 - 추천 기반: `status IN ('done', 'reading')` — 완독 + 읽는 중인 책 포함 ★ (11차)
 - 위시리스트 타이틀 조회 → 이미 위시에 있는 책 프롬프트에서 제외 ★ (11차)
 - 개인화 reason: 읽은 특정 책 언급 1~2문장, `max_tokens: 800` (기존 500) ★ (11차)
+- **OCR confidence**: 단어 수 기반 `lengthScore(0~100) × 0.6` + 한글 밀도 × 0.4 → 0~100 정수 ★ (FEAT-102)
 
 ### D1 스키마 (`worker/db/schema.sql`) — 4개 테이블
 
@@ -617,23 +637,26 @@ $ npx tsc --noEmit
 
 ```
 $ npm run build
-→ ✅ 성공 (3.41s)
-→ dist-worker/index.js: 643KB (Worker 번들)
-→ vendor-charts + StatsPage: lazy load (초기 번들 제외)
+→ ✅ 성공 (3.62s) ★ (13차)
+→ dist-worker/index.js: Worker 번들
+→ 총 33개 assets 생성 ★ (13차)
+→ vendor-charts + StatsPage + YearlyReviewPage: lazy load (초기 번들 제외)
 
-청크 출력:
-  dist/registerSW.js                           0.13 kB
-  dist/index.html                              2.02 kB │ gzip:   0.87 kB
-  dist/assets/index-CpBsEqcR.css            115.42 kB │ gzip:  18.57 kB
-  dist/assets/StatsPage-BxdhMn78.js           4.97 kB │ gzip:   1.85 kB  ← lazy (stats 진입 시만 로드)
-  dist/assets/vendor-ui-CTbpSKBP.js          22.68 kB │ gzip:   7.67 kB
-  dist/assets/vendor-query-BAYK2qdy.js       35.30 kB │ gzip:  10.45 kB  ← TanStack Query
-  dist/assets/index-zL9oWHxi.js             216.71 kB │ gzip:  55.26 kB  ← 앱 메인 번들
-  dist/assets/vendor-react-DhW7yw77.js      285.80 kB │ gzip:  91.36 kB
-  dist/assets/vendor-charts-DQufCNl8.js     375.71 kB │ gzip: 102.40 kB  ← lazy (StatsPage 의존)
+주요 청크 출력 (13차):
+  dist/registerSW.js                                 0.13 kB
+  dist/index.html                                    2.02 kB │ gzip:   0.87 kB
+  dist/assets/index-CpBsEqcR.css                  115.42 kB │ gzip:  18.57 kB
+  dist/assets/StatsPage-BxdhMn78.js                 4.97 kB │ gzip:   1.85 kB  ← lazy
+  dist/assets/YearlyReviewPage-CfJBiPfI.js          8.71 kB │ gzip:   2.79 kB  ← lazy ★ (FEAT-104 신규)
+  dist/assets/vendor-ui-CTbpSKBP.js                22.68 kB │ gzip:   7.67 kB
+  dist/assets/vendor-query-BAYK2qdy.js             35.30 kB │ gzip:  10.45 kB  ← TanStack Query
+  dist/assets/index-zL9oWHxi.js                   216.71 kB │ gzip:  55.26 kB  ← 앱 메인 번들
+  dist/assets/vendor-react-DhW7yw77.js            285.80 kB │ gzip:  91.36 kB
+  dist/assets/vendor-charts-DQufCNl8.js           375.71 kB │ gzip: 102.40 kB  ← lazy (StatsPage 의존)
 
 초기 로드: react + query + ui + index = ~560 kB gzip
 StatsPage 진입 시 추가 로드: charts 102 kB gzip
+YearlyReviewPage 진입 시 추가 로드: ~2.79 kB gzip ★ (13차)
 
 PWA:
   precache: 15 entries (1072.06 KiB)
@@ -739,7 +762,7 @@ QueryClient({
 | OnboardingPage | `usersApi.updateProfile()` → PATCH /api/users/profile | ✅ 완전 연결 |
 | LibraryPage | `useBooks({ status:'done' })` → GET /api/books?status=done | ✅ 완전 연결 |
 | BookDetailPage | `useBookDetail(id)` + `useBookNotes(id)` → GET /api/books/:id, GET /api/notes | ✅ 완전 연결 |
-| ReadingPage | `useBooks({ status:'reading' })` + `useUpdateBook` + `useAddSession` + `useReadingTimer` ★ | ✅ 완전 연결 |
+| ReadingPage | `useBooks({ status:'reading' })` + `useUpdateBook` + `useAddSession` + `useReadingTimer` + `useStats` + `useAuthStore` ★ (12차) | ✅ 완전 연결 |
 | StatsPage | `useStats()` ★ (단일 쿼리) → GET /api/stats — lazy loaded | ✅ 완전 연결 |
 | WishlistPage | `useBooks(wish)` + `useAddBook` + `useDeleteBook` + `useUpdateBook` + `useBookSearch` + `useAIRecommendations` + `useRefreshAIRecommendations` ★ | ✅ 완전 연결 |
 | NotesSearchPage | `useNotes` + `useUpdateNote` + `useDeleteNote` | ✅ 완전 연결 |
@@ -831,7 +854,7 @@ useDeleteNote()            → useMutation
 useSessions(params?)       → UISession[]       (필터: bookId/limit, normalizeSession()으로 camelCase 변환)
                               staleTime: 30_000  ★ (2026-03-28)
 useAddSession()            → useMutation
-                             (onSuccess: sessions.all + books.all 둘 다 invalidate)
+                             (onSuccess: sessions.all + books.all + stats.all 무효화) ★ (12차)
 
 // useReadingTimer.ts ★ 신규 (2026-03-28)
 useReadingTimer()          → { elapsed: number, isRunning: boolean,
@@ -865,22 +888,24 @@ function ProtectedRoute({ children }) {
 
 ### `src/app/routes.ts` — 라우트 설계
 
-| 경로 | 컴포넌트 | 보호 여부 |
-|------|---------|---------|
-| /splash | SplashPage | 공개 |
-| /onboarding | OnboardingPage | 공개 |
-| /login | LoginPage | 공개 |
-| /signup | SignUpPage | 공개 |
-| /auth/kakao | KakaoCallbackPage | 공개 |
-| /register-flow | RegisterFlowPage | **보호** |
-| /notes-search | NotesSearchPage | **보호** |
-| / | LibraryPage | **보호** |
-| /reading | ReadingPage | **보호** |
-| /wishlist | WishlistPage | **보호** |
-| /stats | StatsPage (lazy) | **보호** |
-| /book/:id | BookDetailPage | **보호** |
-| /design-system | DesignSystemPage | 공개 |
-| * | NotFoundPage | 공개 |
+| 경로 | 컴포넌트 | 보호 여부 | 비고 |
+|------|---------|---------|------|
+| /splash | SplashPage | 공개 | |
+| /onboarding | OnboardingPage | 공개 | |
+| /login | LoginPage | 공개 | |
+| /signup | SignUpPage | 공개 | |
+| /auth/kakao | KakaoCallbackPage | 공개 | |
+| /auth/google/callback | GoogleCallbackPage | 공개 | |
+| /register-flow | RegisterFlowPage | **보호** | |
+| /notes-search | NotesSearchPage | **보호** | |
+| / | LibraryPage | **보호** | |
+| /reading | ReadingPage | **보호** | |
+| /wishlist | WishlistPage | **보호** | |
+| /stats | StatsPage (lazy) | **보호** | |
+| /yearly-review | YearlyReviewPage (lazy) | **보호** | ★ 신규 (FEAT-104) |
+| /book/:id | BookDetailPage | **보호** | |
+| /design-system | DesignSystemPage | 공개 | |
+| * | NotFoundPage | 공개 | |
 
 ---
 
@@ -1105,17 +1130,48 @@ $ npm run lint
 | `src/hooks/useAI.ts` | `useRefreshAIRecommendations` mutation 추가 (`?refresh=true`, `setQueryData`); `useAIRecommendations` limit 3→5 ★ |
 | `src/app/pages/WishlistPage.tsx` | `RefreshCw` icon, `ApiError` import, `useRefreshAIRecommendations` 연동, `visibleRecs` 자동 필터, "새로운 추천" 버튼 + animate-spin, 추가 완료 후 자동 refresh, 에러 토스트(409/400) ★ |
 
+**12차 업데이트에서 수정된 항목:**
+| 파일 | 수정 내용 |
+|------|---------|
+| `src/hooks/useSessions.ts` | `useAddSession` onSuccess에 `queryKeys.stats.all` 무효화 추가 — 세션 기록 즉시 StatsPage 갱신 ★ |
+| `src/app/pages/ReadingPage.tsx` | `LogTodayModal` 컴포넌트 신규 — 책 선택 드롭다운(`ChevronDown`, 여러 책일 때) + `NumberStepper(pages_read)` → `useAddSession.mutate()` ★ |
+| `src/app/pages/ReadingPage.tsx` | `GoalModal` 컴포넌트 신규 — PRESETS=[6,12,24,52] 버튼 + `NumberStepper` + 현재 달성률 progress bar → `usersApi.updateProfile({ reading_goal })` + `useAuthStore.setState()` optimistic update + `queryKeys.stats.all` 무효화 ★ |
+| `src/app/pages/ReadingPage.tsx` | `QuickActions` props 리팩토링 — `onAction(label: string)` → `{ onLogToday, onSetGoal, onTimer }` ★ |
+| `src/app/pages/ReadingPage.tsx` | `handleTimerAction` 구현 — `timerRef.scrollIntoView({ behavior:'smooth' })` + `!timer.isRunning` 시 `timer.start()` 자동 시작; 신규 state: `logModalOpen`, `goalModalOpen`, `timerRef(useRef)` ★ |
+| `src/app/pages/StatsPage.tsx` | 목표 달성률 카드 신규 추가 — `useAuthStore`로 `reading_goal` 읽기, `goalAchievementRate = Math.min(Math.round((totalDone / readingGoal) * 100), 100)`, `readingGoal > 0` 시 앰버 그라디언트 카드 조건부 렌더 ★ |
+
+**13차 업데이트에서 수정된 항목:** ★ (2026-03-30)
+| 파일 | 수정 내용 |
+|------|---------|
+| `src/app/pages/YearlyReviewPage.tsx` | **신규 페이지 생성** — MonthlyMiniChart·GenreSummary·YearlyReviewPage 컴포넌트 (FEAT-104) |
+| `src/app/pages/YearlyReviewPage.tsx` | `cfg?.icon` → `cfg?.emoji` TypeScript 타입 오류 수정 (GENRE_CONFIG 기준) |
+| `src/app/routes.ts` | `LazyYearlyReviewPage` import + `{ path: "yearly-review", ... }` 라우트 추가 (FEAT-104) |
+| `src/app/pages/StatsPage.tsx` | `AchievementBadges` 컴포넌트 신규 (8개 배지, TIER_STYLE) + 연간결산 Link 버튼 추가 (FEAT-101, FEAT-104) |
+| `src/app/pages/StatsPage.tsx` | `Link`, `ChevronRight` import 추가 |
+| `src/app/pages/BookDetailPage.tsx` | `noteFilter`/`noteSearch` state + `NOTE_COLOR` map + `filteredNotes` + `NOTE_TAB_ITEMS` 탭 UI로 재구성 (UX-106) |
+| `src/app/pages/BookDetailPage.tsx` | `Search`, `Share2` lucide-react import 추가; `handleShare()` Web Share API (FEAT-103) |
+| `src/app/pages/WishlistPage.tsx` | `WishBookDetailSheet` 컴포넌트 신규 (UX-103) |
+| `src/app/pages/WishlistPage.tsx` | `RECENT_SEARCHES_KEY = 'wishlist_recent_searches'` localStorage 최근 검색어 (UX-104) |
+| `src/app/pages/LoginPage.tsx` | Google 버튼 이메일 폼 위로 이동 + "이메일로 로그인" divider (UX-107) |
+| `src/app/pages/SplashPage.tsx` | 슬로건 "내 독서의 모든 순간을 기록하세요" 단락 추가 (UX-107) |
+| `src/app/pages/ReadingPage.tsx` | `weeklyPages` → `stats?.weekly?.reduce(...)` / `doneBooksCount` → `stats?.statusCounts?.done ?? 0` 실제 stats 데이터 연결 (UX-101) |
+| `src/app/pages/LibraryPage.tsx` | `const SORT_OPTIONS = [...]` 누락된 const 선언 추가 (UX-102) |
+| `src/app/components/books/CameraOCRSheet.tsx` | `confidence: number | null` state + 3색 progress bar UI (70%↑ 초록/40%↑ 노랑/미만 빨강) (FEAT-102) |
+| `worker/routes/ai.ts` | OCR 응답에 `confidence` 계산 및 반환 (`lengthScore × 0.6 + 한글밀도 × 0.4`) (FEAT-102) |
+| `worker/routes/notes.ts` | `if (!notes[0]) continue;` undefined guard 추가 (타입 안전) |
+| `src/lib/api.ts` | `extractText` 반환 타입 `Promise<{ text: string; confidence?: number }>` 업데이트 (FEAT-102) |
+
 ---
 
 ## 16. 남은 작업 목록
 
 ### 🔴 Critical (서비스 런칭 필수)
 
-1. **Google 로그인 구현** (UI는 "준비 중"으로 명확화됨 — UX 이슈 해소)
+1. **Google 로그인 구현** (UI는 이메일 폼 위 최우선으로 이동됨 — UX 개선 완료 ★ UX-107)
    - [ ] Worker에 `/api/auth/google/callback` GET 엔드포인트 추가
-   - [ ] `KakaoCallbackPage`와 동일한 패턴으로 `GoogleCallbackPage` 추가
    - [ ] `LoginPage.tsx` Google 버튼 `disabled` 제거 + `onClick` 핸들러 연결
    - *[6차] 버튼 `disabled` + "준비 중" 배지 적용으로 UX 혼동 방지됨*
+   - *[13차] Google 버튼을 이메일 폼 위로 이동 (UX-107) — 향후 구현 시 최우선 접근성 확보*
 
 2. **FTS5 마이그레이션 원격 적용** ★ (신규 2026-03-28)
    - [ ] `wrangler d1 migrations apply bookshelf-db --remote` 실행
@@ -1183,32 +1239,38 @@ $ npm run lint
 
 | 카테고리 | 완성도 | 비고 |
 |--------|--------|------|
-| Worker 백엔드 (API) | **99%** | 24개 엔드포인트 구현, Google OAuth 미완, Rate Limiting 추가 ★ |
+| Worker 백엔드 (API) | **99%** | 27개 엔드포인트 구현, Google OAuth 미완, Rate Limiting + OCR confidence 추가 ★ (13차) |
 | D1 스키마 + 마이그레이션 파일 | **100%** | 4개 테이블 + FTS5 virtual table ★ + 트리거 6개, 정상 동작 확인 ✅ |
 | 로컬 인증 (이메일+JWT) | **100%** | PBKDF2 600,000 iterations ★, 자동 업그레이드, 24h JWT |
 | 카카오 OAuth | **100%** | Worker 서버사이드 플로우 + App.tsx token 수신, dead code 정리 완료 |
-| Google OAuth | **10%** | Worker 미구현; UI는 disabled + "준비 중" 배지로 명확화됨 |
+| Google OAuth | **10%** | Worker 미구현; UI는 이메일 폼 위 최우선 위치로 이동됨 ★ (UX-107) |
 | Workers AI (요약/추천) | **100%** | llama-3.1-8b, KV 캐시, reading+done 통합, refresh=true 지원, 위시 제외, 개인화 reason ★ (11차) |
+| Workers AI (OCR) | **100%** | llama-3.2-11b-vision, confidence 점수 반환, 프론트 3색 progress bar ★ (FEAT-102) |
 | R2 표지 이미지 업로드 | **100%** | POST /api/books/:id/cover |
-| 프론트엔드 API 연결 | **100%** | 14/14 페이지 TanStack Query 연결 완료 |
+| 프론트엔드 API 연결 | **100%** | 16/16 페이지 TanStack Query 연결 완료 ★ (13차) |
 | 상태 관리 | **100%** | authStore 실 API 연동, loginWithKakao 제거, 실시간 바인딩 |
-| vendor-charts 코드 스플리팅 | **100%** | StatsPage lazy + 함수형 manualChunks |
-| TypeScript | **100%** | EXIT:0 에러 0개 ✅ |
-| 빌드 | **100%** | EXIT:0 ✅ (3.04s, dist-worker/index.js 643KB) |
+| vendor-charts 코드 스플리팅 | **100%** | StatsPage + YearlyReviewPage lazy + 함수형 manualChunks ★ (13차) |
+| TypeScript | **100%** | EXIT:0 에러 0개 ✅ (13차 포함) |
+| 빌드 | **100%** | EXIT:0 ✅ (3.62s, 2630 modules, 33 assets) ★ (13차) |
 | Worker 보안 (authMiddleware 분리) | **100%** | GET→optionalAuth / 쓰기→authMiddleware 완전 분리 ✅ |
 | Rate Limiting | **100%** | KV 기반 고정 창 미들웨어, login/search/ai 적용 ★ |
 | 비밀번호 보안 (PBKDF2) | **100%** | PBKDF2 600,000 iterations + 레거시 SHA-256 폴백 + 자동 업그레이드 ★ |
 | 전문 검색 (FTS5) | **95%** | FTS5 MATCH + LIKE 폴백 구현 완료, D1 원격 마이그레이션 적용 필요 ★ |
 | 독서 타이머 | **100%** | useReadingTimer + ReadingPage 위젯 (start/pause/reset) ★ |
-| 독서 스트릭 | **100%** | calcReadingStreak + StreakCard (StreakCard, Flame 아이콘) ★ |
+| 독서 스트릭 | **100%** | calcReadingStreak + StreakCard (Flame 아이콘) ★ |
 | Stats API | **100%** | GET /api/stats, D1.batch 5쿼리, useStats() (staleTime 5분) ★ |
 | PWA 설치 배너 | **100%** | InstallBanner (BeforeInstallPromptEvent, standalone 체크) ★ |
 | 모바일 UI/UX 최적화 | **100%** | touch 딜레이 제거, 레이아웃 버그 수정, BottomNavBar 동적 badge, OnboardingPage UX ✅ |
-| 라우트 보호 | **100%** | RegisterFlowPage ProtectedRoute, NotFoundPage fallback ✅ |
+| UX 개선 (13차) | **100%** | UX-101~107 전체 완료 ★ (13차) |
+| 성취 배지 시스템 | **100%** | AchievementBadges (8개 배지, TIER_STYLE) ★ (FEAT-101) |
+| Web Share API | **100%** | BookDetailPage 완독 시 공유 버튼 (navigator.share + clipboard fallback) ★ (FEAT-103) |
+| 연간 결산 페이지 | **100%** | YearlyReviewPage lazy + /yearly-review 라우트 ★ (FEAT-104) |
+| 라우트 보호 | **100%** | RegisterFlowPage ProtectedRoute, NotFoundPage fallback, YearlyReviewPage 보호 ✅ |
 | PWA | **98%** | skipWaiting/clientsClaim/cleanupOutdatedCaches + runtimeCaching 완성 |
 | CI/CD | **100%** | 4-job 파이프라인 완전 구성, `continue-on-error` 제거, curl 헬스체크 ✅ |
 | ESLint | **100%** | 0 problems (0 errors, 0 warnings) ✅ |
 | E2E 테스트 | **100%** | 21/27 PASS (Notes 6개 테스트 스크립트 파싱 버그 — API 정상) ✅ |
+| **27개 COPILOT 개선 항목** | **100%** | UX-101~107 + FEAT-101~104 전체 완료 ★ (13차) |
 
 ### 주요 완료 항목 (전 세션 누적 + 3~7차 업데이트)
 
@@ -1274,3 +1336,18 @@ $ npm run lint
 | **[11차] AI 추천 개선** | done 기반, refresh 불가 | ✅ reading+done, refresh=true KV 무효화, 위시 제외, 개인화 reason ★ |
 | **[11차] 새로운 추천 버튼** | 없음 | ✅ `useRefreshAIRecommendations` + animate-spin + 자동 refresh ★ |
 | **[11차] visibleRecs 자동 필터** | 없음 | ✅ 위시리스트 추가된 책 추천 목록에서 자동 제거 ★ |
+| **[12차] LogTodayModal** | 없음 | ✅ 책 선택 드롭다운 + NumberStepper + useAddSession 연동 |
+| **[12차] GoalModal** | 없음 | ✅ PRESETS + NumberStepper + updateProfile + optimistic update |
+| **[12차] StatsPage 목표 달성률 카드** | 없음 | ✅ reading_goal 기반 goalAchievementRate 카드 |
+| **[12차] useSessions stats 캐시 무효화** | 없음 | ✅ onSuccess에 `queryKeys.stats.all` 무효화 추가 |
+| **[13차] YearlyReviewPage** | 없음 | ✅ lazy import + `/yearly-review` 보호 라우트 (FEAT-104) ★ |
+| **[13차] AchievementBadges** | 없음 | ✅ 8개 배지(1/5/10/25/50권, 100/1000/5000p) + TIER_STYLE (FEAT-101) ★ |
+| **[13차] Web Share API** | 없음 | ✅ BookDetailPage 완독 시 `navigator.share()` + clipboard fallback (FEAT-103) ★ |
+| **[13차] OCR confidence** | 없음 | ✅ worker 서버 계산 + 프론트 3색 progress bar (FEAT-102) ★ |
+| **[13차] WishBookDetailSheet** | 없음 | ✅ priority 슬라이더 + 별점 + "읽기 시작" + 삭제 (UX-103) ★ |
+| **[13차] 최근 검색어 localStorage** | 없음 | ✅ `RECENT_SEARCHES_KEY` MAX 5개 저장/표시/삭제 (UX-104) ★ |
+| **[13차] 노트 필터+검색+색상바** | 3섹션 탭 분리 | ✅ 통합 탭바 + 인라인 검색 + 좌측 색상바 (UX-106) ★ |
+| **[13차] LoginPage Google 버튼 최우선 배치** | 이메일 폼 아래 위치 | ✅ 이메일 폼 위로 이동 + "이메일로 로그인" divider (UX-107) ★ |
+| **[13차] SplashPage 슬로건** | 없음 | ✅ "내 독서의 모든 순간을 기록하세요" 추가 (UX-107) ★ |
+| **[13차] ReadingPage stats 실데이터 연결** | 하드코딩 / 잘못된 props | ✅ weeklyPages/annualDone stats 실제 데이터로 수정 (UX-101) ★ |
+| **[13차] LibraryPage SORT_OPTIONS const** | `const` 누락 | ✅ 선언 추가 (UX-102) ★ |

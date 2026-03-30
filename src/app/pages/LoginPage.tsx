@@ -133,6 +133,33 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+      {/* Google — UX-107: 이메일 폼보다 먼저 표시 */}
+      <button
+        type="button"
+        onClick={handleGoogleLogin}
+        disabled={isLoading}
+        className="w-full rounded-2xl flex items-center justify-center gap-2.5 transition-opacity hover:opacity-90 disabled:opacity-50"
+        style={{
+          height: 48,
+          border: "1.5px solid #E2E8F0",
+          backgroundColor: "white",
+          fontFamily: "var(--font-pretendard)",
+          fontWeight: 600,
+          color: "#374151",
+          fontSize: 14,
+        }}
+      >
+        <GoogleLogo />
+        Google로 계속하기
+      </button>
+
+      {/* Divider */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1 h-px bg-[#E2E8F0]" />
+        <span style={{ fontSize: 13, color: "#94A3B8", fontFamily: "var(--font-pretendard)" }}>이메일로 로그인</span>
+        <div className="flex-1 h-px bg-[#E2E8F0]" />
+      </div>
+
       {/* Email */}
       <div>
         <label
@@ -231,33 +258,6 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
         ) : (
           "로그인"
         )}
-      </button>
-
-      {/* Divider */}
-      <div className="flex items-center gap-3 my-1">
-        <div className="flex-1 h-px bg-[#E2E8F0]" />
-        <span style={{ fontSize: 13, color: "#94A3B8", fontFamily: "var(--font-pretendard)" }}>또는</span>
-        <div className="flex-1 h-px bg-[#E2E8F0]" />
-      </div>
-
-      {/* Google */}
-      <button
-        type="button"
-        onClick={handleGoogleLogin}
-        disabled={isLoading}
-        className="w-full rounded-2xl flex items-center justify-center gap-2.5 transition-opacity hover:opacity-90 disabled:opacity-50"
-        style={{
-          height: 48,
-          border: "1.5px solid #E2E8F0",
-          backgroundColor: "white",
-          fontFamily: "var(--font-pretendard)",
-          fontWeight: 600,
-          color: "#374151",
-          fontSize: 14,
-        }}
-      >
-        <GoogleLogo />
-        Google로 계속하기
       </button>
 
       {/* Sign up link */}

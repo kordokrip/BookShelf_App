@@ -91,3 +91,31 @@ sessionsRouter.post(
     return c.json({ data: session, new_current_page: newCurrentPage }, 201);
   },
 );
+
+// ─── DELETE /api/sessions/:id ─────────────────────────────────
+// 세션 삭제 + 책 current_page 역산
+sessionsRouter.delete('/:id', authMiddleware, async (c) => {
+  const userId = c.get('userId');
+  const id = c.req.param('id');
+
+  const session = await c.env.DB.prepare(
+    'SELECT * FROM reading_sessions WHERE id = ? AND user_id = ?',
+  )
+    .bind(id, userId)
+    .first<{ id: string; book_id: string; pages_read: number }>();
+
+  if (!session)
+    throw new HTTPException(404, { message: '세션을 찾을 수 없습니다.' });
+
+  // 역산: current_page에서 pages_read 차감 (0 미만 방지)
+  await c.env.DB.batch([
+    c.env.DB.prepare('DELETE FROM reading_sessions WHERE id = ? AND user_id = ?').bind(id, userId),
+    c.env.DB.prepare(
+      `UPDATE books
+       SET current_page = MAX(0, current_page - ?), updated_at = datetime('now')
+       WHERE id = ? AND user_id = ?`,
+    ).bind(session.pages_read, session.book_id, userId),
+  ]);
+
+  return c.json({ success: true });
+});

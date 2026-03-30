@@ -4,7 +4,7 @@ import { authMiddleware } from '../auth';
 
 export const statsRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
-/** GET /api/stats — 집계 통계 (D1.batch 5쿼리 원자적 실행) */
+/** GET /api/stats — 집계 통계 (D1.batch 6쿼리 원자적 실행) */
 statsRouter.get('/', authMiddleware, async (c) => {
   const userId = c.get('userId');
   const db = c.env.DB;
@@ -52,6 +52,17 @@ statsRouter.get('/', authMiddleware, async (c) => {
        FROM reading_sessions
        WHERE user_id = ?`,
     ).bind(userId),
+
+    // 6. 주간 읽은 페이지 집계 (최근 8주)
+    db.prepare(
+      `SELECT strftime('%Y-W%W', session_date) AS week,
+              SUM(pages_read) AS pages
+       FROM reading_sessions
+       WHERE user_id = ?
+         AND session_date >= date('now', '-56 days')
+       GROUP BY week
+       ORDER BY week ASC`,
+    ).bind(userId),
   ]);
 
   const monthly = batchResults[0]!;
@@ -59,6 +70,7 @@ statsRouter.get('/', authMiddleware, async (c) => {
   const statusCounts = batchResults[2]!;
   const sessionDates = batchResults[3]!;
   const totals = batchResults[4]!;
+  const weekly = batchResults[5]!;
 
   // statusCounts 배열 → 오브젝트 변환
   type StatusRow = { status: string; count: number };
@@ -81,5 +93,6 @@ statsRouter.get('/', authMiddleware, async (c) => {
       totalPages: totalsRow.total_pages ?? 0,
       totalMinutes: totalsRow.total_minutes ?? 0,
     },
+    weekly: weekly.results as { week: string; pages: number }[],
   });
 });

@@ -20,6 +20,8 @@ export default defineConfig({
         clientsClaim: true,
         cleanupOutdatedCaches: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff,woff2}'],
+        // OAuth 콜백은 303 리다이렉트 응답이므로 SW가 절대 인터셉트하면 안 됨
+        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
             // JS 청크 — NetworkFirst: 새 배포 시 구 해시 404 → 네트워크 우선으로 최신 파일 사용
@@ -34,14 +36,9 @@ export default defineConfig({
             },
           },
           {
-            // API calls → NetworkFirst (최신 데이터 우선, 오프라인 폴백)
+            // API calls → NetworkOnly: OAuth 리다이렉트 포함 모든 /api/ 요청은 캐시 없이 네트워크 직통
             urlPattern: /^https?:\/\/.*\/api\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'bookshelf-api-cache',
-              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
+            handler: 'NetworkOnly',
           },
           {
             // 책 표지 이미지 → CacheFirst

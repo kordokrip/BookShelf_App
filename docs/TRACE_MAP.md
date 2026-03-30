@@ -3,8 +3,8 @@
 > 작성 기준: 실제 소스 코드 전수 분석 (2026-03 기준)
 > 목적: 프로덕션 오류 발생 시 UI → Hook → API → DB 레이어를 빠르게 추적하기 위한 기준 문서
 >
-> **최근 변경**: 2026-03-28 — 11차 업데이트 (AI 추천 개선: reading+done 통합·위시 제외·refresh=true·개인화 reason, 위시리스트 10권 제한·중복 방지, useRefreshAIRecommendations, visibleRecs 자동 필터)
-> **이전 변경**: 2026-03-28 — Phase 1-A~3-B 구현 (Rate Limiting, PWA Banner, QueryClient 튜닝, 독서 타이머, 스트릭 카드, PBKDF2 해싱, FTS5 전문 검색, Stats API)
+> **최근 변경**: 2026-03-30 — 13차 업데이트 (27개 COPILOT 개선항목 전체 완료: UX-101~107, FEAT-101~104 — YearlyReviewPage·OCR신뢰도·성취배지·WebShare·WishBookDetailSheet·최근검색어·노트필터+색상바·로그인UX·스플래시슬로건)
+> **이전 변경**: 2026-03-30 — 12차 업데이트 (ReadingPage Quick Actions 3대 완전 구현: LogTodayModal·GoalModal·타이머 연동, StatsPage 목표 달성률 카드, useSessions stats 캐시 무효화)
 
 ---
 
@@ -22,10 +22,10 @@
 | **AI** | Workers AI (`@cf/meta/llama-3.1-8b-instruct`, `@cf/meta/llama-3.2-11b-vision-instruct`) |
 | **Storage** | Cloudflare R2 (`covers/{userId}/{bookId}.{ext}`) |
 | **TypeScript check** | ✅ 0 errors |
-| **Build** | ✅ 성공 (built in 3.04s) |
+| **Build** | ✅ 성공 (built in 3.62s, 2630 modules, 33 assets) ★ (13차) |
 | **Production Health** | ✅ `{"status":"ok","env":"production"}` |
 | **GitHub 커밋** | `0e0211f` (main) |
-| **Cloudflare Workers** | Version ID `4b940c94-6430-4ffb-bb10-b300e99a8706` |
+| **Cloudflare Workers** | Version ID `82a94e1e-6334-456a-a6a2-6d11656d5722` ★ (13차 배포) |
 | **D1 Tables** | users, books, reading_sessions, notes, notes_fts (FTS5), d1_migrations, _cf_KV, sqlite_sequence |
 
 ---
@@ -46,7 +46,8 @@
 | `/` | `Root` > `LibraryPage` | **보호** | ProtectedRoute 래핑 |
 | `/reading` | `Root` > `ReadingPage` | **보호** | |
 | `/wishlist` | `Root` > `WishlistPage` | **보호** | |
-| `/stats` | `Root` > `StatsPage` | **보호** | lazy import + `.catch()` 청크 에러 자동 복구 |
+| `/stats` | `StatsPage` (lazy) | **보호** | lazy import + `.catch()` 청크 에러 자동 복구 |
+| `/yearly-review` | `YearlyReviewPage` (lazy) | **보호** | ★ 신규 (FEAT-104) — lazy import, 연간 독서 결산 |
 | `/books/:id` | `Root` > `BookDetailPage` | **보호** | |
 | `/design-system` | `DesignSystemPage` | **공개** | ProtectedRoute 없음, 개발용 |
 | `*` | `NotFoundPage` | 공개 | 404 fallback 라우트 ✅ |
@@ -253,6 +254,21 @@ UI(삭제 버튼) → useDeleteBook.mutate(id)
     → DELETE /api/books/:id
       → D1: DELETE FROM books WHERE id=? AND user_id=?
 
+[노트 필터 + 검색] ★ (UX-106, 13차)
+noteFilter: "all" | "quote" | "memo" | "review" state
+noteSearch: string state
+NOTE_COLOR = { quote: "#7C3AED", memo: "#4F46E5", review: "#0891B2" }
+filteredNotes = notes
+  .filter(n => noteFilter === "all" || n.type === noteFilter)
+  .filter(n => !noteSearch || n.content.includes(noteSearch))
+→ UI: 탭바(count badge) + 인라인 검색 + 통합 목록(좌측 type별 색상 바)
+
+[Web Share] ★ (FEAT-103, 13차)
+UI(Share 버튼, book.status==='done'일 때만 상단 nav에 표시)
+→ handleShare()
+  → navigator.share({ title: "북셸프 독서 기록", text: `${book.title} ...`, url: location.href })
+  → 미지원/실패 시 navigator.clipboard.writeText(location.href) fallback
+
 [노트 추가]
 UI(노트 작성) → useAddNote.mutate({ book_id, type, content, page_number, color })
   → notesApi.create(data)
@@ -279,7 +295,36 @@ UI(NumberStepper 입력) → useAddSession.mutate({ bookId, startPage, endPage, 
     → POST /api/sessions (zod 검증)
       → D1: SELECT books (reading status + 소유권 확인)
       → D1.batch: [INSERT reading_sessions, UPDATE books SET current_page=newPage]
-    → onSuccess: sessions.all + books.all 무효화
+    → onSuccess: sessions.all + books.all + stats.all 무효화 ★ (12차)
+
+[Quick Actions — 12차 완전 구현]
+UI("오늘 독서 기록" 버튼) → setLogModalOpen(true) → LogTodayModal
+  books.length === 1 → 선택된 책 정적 표시
+  books.length > 1   → ChevronDown 드롭다운 (selectedBookId 상태 관리)
+  NumberStepper(pages_read 입력)
+  → useAddSession.mutate({ bookId: selectedBookId, startPage: 0, endPage: pagesRead })
+    → POST /api/sessions → D1.batch(INSERT reading_sessions + UPDATE books.current_page)
+    → onSuccess: sessions.all + books.all + stats.all 무효화
+
+UI("목표 설정" 버튼) → setGoalModalOpen(true) → GoalModal
+  PRESETS = [6, 12, 24, 52] 프리셋 버튼 (선택 시 NumberStepper 값 동기화)
+  NumberStepper(goal 직접 입력)
+  현재 달성률 progress bar:
+    useStats() → statusCounts.done = totalDone
+    useAuthStore(s => s.user?.reading_goal) → currentGoal
+    goalAchievementRate = Math.min(Math.round((totalDone / currentGoal) * 100), 100)
+  → usersApi.updateProfile({ reading_goal: goal })
+    → PATCH /api/users/profile → D1: UPDATE users SET reading_goal=?
+  → useAuthStore.setState(s => ({ user: { ...s.user, reading_goal: goal } })) ← optimistic update (재로그인 불필요)
+  → queryClient.invalidateQueries({ queryKey: queryKeys.stats.all }) → StatsPage 즉시 갱신
+
+UI("독서 타이머" 버튼) → handleTimerAction()
+  → timerRef.current?.scrollIntoView({ behavior: 'smooth' }) (타이머 위젯으로 스크롤)
+  → !timer.isRunning → timer.start() 자동 시작
+
+[QuickActions 컴포넌트 props — 12차 리팩토링]
+  이전(11차): onAction(label: string) → toast 메시지만 표시
+  현재(12차): { onLogToday: () => void, onSetGoal: () => void, onTimer: () => void }
 ```
 
 ---
@@ -308,7 +353,44 @@ UI(StreakCard) → calcReadingStreak(syntheticSessions)
   → { currentStreak, longestStreak, totalDays }
   → 오늘/어제 기준 연속 일수, 전체 연속 최대값
 
+[목표 달성률 카드] ★ 신규 (2026-03-30, 12차)
+useAuthStore(s => s.user) → user.reading_goal = readingGoal
+useStats() → statusCounts.done = totalDone
+goalAchievementRate = readingGoal > 0
+  ? Math.min(Math.round((totalDone / readingGoal) * 100), 100)
+  : null
+readingGoal > 0 && goalAchievementRate !== null → 앰버 그라디언트 카드 조건부 렌더
+  Target 아이콘, "연간 독서 목표" 제목, 달성률 % 배지, 진행 progress bar
+  실시간 반영: GoalModal에서 useAuthStore.setState() optimistic update
+  → 재로그인 없이 즉시 StatsPage에 반영
+
 [staleTime: 5분 (timeouts) — 다른 훅에 비해 충분한 지연 새로고침]
+
+[AchievementBadges 컴포넌트] ★ (FEAT-101, 13차)
+BADGES 배열 (8개):
+  📖 첫 완독    — books threshold: 1    tier: bronze
+  📚 독서 시작  — books threshold: 5    tier: bronze
+  🥈 독서가     — books threshold: 10   tier: silver
+  🥇 열독가     — books threshold: 25   tier: gold
+  🏆 북마스터   — books threshold: 50   tier: platinum
+  ✨ 100p 달성  — pages threshold: 100  tier: bronze
+  ⭐ 1000p 달성 — pages threshold: 1000 tier: silver
+  🌟 5000p 달성 — pages threshold: 5000 tier: gold
+
+TIER_STYLE:
+  bronze   → bg: #FEF3C7  border: #D97706  label: #92400E
+  silver   → bg: #F1F5F9  border: #64748B  label: #1E293B
+  gold     → bg: #FEF3C7  border: #F59E0B  label: #92400E
+  platinum → bg: #EEF2FF  border: #6366F1  label: #312E81
+
+unlocked 배지:
+  useStats() → totalDone (books), totalPages (pages) 로 threshold 비교
+  unlocked: TIER_STYLE 배경색 카드, 풀 컬러 아이콘, label 텍스트
+  locked: bg: #F8FAFC  border: #E2E8F0  grayscale 텍스트
+
+잠금 해제 진행률:
+  locked 배지 중 최대 3개 표시 → "{남은 수} 권/p 남음" 하위 텍스트
+  잠금 해제 배지 0개 시 → 전체 8개의 locked 상태로 표시
 ```
 
 ---
@@ -367,6 +449,86 @@ UI(검색/AI 결과에서 추가) → useAddBook.mutate({ ..., status: 'wish' })
 [위시 → 독서 중 상태 변경]
 UI(책 선택 후 추가) → useUpdateBook.mutate({ id, data: { status: 'reading' } })
   → PUT /api/books/:id → D1: UPDATE books
+
+[WishBookDetailSheet BottomSheet] ★ (UX-103, 13차)
+WishBookCard 탭 → setSelectedBook(book) → selectedBook state 세팅
+selectedBook !== null → WishBookDetailSheet 조건부 렌더
+
+Bottom Sheet 구조:
+  fixed inset-0 z-50 flex flex-col justify-end
+  bg-black/40 backdrop-blur-sm 오버레이 (탭 → onClose)
+  bg-white rounded-t-2xl (slide-up) — boxShadow: 0 -8px 40px rgba(0,0,0,0.12)
+  handle bar (32×4 rounded-full #D1D5DB)
+
+책 헤더:
+  BookCover(size="md") + 제목(16px bold, line-clamp-2) + 저자(13px) + 출판사(12px, optional)
+  우선순위 배지: P{priority} · {높음/중간/낮음}
+    priority ≤ 3 → 높음 (#991B1B / #FEE2E2)
+    priority ≤ 6 → 중간 (#92400E / #FEF3C7)
+    priority > 6 → 낮음 (#065F46 / #D1FAE5)
+
+우선순위 슬라이더:
+  Star × 5 (클릭 → (i+1)*2 값 적용 → onPriorityChange(p) → useUpdateBook.mutate)
+  input[type=range] min=1 max=10 — linear-gradient(to right, #4F46E5 {pct}%, #E2E8F0)
+  onChange → setPriority + onPriorityChange(p)
+
+액션 버튼:
+  "📖 읽기 시작" → onStart() → useUpdateBook.mutate({id, data:{status:'reading'}}) → navigate('/reading')
+  "🗑 위시리스트에서 삭제" → onDelete() → useDeleteBook.mutate(id) → setSelectedBook(null)
+```
+
+---
+
+### YearlyReviewPage (`/yearly-review`) ★ 신규 (FEAT-104, 2026-03-30)
+```
+UI(마운트) → useStats() + useBooks({})
+  → GET /api/stats + GET /api/books
+  isLoading → 스피너 (border-[#4F46E5] animate-spin)
+
+[Hero 카드]
+totalDone / totalPages / totalHours / topGenre 계산
+  gradient 카드 (linear-gradient(135deg, #4F46E5, #7C3AED))
+  대형 숫자: completedBooksCount × fontSize 52
+  총 페이지수(p) / 독서 시간(h) / 최애 장르 3열 표시
+  배경 장식: 두 개의 흰 원형 opacity:10
+
+[목표 달성률 카드]
+user.reading_goal → readingGoal
+goalRate = readingGoal ? Math.min(Math.round((totalDone/readingGoal)*100), 100) : null
+goalRate !== null → 앰버 그라디언트 카드
+  Flame 아이콘, "목표 달성률", {goalRate}% 배지
+  h-2.5 progress bar: linear-gradient(90deg, #F59E0B, #D97706)
+  "{totalDone} / {readingGoal}권 완독" 서브 텍스트
+
+[월별 독서량] — MonthlyMiniChart 컴포넌트
+stats.monthly → countMap(YYYY-MM → count)
+MONTH_LABELS 12개 → { label, count }[]
+max = Math.max(...data.map(d=>d.count), 1)
+bar height = Math.max((count/max)*56, count>0 ? 6 : 0)px
+  채워진 바: linear-gradient(180deg, #4F46E5, #7C3AED)
+  빈 바: #F1F5F9
+
+[좋아하는 장르 TOP 3] — GenreSummary 컴포넌트
+stats.genres.slice(0,3)
+각 장르: GENRE_CONFIG[genre].emoji + 장르명 + {count}권 ({pct}%)
+  h-1.5 progress bar: width={pct}%, color=cfg.text ?? #4F46E5
+
+[올해 베스트 책]
+allBooks.filter(b => b.status==='done' && b.rating!=null)
+.reduce((best,b) => b.rating > best.rating ? b : best)
+  황금 그라디언트 카드 (FEF3C7 → FDE68A), 🏆 아이콘
+  BookCover (48×64) + 제목/저자 + "★ {rating/2}" 별점
+
+[올해 완독 목록]
+allBooks.filter(b => b.status==='done' && b.finishedDate?.startsWith(YEAR))
+thisYearDone 배열 → 수평 스크롤(overflow-x-auto gap-3)
+  각 책: id/title/author/isbn 포함 BookCover(size="sm") + 제목(2줄)
+
+[공유 버튼] — FEAT-103 Web Share 재사용
+navigator.share 지원 → share({ title: '{YEAR}년 독서 결산', text })
+  text: "📖 {YEAR}년 독서 결산\\n완독 {totalDone}권 · {totalPages}페이지 · {totalHours}시간\\n..."
+navigator.share 미지원 → navigator.clipboard.writeText(text) (클립보드 복사 폴백)
+공유 버튼: Share2 아이콘, bg-[#EEF2FF] text-[#4F46E5] rounded-full
 ```
 
 ---
@@ -479,7 +641,7 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 |---|---|---|---|---|---|
 | POST | `/api/ai/summarize` | optionalAuth | `{description, title, author}` | `{summary, cached}` | KV 1일 TTL |
 | GET | `/api/ai/recommend` | optionalAuth | `?limit=5` (`&refresh=true` 지원 ★) | `{recommendations, topGenres, cached}` | KV 1시간 TTL |
-| POST | `/api/ai/ocr` | optionalAuth | FormData(`image` 파일, 최대 5MB) | `{text}` | 없음 |
+| POST | `/api/ai/ocr` | optionalAuth | FormData(`image` 파일, 최대 5MB) | `{text, confidence}` ★ (FEAT-102) | 없음 |
 
 ### 통계 (`/api/stats`) ★ 신규 (2026-03-28)
 
@@ -1117,3 +1279,5 @@ Global QueryClient 설정:
 | 2026-03-28 | 모바일 UI/UX 최적화 반영 (BUG-013~015, UX-001) — GitHub `f059a00` / Cloudflare `827b4e20` |
 | 2026-03-28 | Phase 1-A~3-B 반영 (Rate Limiting, PWA Banner, QueryClient 튜닝, 독서 타이머, 독서 스트릭, PBKDF2, FTS5, Stats API) — GitHub `8131eeb` / Cloudflare `40506e74` |
 | 2026-03-28 | 11차 반영 (AI 추천 개선: reading+done 통합·위시 제외·refresh=true·개인화 reason, 위시리스트 10권 제한·중복 방지, useRefreshAIRecommendations, visibleRecs 자동 필터) — GitHub `0e0211f` / Cloudflare `4b940c94` |
+| 2026-03-30 | 12차 반영 (ReadingPage Quick Actions 3대 완전 구현: LogTodayModal·GoalModal·타이머 연동, StatsPage 목표 달성률 카드, useSessions stats 캐시 무효화) — GitHub `1d3c7a2` / Cloudflare `cfb4f121` |
+| 2026-03-30 | 13차 반영 (27개 COPILOT 개선항목 전체 완료: FEAT-101 성취배지, FEAT-102 OCR신뢰도, FEAT-103 Web Share, FEAT-104 YearlyReviewPage, UX-101~107 전체 — WishBookDetailSheet·최근검색어·노트필터+색상바·로그인UX·스플래시슬로건) — GitHub `82a94e1e` / Cloudflare `82a94e1e-6334-456a-a6a2-6d11656d5722` |

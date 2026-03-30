@@ -58,6 +58,10 @@ interface UiState {
   // 현재 활성 탭 (모바일 BottomNavBar)
   activeTab: string;
   setActiveTab: (tab: string) => void;
+
+  // 다크모드
+  theme: 'light' | 'dark';
+  toggleTheme: () => void;
 }
 
 let toastIdCounter = 0;
@@ -119,6 +123,18 @@ export const useUiStore = create<UiState>()(
       activeTab: '/',
       setActiveTab: (tab) =>
         set({ activeTab: tab }, false, 'ui/setActiveTab'),
+
+      // 다크모드 (localStorage 영속)
+      theme: (typeof localStorage !== 'undefined'
+        ? (localStorage.getItem('theme') as 'light' | 'dark' | null) ?? 'light'
+        : 'light'),
+      toggleTheme: () =>
+        set((s) => {
+          const next = s.theme === 'light' ? 'dark' : 'light';
+          localStorage.setItem('theme', next);
+          document.documentElement.classList.toggle('dark', next === 'dark');
+          return { theme: next };
+        }, false, 'ui/toggleTheme'),
     }),
     { name: 'UiStore' },
   ),

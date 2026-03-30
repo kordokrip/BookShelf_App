@@ -4,14 +4,15 @@ import type { BookStatus, CreateBookInput, UpdateBookInput } from '../lib/api';
 import { normalizeBook, denormalizeBook } from '../types/book';
 import type { UIBook } from '../types/book';
 
-/** 도서 목록 조회 (status / genre 필터) */
-export function useBooks(filters?: { status?: BookStatus; genre?: string }) {
+/** 도서 목록 조회 (status / genre / sort 필터) */
+export function useBooks(filters?: { status?: BookStatus; genre?: string; sort?: 'created_at_desc' | 'title_asc' | 'author_asc' | 'rating_desc' | 'finished_date_desc' }) {
   return useQuery({
     queryKey: queryKeys.books.list(filters ?? {}),
     queryFn: async () => {
       const res = await booksApi.list(filters ?? {});
       return res.data.map(normalizeBook);
     },
+    staleTime: 5 * 60 * 1000, // 5분
   });
 }
 

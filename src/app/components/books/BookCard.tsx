@@ -203,7 +203,51 @@ export function ReadingBookCard({
     >
       {/* ── Top section: cover + info ── */}
       <div className="flex gap-3">
-        <BookCover book={book} size="md" />
+        {/* Cover with SVG circular progress overlay */}
+        <div className="relative flex-shrink-0">
+          <BookCover book={book} size="md" />
+          {/* SVG circle gauge — bottom-right corner of cover */}
+          <svg
+            width="28"
+            height="28"
+            viewBox="0 0 28 28"
+            className="absolute -bottom-1 -right-1 drop-shadow-sm"
+            style={{ pointerEvents: "none" }}
+          >
+            {/* Track circle */}
+            <circle
+              cx="14" cy="14" r="11"
+              fill="white"
+              stroke="#E2E8F0"
+              strokeWidth="3"
+            />
+            {/* Progress arc */}
+            <circle
+              cx="14" cy="14" r="11"
+              fill="none"
+              stroke={isOverdue ? "#EF4444" : "#4F46E5"}
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeDasharray={`${2 * Math.PI * 11}`}
+              strokeDashoffset={`${2 * Math.PI * 11 * (1 - progress / 100)}`}
+              transform="rotate(-90 14 14)"
+            />
+            {/* Percentage text */}
+            <text
+              x="14" y="14"
+              textAnchor="middle"
+              dominantBaseline="central"
+              style={{
+                fontSize: 6,
+                fontWeight: 700,
+                fill: isOverdue ? "#EF4444" : "#4F46E5",
+                fontFamily: "system-ui, sans-serif",
+              }}
+            >
+              {progress}%
+            </text>
+          </svg>
+        </div>
         <div className="flex-1 min-w-0 flex flex-col gap-1.5">
           <h3
             className="text-[#1E293B] line-clamp-2"
@@ -219,39 +263,20 @@ export function ReadingBookCard({
         </div>
       </div>
 
-      {/* ── Progress section ── */}
-      <div className="flex flex-col gap-1.5">
-        {/* Stats row: page count LEFT, percentage RIGHT */}
-        <div className="flex items-center justify-between">
-          <span
-            style={{
-              fontSize: 12,
-              fontWeight: 600,
-              color: isOverdue ? "#EF4444" : "#4F46E5",
-            }}
-          >
-            {book.currentPage}p / {book.totalPages}p
-          </span>
-          <span
-            style={{ fontSize: 12, fontWeight: 700, color: "#64748B" }}
-          >
-            {progress}%
-          </span>
-        </div>
-        {/* Progress bar: 8px height, track #E2E8F0, fill always #4F46E5 */}
-        <div
-          className="rounded-full overflow-hidden"
-          style={{ height: 8, backgroundColor: "#E2E8F0" }}
+      {/* ── Progress text row (pages + %) ── */}
+      <div className="flex items-center justify-between">
+        <span
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: isOverdue ? "#EF4444" : "#4F46E5",
+          }}
         >
-          <div
-            className="h-full rounded-full transition-all"
-            style={{
-              width: `${Math.max(progress, progress > 0 ? 1 : 0)}%`,
-              minWidth: progress > 0 ? 4 : 0,  // 5% still shows minimum 4px fill
-              background: "linear-gradient(90deg, #4F46E5, #7C3AED)",  // always indigo
-            }}
-          />
-        </div>
+          {book.currentPage}p / {book.totalPages}p
+        </span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: "#64748B" }}>
+          {progress}%
+        </span>
       </div>
 
       {/* ── Chips row: D-day LEFT, daily goal RIGHT ── */}
@@ -311,10 +336,19 @@ export function WishBookCard({
   onStart?: () => void;
   onDelete?: () => void;
 }) {
+  const prio = book.priority ?? 5;
+  // 우선순위 아이콘 + 레이블 + 색상
+  const prioConfig =
+    prio <= 3
+      ? { icon: "🔥", label: "높음", bg: "#FEE2E2", color: "#991B1B" }
+      : prio <= 6
+      ? { icon: "📌", label: "중간", bg: "#FEF3C7", color: "#92400E" }
+      : { icon: "🕐", label: "낮음", bg: "#D1FAE5", color: "#065F46" };
+
   return (
     <div
-      className="bg-white rounded-xl border border-[#F1F5F9] p-3 flex flex-col gap-2.5"
-      style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
+      className="bg-white rounded-xl border p-3 flex flex-col gap-2.5 transition-all hover:border-[#4F46E5]/30 hover:shadow-md"
+      style={{ borderColor: "#F1F5F9", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
     >
       <div className="flex gap-3">
         <BookCover book={book} size="md" />
@@ -329,7 +363,16 @@ export function WishBookCard({
           <p className="text-[#64748B] truncate" style={{ fontSize: 12 }}>
             {book.author} · {book.publisher}
           </p>
-          <GenreBadge genre={book.genre} size="sm" />
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <GenreBadge genre={book.genre} size="sm" />
+            {/* 우선순위 배지: 아이콘 + 레이블 */}
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+              style={{ fontSize: 11, fontWeight: 600, backgroundColor: prioConfig.bg, color: prioConfig.color }}
+            >
+              {prioConfig.icon} {prioConfig.label}
+            </span>
+          </div>
 
           {/* 추가일: YYYY.MM.DD — spec format */}
           <span

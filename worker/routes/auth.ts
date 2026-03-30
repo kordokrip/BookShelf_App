@@ -61,46 +61,45 @@ authRouter.get('/google/callback', async (c) => {
     const avatarUrl = googleUser.picture ?? null;
     const now = new Date().toISOString();
 
-    // ★ STEP 3: 화이트리스트 검증
-    const allowedEmails = (c.env.ALLOWED_EMAILS ?? '')
-      .split(';')
-      .map(e => e.trim().toLowerCase())
-      .filter(e => e.length > 0);
-
-    if (allowedEmails.length === 0) {
-      console.warn('[Google] ALLOWED_EMAILS가 비어있습니다. 관리자 설정 필요.');
-      return c.redirect(`${frontendUrl}/auth/google/callback?error=not_allowed`);
-    }
-
-    if (!allowedEmails.includes(email.toLowerCase())) {
-      console.warn(`[Google] 미허가 이메일 접근 시도: ${email}`);
-      return c.redirect(`${frontendUrl}/auth/google/callback?error=not_allowed`);
-    }
-
-    // 4. google_id로 기존 계정 조회
+    // ★ STEP 3: DB에서 기존 사용자 조회 (google_id 우선, 이메일 fallback)
     let user = await c.env.DB.prepare(
       'SELECT * FROM users WHERE google_id = ?',
     ).bind(googleId).first<DbUser>();
 
-    if (!user) {
-      // 4a. 이메일로 기존 로친 계정 조회 → google_id 연결
-      if (email) {
-        const existing = await c.env.DB.prepare(
-          'SELECT * FROM users WHERE email = ?',
-        ).bind(email).first<DbUser>();
+    let existingByEmail: DbUser | null = null;
+    if (!user && email) {
+      existingByEmail = await c.env.DB.prepare(
+        'SELECT * FROM users WHERE email = ?',
+      ).bind(email).first<DbUser>();
+    }
 
-        if (existing) {
-          await c.env.DB.prepare(
-            `UPDATE users
-             SET google_id = ?, auth_provider = 'google', avatar_url = COALESCE(?, avatar_url), updated_at = ?
-             WHERE id = ?`,
-          ).bind(googleId, avatarUrl, now, existing.id).run();
-          user = { ...existing, google_id: googleId, auth_provider: 'google' };
-        }
+    const isRegisteredUser = !!(user || existingByEmail);
+
+    // ★ STEP 4: 기존 가입 사용자가 아닌 경우 → ALLOWED_EMAILS 신규 가입 게이트 확인
+    if (!isRegisteredUser) {
+      const allowedEmails = (c.env.ALLOWED_EMAILS ?? '')
+        .split(';')
+        .map(e => e.trim().toLowerCase())
+        .filter(e => e.length > 0);
+
+      // ALLOWED_EMAILS가 설정된 경우에만 신규 가입 제한 (빈값이면 개방형 가입)
+      if (allowedEmails.length > 0 && !allowedEmails.includes(email.toLowerCase())) {
+        console.warn(`[Google] 미등록 이메일 접근 시도: ${email}`);
+        return c.redirect(`${frontendUrl}/auth/google/callback?error=not_registered`);
       }
+    }
 
-      // 4b. 완전히 새로운 계정 생성
-      if (!user) {
+    if (!user) {
+      if (existingByEmail) {
+        // 4a. 이메일로 찾은 기존 계정 → google_id 연결
+        await c.env.DB.prepare(
+          `UPDATE users
+           SET google_id = ?, auth_provider = 'google', avatar_url = COALESCE(?, avatar_url), updated_at = ?
+           WHERE id = ?`,
+        ).bind(googleId, avatarUrl, now, existingByEmail.id).run();
+        user = { ...existingByEmail, google_id: googleId, auth_provider: 'google' };
+      } else {
+        // 4b. 완전히 새로운 계정 생성
         const newId = crypto.randomUUID();
         const userEmail = email ?? `google_${googleId}@bookshelf.app`;
         await c.env.DB.prepare(

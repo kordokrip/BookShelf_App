@@ -116,7 +116,7 @@ function StepSearch({
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             <input
               type="text"
-              placeholder="책 제목 또는 저자명..."
+              placeholder="책 제목, 저자, ISBN 검색..."
               value={rawQuery}
               onChange={(e) => setRawQuery(e.target.value)}
               autoFocus
@@ -198,13 +198,30 @@ function StepSearch({
 
         {!isLoading && query.length >= 2 && books.length === 0 && (
           <div className="py-10 text-center">
-            <p className="text-4xl mb-3">🔍</p>
+            <p className="text-4xl mb-3">�</p>
             <p className="font-medium text-foreground text-sm">검색 결과가 없어요</p>
-            <p className="text-xs text-muted-foreground mt-1">직접 입력으로 등록해보세요</p>
+            <p className="text-xs text-muted-foreground mt-1 mb-4">직접 입력하거나 ISBN 바코드를 스캔해보세요</p>
+            <button
+              type="button"
+              onClick={() => setShowScanner(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+              style={{ backgroundColor: "#EEF2FF", color: "#4F46E5" }}
+            >
+              <Camera size={16} />
+              ISBN 바코드 스캔
+            </button>
           </div>
         )}
 
-        {query.length < 2 && (
+        {rawQuery.length === 1 && (
+          <div className="py-6 text-center">
+            <p className="text-xs font-medium" style={{ color: "#92400E", backgroundColor: "#FEF3C7", display: "inline-block", padding: "6px 12px", borderRadius: 8 }}>
+              한 글자 더 입력하면 자동으로 검색됩니다
+            </p>
+          </div>
+        )}
+
+        {rawQuery.length === 0 && (
           <div className="py-8 text-center text-muted-foreground/60 text-sm">
             2글자 이상 입력 시 자동 검색됩니다
           </div>

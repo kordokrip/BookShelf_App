@@ -198,7 +198,15 @@ aiRouter.post('/ocr', rateLimit({ limit: 3, windowMs: 60_000, keyPrefix: 'ai' })
       return c.json({ error: '이미지에서 텍스트를 인식하지 못했습니다. 더 선명한 이미지를 촬영해주세요.' }, 422);
     }
 
-    return c.json({ text: extractedText });
+    // 신뢰도 휴리스틱: 한국어·영문 단어 밀도 기반 (0~100)
+    const words = extractedText.split(/\s+/).filter(Boolean);
+    const koreanChars = (extractedText.match(/[가-힣]/g) ?? []).length;
+    const totalChars = extractedText.replace(/\s/g, '').length;
+    const langDensity = totalChars > 0 ? (koreanChars + (totalChars - koreanChars)) / totalChars : 0;
+    const lengthScore = Math.min(100, words.length * 3); // 최대 33단어 이상이면 100
+    const confidence = Math.round((langDensity * 0.4 + (lengthScore / 100) * 0.6) * 100);
+
+    return c.json({ text: extractedText, confidence });
   } catch (err) {
     console.error('OCR 오류:', err);
     return c.json({ error: 'OCR 처리 중 오류가 발생했습니다' }, 500);

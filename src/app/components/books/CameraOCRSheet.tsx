@@ -62,6 +62,7 @@ export function CameraOCRSheet({ bookId, onClose }: Props) {
   const [step, setStep] = useState<'camera' | 'review'>('camera');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [extractedText, setExtractedText] = useState('');
+  const [confidence, setConfidence] = useState<number | null>(null);
   const [noteType, setNoteType] = useState<NoteType>('memo');
   const [isProcessing, setIsProcessing] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -182,6 +183,7 @@ export function CameraOCRSheet({ bookId, onClose }: Props) {
       try {
         const result = await ocrApi.extractText(file);
         setExtractedText(result.text);
+        setConfidence(result.confidence ?? null);
       } catch (err) {
         setOcrError(err instanceof Error ? err.message : '텍스트 인식에 실패했습니다.');
         setExtractedText('');
@@ -195,6 +197,7 @@ export function CameraOCRSheet({ bookId, onClose }: Props) {
     // previewUrl revoke는 useEffect에서 처리 (state updater 내 side-effect 방지)
     setPreviewUrl(null);
     setExtractedText('');
+    setConfidence(null);
     setOcrError(null);
     // setStep('camera') → useEffect가 startCamera() 재호출 (DOM 마운트 후 실행 보장)
     setStep('camera');
@@ -296,6 +299,28 @@ export function CameraOCRSheet({ bookId, onClose }: Props) {
               <div className="flex items-center gap-2 text-[#4F46E5] py-1">
                 <Loader2 size={16} className="animate-spin" />
                 <span className="text-sm font-medium">텍스트 인식 중...</span>
+              </div>
+            )}
+
+            {/* 신뢰도 표시 */}
+            {!isProcessing && confidence !== null && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-[#64748B]">인식 신뢰도</span>
+                <div className="flex-1 h-1.5 rounded-full bg-[#E2E8F0] overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{
+                      width: `${confidence}%`,
+                      backgroundColor: confidence >= 70 ? '#10B981' : confidence >= 40 ? '#F59E0B' : '#EF4444',
+                    }}
+                  />
+                </div>
+                <span
+                  className="text-xs font-semibold w-9 text-right"
+                  style={{ color: confidence >= 70 ? '#10B981' : confidence >= 40 ? '#F59E0B' : '#EF4444' }}
+                >
+                  {confidence}%
+                </span>
               </div>
             )}
 

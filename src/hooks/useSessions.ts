@@ -38,6 +38,20 @@ export function useAddSession() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.sessions.all });
       qc.invalidateQueries({ queryKey: queryKeys.books.all });
+      qc.invalidateQueries({ queryKey: queryKeys.stats.all });
+    },
+  });
+}
+
+/** 독서 세션 삭제 — 성공 시 books + sessions + stats 캐시 무효화 */
+export function useDeleteSession() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => sessionsApi.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.sessions.all });
+      qc.invalidateQueries({ queryKey: queryKeys.books.all });
+      qc.invalidateQueries({ queryKey: queryKeys.stats.all });
     },
   });
 }

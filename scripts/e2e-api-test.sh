@@ -375,8 +375,8 @@ curl -s -o "$TMPF" -X POST "${BASE_URL}/api/notes" \
   -d "{\"book_id\":\"${BOOK_ID_DONE}\",\"type\":\"memo\",\"content\":\"E2E 테스트 메모 내용\",\"page_number\":42}"
 BODY=$(cat "$TMPF"); rm -f "$TMPF"
 ELAPSED=$(( $(now_ms) - START ))
-NOTE_ID=$(json_val "$BODY" "d['note']['id']")
-NOTE_TYPE=$(json_val "$BODY" "d['note']['type']")
+NOTE_ID=$(json_val "$BODY" "d['data']['id']")
+NOTE_TYPE=$(json_val "$BODY" "d['data']['type']")
 if [[ -n "$NOTE_ID" && "$NOTE_TYPE" == "memo" ]]; then
   pass_test $T "$NAME" $ELAPSED
 else
@@ -390,11 +390,11 @@ curl -s -o "$TMPF" "${BASE_URL}/api/notes?bookId=${BOOK_ID_DONE}" \
   -H "Authorization: Bearer ${TOKEN}"
 BODY=$(cat "$TMPF"); rm -f "$TMPF"
 ELAPSED=$(( $(now_ms) - START ))
-NOTES_COUNT=$(json_val "$BODY" "len(d.get('notes', []))")
+NOTES_COUNT=$(json_val "$BODY" "len(d.get('data', []))")
 if [[ -n "$NOTES_COUNT" && "$NOTES_COUNT" -ge 1 ]]; then
   pass_test $T "$NAME" $ELAPSED
 else
-  fail_test $T "$NAME" $ELAPSED "$BODY" "notes.length < 1 (got: ${NOTES_COUNT:-0})"
+  fail_test $T "$NAME" $ELAPSED "$BODY" "data.length < 1 (got: ${NOTES_COUNT:-0})"
 fi
 
 # TEST 17: GET /api/notes?search=E2E (전문 검색)
@@ -404,7 +404,7 @@ curl -s -o "$TMPF" "${BASE_URL}/api/notes?search=E2E" \
   -H "Authorization: Bearer ${TOKEN}"
 BODY=$(cat "$TMPF"); rm -f "$TMPF"
 ELAPSED=$(( $(now_ms) - START ))
-SEARCH_COUNT=$(json_val "$BODY" "len(d.get('notes', []))")
+SEARCH_COUNT=$(json_val "$BODY" "len(d.get('data', []))")
 if [[ -n "$SEARCH_COUNT" && "$SEARCH_COUNT" -ge 1 ]]; then
   pass_test $T "$NAME" $ELAPSED
 else
@@ -420,8 +420,8 @@ curl -s -o "$TMPF" -X PUT "${BASE_URL}/api/notes/${NOTE_ID}" \
   -d '{"content":"E2E 수정된 메모","type":"highlight","color":"yellow"}'
 BODY=$(cat "$TMPF"); rm -f "$TMPF"
 ELAPSED=$(( $(now_ms) - START ))
-NEW_CONTENT=$(json_val "$BODY" "d['note']['content']")
-NEW_TYPE=$(json_val "$BODY" "d['note']['type']")
+NEW_CONTENT=$(json_val "$BODY" "d['data']['content']")
+NEW_TYPE=$(json_val "$BODY" "d['data']['type']")
 if [[ "$NEW_CONTENT" == "E2E 수정된 메모" && "$NEW_TYPE" == "highlight" ]]; then
   pass_test $T "$NAME" $ELAPSED
 else
@@ -436,7 +436,7 @@ curl -s -o "$TMPF" "${BASE_URL}/api/notes/${NOTE_ID}" \
   -H "Authorization: Bearer ${TOKEN}"
 BODY=$(cat "$TMPF"); rm -f "$TMPF"
 ELAPSED=$(( $(now_ms) - START ))
-GET_CONTENT=$(json_val "$BODY" "d['note']['content']")
+GET_CONTENT=$(json_val "$BODY" "d['data']['content']")
 if [[ "$GET_CONTENT" == "E2E 수정된 메모" ]]; then
   pass_test $T "$NAME" $ELAPSED
 else

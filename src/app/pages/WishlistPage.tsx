@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Plus, ChevronDown, Search, X, ScanLine, RefreshCw } from "lucide-react";
+import { Plus, ChevronDown, Search, X, ScanLine, RefreshCw, Star } from "lucide-react";
 import ISBNScanner from "../components/books/ISBNScanner";
-import type { GenreKey } from "../../types/book";
+import type { UIBook, GenreKey } from "../../types/book";
 import { ALL_GENRES } from "../../types/book";
 import type { SearchBook } from "../../lib/api";
 import { searchApi, ApiError } from "../../lib/api";
-import { WishBookCard } from "../components/books/BookCard";
+import { WishBookCard, BookCover } from "../components/books/BookCard";
 import { GenreFilterBar } from "../components/books/GenreFilterBar";
 import { EmptyState } from "../components/ui/EmptyState";
 import { useToast } from "../components/ui/Toast";
@@ -64,6 +64,165 @@ function SortDropdown({
   );
 }
 
+/* ─── WishBook Detail BottomSheet ─────────────────── */
+function WishBookDetailSheet({
+  book,
+  onClose,
+  onStart,
+  onDelete,
+  onPriorityChange,
+}: {
+  book: UIBook;
+  onClose: () => void;
+  onStart: () => void;
+  onDelete: () => void;
+  onPriorityChange: (p: number) => void;
+}) {
+  const [priority, setPriority] = useState(book.priority ?? 5);
+
+  const prioLabel = priority <= 3 ? "높음" : priority <= 6 ? "중간" : "낮음";
+  const prioColor = priority <= 3 ? "#991B1B" : priority <= 6 ? "#92400E" : "#065F46";
+  const prioBg = priority <= 3 ? "#FEE2E2" : priority <= 6 ? "#FEF3C7" : "#D1FAE5";
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="relative bg-white rounded-t-2xl w-full z-10"
+        style={{ boxShadow: "0 -8px 40px rgba(0,0,0,0.12)" }}
+      >
+        {/* Handle */}
+        <div className="flex justify-center pt-3 pb-2">
+          <div className="rounded-full bg-[#D1D5DB]" style={{ width: 32, height: 4 }} />
+        </div>
+
+        <div className="px-5 pb-8 pt-2">
+          {/* 책 헤더 */}
+          <div className="flex gap-3 mb-5">
+            <BookCover book={book} size="md" />
+            <div className="flex-1 min-w-0">
+              <h3 className="text-[#1E293B] line-clamp-2" style={{ fontSize: 16, fontWeight: 700 }}>
+                {book.title}
+              </h3>
+              <p className="text-[#64748B] truncate" style={{ fontSize: 13 }}>
+                {book.author}
+              </p>
+              {book.publisher && (
+                <p className="text-[#94A3B8] truncate" style={{ fontSize: 12 }}>
+                  {book.publisher}
+                </p>
+              )}
+              <span
+                className="inline-flex items-center px-2 py-0.5 rounded-full mt-1.5"
+                style={{ fontSize: 11, fontWeight: 600, backgroundColor: prioBg, color: prioColor }}
+              >
+                P{priority} · {prioLabel}
+              </span>
+            </div>
+          </div>
+
+          {/* 우선순위 슬라이더 */}
+          <div className="mb-5">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-[#374151]" style={{ fontSize: 13, fontWeight: 600 }}>
+                우선순위
+              </label>
+              <div className="flex items-center gap-1">
+                {[...Array(5)].map((_, i) => (
+                  <Star
+                    key={i}
+                    size={16}
+                    className="cursor-pointer transition-colors"
+                    style={{ color: i < Math.round(priority / 2) ? "#F59E0B" : "#E2E8F0" }}
+                    fill={i < Math.round(priority / 2) ? "#F59E0B" : "none"}
+                    onClick={() => {
+                      const p = (i + 1) * 2;
+                      setPriority(p);
+                      onPriorityChange(p);
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+            <input
+              type="range"
+              min={1}
+              max={10}
+              value={priority}
+              onChange={(e) => {
+                const p = Number(e.target.value);
+                setPriority(p);
+                onPriorityChange(p);
+              }}
+              className="w-full"
+              style={{
+                appearance: "none",
+                height: 8,
+                borderRadius: 999,
+                background: `linear-gradient(to right, #4F46E5 ${((priority - 1) / 9) * 100}%, #E2E8F0 ${((priority - 1) / 9) * 100}%)`,
+              }}
+            />
+            <div className="flex justify-between mt-1">
+              <span style={{ fontSize: 11, color: "#94A3B8" }}>낮음</span>
+              <span style={{ fontSize: 11, color: "#94A3B8" }}>높음</span>
+            </div>
+          </div>
+
+
+
+          {/* 추가일 */}
+          <p className="text-[#94A3B8] mb-5" style={{ fontSize: 12 }}>
+            추가일: {book.addedDate.replace(/-/g, ".")}
+          </p>
+
+          {/* 액션 버튼 */}
+          <div className="flex flex-col gap-2.5">
+            <button
+              onClick={(e) => { e.stopPropagation(); onStart(); }}
+              className="w-full rounded-2xl text-white transition-opacity hover:opacity-90"
+              style={{
+                height: 48,
+                background: "linear-gradient(135deg, #4F46E5, #7C3AED)",
+                fontSize: 15,
+                fontWeight: 700,
+              }}
+            >
+              📖 읽기 시작
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(); }}
+              className="w-full rounded-2xl border border-[#FEE2E2] text-[#EF4444] hover:bg-[#FEF2F2] transition-colors"
+              style={{ height: 44, fontSize: 14, fontWeight: 600 }}
+            >
+              🗑 위시리스트에서 삭제
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+const RECENT_SEARCHES_KEY = 'wishlist_recent_searches';
+const MAX_RECENT = 8;
+
+function loadRecentSearches(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) ?? '[]');
+  } catch {
+    return [];
+  }
+}
+
+function saveRecentSearch(query: string) {
+  const q = query.trim();
+  if (!q) return;
+  const prev = loadRecentSearches();
+  const next = [q, ...prev.filter((s) => s !== q)].slice(0, MAX_RECENT);
+  localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(next));
+}
+
 export function WishlistPage() {
   const { data: books = [], isLoading, isError, refetch } = useBooks({ status: 'wish' });
   const deleteBook = useDeleteBook();
@@ -74,7 +233,9 @@ export function WishlistPage() {
   const [selectedGenre, setSelectedGenre] = useState<GenreKey | null>(null);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [showScanner, setShowScanner] = useState(false);
+  const [selectedBook, setSelectedBook] = useState<UIBook | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
   const navigate = useNavigate();
@@ -98,13 +259,23 @@ export function WishlistPage() {
 
   useEffect(() => {
     if (showSearch) {
+      setRecentSearches(loadRecentSearches());
       setTimeout(() => searchInputRef.current?.focus(), 50);
     } else {
       setSearchQuery("");
     }
   }, [showSearch]);
 
+  // 키보드 엔터/검색 실행 시 최근 검색어 저장
+  function handleSearchCommit(q: string) {
+    if (q.trim().length >= 2) {
+      saveRecentSearch(q.trim());
+      setRecentSearches(loadRecentSearches());
+    }
+  }
+
   function handleAddFromSearch(book: SearchBook) {
+    saveRecentSearch(searchQuery.trim());
     addBook.mutate(
       {
         title: book.title,
@@ -219,7 +390,19 @@ export function WishlistPage() {
 
   return (
     <div className="pb-[var(--page-pb)] lg:pb-8">
-      {/* Search Panel — showSearch 시 표시 */}
+      {/* WishBook 상세 BottomSheet */}
+      {selectedBook && (
+        <WishBookDetailSheet
+          book={selectedBook}
+          onClose={() => setSelectedBook(null)}
+          onStart={() => { handleStart(selectedBook.id); setSelectedBook(null); }}
+          onDelete={() => { handleDelete(selectedBook.id); setSelectedBook(null); }}
+          onPriorityChange={(p) => {
+            updateBook.mutate({ id: selectedBook.id, data: { priority: p } });
+            setSelectedBook((prev) => prev ? { ...prev, priority: p } : prev);
+          }}
+        />
+      )}
       {showSearch && (
         <div className="fixed inset-0 z-50 bg-white flex flex-col">
           {/* 검색 헤더 */}
@@ -231,6 +414,9 @@ export function WishlistPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSearchCommit(searchQuery);
+                }}
                 placeholder="책 제목, 저자 검색..."
                 className="flex-1 bg-transparent outline-none text-[#1E293B] placeholder-[#94A3B8]"
                 style={{ fontSize: 15 }}
@@ -262,9 +448,43 @@ export function WishlistPage() {
           {/* 검색 결과 */}
           <div className="flex-1 overflow-y-auto">
             {searchQuery.trim().length < 2 ? (
-              <p className="text-center text-[#94A3B8] mt-16" style={{ fontSize: 14 }}>
-                검색어를 2글자 이상 입력하세요
-              </p>
+              recentSearches.length > 0 ? (
+                <div className="px-4 pt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[#64748B]" style={{ fontSize: 13, fontWeight: 600 }}>최근 검색어</span>
+                    <button
+                      onClick={() => {
+                        localStorage.removeItem(RECENT_SEARCHES_KEY);
+                        setRecentSearches([]);
+                      }}
+                      className="text-[#94A3B8] hover:text-[#64748B]"
+                      style={{ fontSize: 12 }}
+                    >
+                      전체 삭제
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {recentSearches.map((q) => (
+                      <button
+                        key={q}
+                        onClick={() => {
+                          setSearchQuery(q);
+                          handleSearchCommit(q);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#E2E8F0] bg-[#F8FAFC] text-[#475569] hover:bg-[#EEF2FF] hover:border-[#C7D2FE] hover:text-[#4F46E5] transition-colors"
+                        style={{ fontSize: 13 }}
+                      >
+                        <Search size={11} />
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-center text-[#94A3B8] mt-16" style={{ fontSize: 14 }}>
+                  검색어를 2글자 이상 입력하세요
+                </p>
+              )
             ) : isSearching ? (
               <div className="flex flex-col gap-0 mt-2">
                 {[...Array(5)].map((_, i) => (
@@ -347,16 +567,28 @@ export function WishlistPage() {
       {(visibleRecs.length > 0 || refreshRecs.isPending) && (
         <div className="mx-4 mb-5">
           <div className="flex items-center justify-between mb-3">
+            {/* Gradient 텍스트 헤더 */}
             <p
-              style={{ fontSize: 13, fontWeight: 600, color: "#64748B" }}
+              style={{
+                fontSize: 13,
+                fontWeight: 700,
+                background: "linear-gradient(90deg, #4F46E5, #7C3AED)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
             >
               ✨ AI 추천 — {aiData?.topGenres?.join(', ')} 기반
             </p>
             <button
               onClick={() => refreshRecs.mutate()}
               disabled={refreshRecs.isPending}
-              className="flex items-center gap-1 disabled:opacity-50 transition-opacity"
-              style={{ fontSize: 12, color: "#7C3AED", fontWeight: 600 }}
+              className="flex items-center gap-1 disabled:opacity-50 transition-opacity rounded-full px-3 py-1 text-white"
+              style={{
+                fontSize: 12,
+                fontWeight: 600,
+                background: "linear-gradient(135deg, #4F46E5, #7C3AED)",
+              }}
             >
               <RefreshCw size={12} className={refreshRecs.isPending ? "animate-spin" : ""} />
               새로운 추천
@@ -373,15 +605,27 @@ export function WishlistPage() {
               visibleRecs.map((rec, i) => (
                 <div
                   key={i}
-                  className="rounded-2xl p-3 border"
+                  className="rounded-2xl p-3"
                   style={{
                     background: "linear-gradient(135deg, #F5F3FF 0%, #FAFAFA 100%)",
-                    borderColor: "#DDD6FE",
+                    boxShadow: "0 0 0 1px rgba(79, 70, 229, 0.2)",
                   }}
                 >
                   <p style={{ fontSize: 14, fontWeight: 700, color: "#1E293B" }}>{rec.title}</p>
                   <p style={{ fontSize: 12, color: "#64748B" }}>{rec.author} · {rec.genre}</p>
-                  <p style={{ fontSize: 12, color: "#475569", marginTop: 4 }}>{rec.reason}</p>
+                  {/* 인용 블록 스타일 reason */}
+                  <p
+                    className="mt-2"
+                    style={{
+                      fontSize: 12,
+                      color: "#475569",
+                      fontStyle: "italic",
+                      borderLeft: "3px solid #7C3AED",
+                      paddingLeft: 10,
+                    }}
+                  >
+                    {rec.reason}
+                  </p>
                   <button
                     onClick={() => handleAddAIRecommendation(rec)}
                     disabled={addBook.isPending}
@@ -411,6 +655,18 @@ export function WishlistPage() {
           우선순위가 높은 책부터 읽어보세요!
         </p>
       </div>
+
+      {/* 10권 한도 경고 배너 */}
+      {books.length >= 10 && (
+        <div
+          className="mx-4 mb-3 rounded-xl p-3"
+          style={{ backgroundColor: "#FFFBEB", border: "1px solid #FDE68A" }}
+        >
+          <p style={{ fontSize: 12, color: "#92400E", fontWeight: 500 }}>
+            ⚠️ 위시리스트가 가득 찼어요 ({books.length}/10) — 읽기 시작한 책으로 이동하면 자동으로 공간이 생깁니다
+          </p>
+        </div>
+      )}
 
       {/* Header row */}
       <div className="flex items-center justify-between px-4 mb-2">
@@ -470,12 +726,13 @@ export function WishlistPage() {
           {/* Mobile: single col */}
           <div className="lg:hidden px-4 flex flex-col gap-3">
             {visible.map((book) => (
-              <WishBookCard
-                key={book.id}
-                book={book}
-                onStart={() => handleStart(book.id)}
-                onDelete={() => handleDelete(book.id)}
-              />
+              <div key={book.id} onClick={() => setSelectedBook(book)} className="cursor-pointer">
+                <WishBookCard
+                  book={book}
+                  onStart={() => handleStart(book.id)}
+                  onDelete={() => handleDelete(book.id)}
+                />
+              </div>
             ))}
             {!showAll && hiddenCount > 0 && (
               <button
@@ -491,12 +748,13 @@ export function WishlistPage() {
           {/* Desktop: 3-col */}
           <div className="hidden lg:grid px-4 grid-cols-3 gap-4">
             {sorted.map((book) => (
-              <WishBookCard
-                key={book.id}
-                book={book}
-                onStart={() => handleStart(book.id)}
-                onDelete={() => handleDelete(book.id)}
-              />
+              <div key={book.id} onClick={() => setSelectedBook(book)} className="cursor-pointer">
+                <WishBookCard
+                  book={book}
+                  onStart={() => handleStart(book.id)}
+                  onDelete={() => handleDelete(book.id)}
+                />
+              </div>
             ))}
           </div>
         </>
