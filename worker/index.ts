@@ -14,6 +14,8 @@ import aiRouter from './routes/ai';
 import { statsRouter } from './routes/stats';
 import { collectionsRouter } from './routes/collections';
 import { pushRouter, sendDailyReminders } from './routes/push';
+import { groupsRouter } from './routes/groups';
+import { shareRouter } from './routes/share';
 import { authMiddleware } from './auth';
 
 // ─── App 인스턴스 ─────────────────────────────────────────────
@@ -112,6 +114,8 @@ app.route('/api/ai', aiRouter);
 app.route('/api/stats', statsRouter);
 app.route('/api/collections', collectionsRouter);
 app.route('/api/push', pushRouter);
+app.route('/api/groups', groupsRouter);
+app.route('/api/share', shareRouter);
 
 // ─── GET /api/initial-data — 앱 첫 진입 시 일괄 로드 ──────────
 // BottomNavBar 상태별 카운트 + 사용자 프로필을 단일 요청으로 반환

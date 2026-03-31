@@ -1,0 +1,452 @@
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { zValidator } from '@hono/zod-validator';
+import type { Bindings } from '../types';
+import { authMiddleware } from '../auth';
+
+export const groupsRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
+
+// ─── Schemas ──────────────────────────────────────────────────
+const createGroupSchema = z.object({
+  name: z.string().min(1).max(50),
+  description: z.string().max(500).optional(),
+  cover_emoji: z.string().max(10).optional(),
+  max_members: z.number().int().min(2).max(50).optional(),
+  is_public: z.boolean().optional(),
+});
+
+const createMessageSchema = z.object({
+  content: z.string().min(1).max(1000),
+});
+
+const createMeetingSchema = z.object({
+  title: z.string().min(1).max(100),
+  description: z.string().max(2000).optional(),
+  book_title: z.string().max(200).optional(),
+  book_author: z.string().max(100).optional(),
+  location: z.string().max(200).optional(),
+  meeting_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  meeting_time: z.string().max(20).optional(),
+});
+
+const createFeedbackSchema = z.object({
+  content: z.string().min(1).max(2000),
+  rating: z.number().int().min(1).max(5).optional(),
+});
+
+// ─── helpers ──────────────────────────────────────────────────
+async function isMember(db: D1Database, groupId: string, userId: string) {
+  const row = await db.prepare(
+    'SELECT id FROM group_members WHERE group_id = ? AND user_id = ?',
+  ).bind(groupId, userId).first();
+  return !!row;
+}
+
+async function isLeader(db: D1Database, groupId: string, userId: string) {
+  const row = await db.prepare(
+    `SELECT id FROM group_members WHERE group_id = ? AND user_id = ? AND role = 'leader'`,
+  ).bind(groupId, userId).first();
+  return !!row;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 그룹 CRUD
+// ═══════════════════════════════════════════════════════════════
+
+/** GET /api/groups — 전체 공개 그룹 + 내가 가입한 그룹 */
+groupsRouter.get('/', authMiddleware, async (c) => {
+  const userId = c.get('userId');
+  const db = c.env.DB;
+
+  const [publicGroups, myGroups] = await db.batch([
+    db.prepare(`
+      SELECT g.*, u.name AS owner_name,
+        (SELECT COUNT(*) FROM group_members WHERE group_id = g.id) AS member_count
+      FROM groups g
+      JOIN users u ON u.id = g.owner_id
+      WHERE g.is_public = 1
+      ORDER BY g.created_at DESC
+      LIMIT 50
+    `),
+    db.prepare(`
+      SELECT g.*, gm.role AS my_role, u.name AS owner_name,
+        (SELECT COUNT(*) FROM group_members WHERE group_id = g.id) AS member_count
+      FROM group_members gm
+      JOIN groups g ON g.id = gm.group_id
+      JOIN users u ON u.id = g.owner_id
+      WHERE gm.user_id = ?
+      ORDER BY gm.joined_at DESC
+    `).bind(userId),
+  ]);
+
+  return c.json({
+    data: {
+      publicGroups: publicGroups.results,
+      myGroups: myGroups.results,
+    },
+  });
+});
+
+/** POST /api/groups — 그룹 생성 (생성자 = leader) */
+groupsRouter.post('/', authMiddleware, zValidator('json', createGroupSchema), async (c) => {
+  const userId = c.get('userId');
+  const body = c.req.valid('json');
+  const db = c.env.DB;
+
+  const groupId = crypto.randomUUID();
+  const memberId = crypto.randomUUID();
+
+  await db.batch([
+    db.prepare(`
+      INSERT INTO groups (id, name, description, cover_emoji, owner_id, max_members, is_public)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      groupId,
+      body.name.trim(),
+      body.description?.trim() ?? null,
+      body.cover_emoji ?? '📖',
+      userId,
+      body.max_members ?? 20,
+      body.is_public !== false ? 1 : 0,
+    ),
+    db.prepare(`
+      INSERT INTO group_members (id, group_id, user_id, role) VALUES (?, ?, ?, 'leader')
+    `).bind(memberId, groupId, userId),
+  ]);
+
+  const group = await db.prepare('SELECT * FROM groups WHERE id = ?').bind(groupId).first();
+  return c.json({ data: group }, 201);
+});
+
+/** GET /api/groups/:id — 그룹 상세 (멤버 목록 포함) */
+groupsRouter.get('/:id', authMiddleware, async (c) => {
+  const groupId = c.req.param('id');
+  const db = c.env.DB;
+
+  const [groupRes, membersRes] = await db.batch([
+    db.prepare('SELECT * FROM groups WHERE id = ?').bind(groupId),
+    db.prepare(`
+      SELECT gm.role, gm.joined_at, u.id AS user_id, u.name, u.email, u.avatar_url, u.profile_emoji
+      FROM group_members gm
+      JOIN users u ON u.id = gm.user_id
+      WHERE gm.group_id = ?
+      ORDER BY gm.role DESC, gm.joined_at ASC
+    `).bind(groupId),
+  ]);
+
+  const group = groupRes.results[0];
+  if (!group) return c.json({ error: '그룹을 찾을 수 없습니다.' }, 404);
+
+  return c.json({
+    data: { ...group, members: membersRes.results },
+  });
+});
+
+/** DELETE /api/groups/:id — 그룹 삭제 (leader only) */
+groupsRouter.delete('/:id', authMiddleware, async (c) => {
+  const userId = c.get('userId');
+  const groupId = c.req.param('id');
+  const db = c.env.DB;
+
+  if (!(await isLeader(db, groupId, userId))) {
+    return c.json({ error: '모임장만 그룹을 삭제할 수 있습니다.' }, 403);
+  }
+
+  await db.prepare('DELETE FROM groups WHERE id = ?').bind(groupId).run();
+  return c.json({ data: { deleted: true } });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// 멤버 관리
+// ═══════════════════════════════════════════════════════════════
+
+/** POST /api/groups/:id/join — 그룹 가입 */
+groupsRouter.post('/:id/join', authMiddleware, async (c) => {
+  const userId = c.get('userId');
+  const groupId = c.req.param('id');
+  const db = c.env.DB;
+
+  const group = await db.prepare('SELECT * FROM groups WHERE id = ?').bind(groupId).first<{
+    id: string; max_members: number; is_public: number;
+  }>();
+  if (!group) return c.json({ error: '그룹을 찾을 수 없습니다.' }, 404);
+
+  if (await isMember(db, groupId, userId)) {
+    return c.json({ error: '이미 가입된 그룹입니다.' }, 409);
+  }
+
+  const countRow = await db.prepare(
+    'SELECT COUNT(*) AS cnt FROM group_members WHERE group_id = ?',
+  ).bind(groupId).first<{ cnt: number }>();
+  if (countRow && countRow.cnt >= group.max_members) {
+    return c.json({ error: '그룹 정원이 가득 찼습니다.' }, 400);
+  }
+
+  const id = crypto.randomUUID();
+  await db.prepare(
+    `INSERT INTO group_members (id, group_id, user_id, role) VALUES (?, ?, ?, 'member')`,
+  ).bind(id, groupId, userId).run();
+
+  return c.json({ data: { joined: true } }, 201);
+});
+
+/** POST /api/groups/:id/leave — 그룹 탈퇴 */
+groupsRouter.post('/:id/leave', authMiddleware, async (c) => {
+  const userId = c.get('userId');
+  const groupId = c.req.param('id');
+  const db = c.env.DB;
+
+  const member = await db.prepare(
+    'SELECT role FROM group_members WHERE group_id = ? AND user_id = ?',
+  ).bind(groupId, userId).first<{ role: string }>();
+
+  if (!member) return c.json({ error: '가입되지 않은 그룹입니다.' }, 404);
+  if (member.role === 'leader') {
+    return c.json({ error: '모임장은 그룹을 탈퇴할 수 없습니다. 그룹을 삭제하세요.' }, 400);
+  }
+
+  await db.prepare(
+    'DELETE FROM group_members WHERE group_id = ? AND user_id = ?',
+  ).bind(groupId, userId).run();
+
+  return c.json({ data: { left: true } });
+});
+
+/** DELETE /api/groups/:id/members/:userId — 멤버 추방 (leader only) */
+groupsRouter.delete('/:id/members/:userId', authMiddleware, async (c) => {
+  const currentUserId = c.get('userId');
+  const groupId = c.req.param('id');
+  const targetUserId = c.req.param('userId');
+  const db = c.env.DB;
+
+  if (!(await isLeader(db, groupId, currentUserId))) {
+    return c.json({ error: '모임장만 멤버를 추방할 수 있습니다.' }, 403);
+  }
+
+  if (currentUserId === targetUserId) {
+    return c.json({ error: '자신은 추방할 수 없습니다.' }, 400);
+  }
+
+  await db.prepare(
+    'DELETE FROM group_members WHERE group_id = ? AND user_id = ?',
+  ).bind(groupId, targetUserId).run();
+
+  return c.json({ data: { removed: true } });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// 그룹 채팅 메시지
+// ═══════════════════════════════════════════════════════════════
+
+/** GET /api/groups/:id/messages — 최근 메시지 (페이지네이션) */
+groupsRouter.get('/:id/messages', authMiddleware, async (c) => {
+  const userId = c.get('userId');
+  const groupId = c.req.param('id');
+  const db = c.env.DB;
+  const limit = Math.min(Number(c.req.query('limit') ?? 50), 100);
+  const before = c.req.query('before'); // cursor: created_at
+
+  if (!(await isMember(db, groupId, userId))) {
+    return c.json({ error: '그룹 멤버만 메시지를 볼 수 있습니다.' }, 403);
+  }
+
+  let query = `
+    SELECT m.*, u.name AS user_name, u.avatar_url, u.profile_emoji
+    FROM group_messages m
+    JOIN users u ON u.id = m.user_id
+    WHERE m.group_id = ?
+  `;
+  const params: unknown[] = [groupId];
+
+  if (before) {
+    query += ' AND m.created_at < ?';
+    params.push(before);
+  }
+
+  query += ' ORDER BY m.created_at DESC LIMIT ?';
+  params.push(limit);
+
+  const result = await db.prepare(query).bind(...params).all();
+  return c.json({ data: result.results });
+});
+
+/** POST /api/groups/:id/messages — 메시지 전송 */
+groupsRouter.post('/:id/messages', authMiddleware, zValidator('json', createMessageSchema), async (c) => {
+  const userId = c.get('userId');
+  const groupId = c.req.param('id');
+  const body = c.req.valid('json');
+  const db = c.env.DB;
+
+  if (!(await isMember(db, groupId, userId))) {
+    return c.json({ error: '그룹 멤버만 메시지를 보낼 수 있습니다.' }, 403);
+  }
+
+  const id = crypto.randomUUID();
+  await db.prepare(
+    'INSERT INTO group_messages (id, group_id, user_id, content) VALUES (?, ?, ?, ?)',
+  ).bind(id, groupId, userId, body.content.trim()).run();
+
+  const msg = await db.prepare(`
+    SELECT m.*, u.name AS user_name, u.avatar_url, u.profile_emoji
+    FROM group_messages m JOIN users u ON u.id = m.user_id
+    WHERE m.id = ?
+  `).bind(id).first();
+
+  return c.json({ data: msg }, 201);
+});
+
+// ═══════════════════════════════════════════════════════════════
+// 모임 일정
+// ═══════════════════════════════════════════════════════════════
+
+/** GET /api/groups/:id/meetings — 모임 일정 목록 */
+groupsRouter.get('/:id/meetings', authMiddleware, async (c) => {
+  const userId = c.get('userId');
+  const groupId = c.req.param('id');
+  const db = c.env.DB;
+
+  if (!(await isMember(db, groupId, userId))) {
+    return c.json({ error: '그룹 멤버만 일정을 볼 수 있습니다.' }, 403);
+  }
+
+  const result = await db.prepare(`
+    SELECT mt.*, u.name AS creator_name,
+      (SELECT COUNT(*) FROM meeting_feedbacks WHERE meeting_id = mt.id) AS feedback_count
+    FROM group_meetings mt
+    JOIN users u ON u.id = mt.created_by
+    WHERE mt.group_id = ?
+    ORDER BY mt.meeting_date DESC
+    LIMIT 50
+  `).bind(groupId).all();
+
+  return c.json({ data: result.results });
+});
+
+/** POST /api/groups/:id/meetings — 모임 일정 생성 (leader only) */
+groupsRouter.post('/:id/meetings', authMiddleware, zValidator('json', createMeetingSchema), async (c) => {
+  const userId = c.get('userId');
+  const groupId = c.req.param('id');
+  const body = c.req.valid('json');
+  const db = c.env.DB;
+
+  if (!(await isLeader(db, groupId, userId))) {
+    return c.json({ error: '모임장만 일정을 생성할 수 있습니다.' }, 403);
+  }
+
+  const id = crypto.randomUUID();
+  await db.prepare(`
+    INSERT INTO group_meetings (id, group_id, created_by, title, description, book_title, book_author, location, meeting_date, meeting_time)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(
+    id, groupId, userId,
+    body.title.trim(),
+    body.description?.trim() ?? null,
+    body.book_title?.trim() ?? null,
+    body.book_author?.trim() ?? null,
+    body.location?.trim() ?? null,
+    body.meeting_date,
+    body.meeting_time ?? null,
+  ).run();
+
+  const meeting = await db.prepare('SELECT * FROM group_meetings WHERE id = ?').bind(id).first();
+  return c.json({ data: meeting }, 201);
+});
+
+/** DELETE /api/groups/:id/meetings/:meetingId — 모임 일정 삭제 (leader only) */
+groupsRouter.delete('/:id/meetings/:meetingId', authMiddleware, async (c) => {
+  const userId = c.get('userId');
+  const groupId = c.req.param('id');
+  const meetingId = c.req.param('meetingId');
+  const db = c.env.DB;
+
+  if (!(await isLeader(db, groupId, userId))) {
+    return c.json({ error: '모임장만 일정을 삭제할 수 있습니다.' }, 403);
+  }
+
+  await db.prepare('DELETE FROM group_meetings WHERE id = ? AND group_id = ?').bind(meetingId, groupId).run();
+  return c.json({ data: { deleted: true } });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// 모임 피드백
+// ═══════════════════════════════════════════════════════════════
+
+/** GET /api/groups/:id/meetings/:meetingId/feedbacks — 피드백 목록 */
+groupsRouter.get('/:id/meetings/:meetingId/feedbacks', authMiddleware, async (c) => {
+  const userId = c.get('userId');
+  const groupId = c.req.param('id');
+  const meetingId = c.req.param('meetingId');
+  const db = c.env.DB;
+
+  if (!(await isMember(db, groupId, userId))) {
+    return c.json({ error: '그룹 멤버만 피드백을 볼 수 있습니다.' }, 403);
+  }
+
+  const result = await db.prepare(`
+    SELECT f.*, u.name AS user_name, u.avatar_url, u.profile_emoji
+    FROM meeting_feedbacks f
+    JOIN users u ON u.id = f.user_id
+    WHERE f.meeting_id = ?
+    ORDER BY f.created_at ASC
+  `).bind(meetingId).all();
+
+  return c.json({ data: result.results });
+});
+
+/** POST /api/groups/:id/meetings/:meetingId/feedbacks — 피드백 작성 */
+groupsRouter.post('/:id/meetings/:meetingId/feedbacks', authMiddleware, zValidator('json', createFeedbackSchema), async (c) => {
+  const userId = c.get('userId');
+  const groupId = c.req.param('id');
+  const meetingId = c.req.param('meetingId');
+  const body = c.req.valid('json');
+  const db = c.env.DB;
+
+  if (!(await isMember(db, groupId, userId))) {
+    return c.json({ error: '그룹 멤버만 피드백을 작성할 수 있습니다.' }, 403);
+  }
+
+  // 중복 피드백 방지
+  const existing = await db.prepare(
+    'SELECT id FROM meeting_feedbacks WHERE meeting_id = ? AND user_id = ?',
+  ).bind(meetingId, userId).first();
+  if (existing) {
+    return c.json({ error: '이미 피드백을 작성하셨습니다.' }, 409);
+  }
+
+  const id = crypto.randomUUID();
+  await db.prepare(
+    'INSERT INTO meeting_feedbacks (id, meeting_id, user_id, content, rating) VALUES (?, ?, ?, ?, ?)',
+  ).bind(id, meetingId, userId, body.content.trim(), body.rating ?? null).run();
+
+  const feedback = await db.prepare(`
+    SELECT f.*, u.name AS user_name, u.avatar_url, u.profile_emoji
+    FROM meeting_feedbacks f JOIN users u ON u.id = f.user_id
+    WHERE f.id = ?
+  `).bind(id).first();
+
+  return c.json({ data: feedback }, 201);
+});
+
+/** DELETE /api/groups/:id/meetings/:meetingId/feedbacks/:feedbackId — 피드백 삭제 (본인 or leader) */
+groupsRouter.delete('/:id/meetings/:meetingId/feedbacks/:feedbackId', authMiddleware, async (c) => {
+  const userId = c.get('userId');
+  const groupId = c.req.param('id');
+  const feedbackId = c.req.param('feedbackId');
+  const db = c.env.DB;
+
+  const feedback = await db.prepare(
+    'SELECT user_id FROM meeting_feedbacks WHERE id = ?',
+  ).bind(feedbackId).first<{ user_id: string }>();
+
+  if (!feedback) return c.json({ error: '피드백을 찾을 수 없습니다.' }, 404);
+
+  const isOwner = feedback.user_id === userId;
+  const isGroupLeader = await isLeader(db, groupId, userId);
+
+  if (!isOwner && !isGroupLeader) {
+    return c.json({ error: '본인 또는 모임장만 삭제할 수 있습니다.' }, 403);
+  }
+
+  await db.prepare('DELETE FROM meeting_feedbacks WHERE id = ?').bind(feedbackId).run();
+  return c.json({ data: { deleted: true } });
+});

@@ -554,6 +554,173 @@ export const ocrApi = {  /** 이미지에서 텍스트 추출 (Workers AI Vision
   },
 };
 
+// ─── Groups API ───────────────────────────────────────────────
+export interface Group {
+  id: string;
+  name: string;
+  description: string | null;
+  cover_emoji: string;
+  owner_id: string;
+  owner_name?: string;
+  max_members: number;
+  is_public: number;
+  member_count?: number;
+  my_role?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GroupMember {
+  user_id: string;
+  name: string;
+  email: string;
+  avatar_url: string | null;
+  profile_emoji: string | null;
+  role: string;
+  joined_at: string;
+}
+
+export interface GroupMessage {
+  id: string;
+  group_id: string;
+  user_id: string;
+  user_name: string;
+  avatar_url: string | null;
+  profile_emoji: string | null;
+  content: string;
+  created_at: string;
+}
+
+export interface GroupMeeting {
+  id: string;
+  group_id: string;
+  created_by: string;
+  creator_name?: string;
+  title: string;
+  description: string | null;
+  book_title: string | null;
+  book_author: string | null;
+  location: string | null;
+  meeting_date: string;
+  meeting_time: string | null;
+  feedback_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MeetingFeedback {
+  id: string;
+  meeting_id: string;
+  user_id: string;
+  user_name: string;
+  avatar_url: string | null;
+  profile_emoji: string | null;
+  content: string;
+  rating: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SharedReport {
+  id: string;
+  sender_id: string;
+  recipient_id: string;
+  sender_name?: string;
+  sender_email?: string;
+  sender_avatar?: string | null;
+  sender_emoji?: string | null;
+  recipient_name?: string;
+  recipient_email?: string;
+  report_data: string;
+  message: string | null;
+  is_read: number;
+  created_at: string;
+}
+
+export const groupsApi = {
+  list: () =>
+    apiFetch<{ data: { publicGroups: Group[]; myGroups: Group[] } }>('/api/groups'),
+
+  get: (id: string) =>
+    apiFetch<{ data: Group & { members: GroupMember[] } }>(`/api/groups/${id}`),
+
+  create: (data: { name: string; description?: string; cover_emoji?: string; max_members?: number; is_public?: boolean }) =>
+    apiFetch<{ data: Group }>('/api/groups', { method: 'POST', body: JSON.stringify(data) }),
+
+  delete: (id: string) =>
+    apiFetch<{ data: { deleted: boolean } }>(`/api/groups/${id}`, { method: 'DELETE' }),
+
+  join: (id: string) =>
+    apiFetch<{ data: { joined: boolean } }>(`/api/groups/${id}/join`, { method: 'POST' }),
+
+  leave: (id: string) =>
+    apiFetch<{ data: { left: boolean } }>(`/api/groups/${id}/leave`, { method: 'POST' }),
+
+  removeMember: (groupId: string, userId: string) =>
+    apiFetch<{ data: { removed: boolean } }>(`/api/groups/${groupId}/members/${userId}`, { method: 'DELETE' }),
+
+  // 메시지
+  getMessages: (groupId: string, params?: { limit?: number; before?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.limit) qs.set('limit', String(params.limit));
+    if (params?.before) qs.set('before', params.before);
+    const q = qs.toString() ? `?${qs.toString()}` : '';
+    return apiFetch<{ data: GroupMessage[] }>(`/api/groups/${groupId}/messages${q}`);
+  },
+
+  sendMessage: (groupId: string, content: string) =>
+    apiFetch<{ data: GroupMessage }>(`/api/groups/${groupId}/messages`, {
+      method: 'POST', body: JSON.stringify({ content }),
+    }),
+
+  // 모임 일정
+  getMeetings: (groupId: string) =>
+    apiFetch<{ data: GroupMeeting[] }>(`/api/groups/${groupId}/meetings`),
+
+  createMeeting: (groupId: string, data: {
+    title: string; description?: string; book_title?: string; book_author?: string;
+    location?: string; meeting_date: string; meeting_time?: string;
+  }) =>
+    apiFetch<{ data: GroupMeeting }>(`/api/groups/${groupId}/meetings`, {
+      method: 'POST', body: JSON.stringify(data),
+    }),
+
+  deleteMeeting: (groupId: string, meetingId: string) =>
+    apiFetch<{ data: { deleted: boolean } }>(`/api/groups/${groupId}/meetings/${meetingId}`, { method: 'DELETE' }),
+
+  // 피드백
+  getFeedbacks: (groupId: string, meetingId: string) =>
+    apiFetch<{ data: MeetingFeedback[] }>(`/api/groups/${groupId}/meetings/${meetingId}/feedbacks`),
+
+  createFeedback: (groupId: string, meetingId: string, data: { content: string; rating?: number }) =>
+    apiFetch<{ data: MeetingFeedback }>(`/api/groups/${groupId}/meetings/${meetingId}/feedbacks`, {
+      method: 'POST', body: JSON.stringify(data),
+    }),
+
+  deleteFeedback: (groupId: string, meetingId: string, feedbackId: string) =>
+    apiFetch<{ data: { deleted: boolean } }>(`/api/groups/${groupId}/meetings/${meetingId}/feedbacks/${feedbackId}`, { method: 'DELETE' }),
+};
+
+// ─── Share API ────────────────────────────────────────────────
+export const shareApi = {
+  shareReport: (data: { recipient_email: string; message?: string }) =>
+    apiFetch<{ data: { id: string; shared: boolean } }>('/api/share/report', {
+      method: 'POST', body: JSON.stringify(data),
+    }),
+
+  getInbox: () =>
+    apiFetch<{ data: SharedReport[] }>('/api/share/inbox'),
+
+  getSent: () =>
+    apiFetch<{ data: SharedReport[] }>('/api/share/sent'),
+
+  markRead: (id: string) =>
+    apiFetch<{ data: { read: boolean } }>(`/api/share/${id}/read`, { method: 'PATCH' }),
+
+  getUnreadCount: () =>
+    apiFetch<{ data: { count: number } }>('/api/share/unread-count'),
+};
+
 // ─── React Query 키 팩토리 ────────────────────────────────────
 // useQuery / useMutation에서 일관된 캐시 키 사용
 export const queryKeys = {
@@ -601,6 +768,20 @@ export const queryKeys = {
     lists: () => [...queryKeys.collections.all, 'list'] as const,
     details: () => [...queryKeys.collections.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.collections.details(), id] as const,
+  },
+  groups: {
+    all: ['groups'] as const,
+    lists: () => [...queryKeys.groups.all, 'list'] as const,
+    detail: (id: string) => [...queryKeys.groups.all, 'detail', id] as const,
+    messages: (id: string) => [...queryKeys.groups.all, id, 'messages'] as const,
+    meetings: (id: string) => [...queryKeys.groups.all, id, 'meetings'] as const,
+    feedbacks: (groupId: string, meetingId: string) => [...queryKeys.groups.all, groupId, 'meetings', meetingId, 'feedbacks'] as const,
+  },
+  share: {
+    all: ['share'] as const,
+    inbox: () => [...queryKeys.share.all, 'inbox'] as const,
+    sent: () => [...queryKeys.share.all, 'sent'] as const,
+    unread: () => [...queryKeys.share.all, 'unread'] as const,
   },
   initialData: {
     all: ['initial-data'] as const,

@@ -21,6 +21,7 @@ const pageTitles: Record<string, string> = {
   '/stats': '독서 통계 📊',
   '/design-system': '디자인 시스템',
   '/notes-search': '노트 & 검색',
+  '/groups': '독서 모임 👥',
 };
 
 const THEME_LABEL = {

@@ -43,6 +43,7 @@ const LazyGoogleCallbackPage = makeLazy(() => import("./pages/GoogleCallbackPage
 const LazyNotFoundPage    = makeLazy(() => import("./pages/NotFoundPage"),    "NotFoundPage");
 const LazyYearlyReviewPage = makeLazy(() => import("./pages/YearlyReviewPage"), "YearlyReviewPage");
 const LazyCollectionsPage = makeLazy(() => import("./pages/CollectionsPage"), "CollectionsPage");
+const LazyGroupsPage      = makeLazy(() => import("./pages/GroupsPage"),       "GroupsPage");
 
 function withSuspense(Component: React.ComponentType, fallbackText = "로딩 중...") {
   return () =>
@@ -123,6 +124,7 @@ export const router = createBrowserRouter([
       { path: "book/:id", Component: protected_(withSuspense(LazyBookDetailPage, "책 상세 로딩 중...")), ErrorBoundary: EB },
       { path: "yearly-review", Component: protected_(withSuspense(LazyYearlyReviewPage, "연간 결산 로딩 중...")), ErrorBoundary: EB },
       { path: "collections", Component: protected_(withSuspense(LazyCollectionsPage, "컬렉션 로딩 중...")), ErrorBoundary: EB },
+      { path: "groups", Component: protected_(withSuspense(LazyGroupsPage, "독서 모임 로딩 중...")), ErrorBoundary: EB },
     ],
   },
   // ─── 404 Fallback ─────────────────────────────────────────────
