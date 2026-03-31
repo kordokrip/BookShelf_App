@@ -52,6 +52,10 @@ bucket_name = "bookshelf-covers"
 [ai]
 binding = "AI"
 
+# ─── Cron Trigger — 독서 리마인더 (매일 오전 8시 UTC = KST 17시) ─
+[triggers]
+crons = ["0 8 * * *"]
+
 # ─── 환경 변수 (비밀값은 wrangler secret put 사용) ────────────
 [vars]
 ENVIRONMENT = "production"

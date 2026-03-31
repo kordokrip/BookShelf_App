@@ -19,7 +19,10 @@ export default defineConfig({
         skipWaiting: true,
         clientsClaim: true,
         cleanupOutdatedCaches: true,
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff,woff2}'],
+        // PWA precache 최적화: HTML·아이콘·폰트만 precache, JS/CSS는 runtime caching으로
+        globPatterns: ['**/*.{html,ico,png,svg,webp,woff,woff2}'],
+        // Push 알림 핸들러 주입
+        importScripts: ['/sw-push.js'],
         // OAuth 콜백은 303 리다이렉트 응답이므로 SW가 절대 인터셉트하면 안 됨
         navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [

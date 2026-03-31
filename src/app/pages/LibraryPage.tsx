@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
-import { ChevronDown, Plus, ChevronRight, LayoutGrid, List, GitBranch, Search, X } from "lucide-react";
+import { ChevronDown, Plus, ChevronRight, LayoutGrid, List, GitBranch, Search, X, FolderOpen } from "lucide-react";
 import type { UIBook, GenreKey } from "../../types/book";
 import { ALL_GENRES } from "../../types/book";
 import { useBooks, useRefreshBookCovers } from "../../hooks/useBooks";
 import { DoneBookCard } from "../components/books/BookCard";
 import { GenreFilterBar } from "../components/books/GenreFilterBar";
 import { EmptyState } from "../components/ui/EmptyState";
-import { useNavigate } from "react-router";
+import { useNavigate, Link } from "react-router";
 import { BookCardSkeleton, ErrorState } from "../components/ui/skeleton";
 
 /* ─── helpers ─────────────────────────────────────── */
@@ -275,6 +275,27 @@ export function LibraryPage() {
       {/* CV-7: Success state — book list */}
       {loadState === "success" && (
         <>
+          {/* ── 컬렉션 바로가기 ── */}
+          <div className="px-4 mb-3">
+            <Link
+              to="/collections"
+              className="flex items-center gap-3 w-full rounded-2xl px-4 py-3 hover:bg-[#EEF2FF] transition-colors"
+              style={{ backgroundColor: "#F8FAFC", border: "1px solid #E2E8F0" }}
+            >
+              <div
+                className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ backgroundColor: "#EEF2FF" }}
+              >
+                <FolderOpen size={16} style={{ color: "#4F46E5" }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p style={{ fontSize: 13, fontWeight: 700, color: "#1E293B" }}>내 컬렉션</p>
+                <p style={{ fontSize: 11, color: "#94A3B8" }}>시리즈, 주제별로 책을 모아보세요</p>
+              </div>
+              <ChevronRight size={16} style={{ color: "#94A3B8", flexShrink: 0 }} />
+            </Link>
+          </div>
+
           {/* ── 인라인 검색 바 ── */}
           <div className="px-4 mb-3">
             <div className="relative">

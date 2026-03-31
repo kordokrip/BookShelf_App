@@ -438,6 +438,100 @@ export const searchApi = {
 // ─── Stats API ────────────────────────────────────────────────
 export const statsApi = {
   getStats: () => apiFetch<StatsResponse>('/api/stats'),
+
+  /** 통계 + 도서 목록 CSV 내보내기 */
+  exportCsv: async (): Promise<Blob> => {
+    const token = localStorage.getItem('auth_token');
+    const resp = await fetch(`${BASE_URL}/api/stats/export`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!resp.ok) throw new ApiError(resp.status, `export failed: ${resp.status}`);
+    return resp.blob();
+  },
+};
+
+// ─── Initial Data API ─────────────────────────────────────────
+export interface InitialData {
+  bookCounts: { done: number; reading: number; wish: number };
+  user: User | null;
+  lastSessionDate: string | null;
+}
+
+export const initialDataApi = {
+  load: () => apiFetch<InitialData>('/api/initial-data'),
+};
+
+// ─── Collections API ──────────────────────────────────────────
+export interface Collection {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  emoji: string;
+  book_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CollectionDetail extends Collection {
+  books: (Book & { sort_order: number; collection_added_at: string })[];
+}
+
+export const collectionsApi = {
+  list: () =>
+    apiFetch<{ data: (Collection & { book_count: number })[] }>('/api/collections'),
+
+  get: (id: string) =>
+    apiFetch<{ data: CollectionDetail }>(`/api/collections/${id}`),
+
+  create: (data: { name: string; description?: string; emoji?: string }) =>
+    apiFetch<{ data: Collection }>('/api/collections', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: string, data: Partial<{ name: string; description: string; emoji: string }>) =>
+    apiFetch<{ data: Collection }>(`/api/collections/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: string) =>
+    apiFetch<{ success: boolean }>(`/api/collections/${id}`, { method: 'DELETE' }),
+
+  addBook: (collectionId: string, bookId: string) =>
+    apiFetch<{ success: boolean }>(`/api/collections/${collectionId}/books`, {
+      method: 'POST',
+      body: JSON.stringify({ book_id: bookId }),
+    }),
+
+  removeBook: (collectionId: string, bookId: string) =>
+    apiFetch<{ success: boolean }>(`/api/collections/${collectionId}/books/${bookId}`, {
+      method: 'DELETE',
+    }),
+};
+
+// ─── Push Notifications API ───────────────────────────────────
+export const pushApi = {
+  getVapidKey: () =>
+    apiFetch<{ publicKey: string }>('/api/push/vapid-key'),
+
+  subscribe: (subscription: PushSubscriptionJSON) =>
+    apiFetch<{ success: boolean; id: string }>('/api/push/subscribe', {
+      method: 'POST',
+      body: JSON.stringify({
+        endpoint: subscription.endpoint,
+        keys: subscription.keys,
+      }),
+    }),
+
+  unsubscribe: (endpoint: string) =>
+    apiFetch<{ success: boolean }>(`/api/push/unsubscribe?endpoint=${encodeURIComponent(endpoint)}`, {
+      method: 'DELETE',
+    }),
+
+  status: () =>
+    apiFetch<{ subscriptions: { id: string; endpoint: string; created_at: string }[]; count: number }>('/api/push/status'),
 };
 
 // ─── OCR API ──────────────────────────────────────────────────
@@ -500,5 +594,14 @@ export const queryKeys = {
   stats: {
     all: ['stats'] as const,
     user: () => [...queryKeys.stats.all, 'user'] as const,
+  },
+  collections: {
+    all: ['collections'] as const,
+    lists: () => [...queryKeys.collections.all, 'list'] as const,
+    details: () => [...queryKeys.collections.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.collections.details(), id] as const,
+  },
+  initialData: {
+    all: ['initial-data'] as const,
   },
 };

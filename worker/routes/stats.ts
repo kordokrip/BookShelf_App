@@ -96,3 +96,59 @@ statsRouter.get('/', authMiddleware, async (c) => {
     weekly: weekly.results as { week: string; pages: number }[],
   });
 });
+
+/** GET /api/stats/export — 통계 및 도서 목록 CSV 내보내기 */
+statsRouter.get('/export', authMiddleware, async (c) => {
+  const userId = c.get('userId');
+  const db = c.env.DB;
+
+  const { results: books } = await db.prepare(
+    `SELECT title, author, genre, status, rating, total_pages, current_page,
+            finished_date, added_date, goal_date, note
+     FROM books WHERE user_id = ?
+     ORDER BY created_at DESC`,
+  ).bind(userId).all<{
+    title: string; author: string; genre: string; status: string;
+    rating: number | null; total_pages: number | null; current_page: number;
+    finished_date: string | null; added_date: string; goal_date: string | null;
+    note: string | null;
+  }>();
+
+  // BOM + UTF-8 CSV 생성
+  const BOM = '\uFEFF';
+  const headers = ['제목', '저자', '장르', '상태', '평점', '총 페이지', '현재 페이지', '완독일', '등록일', '목표일', '메모'];
+
+  const escapeField = (val: string | number | null | undefined): string => {
+    if (val == null) return '';
+    const s = String(val);
+    if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+      return `"${s.replace(/"/g, '""')}"`;
+    }
+    return s;
+  };
+
+  const statusMap: Record<string, string> = { done: '완독', reading: '읽는 중', wish: '위시리스트' };
+
+  const rows = books.map(b => [
+    escapeField(b.title),
+    escapeField(b.author),
+    escapeField(b.genre),
+    escapeField(statusMap[b.status] ?? b.status),
+    escapeField(b.rating),
+    escapeField(b.total_pages),
+    escapeField(b.current_page),
+    escapeField(b.finished_date),
+    escapeField(b.added_date),
+    escapeField(b.goal_date),
+    escapeField(b.note),
+  ].join(','));
+
+  const csv = BOM + headers.join(',') + '\n' + rows.join('\n');
+
+  return new Response(csv, {
+    headers: {
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': `attachment; filename="bookshelf_export_${new Date().toISOString().slice(0, 10)}.csv"`,
+    },
+  });
+});

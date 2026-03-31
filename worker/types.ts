@@ -127,4 +127,8 @@ export interface Bindings {
   GOOGLE_CLIENT_ID: string;
   GOOGLE_CLIENT_SECRET: string;
   ALLOWED_EMAILS: string;  // 세미콜론 구분 허용 이메일 목록
+  // Web Push VAPID 키 (wrangler secret put 으로 설정)
+  VAPID_PUBLIC_KEY?: string;   // base64url 인코딩된 공개키
+  VAPID_PRIVATE_KEY?: string;  // JWK JSON 문자열
+  VAPID_SUBJECT?: string;      // 'mailto:admin@example.com'
 }

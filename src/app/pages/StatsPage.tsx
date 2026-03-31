@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
-import { BookMarked, BookOpen, Sparkles, FileText, Target, ChevronRight, ChevronDown } from "lucide-react";
+import { BookMarked, BookOpen, Sparkles, FileText, Target, ChevronRight, ChevronDown, Download } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SummaryCard, MonthlyBarChart, GenreDonutChart, ReadingHeatmap, StreakCard } from "../components/stats/StatsComponents";
 import { StatCardSkeleton, ChartSkeleton } from "../components/ui/skeleton";
@@ -8,6 +8,7 @@ import { useStats } from "../../hooks/useStats";
 import type { UISession } from "../../types/book";
 import { GENRE_CONFIG } from "../../types/book";
 import { useAuthStore } from "../../stores/authStore";
+import { statsApi } from "../../lib/api";
 
 /* ─── 장르별 색상 매핑 (GENRE_CONFIG 기반 — 19종 전체 커버) */
 const GENRE_COLORS: Record<string, string> = Object.fromEntries(
@@ -417,6 +418,30 @@ export function StatsPage() {
                 <GenreDonutChart allData={genreDataAll} doneData={[]} readingData={[]} />
               </div>
             </div>
+          </div>
+
+          {/* CSV Export */}
+          <div className="px-4 mt-4">
+            <button
+              onClick={async () => {
+                try {
+                  const blob = await statsApi.exportCsv();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `bookshelf_export_${new Date().toISOString().slice(0, 10)}.csv`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                } catch {
+                  alert("CSV 내보내기에 실패했습니다. 다시 시도해주세요.");
+                }
+              }}
+              className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 border border-[#E2E8F0] bg-white hover:bg-[#F8FAFC] transition-colors"
+              style={{ fontSize: 14, fontWeight: 600, color: "#4F46E5" }}
+            >
+              <Download size={16} />
+              독서 데이터 CSV 내보내기
+            </button>
           </div>
         </>
       )}

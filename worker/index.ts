@@ -12,6 +12,9 @@ import { searchRouter } from './routes/search';
 import { authRouter } from './routes/auth';
 import aiRouter from './routes/ai';
 import { statsRouter } from './routes/stats';
+import { collectionsRouter } from './routes/collections';
+import { pushRouter, sendDailyReminders } from './routes/push';
+import { authMiddleware } from './auth';
 
 // ─── App 인스턴스 ─────────────────────────────────────────────
 const app = new Hono<{ Bindings: Bindings }>();
@@ -107,6 +110,45 @@ app.route('/api/notes', notesRouter);
 app.route('/api/search', searchRouter);
 app.route('/api/ai', aiRouter);
 app.route('/api/stats', statsRouter);
+app.route('/api/collections', collectionsRouter);
+app.route('/api/push', pushRouter);
+
+// ─── GET /api/initial-data — 앱 첫 진입 시 일괄 로드 ──────────
+// BottomNavBar 상태별 카운트 + 사용자 프로필을 단일 요청으로 반환
+// → 초기 동시 요청 6~8개 → 1개로 감소
+app.get('/api/initial-data', authMiddleware, async (c) => {
+  const userId = c.get('userId');
+  const db = c.env.DB;
+
+  const [statusCounts, profile, recentActivity] = await db.batch([
+    db.prepare(
+      `SELECT status, COUNT(*) AS count FROM books WHERE user_id = ? GROUP BY status`,
+    ).bind(userId),
+    db.prepare(
+      `SELECT id, email, name, avatar_url, favorite_genres, reading_goal, role, created_at
+       FROM users WHERE id = ?`,
+    ).bind(userId),
+    db.prepare(
+      `SELECT session_date FROM reading_sessions
+       WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`,
+    ).bind(userId),
+  ]);
+
+  type StatusRow = { status: string; count: number };
+  const counts = { done: 0, reading: 0, wish: 0 };
+  for (const row of (statusCounts.results as StatusRow[])) {
+    if (row.status in counts) counts[row.status as keyof typeof counts] = row.count;
+  }
+
+  type ActivityRow = { session_date: string };
+  const lastSession = (recentActivity.results[0] as ActivityRow | undefined)?.session_date ?? null;
+
+  return c.json({
+    bookCounts: counts,
+    user: profile.results[0] ?? null,
+    lastSessionDate: lastSession,
+  });
+});
 
 // ─── SPA 폴백 — PWA dist 파일 서빙 ───────────────────────────
 app.get('*', async (c) => {
@@ -128,4 +170,20 @@ app.onError((err, c) => {
 
 app.notFound((c) => c.json({ error: 'Not Found' }, 404));
 
-export default app;
+// ─── Export: fetch + scheduled (Cron) ─────────────────────────
+export default {
+  fetch: app.fetch,
+
+  /** Cron 트리거: 매일 오전 8시 (KST 17시) 독서 리마인더 전송 */
+  async scheduled(
+    _controller: ScheduledController,
+    env: Bindings,
+    ctx: ExecutionContext,
+  ) {
+    ctx.waitUntil(
+      sendDailyReminders(env).then((result) => {
+        console.log(`[Cron] Push reminders sent: ${result.sent}, failed: ${result.failed}`);
+      }),
+    );
+  },
+};

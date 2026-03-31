@@ -8,10 +8,22 @@ import { authMiddleware } from '../auth';
 export const booksRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
 // ─── cover_image URL 정규화 ───────────────────────────────────
-// 직접 CDN URL(CORS 오류)을 /api/cover-proxy 경유 URL로 변환
-function normalizeCoverUrl(coverImage: string | null, origin: string): string | null {
+// DB의 cover_image 값을 클라이언트가 사용할 수 있는 URL로 변환
+// - r2://... → /api/books/:id/cover (R2 서빙)
+// - 직접 CDN URL → /api/cover-proxy?url=... (CORS 회피)
+// - 프록시 URL → 그대로 반환
+// - 기타 non-URL → R2 레거시 키로 간주하여 /api/books/:id/cover
+function resolveBookCoverUrl(coverImage: string | null, bookId: string, origin: string): string | null {
   if (!coverImage) return null;
-  if (coverImage.startsWith('/api/cover-proxy') || coverImage.startsWith(origin)) return coverImage;
+  // R2 저장 이미지 (r2:// prefix)
+  if (coverImage.startsWith('r2://')) {
+    return `${origin}/api/books/${bookId}/cover`;
+  }
+  // 이미 프록시 URL
+  if (coverImage.startsWith('/api/cover-proxy') || coverImage.startsWith(`${origin}/api/cover-proxy`)) {
+    return coverImage;
+  }
+  // 외부 CDN URL → 프록시 경유
   const CDN_ORIGINS = [
     'https://search1.kakaocdn.net',
     'https://search2.kakaocdn.net',
@@ -19,6 +31,10 @@ function normalizeCoverUrl(coverImage: string | null, origin: string): string | 
   ];
   if (CDN_ORIGINS.some((cdn) => coverImage.startsWith(cdn))) {
     return `${origin}/api/cover-proxy?url=${encodeURIComponent(coverImage)}`;
+  }
+  // 레거시 R2 키 (http로 시작하지 않는 non-URL 문자열)
+  if (!coverImage.startsWith('http')) {
+    return `${origin}/api/books/${bookId}/cover`;
   }
   return coverImage;
 }
@@ -163,7 +179,7 @@ booksRouter.get('/', authMiddleware, async (c) => {
 
   const origin = new URL(c.req.url).origin;
   return c.json({
-    data: results.map((b) => ({ ...b, cover_image: normalizeCoverUrl(b.cover_image, origin) })),
+    data: results.map((b) => ({ ...b, cover_image: resolveBookCoverUrl(b.cover_image, b.id, origin) })),
     count: results.length,
   });
 });
@@ -182,7 +198,7 @@ booksRouter.get('/:id', authMiddleware, async (c) => {
   if (!book) throw new HTTPException(404, { message: '책을 찾을 수 없습니다.' });
 
   const origin = new URL(c.req.url).origin;
-  return c.json({ data: { ...book, cover_image: normalizeCoverUrl(book.cover_image, origin) } });
+  return c.json({ data: { ...book, cover_image: resolveBookCoverUrl(book.cover_image, book.id, origin) } });
 });
 
 // ─── POST /api/books ──────────────────────────────────────────
@@ -353,11 +369,11 @@ booksRouter.post('/:id/cover', authMiddleware, async (c) => {
     },
   });
 
-  // DB: cover_image를 r2Key로 업데이트
+  // DB: cover_image를 r2:// prefix 포함 키로 업데이트
   await c.env.DB.prepare(
     `UPDATE books SET cover_image = ?, updated_at = datetime('now') WHERE id = ?`,
   )
-    .bind(r2Key, bookId)
+    .bind(`r2://${r2Key}`, bookId)
     .run();
 
   return c.json({ success: true, r2Key, coverUrl: `/api/books/${bookId}/cover` });
@@ -377,12 +393,15 @@ booksRouter.get('/:id/cover', async (c) => {
     return c.json({ error: '표지 이미지가 없습니다.' }, 404);
   }
 
-  const r2Key = row.cover_image;
+  const coverValue = row.cover_image;
 
   // 외부 URL(카카오 등)이면 리다이렉트
-  if (r2Key.startsWith('http')) {
-    return c.redirect(r2Key);
+  if (coverValue.startsWith('http')) {
+    return c.redirect(coverValue);
   }
+
+  // r2:// prefix 제거 (레거시 raw 키도 지원)
+  const r2Key = coverValue.startsWith('r2://') ? coverValue.slice(5) : coverValue;
 
   const object = await c.env.R2.get(r2Key);
   if (!object) return c.json({ error: 'R2에서 이미지를 찾을 수 없습니다.' }, 404);

@@ -5,9 +5,11 @@ import { SideNav } from "./components/navigation/SideNav";
 import { ToastProvider } from "./components/ui/Toast";
 import { OfflineBanner } from "./components/ui/OfflineBanner";
 import { useUiStore } from "../stores/uiStore";
+import { useOfflineQueue } from "../hooks/useOfflineQueue";
 
 export function Root() {
   const sidebarOpen = useUiStore((s) => s.sidebarOpen);
+  useOfflineQueue();
 
   return (
     <ToastProvider>
