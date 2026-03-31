@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Trash2, Edit, Heart, Share2 } from "lucide-react";
+import { Trash2, Edit, Heart, Share2, ShieldAlert } from "lucide-react";
 import { GenreBadge } from "../components/ui/GenreBadge";
 import { StarRating } from "../components/ui/StarRating";
 import { ProgressBar } from "../components/ui/ProgressBar";
@@ -12,6 +12,7 @@ import { DoneBookCard, ReadingBookCard, WishBookCard } from "../components/books
 import { SummaryCard } from "../components/stats/StatsComponents";
 import { BookMarked, Star, Flame, BookOpen } from "lucide-react";
 import { GENRE_CONFIG, type GenreKey, type UIBook } from "../../types/book";
+import { useAuthStore } from "../../stores/authStore";
 
 const GENRES = Object.keys(GENRE_CONFIG) as GenreKey[];
 
@@ -132,6 +133,9 @@ function SubSection({ label, children }: { label: string; children: React.ReactN
 }
 
 export function DesignSystemPage() {
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === 'admin';
+
   const [rating, setRating] = useState(3);
   const [inputVal, setInputVal] = useState("");
   const [searchVal, setSearchVal] = useState("");
@@ -140,6 +144,21 @@ export function DesignSystemPage() {
   const [dateVal, setDateVal] = useState("2024-05-01");
   const [modalOpen, setModalOpen] = useState(false);
   const { showToast } = useToast();
+
+  if (!isAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 px-6 text-center">
+        <div className="w-16 h-16 rounded-full bg-[#FEF2F2] dark:bg-[#7F1D1D]/30 flex items-center justify-center">
+          <ShieldAlert className="text-[#EF4444]" size={32} />
+        </div>
+        <h2 className="text-xl font-bold text-[#1E293B] dark:text-[#F8FAFC]">접근 권한 없음</h2>
+        <p className="text-[#64748B] dark:text-[#94A3B8] text-sm max-w-xs">
+          디자인 시스템 페이지는 Admin 계정만 접근할 수 있습니다.
+          관리자에게 문의해 주세요.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="pb-24">

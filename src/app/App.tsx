@@ -8,6 +8,7 @@ import { useViewport } from "../hooks/useViewport";
 import { router } from "./routes";
 import { ToastProvider, useToast } from "./components/ui/Toast";
 import { InstallBanner } from "./components/ui/InstallBanner";
+import { TooltipProvider } from "./components/ui/tooltip";
 
 export default function App() {
   const checkAuth = useAuthStore((s) => s.checkAuth);
@@ -30,13 +31,18 @@ export default function App() {
   }, [themeMode]);
 
   useEffect(() => {
-    // OAuth 콜백 후 /?token=xxx&provider=google 파라미터 처리
+    // OAuth 콜백 후 /?token=xxx&refreshToken=yyy&provider=google 파라미터 처리
     const url = new URL(window.location.href);
     const oauthToken = url.searchParams.get('token');
+    const oauthRefreshToken = url.searchParams.get('refreshToken');
     if (oauthToken) {
       localStorage.setItem('auth_token', oauthToken);
-      // token + provider를 URL에서 제거 (보안: 주소창 노출 방지)
+      if (oauthRefreshToken) {
+        localStorage.setItem('refresh_token', oauthRefreshToken);
+      }
+      // token + refreshToken + provider를 URL에서 제거 (보안: 주소창 노출 방지)
       url.searchParams.delete('token');
+      url.searchParams.delete('refreshToken');
       url.searchParams.delete('provider');
       window.history.replaceState({}, '', url.pathname + (url.search !== '?' ? url.search : ''));
     }
@@ -45,10 +51,12 @@ export default function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* App-level ToastProvider: 오프라인/온라인 알림 전용 */}
-      <ToastProvider>
-        <AppInner />
-      </ToastProvider>
+      <TooltipProvider delayDuration={200}>
+        {/* App-level ToastProvider: 오프라인/온라인 알림 전용 */}
+        <ToastProvider>
+          <AppInner />
+        </ToastProvider>
+      </TooltipProvider>
     </QueryClientProvider>
   );
 }

@@ -89,13 +89,40 @@ export class ApiError extends Error {
 }
 
 // ─── 인증 헤더 ────────────────────────────────────────────────
+const TOKEN_KEY = 'auth_token';
+const REFRESH_TOKEN_KEY = 'refresh_token';
+
 const getAuthHeaders = (): Record<string, string> => {
-  const token = localStorage.getItem('auth_token');
+  const token = localStorage.getItem(TOKEN_KEY);
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
 // ─── 기본 fetch 래퍼 ──────────────────────────────────────────
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
+
+/** 진행 중인 refresh 요청을 공유하여 동시 401 다중 호출 방지 */
+let refreshPromise: Promise<boolean> | null = null;
+
+async function tryRefreshToken(): Promise<boolean> {
+  const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+  if (!refreshToken) return false;
+
+  try {
+    const res = await fetch(`${BASE_URL}/api/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    });
+    if (!res.ok) return false;
+
+    const data = await res.json() as { token: string; refreshToken: string };
+    localStorage.setItem(TOKEN_KEY, data.token);
+    localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export async function apiFetch<T>(
   path: string,
@@ -111,6 +138,30 @@ export async function apiFetch<T>(
       ...options.headers,
     },
   });
+
+  // 401 → refreshToken으로 자동 갱신 후 1회 재시도
+  if (response.status === 401 && localStorage.getItem(REFRESH_TOKEN_KEY)) {
+    if (!refreshPromise) {
+      refreshPromise = tryRefreshToken().finally(() => { refreshPromise = null; });
+    }
+    const refreshed = await refreshPromise;
+    if (refreshed) {
+      const retryResponse = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+          ...options.headers,
+        },
+      });
+      if (retryResponse.ok) {
+        return retryResponse.json<T>();
+      }
+    }
+    // 갱신 실패 → 토큰 정리 후 로그인 페이지로
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+  }
 
   if (!response.ok) {
     let message = `HTTP ${response.status}`;
@@ -204,6 +255,7 @@ export interface AuthResponse {
   data: {
     user: User;
     token: string;
+    refreshToken?: string;
   };
 }
 

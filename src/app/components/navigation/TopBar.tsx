@@ -6,11 +6,12 @@
  * - 알림 벨: 미읽음 카운트 배지 + NotificationPanel 드롭다운
  */
 import { useState, useRef } from 'react';
-import { Search, Bell, Plus, Sun, Moon, Clock } from 'lucide-react';
+import { Bell, BookPlus, Sun, Moon, Clock, FileSearch } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { useAuthStore } from '../../../stores/authStore';
 import { useUiStore } from '../../../stores/uiStore';
 import { NotificationPanel } from '../ui/NotificationPanel';
+import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
 
 const pageTitles: Record<string, string> = {
   '/': '완독 📚',
@@ -77,54 +78,75 @@ export function TopBar() {
         <div className="flex items-center gap-0 sm:gap-0.5 flex-shrink-0">
 
           {/* 테마 토글: sm 이상에서만 표시 (모바일은 화면이 좁으므로 숨김) */}
-          <button
-            onClick={cycleThemeMode}
-            aria-label={THEME_LABEL[themeMode]}
-            title={THEME_LABEL[themeMode]}
-            className="hidden sm:flex w-10 h-10 sm:w-11 sm:h-11 rounded-full items-center justify-center text-[#64748B] hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition-colors"
-          >
-            {themeMode === 'auto'  ? <Clock size={19} /> :
-             themeMode === 'light' ? <Sun   size={19} /> :
-                                     <Moon  size={19} />}
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={cycleThemeMode}
+                aria-label={THEME_LABEL[themeMode]}
+                className="hidden sm:flex w-10 h-10 sm:w-11 sm:h-11 rounded-full items-center justify-center text-[#64748B] hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition-colors"
+              >
+                {themeMode === 'auto'  ? <Clock size={19} /> :
+                 themeMode === 'light' ? <Sun   size={19} /> :
+                                         <Moon  size={19} />}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" sideOffset={4}>{THEME_LABEL[themeMode]}</TooltipContent>
+          </Tooltip>
 
-          {/* + 책 추가 */}
-          <button
-            onClick={() => navigate('/register-flow')}
-            aria-label="책 추가"
-            className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-[#4F46E5] hover:bg-[#EEF2FF] transition-colors"
-          >
-            <Plus size={19} />
-          </button>
+          {/* 책 등록 */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => navigate('/register-flow')}
+                aria-label="책 등록"
+                className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-[#4F46E5] hover:bg-[#EEF2FF] dark:hover:bg-[#312E81] transition-colors"
+              >
+                <BookPlus size={19} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" sideOffset={4}>새 책 등록하기</TooltipContent>
+          </Tooltip>
 
-          {/* 🔍 검색 */}
-          <button
-            onClick={() => navigate('/notes-search')}
-            aria-label="검색"
-            className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-[#64748B] hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition-colors"
-          >
-            <Search size={19} />
-          </button>
+          {/* 노트 & 검색 */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => navigate('/notes-search')}
+                aria-label="노트 & 검색"
+                className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-[#64748B] hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition-colors"
+              >
+                <FileSearch size={19} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" sideOffset={4}>노트 & 검색</TooltipContent>
+          </Tooltip>
 
           {/* 🔔 알림 벨 + 패널 드롭다운 */}
           <div ref={bellRef} className="relative">
-            <button
-              onClick={() => setNotifOpen((v) => !v)}
-              aria-label={`알림${unreadCount > 0 ? ` (${unreadCount}건 미읽음)` : ''}`}
-              aria-expanded={notifOpen}
-              className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center relative text-[#64748B] hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition-colors"
-            >
-              <Bell size={19} />
-              {unreadCount > 0 && (
-                <span
-                  className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 bg-[#EF4444] rounded-full border-2 border-white dark:border-[#0F172A] text-white flex items-center justify-center"
-                  style={{ fontSize: 9, fontWeight: 700, lineHeight: 1 }}
-                  aria-hidden
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setNotifOpen((v) => !v)}
+                  aria-label={`알림${unreadCount > 0 ? ` (${unreadCount}건 미읽음)` : ''}`}
+                  aria-expanded={notifOpen}
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center relative text-[#64748B] hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition-colors"
                 >
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </button>
+                  <Bell size={19} />
+                  {unreadCount > 0 && (
+                    <span
+                      className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 bg-[#EF4444] rounded-full border-2 border-white dark:border-[#0F172A] text-white flex items-center justify-center"
+                      style={{ fontSize: 9, fontWeight: 700, lineHeight: 1 }}
+                      aria-hidden
+                    >
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" sideOffset={4}>
+                {`알림${unreadCount > 0 ? ` — ${unreadCount}건 미읽음` : ''}`}
+              </TooltipContent>
+            </Tooltip>
 
             {notifOpen && (
               <NotificationPanel onClose={() => setNotifOpen(false)} />
@@ -132,14 +154,18 @@ export function TopBar() {
           </div>
 
           {/* 아바타 */}
-          <Link
-            to="/splash"
-            className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] flex items-center justify-center ml-1 shadow-sm flex-shrink-0"
-            title="인증 화면 보기"
-            aria-label="프로필"
-          >
-            <span className="text-white text-xs font-semibold">{avatarInitial}</span>
-          </Link>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link
+                to="/splash"
+                className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] flex items-center justify-center ml-1 shadow-sm flex-shrink-0"
+                aria-label="프로필"
+              >
+                <span className="text-white text-xs font-semibold">{avatarInitial}</span>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" sideOffset={4}>내 프로필</TooltipContent>
+          </Tooltip>
         </div>
       </div>
     </header>

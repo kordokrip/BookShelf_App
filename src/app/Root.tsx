@@ -4,8 +4,11 @@ import { BottomNavBar } from "./components/navigation/BottomNavBar";
 import { SideNav } from "./components/navigation/SideNav";
 import { ToastProvider } from "./components/ui/Toast";
 import { OfflineBanner } from "./components/ui/OfflineBanner";
+import { useUiStore } from "../stores/uiStore";
 
 export function Root() {
+  const sidebarOpen = useUiStore((s) => s.sidebarOpen);
+
   return (
     <ToastProvider>
       {/* min-h-svh: 100svh — 브라우저 UI를 제사한 안정적인 화면 높이 (iOS Safari 대응) */}
@@ -14,7 +17,7 @@ export function Root() {
         <SideNav />
 
         {/* Main Content Area */}
-        <div className="lg:ml-60">
+        <div className={`${sidebarOpen ? "lg:ml-60" : "lg:ml-[68px]"} transition-all duration-300 ease-in-out`}>
           {/* Top Bar: sticky top-0 + safe-area-inset-top 여백 */}
           <TopBar />
           {/* Offline Banner: 오프라인 시 TopBar 아래에 표시 */}

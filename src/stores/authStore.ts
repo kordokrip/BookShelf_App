@@ -14,6 +14,7 @@ export interface AuthUser {
   email: string;
   name: string;
   avatar_url: string | null;
+  role: string; // 'admin' | 'user'
   favorite_genres?: string[];
   reading_goal?: number;
 }
@@ -38,6 +39,8 @@ interface AuthState {
 }
 
 const TOKEN_KEY = 'auth_token';
+const REFRESH_TOKEN_KEY = 'refresh_token';
+const HAS_VISITED_KEY = 'has_visited';
 
 export const useAuthStore = create<AuthState>()(
   devtools(
@@ -52,9 +55,14 @@ export const useAuthStore = create<AuthState>()(
         try {
           const res = await usersApi.login({ email, password });
           localStorage.setItem(TOKEN_KEY, res.data.token);
+          if (res.data.refreshToken) {
+            localStorage.setItem(REFRESH_TOKEN_KEY, res.data.refreshToken);
+          }
+          localStorage.setItem(HAS_VISITED_KEY, '1');
           const raw = res.data.user as AuthUser & {
             favorite_genres?: string | string[];
             reading_goal?: number;
+            role?: string;
           };
           const favoriteGenres =
             typeof raw.favorite_genres === 'string'
@@ -67,6 +75,7 @@ export const useAuthStore = create<AuthState>()(
                 email: raw.email,
                 name: raw.name,
                 avatar_url: raw.avatar_url,
+                role: raw.role ?? 'user',
                 favorite_genres: favoriteGenres,
                 reading_goal: raw.reading_goal,
               },
@@ -109,6 +118,7 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(REFRESH_TOKEN_KEY);
         set(
           { user: null, status: 'unauthenticated', error: null },
           false,
@@ -126,7 +136,7 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true }, false, 'auth/check:start');
         try {
           const res = await usersApi.getProfile();
-          const raw = res.data as AuthUser & { favorite_genres?: string | string[] };
+          const raw = res.data as AuthUser & { favorite_genres?: string | string[]; role?: string };
           const favoriteGenres =
             typeof raw.favorite_genres === 'string'
               ? (JSON.parse(raw.favorite_genres || '[]') as string[])
@@ -138,6 +148,7 @@ export const useAuthStore = create<AuthState>()(
                 email: raw.email,
                 name: raw.name,
                 avatar_url: raw.avatar_url,
+                role: raw.role ?? 'user',
                 favorite_genres: favoriteGenres,
                 reading_goal: raw.reading_goal,
               },
@@ -147,8 +158,10 @@ export const useAuthStore = create<AuthState>()(
             false,
             'auth/check:success',
           );
+          localStorage.setItem(HAS_VISITED_KEY, '1');
         } catch {
           localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem(REFRESH_TOKEN_KEY);
           set(
             {
               user: null,

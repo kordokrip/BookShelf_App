@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS users (
   -- 온보딩 개인화
   favorite_genres TEXT NOT NULL DEFAULT '[]',        -- JSON 배열 문자열 (장르 키 배열)
   reading_goal    INTEGER NOT NULL DEFAULT 12,       -- 연간 목표 권수
+  role            TEXT NOT NULL DEFAULT 'user',      -- 'admin' | 'user'
   created_at      TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );

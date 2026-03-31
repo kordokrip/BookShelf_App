@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { HTTPException } from 'hono/http-exception';
 import type { Bindings, DbBook } from '../types';
-import { authMiddleware, optionalAuth } from '../auth';
+import { authMiddleware } from '../auth';
 
 export const booksRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -127,7 +127,7 @@ booksRouter.post('/refresh-covers', authMiddleware, async (c) => {
 
 // ─── GET /api/books ───────────────────────────────────────────
 // 사용자의 전체 책 목록 조회 (status 필터 가능)
-booksRouter.get('/', optionalAuth, async (c) => {
+booksRouter.get('/', authMiddleware, async (c) => {
   const userId = c.get('userId');
   const status = c.req.query('status');
   const genre = c.req.query('genre');
@@ -169,7 +169,7 @@ booksRouter.get('/', optionalAuth, async (c) => {
 });
 
 // ─── GET /api/books/:id ───────────────────────────────────────
-booksRouter.get('/:id', optionalAuth, async (c) => {
+booksRouter.get('/:id', authMiddleware, async (c) => {
   const userId = c.get('userId');
   const id = c.req.param('id');
 

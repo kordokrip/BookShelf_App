@@ -183,6 +183,28 @@ function FormContent({ onSubmit }: { onSubmit: (name: string, email: string, pas
         )}
       </div>
 
+      {/* Privacy notice */}
+      <div
+        className="rounded-xl px-4 py-3"
+        style={{ background: "#F0F9FF", border: "1px solid #BAE6FD" }}
+      >
+        <p
+          className="text-[12px] leading-relaxed"
+          style={{ color: "#0369A1", fontFamily: "var(--font-pretendard)" }}
+        >
+          🔒 <strong>개인정보 안내</strong>
+        </p>
+        <ul
+          className="text-[11px] mt-1.5 flex flex-col gap-1"
+          style={{ color: "#0C4A6E", fontFamily: "var(--font-pretendard)", lineHeight: 1.5 }}
+        >
+          <li>• 저장되는 정보: <strong>이메일 주소</strong>, 이름</li>
+          <li>• Google 로그인 시: 이름, 이메일, 프로필 사진 URL</li>
+          <li>• 비밀번호는 암호화되어 저장되며, 원본은 보관하지 않습니다</li>
+          <li>• 수집된 정보는 서비스 제공 목적으로만 사용됩니다</li>
+        </ul>
+      </div>
+
       {/* Terms checkbox */}
       <div className="flex items-start gap-3 py-1">
         <button

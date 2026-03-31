@@ -3,8 +3,8 @@
 > 작성 기준: 실제 소스 코드 전수 분석 (2026-03 기준)
 > 목적: 프로덕션 오류 발생 시 UI → Hook → API → DB 레이어를 빠르게 추적하기 위한 기준 문서
 >
-> **최근 변경**: 2026-03-31 — 14차 업데이트 (BOOKSHELF_COPILOT_PROMPT_14TH 19개 항목: A-1 Google OAuth · A-4 useRecentSearches · C-1 타이머자동기록 · C-2 검색UX · C-3 온보딩스킵 · C-4 Stats결산카드 · C-5 빠른노트캐폜 · C-6 오프라인배너)
-> **이전 변경**: 2026-03-30 — 13차 업데이트 (27개 COPILOT 개선항목 전체 완료: UX-101~107, FEAT-101~104 — YearlyReviewPage·OCR신뢰도·성취배지·WebShare·WishBookDetailSheet·최근검색어·노트필터+색상바·로그인UX·스플래시슬로건)
+> **최근 변경**: 2026-03-31 — 15차 업데이트 (자동 테마(themeMode) · 알림 시스템 · TopBar 3-column grid · AI one-click UX)
+> **이전 변경**: 2026-03-31 — 14차 업데이트 (BOOKSHELF_COPILOT_PROMPT_14TH 19개 항목: A-1 Google OAuth · A-4 useRecentSearches · C-1 타이머자동기록 · C-2 검색UX · C-3 온보딩스킵 · C-4 Stats결산카드 · C-5 빠른노트캐폜 · C-6 오프라인배너)
 
 ---
 
@@ -22,10 +22,10 @@
 | **AI** | Workers AI (`@cf/meta/llama-3.1-8b-instruct`, `@cf/meta/llama-3.2-11b-vision-instruct`) |
 | **Storage** | Cloudflare R2 (`covers/{userId}/{bookId}.{ext}`) |
 | **TypeScript check** | ✅ 0 errors |
-| **Build** | ✅ 성공 (built in 3.32s, 3030 modules, 34 assets) ★ (14차) |
+| **Build** | ✅ 성공 (built in 3.06s, 3031 modules, 34 assets) ★ (15차) |
 | **Production Health** | ✅ `{"status":"ok","env":"production"}` |
-| **GitHub 커밋** | `16c06bc` (main) ★ (14차) |
-| **Cloudflare Workers** | Version ID `9dc85ef0-452a-4d72-a2a9-e50ac54615df` ★ (14차 배포) |
+| **GitHub 커밋** | `29ec33e` (main) ★ (15차) |
+| **Cloudflare Workers** | Version ID `d4b79c4b-24f2-49f6-8631-203449189e13` ★ (15차 배포) |
 | **D1 Tables** | users, books, reading_sessions, notes, notes_fts (FTS5), d1_migrations, _cf_KV, sqlite_sequence |
 
 ---
@@ -165,6 +165,34 @@ active:scale-[0.92] 탭 시 미세 축소 애니메이션
 
 ---
 
+### uiStore 알림 시스템 (`src/stores/uiStore.ts`) ★ 15차 신규
+```
+[알림 흐름]
+useBooks.ts useAddBook onSuccess    → addNotification('book_added', '새 책을 서재에 추가했습니다', title)
+useBooks.ts useUpdateBook onSuccess → addNotification('book_updated', statusMsg, title)
+  statusMsg: done='📖 완독 축하드립니다!' / reading='📖 읽는 중으로 변경' / wish='💫 위시리스트에 추가'
+useNotes.ts useAddNote onSuccess    → addNotification('note_saved', '새 {typeLabel}를 저장했습니다', 'p.{page}')
+useSessions.ts useAddSession onSuccess → addNotification('session_saved', '독서 세션을 기록했습니다 ⏱️', '{pages}페이지·{mins}분')
+
+addNotification(type, message, detail?) → uiStore:
+  → new NotificationItem(uuid, type, message, detail, read=false, createdAt)
+  → notifications = [newItem, ...prev].slice(0, 20)  // max 20개 유지
+  → unreadCount = notifications.filter(n => !n.read).length
+  → saveNotifications()  // localStorage 저장
+
+[NotificationPanel 드롭다운 데이터 흐름]
+TopBar Bell 클릭 → notifOpen=true → <NotificationPanel />
+  마운트 시 markAllRead() 자동 호출 → unreadCount=0
+  각 항목: type별 아이콘 + message + detail(optional) + timeAgo(createdAt)
+  "모두 삭제" → clearNotifications() → notifications=[] → localStorage 삭제
+
+[앱 시작 시]
+App.tsx → loadNotifications()
+  → localStorage['bookshelf_notifications'] → JSON.parse → notifications 복구
+```
+
+---
+
 ### OfflineBanner (`src/app/components/ui/OfflineBanner.tsx`) ★ 신규 (C-6, 14차)
 ```
 [마운트]
@@ -179,6 +207,54 @@ bg: amber-50, border: amber-200
 [데이터 흐름]
 App.tsx window.addEventListener('offline') → setOnline(false) → OfflineBanner 표시
 App.tsx window.addEventListener('online')  → setOnline(true)  → OfflineBanner 숨김
+```
+
+---
+
+### TopBar (`src/app/components/navigation/TopBar.tsx`) ★ 15차 전면 개편
+```
+[레이아웃]
+이전(14차): flex + h-14 + absolute left-1/2 (제목 절대 위치)
+현재(15차): grid grid-cols-[auto_1fr_auto]
+  left  (auto): 뒤로/메뉴 버튼 (NavigationLeft)
+  center (1fr): 타이틀 (truncate, 오버플로 말줄임)
+  right (auto): 테마토글(hidden sm:flex) + Bell(NotificationPanel)
+
+[themeMode 3-state 버튼]
+cycleThemeMode() 호출 → auto → light → dark 순환
+  auto  → Clock 아이콘
+  light → Sun 아이콘
+  dark  → Moon 아이콘
+hidden sm:flex (모바일에서 숨김)
+
+[Bell + NotificationPanel]
+unreadCount > 0 → Bell 위 빨간 배지 (9+ 표시)
+Bell 클릭 → notifOpen: true → <NotificationPanel onClose={() => setNotifOpen(false)} />
+  - autoFocus, 외부 클릭 → onClose()
+  - 열릴 때 자동 markAllRead() → unreadCount = 0
+  - 전체 삭제 → clearNotifications()
+  - 타입별 아이콘: book_added(BookOpen), session_saved(Clock),
+                  note_saved(FileText), sync(RefreshCw), info(Bell)
+  - timeAgo() 상대 시간 표시 (방금/N분전/N시간전/N일전)
+```
+
+---
+
+### App.tsx 테마 시스템 (`src/app/App.tsx`) ★ 15차 추가
+```
+[themeMode 자동 테마] ★ (15차)
+useEffect → themeMode 구독
+  'auto' → getTimeBasedTheme()
+    → 06:00~18:00 = 'light', 나머지 = 'dark'
+    → document.documentElement.classList (light/dark 토글)
+    → setInterval(60_000) — 1분마다 재평가
+    → cleanup: clearInterval on unmount / themeMode 변경 시
+  'light' / 'dark' → 즉시 classList 적용
+
+[기존]
+window.addEventListener('offline') → setOnline(false)
+window.addEventListener('online')  → setOnline(true)
+useEffect cleanup: removeEventListener
 ```
 
 ---
@@ -267,12 +343,35 @@ UI → useBookNotes(id)
     → GET /api/notes?bookId=...
       → D1: SELECT * FROM notes WHERE user_id=? AND book_id=?
 
-[AI 요약]
-UI(버튼 클릭) → useBookSummary.mutate({ description, title, author })
-  → POST /api/ai/summarize
-    → KV: 캐시 확인(1일 TTL)
-    → Workers AI: llama-3.1-8b-instruct
-    → KV: 결과 저장
+[AI 책 분석] ★ (15차 one-click UX 전면 개편)
+UI("AI 분석 시작" 버튼 클릭, Sparkles 아이콘)
+  → handleSummarize()
+    → useBookSummaryMutation.mutateAsync({
+        title: book.title,
+        author: book.author   // description 없어도 동작 ★ (15차)
+      })
+      → POST /api/ai/summarize
+        → hasDescription = description?.length >= 20
+            true:  기존 description 기반 요약 프롬프트
+            false: "title+author로 책 소개해주세요" 프롬프트 ★
+        → KV: 캐시 확인 (1일 TTL)
+        → Workers AI: llama-3.1-8b-instruct
+        → KV: 결과 저장 (캐시 키 분기)
+    → setSummaryResult(summary)
+      → useEffect: 타이핑 애니메이션 (18ms/char, setInterval)
+        → displayedSummary 글자 하나씩 증가
+        → isTyping=true → 커서 깜빡임 (|) 표시
+
+[AI 책 분석 UI 상태 — 15차]
+Idle:    "AI 분석 시작" 버튼 (Sparkles 아이콘, 인디고 그라디언트 배경)
+Loading: 스피너 + 스켈레톤 3줄 animate-pulse
+Result:  타이핑 효과 텍스트 + cached 배지("⚡ 캐시된 분석 결과", book.isbn 있을 때)
+         우측 상단 "다시 생성" 버튼 (RefreshCw 아이콘)
+Error:   에러 메시지 + "다시 시도" 버튼
+
+[제거된 UI — 15차]
+textarea 입력 필드 완전 제거
+"AI 책 소개 생성" 분리 버튼 제거
 
 [표지 업로드]
 UI(파일 선택) → coverApi.uploadCover(bookId, file)
@@ -1360,3 +1459,4 @@ Global QueryClient 설정:
 | 2026-03-30 | 12차 반영 (ReadingPage Quick Actions 3대 완전 구현: LogTodayModal·GoalModal·타이머 연동, StatsPage 목표 달성률 카드, useSessions stats 캐시 무효화) — GitHub `1d3c7a2` / Cloudflare `cfb4f121` |
 | 2026-03-30 | 13차 반영 (27개 COPILOT 개선항목 전체 완료: FEAT-101 성취배지, FEAT-102 OCR신뢰도, FEAT-103 Web Share, FEAT-104 YearlyReviewPage, UX-101~107 전체 — WishBookDetailSheet·최근검색어·노트필터+색상바·로그인UX·스플래시슬로건) — GitHub `82a94e1e` / Cloudflare `82a94e1e-6334-456a-a6a2-6d11656d5722` |
 | 2026-03-31 | 14차 반영 (BOOKSHELF_COPILOT_PROMPT_14TH 19개 항목: A-1 Google OAuth · A-4 useRecentSearches · C-1 타이머 자동기록 · C-2 검색UX · C-3 온보딩스킵→마지막슬라이드 · C-4 Stats 연간결산카드+목표미설정amber · C-5 BookDetail 빠른노트캡처바 · C-6 OfflineBanner+uiStore.isOnline+App.tsx이벤트) — GitHub `16c06bc` / Cloudflare `9dc85ef0-452a-4d72-a2a9-e50ac54615df` |
+| 2026-03-31 | 15차 반영 (자동 테마(themeMode auto/light/dark·06:00~18:00=light·setInterval 60_000) · 알림 시스템(NotificationItem 6타입·localStorage max20·NotificationPanel 드롭다운) · TopBar 3-column grid(grid-cols-[auto_1fr_auto]·Bell 배지) · AI one-click UX(description optional·타이핑효과 18ms/char·스켈레톤·에러재시도)) — GitHub `29ec33e` / Cloudflare `d4b79c4b-24f2-49f6-8631-203449189e13` |

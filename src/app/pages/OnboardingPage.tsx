@@ -238,6 +238,7 @@ export function OnboardingPage() {
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [readingGoal, setReadingGoal] = useState(12);
   const [isSaving, setIsSaving] = useState(false);
+  const [dontShow, setDontShow] = useState(false);
   // 스와이프 제스처 상태
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const navigate = useNavigate();
@@ -275,6 +276,9 @@ export function OnboardingPage() {
       showToast("최소 1개의 장르를 선택해주세요 📚", "error");
       return;
     }
+    if (dontShow) {
+      localStorage.setItem("onboarding_dismissed", "1");
+    }
     const token = localStorage.getItem("auth_token");
     if (token) {
       setIsSaving(true);
@@ -289,7 +293,7 @@ export function OnboardingPage() {
         setIsSaving(false);
       }
     }
-    navigate("/login");
+    navigate("/signup");
   };
 
   const toggleGenre = (genre: string) => {
@@ -504,8 +508,25 @@ export function OnboardingPage() {
             </div>
           </div>
 
-          {/* 시작하기 버튼 */}
+          {/* 다시 보지 않기 + 시작하기 버튼 */}
           <div className="flex flex-col items-center gap-3 mt-auto pt-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={dontShow}
+                onChange={(e) => setDontShow(e.target.checked)}
+                className="w-4 h-4 rounded accent-indigo-500"
+              />
+              <span
+                style={{
+                  fontFamily: "var(--font-pretendard)",
+                  fontSize: 13,
+                  color: "#94A3B8",
+                }}
+              >
+                다시 보지 않기
+              </span>
+            </label>
             <button
               onClick={handleOnboardingComplete}
               disabled={isSaving}

@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { Bindings, DbUser } from '../types';
-import { createToken } from '../auth';
+import { createToken, createRefreshToken, verifyRefreshToken } from '../auth';
 
 const authRouter = new Hono<{ Bindings: Bindings }>();
 
@@ -119,16 +119,50 @@ authRouter.get('/google/callback', async (c) => {
       return c.redirect(`${frontendUrl}/login?error=google_db`);
     }
 
-    // 4. JWT 발급 → 프론트엔드로 리다이렉트 (카카오와 동일한 패턴)
+    // 4. JWT + Refresh Token 발급 → 프론트엔드로 리다이렉트
     const token = await createToken(
       { sub: user.id, email: user.email },
       c.env.JWT_SECRET,
     );
-    return c.redirect(`${frontendUrl}/?token=${encodeURIComponent(token)}&provider=google`);
+    const refreshToken = await createRefreshToken(user.id, c.env.SESSIONS);
+    return c.redirect(`${frontendUrl}/?token=${encodeURIComponent(token)}&refreshToken=${encodeURIComponent(refreshToken)}&provider=google`);
   } catch (err) {
     console.error('[Google callback error]', err);
     return c.redirect(`${frontendUrl}/login?error=google_unknown`);
   }
+});
+
+// ─── POST /api/auth/refresh ───────────────────────────────────
+// Refresh Token → 새 Access Token 발급 (refreshToken은 유지 — 다중 탭 안전)
+authRouter.post('/refresh', async (c) => {
+  const { refreshToken } = await c.req.json<{ refreshToken: string }>();
+  if (!refreshToken) {
+    return c.json({ error: 'refreshToken이 필요합니다.' }, 400);
+  }
+
+  const userId = await verifyRefreshToken(refreshToken, c.env.SESSIONS);
+  if (!userId) {
+    return c.json({ error: '유효하지 않거나 만료된 토큰입니다.' }, 401);
+  }
+
+  const user = await c.env.DB.prepare(
+    'SELECT id, email FROM users WHERE id = ?',
+  ).bind(userId).first<{ id: string; email: string }>();
+
+  if (!user) {
+    return c.json({ error: '사용자를 찾을 수 없습니다.' }, 401);
+  }
+
+  const newAccessToken = await createToken(
+    { sub: user.id, email: user.email },
+    c.env.JWT_SECRET,
+  );
+
+  // refreshToken은 기존 것을 유지 (30일 TTL, 다중 탭에서 동일 토큰 재사용 가능)
+  return c.json({
+    token: newAccessToken,
+    refreshToken,
+  });
 });
 
 export { authRouter };

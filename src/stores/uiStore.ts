@@ -152,12 +152,20 @@ export const useUiStore = create<UiState>()(
       setLoading: (loading) =>
         set({ isLoading: loading }, false, 'ui/setLoading'),
 
-      // 사이드바
-      sidebarOpen: true,
+      // 사이드바 (localStorage 영속)
+      sidebarOpen: (typeof localStorage !== 'undefined'
+        ? localStorage.getItem('sidebarOpen') !== 'false'
+        : true),
       toggleSidebar: () =>
-        set((s) => ({ sidebarOpen: !s.sidebarOpen }), false, 'ui/toggleSidebar'),
-      setSidebarOpen: (open) =>
-        set({ sidebarOpen: open }, false, 'ui/setSidebarOpen'),
+        set((s) => {
+          const next = !s.sidebarOpen;
+          localStorage.setItem('sidebarOpen', String(next));
+          return { sidebarOpen: next };
+        }, false, 'ui/toggleSidebar'),
+      setSidebarOpen: (open) => {
+        localStorage.setItem('sidebarOpen', String(open));
+        set({ sidebarOpen: open }, false, 'ui/setSidebarOpen');
+      },
 
       // 탭
       activeTab: '/',

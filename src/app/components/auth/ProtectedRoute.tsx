@@ -17,9 +17,9 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // 미인증 → 로그인 페이지로 리다이렉트
+  // 미인증 → 진입 게이트로 리다이렉트
   if (status === 'unauthenticated') {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/entry" replace />;
   }
 
   return <>{children}</>;

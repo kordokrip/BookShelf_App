@@ -24,12 +24,12 @@ app.use(
   cors({
     origin: (origin) => {
       // 개발: 모든 localhost 허용
-      // 프로덕션: workers.dev 및 Pages URL 허용
+      // 프로덕션: 정확한 프로젝트 도메인만 허용
       if (!origin) return '*';   // 동일 오리진(Origin 헤더 없음) 통과
       const allowed = [
         /^http:\/\/localhost:\d+$/,
-        /^https:\/\/bookshelf.*\.pages\.dev$/,
-        /^https:\/\/bookshelf.*\.workers\.dev$/,   // workers.dev 서비스
+        /^https:\/\/bookshelf-api\.kordokrip\.workers\.dev$/,
+        /^https:\/\/([\da-f]+\.)?bookshelf-app\.pages\.dev$/,
       ];
       return allowed.some((r) => r.test(origin)) ? origin : null;
     },

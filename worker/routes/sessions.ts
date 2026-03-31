@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { HTTPException } from 'hono/http-exception';
 import type { Bindings, DbReadingSession } from '../types';
-import { authMiddleware, optionalAuth } from '../auth';
+import { authMiddleware } from '../auth';
 
 export const sessionsRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -16,7 +16,7 @@ const createSessionSchema = z.object({
 });
 
 // ─── GET /api/sessions?book_id=&limit= ───────────────────────
-sessionsRouter.get('/', optionalAuth, async (c) => {
+sessionsRouter.get('/', authMiddleware, async (c) => {
   const userId = c.get('userId');
   const bookId = c.req.query('book_id');
   const limit = parseInt(c.req.query('limit') ?? '30');

@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { HTTPException } from 'hono/http-exception';
 import type { Bindings, DbUser } from '../types';
-import { hashPassword, verifyPassword, createToken, authMiddleware } from '../auth';
+import { hashPassword, verifyPassword, createToken, createRefreshToken, authMiddleware } from '../auth';
 import { rateLimit } from '../middleware/rateLimit';
 
 export const usersRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
@@ -63,8 +63,9 @@ usersRouter.post(
       .bind(id).first<DbUser>();
 
     const token = await createToken({ sub: id, email }, c.env.JWT_SECRET);
+    const refreshToken = await createRefreshToken(id, c.env.SESSIONS);
 
-    return c.json({ data: { user: safeUser(user!), token } }, 201);
+    return c.json({ data: { user: safeUser(user!), token, refreshToken } }, 201);
   },
 );
 
@@ -101,8 +102,9 @@ usersRouter.post(
     }
 
     const token = await createToken({ sub: user.id, email }, c.env.JWT_SECRET);
+    const refreshToken = await createRefreshToken(user.id, c.env.SESSIONS);
 
-    return c.json({ data: { user: safeUser(user), token } });
+    return c.json({ data: { user: safeUser(user), token, refreshToken } });
   },
 );
 
@@ -208,7 +210,7 @@ usersRouter.patch(
     ).bind(...values).run();
 
     const user = await c.env.DB.prepare(
-      'SELECT id, email, name, avatar_url, favorite_genres, reading_goal, created_at, updated_at FROM users WHERE id = ?'
+      'SELECT id, email, name, avatar_url, favorite_genres, reading_goal, role, created_at, updated_at FROM users WHERE id = ?'
     ).bind(userId).first();
 
     return c.json({ data: user });

@@ -3,6 +3,7 @@ import { createBrowserRouter } from "react-router";
 import { Root } from "./Root";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { SplashPage } from "./pages/SplashPage";
+import { EntryGate } from "./components/auth/EntryGate";
 import { RouteErrorFallback } from "./components/RouteErrorFallback";
 
 // ─── Lazy-loaded pages — 초기 번들 크기 최소화 ───────────────
@@ -65,6 +66,12 @@ const protected_ = (Page: React.ComponentType) => () =>
 const EB = RouteErrorFallback;
 
 export const router = createBrowserRouter([
+  // ─── 진입 게이트 ─────────────────────────────────────────
+  {
+    path: "/entry",
+    Component: EntryGate,
+    ErrorBoundary: EB,
+  },
   // ─── 공개 라우트 ─────────────────────────────────────────
   {
     path: "/splash",
@@ -111,7 +118,7 @@ export const router = createBrowserRouter([
       { path: "reading", Component: protected_(withSuspense(LazyReadingPage, "독서 로딩 중...")), ErrorBoundary: EB },
       { path: "wishlist", Component: protected_(withSuspense(LazyWishlistPage, "위시리스트 로딩 중...")), ErrorBoundary: EB },
       { path: "stats", Component: protected_(withSuspense(LazyStatsPage, "통계 로딩 중...")), ErrorBoundary: EB },
-      { path: "design-system", Component: withSuspense(LazyDesignSystemPage), ErrorBoundary: EB },
+      { path: "design-system", Component: protected_(withSuspense(LazyDesignSystemPage)), ErrorBoundary: EB },
       { path: "book/:id", Component: protected_(withSuspense(LazyBookDetailPage, "책 상세 로딩 중...")), ErrorBoundary: EB },
       { path: "yearly-review", Component: protected_(withSuspense(LazyYearlyReviewPage, "연간 결산 로딩 중...")), ErrorBoundary: EB },
     ],

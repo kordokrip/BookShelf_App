@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { HTTPException } from 'hono/http-exception';
 import type { Bindings, DbNote } from '../types';
-import { authMiddleware, optionalAuth } from '../auth';
+import { authMiddleware } from '../auth';
 
 export const notesRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -123,7 +123,7 @@ notesRouter.get('/export', authMiddleware, async (c) => {
 
 // ─── GET /api/notes ───────────────────────────────────────────
 // 사용자 노트 목록 조회 (bookId, type, search 필터)
-notesRouter.get('/', optionalAuth, async (c) => {
+notesRouter.get('/', authMiddleware, async (c) => {
   const userId = c.get('userId');
   const bookId = c.req.query('book_id');
   const type = c.req.query('type');
@@ -205,7 +205,7 @@ notesRouter.get('/', optionalAuth, async (c) => {
 });
 
 // ─── GET /api/notes/:id ──────────────────────────────────────
-notesRouter.get('/:id', optionalAuth, async (c) => {
+notesRouter.get('/:id', authMiddleware, async (c) => {
   const userId = c.get('userId');
   const id = c.req.param('id');
 

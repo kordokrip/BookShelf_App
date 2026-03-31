@@ -10,7 +10,7 @@ export interface JwtPayload {
   exp: number;
 }
 
-/** JWT 토큰 생성 (24시간 유효) */
+/** JWT Access Token 생성 (24시간 유효 — 개인 서재앱 편의 우선) */
 export async function createToken(
   payload: { sub: string; email: string },
   secret: string,
@@ -20,6 +20,24 @@ export async function createToken(
     { ...payload, iat: now, exp: now + 86400 },
     secret,
   );
+}
+
+/** Refresh Token 생성 (30일, SESSIONS KV 저장) */
+export async function createRefreshToken(
+  userId: string,
+  kv: KVNamespace,
+): Promise<string> {
+  const token = crypto.randomUUID();
+  await kv.put(`refresh:${token}`, userId, { expirationTtl: 60 * 60 * 24 * 30 });
+  return token;
+}
+
+/** Refresh Token 검증 — KV에서 userId 반환 (삭제하지 않아 다중 탭 안전) */
+export async function verifyRefreshToken(
+  token: string,
+  kv: KVNamespace,
+): Promise<string | null> {
+  return kv.get(`refresh:${token}`);
 }
 
 /** SHA-256 비밀번호 해싱 (salt 포함) - 레거시용 */
@@ -109,7 +127,10 @@ export const authMiddleware = createMiddleware<{ Bindings: Bindings; Variables: 
   },
 );
 
-/** 선택적 인증 — 토큰이 있으면 검증, 없으면 demo-user 폴백 */
+/**
+ * 선택적 인증 — 토큰이 있으면 검증, 없으면 userId = null
+ * GET 라우트에서 비인증 사용자도 접근 가능한 엔드포인트용 (현재 미사용)
+ */
 export const optionalAuth = createMiddleware<{ Bindings: Bindings; Variables: { userId: string } }>(
   async (c, next) => {
     const header = c.req.header('Authorization');
@@ -122,7 +143,8 @@ export const optionalAuth = createMiddleware<{ Bindings: Bindings; Variables: { 
         return c.json({ error: '유효하지 않은 토큰입니다.' }, 401);
       }
     } else {
-      c.set('userId', 'demo-user');
+      // demo-user 폴백 제거 — 토큰 없으면 인증 없이 진행
+      c.set('userId', '');
     }
     await next();
   },

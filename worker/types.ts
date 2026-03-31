@@ -35,6 +35,7 @@ export interface DbUser {
   kakao_id: string | null;
   google_id: string | null;
   auth_provider: string;
+  role: string; // 'admin' | 'user'
   created_at: string;
   updated_at: string;
 }
