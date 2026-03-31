@@ -3,8 +3,8 @@
 > 작성 기준: 실제 소스 코드 전수 분석 (2026-03 기준)
 > 목적: 프로덕션 오류 발생 시 UI → Hook → API → DB 레이어를 빠르게 추적하기 위한 기준 문서
 >
-> **최근 변경**: 2026-03-31 — 15차 업데이트 (자동 테마(themeMode) · 알림 시스템 · TopBar 3-column grid · AI one-click UX)
-> **이전 변경**: 2026-03-31 — 14차 업데이트 (BOOKSHELF_COPILOT_PROMPT_14TH 19개 항목: A-1 Google OAuth · A-4 useRecentSearches · C-1 타이머자동기록 · C-2 검색UX · C-3 온보딩스킵 · C-4 Stats결산카드 · C-5 빠른노트캐폜 · C-6 오프라인배너)
+> **최신 변경**: 2026-04-01 — 17차 코드 정리 (40개 UI 컴포넌트 삭제·39개 npm 의존성 제거·문서 정리)
+> **이전 변경**: 2026-04-01 — 16차 교차검증 (E2E 27/27 PASS·버그 6건 수정·데스크톱 UI/Admin/Tooltip·SideNav 접기/펼치기·EntryGate)
 
 ---
 
@@ -22,11 +22,12 @@
 | **AI** | Workers AI (`@cf/meta/llama-3.1-8b-instruct`, `@cf/meta/llama-3.2-11b-vision-instruct`) |
 | **Storage** | Cloudflare R2 (`covers/{userId}/{bookId}.{ext}`) |
 | **TypeScript check** | ✅ 0 errors |
-| **Build** | ✅ 성공 (built in 3.06s, 3031 modules, 34 assets) ★ (15차) |
+| **Build** | ✅ 성공 (built in 3.31s, PWA precache 39 entries, 1944.57 KiB) ★ (17차) |
 | **Production Health** | ✅ `{"status":"ok","env":"production"}` |
-| **GitHub 커밋** | `29ec33e` (main) ★ (15차) |
-| **Cloudflare Workers** | Version ID `d4b79c4b-24f2-49f6-8631-203449189e13` ★ (15차 배포) |
-| **D1 Tables** | users, books, reading_sessions, notes, notes_fts (FTS5), d1_migrations, _cf_KV, sqlite_sequence |
+| **E2E 테스트** | ✅ 27/27 PASS ★ (16차 교차검증) |
+| **GitHub 커밋** | `0f3cf28` (main) ★ (17차) |
+| **Cloudflare Workers** | Version ID `17eba81b-7637-4721-9a8b-0d6385efa55f` ★ (17차 배포) |
+| **D1 Tables** | users(★role), books, reading_sessions, notes(★type 'review'), notes_fts (FTS5), d1_migrations, _cf_KV, sqlite_sequence |
 
 ---
 
@@ -50,7 +51,8 @@
 | `/stats` | `StatsPage` (lazy) | **보호** | lazy import + `.catch()` 청크 에러 자동 복구 |
 | `/yearly-review` | `YearlyReviewPage` (lazy) | **보호** | ★ 신규 (FEAT-104) — lazy import, 연간 독서 결산 |
 | `/books/:id` | `Root` > `BookDetailPage` | **보호** | |
-| `/design-system` | `DesignSystemPage` | **공개** | ProtectedRoute 없음, 개발용 |
+| `/design-system` | `DesignSystemPage` (lazy) | **보호** ★ (16차) | `protected_(withSuspense(Lazy))` + 컴포넌트 내부 admin gate (`role==='admin'`) |
+| `/entry` | `EntryGate` | 공개 ★ (16차) | 인증→`/`, 비인증→`/splash` 분기 |
 | `*` | `NotFoundPage` | 공개 | 404 fallback 라우트 ✅ |
 
 > **공통**: 모든 라우트에 `errorElement={RouteErrorFallback}` 적용 — 청크 로드 오류 시 1회 자동 새로고침
@@ -120,13 +122,17 @@ deltaX = touchStartX - touchEndX
 
 ### Root 레이아웃 (`Root.tsx`)
 ```
+<TooltipProvider delayDuration={200}>  ★ (16차) 앱 루트 이동 — Radix Tooltip 전역 래핑
 <Root>
-  ├── <TopBar />      — fixed top, height: var(--topbar-h)
+  ├── <SideNav />      — lg:block hidden, 240px↔68px 동적 너비 ★ (16차)
+  ├── <TopBar />       — fixed top, height: var(--topbar-h)
   ├── <OfflineBanner /> — sticky top-0 z-40, uiStore.isOnline false 시 amber 배너 ★ (C-6)
-  ├── <main>          — min-h: calc(100svh - var(--topbar-h))
-  │                     pb: var(--page-pb) (모바일)
-  │                     lg:pb-0             (데스크톱)
-  │   └── <Outlet />  — 각 페이지 렌더링
+  ├── <main>           — min-h: calc(100svh - var(--topbar-h))
+  │                      pb: var(--page-pb) (모바일)
+  │                      lg:pb-0             (데스크톱)
+  │                      sidebarOpen ? "lg:ml-60" : "lg:ml-[68px]" ★ (16차) 동적 마진
+  │                      transition-all duration-300
+  │   └── <Outlet />   — 각 페이지 렌더링
   └── <BottomNavBar /> — fixed bottom, lg:hidden
 
 CSS 변수:
@@ -134,9 +140,12 @@ CSS 변수:
   --bottomnav-h:  64px   (BottomNavBar 높이)
   --page-pb:      calc(var(--bottomnav-h) + 1rem)  (= 80px)
 
-핵심 수정 (BUG-013 수정):
-  main에 pb-[var(--page-pb)] lg:pb-0 추가
-  → 콘텐츠 하단이 BottomNavBar(64px)에 가려지지 않도록 보장
+핵심 수정:
+  [BUG-013] main에 pb-[var(--page-pb)] lg:pb-0 추가
+  [16차] main 좌측 마진을 sidebarOpen 상태에 따라 동적 결정
+    sidebarOpen=true → lg:ml-60 (240px)
+    sidebarOpen=false → lg:ml-[68px] (68px)
+    transition-all duration-300 (부드러운 전환)
 ```
 
 ---
@@ -161,6 +170,70 @@ className="fixed-nav ..."
 
 [터치 피드백]
 active:scale-[0.92] 탭 시 미세 축소 애니메이션
+```
+
+---
+
+### SideNav (`src/app/components/navigation/SideNav.tsx`) ★ 16차 전면 개편
+```
+[레이아웃]
+데스크톱(lg:) 전용 — hidden lg:flex flex-col
+position: fixed left-0 top-0, h-screen
+sidebarOpen=true  → w-60 (240px)
+sidebarOpen=false → w-[68px]
+transition-all duration-300 (부드러운 전환)
+
+[접기/펼치기 토글] ★ (16차)
+sidebarOpen=true  → ChevronsLeft 아이콘 (상단 우측)
+sidebarOpen=false → ChevronsRight 아이콘 (하단 보라색 w-11 h-11 버튼)
+toggleSidebar() → uiStore.sidebarOpen 반전 → localStorage 영속화
+
+[Tooltip 래핑] ★ (16차)
+접힌 상태(sidebarOpen=false) 시 각 메뉴 아이콘에 Radix UI Tooltip 표시
+  → 아이콘 hover 시 label 텍스트 표시 (side="right")
+펼친 상태 → Tooltip 비활성 (label 직접 노출)
+
+[메뉴 항목] (7개)
+BookOpen → "/" (서재)
+BookOpenCheck → "/reading" (읽는 중)
+Heart → "/wishlist" (위시리스트)
+BarChart3 → "/stats" (통계)
+FileSearch → "/notes-search" (노트 검색)
+Calendar → "/yearly-review" (연간 결산)
+Palette → "/design-system" (디자인 시스템) — admin 전용 ★
+
+[Admin 체계] ★ (16차)
+isAdmin = user?.role === 'admin'
+  → ShieldCheck 아이콘 + "ADMIN" 배지 (bg-gradient violet→purple, 텍스트 xs)
+  → 디자인 시스템 링크: isAdmin일 때만 표시
+접힌 상태에서도 ShieldCheck → Tooltip "관리자" 표시
+
+[사용자 프로필 영역]
+하단: 사용자 아바타(이니셜) + 이름 + 이메일
+LogOut 아이콘 → authStore.logout() → navigate('/login')
+접힌 상태 → 아바타만 표시, Tooltip에 이름
+
+[데이터 소스]
+useAuthStore(s => s.user) → user.name, user.email, user.role
+useUiStore(s => s.sidebarOpen) → 접기/펼치기 상태
+useBooks({ status }) → reading/wish 카운트 배지
+```
+
+---
+
+### EntryGate (`src/app/components/auth/EntryGate.tsx`) ★ 16차 신규
+```
+[경로] /entry
+
+[동작]
+useAuthStore(s => s.status) 구독
+  status === 'authenticated' → <Navigate to="/" replace />
+  status === 'unauthenticated' → <Navigate to="/splash" replace />
+  status === 'idle' || 'loading' → 로딩 스피너 표시
+
+[용도]
+앱 최초 진입점 — 인증 상태에 따라 적절한 페이지로 라우팅
+딥링크 또는 북마크로 /entry 직접 접근 시 안전한 분기 제공
 ```
 
 ---
@@ -211,14 +284,18 @@ App.tsx window.addEventListener('online')  → setOnline(true)  → OfflineBanne
 
 ---
 
-### TopBar (`src/app/components/navigation/TopBar.tsx`) ★ 15차 전면 개편
+### TopBar (`src/app/components/navigation/TopBar.tsx`) ★ 15~16차 전면 개편
 ```
 [레이아웃]
 이전(14차): flex + h-14 + absolute left-1/2 (제목 절대 위치)
 현재(15차): grid grid-cols-[auto_1fr_auto]
   left  (auto): 뒤로/메뉴 버튼 (NavigationLeft)
   center (1fr): 타이틀 (truncate, 오버플로 말줄임)
-  right (auto): 테마토글(hidden sm:flex) + Bell(NotificationPanel)
+  right (auto): BookPlus ★(16차) + FileSearch ★(16차) + 테마토글(hidden sm:flex) + Bell(NotificationPanel)
+
+[아이콘 변경] ★ (16차)
+  Plus → BookPlus (책 등록)
+  Search → FileSearch (노트 검색)
 
 [themeMode 3-state 버튼]
 cycleThemeMode() 호출 → auto → light → dark 순환
@@ -768,7 +845,7 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 | GET | `/api/users/profile` | **authMiddleware** | — | `{data: user}` | `routes/users.ts` |
 | GET | `/api/users/:id` | 없음 | — | `{data: user}` | `routes/users.ts` |
 | POST | `/api/users` | 없음 | `{id, email, name, avatar_url?}` | `{data: user}` 201 | `routes/users.ts` |
-| PATCH | `/api/users/profile` | **authMiddleware** | `{name?, favorite_genres?, reading_goal?, avatar_url?}` (zod 검증 ✅) | `{data}` | `routes/users.ts` |
+| PATCH | `/api/users/profile` | **authMiddleware** | `{name?, favorite_genres?, reading_goal?, avatar_url?}` (zod 검증 ✅) | `{data}` (SELECT 시 role 포함 ★16차) | `routes/users.ts` |
 
 ### 책 (`/api/books`)
 
@@ -1460,3 +1537,5 @@ Global QueryClient 설정:
 | 2026-03-30 | 13차 반영 (27개 COPILOT 개선항목 전체 완료: FEAT-101 성취배지, FEAT-102 OCR신뢰도, FEAT-103 Web Share, FEAT-104 YearlyReviewPage, UX-101~107 전체 — WishBookDetailSheet·최근검색어·노트필터+색상바·로그인UX·스플래시슬로건) — GitHub `82a94e1e` / Cloudflare `82a94e1e-6334-456a-a6a2-6d11656d5722` |
 | 2026-03-31 | 14차 반영 (BOOKSHELF_COPILOT_PROMPT_14TH 19개 항목: A-1 Google OAuth · A-4 useRecentSearches · C-1 타이머 자동기록 · C-2 검색UX · C-3 온보딩스킵→마지막슬라이드 · C-4 Stats 연간결산카드+목표미설정amber · C-5 BookDetail 빠른노트캡처바 · C-6 OfflineBanner+uiStore.isOnline+App.tsx이벤트) — GitHub `16c06bc` / Cloudflare `9dc85ef0-452a-4d72-a2a9-e50ac54615df` |
 | 2026-03-31 | 15차 반영 (자동 테마(themeMode auto/light/dark·06:00~18:00=light·setInterval 60_000) · 알림 시스템(NotificationItem 6타입·localStorage max20·NotificationPanel 드롭다운) · TopBar 3-column grid(grid-cols-[auto_1fr_auto]·Bell 배지) · AI one-click UX(description optional·타이핑효과 18ms/char·스켈레톤·에러재시도)) — GitHub `29ec33e` / Cloudflare `d4b79c4b-24f2-49f6-8631-203449189e13` |
+| 2026-04-01 | 16차 반영 (교차검증: E2E 27/27 PASS · 프론트엔드 버그 6건 수정 · SideNav 접기/펼치기+Tooltip+Admin 체계 · TopBar BookPlus/FileSearch 아이콘 · EntryGate /entry 라우트 · Root 동적 마진 · D1 0004_user_role.sql · PATCH /api/users/profile role · authStore role) — Git `0f3cf28` / Cloudflare `719eeb80` |
+| 2026-04-01 | 17차 반영 (코드 정리: 40개 미사용 UI 컴포넌트 삭제(47→21개 잔존) · 39개 npm 의존성 제거 · 문서 정리·중복 파일 삭제) — Cloudflare `17eba81b-7637-4721-9a8b-0d6385efa55f` |

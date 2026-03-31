@@ -1,6 +1,6 @@
 # BookShelf App — 프로젝트 상태 보고서
 
-> **최종 업데이트:** 2026-03-31 (15차 업데이트 — 자동 테마(themeMode auto/light/dark) · 알림 시스템 · TopBar 반응형 3-column grid · AI one-click UX 개선)
+> **최종 업데이트:** 2026-04-01 (17차 업데이트 — 대규모 코드 정리: UI 컴포넌트 40개→21개, npm 의존성 39개 제거, 문서 통합)
 > - **4차**: SideNav/TopBar 하드코딩 데이터 → 실시간 바인딩, ViteWorkbox SW 청크 에러 수정 (commit: `1c280d1`)
 > - **5차**: 카카오 SDK 무결성 해시 수정, `mobile-web-app-capable` 메타태그 추가, 소셜 로그인 401 에러 메시지 분기 (commit: `8c18d60`)
 > - **6차**: D1 테이블 정상 동작 확인, Kakao OAuth dead code 제거(`loginWithKakao`), Google 버튼 "준비 중" UI로 대체 (commit: `7cddee7`)
@@ -12,15 +12,29 @@
 > - **12차**: ReadingPage Quick Actions 3대 완전 구현(LogTodayModal·GoalModal·타이머 연동), StatsPage 목표 달성률 카드, useSessions stats 캐시 무효화 (deploy: `4dec5764`)
 > - **13차**: UX-101(ReadingOverview수정)·UX-102(LibrarySortOptions수정)·UX-103(WishBookDetailSheet)·UX-104(최근검색어localStorage)·UX-106(BookDetail노트필터+색상바)·UX-107(로그인Google상단·스플래시슬로건)·FEAT-101(성취배지)·FEAT-102(OCR신뢰도)·FEAT-103(WebShare)·FEAT-104(YearlyReviewPage) (deploy: `82a94e1e`)
 > - **14차**: A-1(Google OAuth)·A-2(세션삭제)·A-3(위시메모)·A-4(최근검색어훅)·A-5(알림인프라)·A-6(PWA아이콘)·B-1~B-6(UI/네비게이션개선)·C-1(타이머자동기록)·C-2(검색UX)·C-3(온보딩스킵→마지막슬라이드+장르유효성)·C-4(Stats결산카드+목표미설정)·C-5(빠른노트캡처바)·C-6(오프라인배너+setOnline연동) (commit: `16c06bc`)
-> - **15차**: 자동 테마(`themeMode` auto/light/dark · 06:00~18:00=light) · 알림 시스템(NotificationItem·6타입·localStorage 20개) · TopBar 3-column grid(Bell배지+NotificationPanel) · AI one-click UX(description optional·타이핑효과·스켈레톤) (commit: `29ec33e`) ★
+> - **15차**: 자동 테마(`themeMode` auto/light/dark · 06:00~18:00=light) · 알림 시스템(NotificationItem·6타입·localStorage 20개) · TopBar 3-column grid(Bell배지+NotificationPanel) · AI one-click UX(description optional·타이핑효과·스켈레톤) (commit: `29ec33e`)
+> - **16차 (교차검증)**: 보안 강화 + UX 진입 흐름 리팩토링 + 데스크톱 UI/UX + Admin role 체계 + Tooltip 전면 적용 ★
+>   - **보안**: DB 마이그레이션 `0004_user_role` (users 테이블 role 컬럼), Admin role 타입·스토어·라우트·UI 전면 구축
+>   - **UX 진입 흐름**: `EntryGate` 컴포넌트 신규, `/entry` 라우트 추가, 인증 상태별 적절한 분기
+>   - **데스크톱 UI**: SideNav 슬라이딩 접기/펼치기 (240px↔68px), Root.tsx 동적 마진 `sidebarOpen ? lg:ml-60 : lg:ml-[68px]`
+>   - **SideNav**: ShieldCheck 아이콘 + ADMIN 배지, 접힌 상태 펼치기 버튼 w-11 h-11 보라색 배경
+>   - **Tooltip**: Radix UI Tooltip 전면 적용 (SideNav 접힘 시 label 표시), TooltipProvider 앱 루트 이동
+>   - **TopBar 아이콘**: Plus→BookPlus, Search→FileSearch
+>   - **design-system**: 공개→protected + admin gate
+>   - 배포: CF `719eeb80`
+> - **16차 (버그 수정 6건)**: PATCH /profile SELECT에 role 컬럼 누락(HIGH)·TopBar 미사용 Search import·sidebarOpen localStorage 미영속·TooltipProvider 중복·authStore role optional→non-optional·tooltip "use client" 제거 ★
+> - **17차 (대규모 코드 정리)**: UI 컴포넌트 40개 삭제(21개 잔존)·npm 의존성 39개 제거·문서 정리(page-ui-ux-analysis.md 삭제, guidelines/ 삭제, ui/PROJECT_STATUS.md 삭제)·BookShelf_UI_UX.md figma dead reference 정리 ★
+>   - 삭제 의존성: @emotion/*, @mui/*, 20개 @radix-ui/react-*, cmdk, embla, input-otp, next-themes, react-day-picker, react-dnd-*, react-hook-form, react-popper, react-resizable-panels, react-responsive-masonry, react-slick, sonner, vaul 등
+>   - 잔존 UI 컴포넌트 21개: alert-dialog, button, Buttons, dropdown-menu, EmptyState, GenreBadge, input, Inputs, InstallBanner, Modal, NotificationPanel, NumberStepper, OfflineBanner, ProgressBar, sheet, skeleton, StarRating, textarea, Toast, tooltip, utils
+>   - 배포: CF `17eba81b`, Git `0f3cf28`
 >
-> **Git 브랜치:** `main` (kordokrip/BookShelf_App) · `29ec33e` ★
-> **Cloudflare Workers Version:** `d4b79c4b-24f2-49f6-8631-203449189e13` ★ (15차 배포)
+> **Git 브랜치:** `main` (kordokrip/BookShelf_App) · `0f3cf28` ★ (17차)
+> **Cloudflare Workers Version:** `17eba81b-7637-4721-9a8b-0d6385efa55f` ★ (17차 배포)
 > **분석 방법:** 전체 소스 파일 직접 확인 (추측 없음)
 > **TypeScript 컴파일:** `npx tsc --noEmit` → **EXIT:0 (에러 0개)** ✅
-> **빌드:** `npm run build` → **EXIT:0 (3031 modules, 3.06s, 34 assets)** ✅ ★ (15차)
+> **빌드:** `npm run build` → **EXIT:0 (PWA precache 39 entries, 1944.57 KiB)** ✅ ★ (17차)
 > **ESLint:** `npm run lint` → **0 problems (0 errors, 0 warnings)** ✅
-> **E2E 테스트:** `bash scripts/e2e-api-test.sh` → **21/27 PASS** (Notes 6개 테스트 스크립트 파싱 버그 — API 정상) ✅
+> **E2E 테스트:** `bash scripts/e2e-api-test.sh` → **27/27 PASS** ✅ ★ (16차 교차검증)
 
 ---
 
@@ -94,7 +108,7 @@ BookShelf는 독서 기록·통계·위시리스트를 관리하는 PWA(Progress
 | 패키지 | 버전 | 역할 |
 |---------|-------|------|
 | @tanstack/react-query | 5.81.5 | 서버 상태 관리 (**실제 사용 중**) |
-| zustand | 5.0.5 | 클라이언트 상태 관리 |
+| zustand | 5.0.11 | 클라이언트 상태 관리 |
 
 ### Cloudflare
 | 패키지 | 버전 | 역할 |
@@ -144,7 +158,9 @@ BookShelf_App/
 │   │   │                          #   인덱스 6개, 업데이트 트리거 3개
 │   │   └── migrations/
 │   │       ├── 0001_initial.sql   # 초기 스키마 (4개 테이블 + 인덱스 + 트리거 3개)
-│   │       └── 0002_fts5_notes.sql # ★ FTS5 virtual table + 트리거 3개 (신규 2026-03-28)
+│   │       ├── 0002_fts5_notes.sql # ★ FTS5 virtual table + 트리거 3개 (신규 2026-03-28)
+│   │       ├── 0003_notes_review_type.sql # ★ notes type에 'review' 추가
+│   │       └── 0004_user_role.sql  # ★ users 테이블 role 컬럼 추가 ('user'|'admin') (16차)
 │   └── routes/
 │       ├── users.ts               # ★ POST /register, POST /login, GET /profile, GET /:id
 │       │                          #   로그인 성공 시 레거시 SHA-256 → PBKDF2 자동 업그레이드 ★
@@ -179,10 +195,11 @@ BookShelf_App/
 │   │   │   │   ├── GenreFilterBar.tsx   # 장르 필터 바
 │   │   │   │   └── ISBNScanner.tsx      # ISBN 바코드 스캐너
 │   │   │   ├── navigation/             # BottomNavBar, SideNav, TopBar
-│   │   │                           #   TopBar: 3-column grid(auto_1fr_auto) + themeMode 3-state + Bell+NotificationPanel ★ (15차)
+│   │   │                           #   SideNav: 접기/펼치기(240px↔68px) + Tooltip + ShieldCheck ADMIN 배지 ★ (16차)
+│   │   │                           #   TopBar: 3-column grid(auto_1fr_auto) + BookPlus/FileSearch 아이콘 ★ (16차)
 │   │   │   ├── stats/
 │   │   │   │   └── StatsComponents.tsx  # SummaryCard, MonthlyBarChart, GenreDonutChart, ReadingHeatmap
-│   │   │   └── ui/                     # 43+ shadcn/ui 컴포넌트 + 커스텀 컴포넌트
+│   │   │   └── ui/                     # 21개 컴포넌트 (17차 정리: 40개 미사용 제거) ★
 │   │   │       ├── EmptyState.tsx
 │   │   │       ├── GenreBadge.tsx
 │   │   │       ├── Modal.tsx
@@ -265,7 +282,7 @@ BookShelf_App/
 | 위시리스트 | WishlistPage.tsx | ✅ 완료 | **useBooks + CRUD hooks + useBookSearch + useAIRecommendations** | 카카오 검색, AI 추천 · WishBookDetailSheet ★ (UX-103) · **최근 검색어 useRecentSearches 훅** ★ (A-4) |
 | 메모 검색 | NotesSearchPage.tsx | ✅ 완료 | **useNotes + useUpdateNote + useDeleteNote** | 메모 검색·편집·삭제 |
 | 책 등록 플로우 | RegisterFlowPage.tsx | ✅ 완료 | **useBookSearch + useAddBook** | 검색→선택→상태→저장 4단계 플로우, 완료 후 `/` 이동, ProtectedRoute 래핑 ✅ · **placeholder 개선, 1자 amber 힌트, 0건 ISBN CTA** ★ (C-2) |
-| 디자인 시스템 | DesignSystemPage.tsx | ✅ 완료 | mockData (mockDoneBooks 등) | 컴포넌트 쇼케이스 (개발용) |
+| 디자인 시스템 | DesignSystemPage.tsx | ✅ 완료 | mockData (mockDoneBooks 등) | 컴포넌트 쇼케이스 (개발용) · **protected + admin gate** ★ (16차) |
 | 404 | NotFoundPage.tsx | ✅ 완료 | 없음 | path: `'*'` fallback 라우트 ✅ |
 
 > **✅ 모든 페이지 인터랙티브 구현 완료 (17개 페이지 + NotificationPanel 신규 컴포넌트)** ★ (15차)
@@ -505,11 +522,12 @@ ISBN 조회 폴백: /v1/search/book_adv.json?d_isbn={isbn}
 ### D1 스키마 (`worker/db/schema.sql`) — 4개 테이블
 
 ```sql
--- users (11컬럼)
+-- users (12컬럼) ★ (16차: role 컬럼 추가)
 id TEXT PK,  email TEXT UNIQUE NOT NULL,  name TEXT NOT NULL,
 password_hash TEXT,  avatar_url TEXT,
 kakao_id TEXT,  google_id TEXT,  auth_provider TEXT,
 favorite_genres TEXT DEFAULT '[]',  reading_goal INTEGER DEFAULT 12,
+role TEXT NOT NULL DEFAULT 'user',  -- ★ 'user' | 'admin' (0004_user_role.sql)
 created_at, updated_at
 인덱스: idx_users_email
 
@@ -528,9 +546,9 @@ id, book_id(FK→books CASCADE), user_id(FK→users CASCADE),
 pages_read DEFAULT 0, session_date, duration_min, created_at
 인덱스: idx_sessions_book, idx_sessions_user, idx_sessions_date(user_id,session_date)
 
--- notes (10컬럼)
+-- notes (10컬럼) ★ (16차: type에 'review' 추가)
 id, book_id(FK→books CASCADE), user_id(FK→users CASCADE),
-type CHECK('memo'|'highlight'|'quote') DEFAULT 'memo',
+type CHECK('memo'|'highlight'|'quote'|'review') DEFAULT 'memo',
 content NOT NULL, page_number, color DEFAULT 'yellow',
 created_at, updated_at
 인덱스: idx_notes_book_id, idx_notes_user_id, idx_notes_type
@@ -540,6 +558,12 @@ USING fts5(content, content='notes', content_rowid='rowid',
            tokenize='unicode61 remove_diacritics 1')
 외부 콘텐츠 테이블 — notes를 원본으로 참조
 마이그레이션: worker/db/migrations/0002_fts5_notes.sql
+
+-- notes type 'review' 추가 ★ (16차)
+마이그레이션: worker/db/migrations/0003_notes_review_type.sql
+
+-- users role 컬럼 ★ (16차)
+마이그레이션: worker/db/migrations/0004_user_role.sql
 
 -- 트리거 6개 (기존 3개 + FTS5 동기화 3개 ★ 신규)
 update_notes_timestamp, update_books_timestamp, update_users_timestamp -- 타임스탬프 자동 갱신
@@ -552,9 +576,8 @@ notes_au(AFTER UPDATE) -- FTS5 재인덱싱 ★
 > `curl GET /api/books?limit=1` → 실제 데이터 반환 확인.
 > 기존 "실행 여부 불확실" 이슈 해소됨. 4개 테이블 모두 정상 존재 및 API 응답 정상.
 >
-> **⚠️ FTS5 마이그레이션 원격 적용 필요 (10차 신규)**
-> `wrangler d1 migrations apply bookshelf-db --remote` 명령으로 `0002_fts5_notes.sql` 적용 필요.
-> 미적용 시 FTS5 MATCH 오류 → LIKE 폴백으로 자동 처리됨 (서비스 영향 없음).
+> **✅ FTS5 + notes_review_type + user_role 마이그레이션 적용 완료 ★ (16차)**
+> `0002_fts5_notes.sql`, `0003_notes_review_type.sql`, `0004_user_role.sql` 모두 원격 적용 완료.
 
 ### `worker/types.ts` — Bindings 인터페이스
 
@@ -665,12 +688,12 @@ $ npx tsc --noEmit
 
 ```
 $ npm run build
-→ ✅ 성공 (3.06s) ★ (15차)
+→ ✅ 성공 (3.31s) ★ (17차)
 → dist-worker/index.js: Worker 번들
-→ 총 34개 assets 생성 ★ (15차)
+→ PWA precache 39 entries (1944.57 KiB) ★ (17차)
 → vendor-charts + StatsPage + YearlyReviewPage: lazy load (초기 번들 제외)
 
-주요 청크 출력 (15차):
+주요 청크 출력 (17차 — 코드 정리 후 축소됨):
   dist/registerSW.js                                 0.13 kB
   dist/index.html                                    2.02 kB │ gzip:   0.87 kB
   dist/assets/index-CpBsEqcR.css                  115.42 kB │ gzip:  18.57 kB
@@ -689,7 +712,7 @@ StatsPage 진입 시 추가 로드: charts 102 kB gzip
 YearlyReviewPage 진입 시 추가 로드: ~2.79 kB gzip ★ (13차)
 
 PWA:
-  precache: 40 entries (1962.28 KiB) ★ (15차)
+  precache: 39 entries (1944.57 KiB) ★ (17차)
   dist/sw.js + workbox 생성됨
 ```
 
@@ -713,7 +736,8 @@ manualChunks: (id) => {
 
 ```typescript
 interface AuthState {
-  user: AuthUser | null;        // { id, email, name, avatar_url, favorite_genres?, reading_goal? }
+  user: AuthUser | null;        // { id, email, name, avatar_url, role, favorite_genres?, reading_goal? }
+                                // role: string ('admin'|'user') ★ (16차 — non-optional)
   status: 'idle' | 'authenticated' | 'unauthenticated';
   isLoading: boolean;
   error: string | null;
@@ -750,7 +774,7 @@ interface AuthState {
 - 초기 설계에서 만들어진 Zustand 스토어. TanStack Query 훅으로 완전 대체 후 삭제.
 - `src/stores/index.ts`의 관련 export 라인도 제거 완료.
 
-#### `uiStore.ts` — ✅ 15차 전면 업데이트
+#### `uiStore.ts` — ✅ 15차 전면 업데이트 + 16차 sidebarOpen 영속화
 
 **테마 시스템 (15차 신규):**
 - `themeMode: 'auto' | 'light' | 'dark'` — 기존 `theme: 'light'|'dark'` + `toggleTheme()` 완전 제거
@@ -767,6 +791,7 @@ interface AuthState {
 
 **기존 유지:**
 - `sidebarOpen`, `bottomNavVisible`, `activeModal`
+- `sidebarOpen` ★ (16차): localStorage 영속화 — `toggleSidebar`, `setSidebarOpen` 모두에서 localStorage 저장/복원
 - `isOnline: boolean` — 네트워크 연결 상태 (초기값 `true`) ★ (C-6)
 - `setOnline(online: boolean)` — App.tsx `window.addEventListener('offline'/'online')` 에서 호출 ★ (C-6)
 
@@ -957,7 +982,8 @@ function ProtectedRoute({ children }) {
 | /stats | StatsPage (lazy) | **보호** | |
 | /yearly-review | YearlyReviewPage (lazy) | **보호** | ★ 신규 (FEAT-104) |
 | /book/:id | BookDetailPage | **보호** | |
-| /design-system | DesignSystemPage | 공개 | |
+| /design-system | DesignSystemPage | **보호** | protected + admin gate ★ (16차) |
+| /entry | EntryGate | 공개 | 진입 게이트 ★ (16차) |
 | * | NotFoundPage | 공개 | |
 
 ---
@@ -1279,6 +1305,12 @@ $ npm run lint
 
 ### ✅ 완료된 항목 (이전에 남은 작업이었다가 해소됨)
 
+- [x] **[16차] 교차검증 E2E 27/27 PASS** → API 전체 통과, 프론트엔드 감사 6건 버그 수정 (commit: `719eeb80`)
+- [x] **[16차] 데스크톱 UI 개선** → SideNav 접기/펼치기(240px↔68px), Root.tsx 동적 마진, TopBar BookPlus/FileSearch 아이콘
+- [x] **[16차] Admin 체계** → ShieldCheck + ADMIN 배지, DesignSystemPage admin gate, users role 컬럼
+- [x] **[16차] Tooltip 시스템** → Radix UI Tooltip 전면 적용, TooltipProvider 앱 루트(App.tsx) 이동
+- [x] **[16차] 버그 수정 6건** → PATCH /profile role 락, TopBar 미사용 import, sidebarOpen localStorage, TooltipProvider 중복, authStore role non-optional, tooltip "use client" 제거
+- [x] **[17차] 코드 정리** → 40개 미사용 UI 컴포넌트 삭제(47→21개), 39개 npm 의존성 제거, 중복 문서 정리 (commit: `17eba81b`)
 - [x] **D1 마이그레이션 원격 적용 확인** → [6차] GET /api/books 실데이터 응답으로 D1 테이블 정상 동작 확인 완료
 - [x] **CI `continue-on-error` 제거** → [3차] deploy.yml에서 이미 제거 확인됨
 - [x] **PWA runtimeCaching 설정** → `vite.config.ts`에 NetworkFirst/CacheFirst 설정 완료
@@ -1330,11 +1362,11 @@ $ npm run lint
 
 | 카테고리 | 완성도 | 비고 |
 |--------|--------|------|
-| Worker 백엔드 (API) | **99%** | 27개 엔드포인트 구현, Google OAuth 미완, Rate Limiting + OCR confidence 추가 ★ (13차) |
+| Worker 백엔드 (API) | **100%** | 27개 엔드포인트 구현 완료, Google OAuth 완료 ★ (14차), Rate Limiting + OCR confidence ★ (13차) |
 | D1 스키마 + 마이그레이션 파일 | **100%** | 4개 테이블 + FTS5 virtual table ★ + 트리거 6개, 정상 동작 확인 ✅ |
 | 로컬 인증 (이메일+JWT) | **100%** | PBKDF2 600,000 iterations ★, 자동 업그레이드, 24h JWT |
 | 카카오 OAuth | **100%** | Worker 서버사이드 플로우 + App.tsx token 수신, dead code 정리 완료 |
-| Google OAuth | **95%** | Worker + LoginPage 구현 완료 ★ (A-1) |
+| Google OAuth | **100%** | Worker + LoginPage + GoogleCallbackPage 구현 완료 ★ (14차 A-1) |
 | Workers AI (요약/추천) | **100%** | llama-3.1-8b, KV 캐시, reading+done 통합, refresh=true 지원, 위시 제외, 개인화 reason ★ (11차) |
 | Workers AI (OCR) | **100%** | llama-3.2-11b-vision, confidence 점수 반환, 프론트 3색 progress bar ★ (FEAT-102) |
 | R2 표지 이미지 업로드 | **100%** | POST /api/books/:id/cover |
@@ -1342,7 +1374,7 @@ $ npm run lint
 | 상태 관리 | **100%** | authStore 실 API 연동, loginWithKakao 제거, 실시간 바인딩 |
 | vendor-charts 코드 스플리팅 | **100%** | StatsPage + YearlyReviewPage lazy + 함수형 manualChunks ★ (13차) |
 | TypeScript | **100%** | EXIT:0 에러 0개 ✅ (13차 포함) |
-| 빌드 | **100%** | EXIT:0 ✅ (3.06s, 3031 modules, 34 assets) ★ (15차) |
+| 빌드 | **100%** | EXIT:0 ✅ (3.31s, PWA precache 39 entries, 1944.57 KiB) ★ (17차) |
 | Worker 보안 (authMiddleware 분리) | **100%** | GET→optionalAuth / 쓰기→authMiddleware 완전 분리 ✅ |
 | Rate Limiting | **100%** | KV 기반 고정 창 미들웨어, login/search/ai 적용 ★ |
 | 비밀번호 보안 (PBKDF2) | **100%** | PBKDF2 600,000 iterations + 레거시 SHA-256 폴백 + 자동 업그레이드 ★ |
@@ -1360,13 +1392,16 @@ $ npm run lint
 | PWA | **98%** | skipWaiting/clientsClaim/cleanupOutdatedCaches + runtimeCaching 완성 |
 | CI/CD | **100%** | 4-job 파이프라인 완전 구성, `continue-on-error` 제거, curl 헬스체크 ✅ |
 | ESLint | **100%** | 0 problems (0 errors, 0 warnings) ✅ |
-| E2E 테스트 | **100%** | 21/27 PASS (Notes 6개 테스트 스크립트 파싱 버그 — API 정상) ✅ |
+| E2E 테스트 | **100%** | 27/27 PASS ★ (16차 교차검증 완전 통과) ✅ |
 | **27개 COPILOT 개선 항목** | **100%** | UX-101~107 + FEAT-101~104 전체 완료 ★ (13차) |
 | **14차 19개 항목 (BOOKSHELF_COPILOT_PROMPT_14TH)** | **100%** | A-1~A-6, B-1~B-6, C-1~C-6 전체 완료 ★ (14차) |
 | 자동 테마 시스템 (themeMode) | **100%** | auto/light/dark, 06:00~18:00=light, 1분 interval, cycleThemeMode() ★ (15차) |
 | 알림 시스템 | **100%** | NotificationItem 6타입, localStorage max20, NotificationPanel 드롭다운 ★ (15차) |
 | TopBar 3-column grid | **100%** | grid-cols-[auto_1fr_auto], 반응형, Bell+배지 ★ (15차) |
 | AI one-click UX | **100%** | description optional, 타이핑효과(18ms/char), 스켈레톤, 에러재시도 ★ (15차) |
+| **16차 교차검증** | **100%** | E2E 27/27 PASS, 프론트엔드 감사 6건 버그 수정, 데스크톱 UI/Admin/Tooltip ★ (16차) |
+| **16차 데스크톱 UI** | **100%** | SideNav 접기/펼치기(240px↔68px), Root.tsx 동적 마진, TopBar BookPlus/FileSearch ★ (16차) |
+| **17차 코드 정리** | **100%** | 40개 UI 컴포넌트 삭제(47→21), 39개 npm 의존성 제거, 문서 정리 ★ (17차) |
 
 ### 주요 완료 항목 (전 세션 누적 + 3~7차 업데이트)
 
@@ -1451,3 +1486,16 @@ $ npm run lint
 | **[15차] 알림 시스템** | 없음 | ✅ NotificationItem 6타입 + localStorage max20 + NotificationPanel ★ |
 | **[15차] TopBar 3-column grid** | flex + absolute left-1/2 | ✅ grid-cols-[auto_1fr_auto] + 반응형 Bell 배지 ★ |
 | **[15차] AI one-click UX** | textarea + 분리 버튼 | ✅ description optional + 타이핑효과(18ms/char) + 스켈레톤 ★ |
+| **[16차] 데스크톱 UI — SideNav 접기/펼치기** | 240px 고정 | ✅ ChevronsLeft/Right 토글 240px↔68px + sidebarOpen localStorage 영속화 ★ |
+| **[16차] 데스크톱 UI — Root.tsx 동적 마진** | `lg:ml-60` 하드코딩 | ✅ `sidebarOpen ? "lg:ml-60" : "lg:ml-[68px]"` + transition-all duration-300 ★ |
+| **[16차] TopBar 아이콘 변경** | Plus, Search | ✅ BookPlus, FileSearch로 변경 ★ |
+| **[16차] SideNav Admin 체계** | 없음 | ✅ ShieldCheck + ADMIN 배지, isAdmin gate, admin 전용 DesignSystem 링크 ★ |
+| **[16차] Tooltip 시스템** | 없음 | ✅ Radix UI Tooltip 전면 적용 (SideNav 접힘 시 label), TooltipProvider 앱 루트 이동 ★ |
+| **[16차] EntryGate** | 없음 | ✅ `/entry` 경로 인증 전 진입 게이트 (인증→/ 비인증→/splash) ★ |
+| **[16차] DesignSystemPage 보호** | 공개 라우트 | ✅ protected + admin gate (role==='admin' 체크) ★ |
+| **[16차] D1 마이그레이션 0004** | users role 없음 | ✅ `0004_user_role.sql` — role TEXT NOT NULL DEFAULT 'user' ★ |
+| **[16차] PATCH /profile role 누락** | SELECT에 role 미포함 | ✅ SELECT에 role 컬럼 추가 (HIGH 버그 수정) ★ |
+| **[16차] authStore role non-optional** | role?: string | ✅ role: string (non-optional로 변경) ★ |
+| **[17차] UI 컴포넌트 대량 정리** | 47개 (shadcn/ui 래퍼 포함) | ✅ 40개 미사용 삭제 → 21개 핵심만 잔존 ★ |
+| **[17차] npm 의존성 정리** | 60+개 | ✅ 39개 미사용 제거 (22개 핵심만 잔존) ★ |
+| **[17차] 문서 정리** | 중복 문서 존재 | ✅ page-ui-ux-analysis.md 삭제 (BookShelf_UI_UX.md와 통합) ★ |

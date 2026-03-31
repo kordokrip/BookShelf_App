@@ -1,8 +1,8 @@
 # BookShelf App — UI/UX 완전 명세서
 
-> **문서 버전**: v1.0  
-> **최종 업데이트**: 2025-07-16  
-> **대상 커밋**: `29ec33e` / Cloudflare `d4b79c4b`  
+> **문서 버전**: v1.2  
+> **최종 업데이트**: 2025-07-16 (17차 코드 정리 반영)  
+> **대상 커밋**: `0f3cf28` / Cloudflare `17eba81b`  
 > **목적**: 코드레벨 교차 검증을 통한 완전한 UI/UX 명세. 이 문서만으로 모든 버튼, 이미지, 데이터 바인딩, API 호출을 파악할 수 있도록 작성.
 
 ---
@@ -18,7 +18,8 @@
 - [6. 알림 시스템](#6-알림-시스템)
 - [7. 토스트 시스템](#7-토스트-시스템)
 - [8. 인증 플로우](#8-인증-플로우)
-- [9. 페이지별 상세 UI/UX (15개)](#9-페이지별-상세-uiux-15개)
+- [9. 페이지별 상세 UI/UX (16개)](#9-페이지별-상세-uiux-16개)
+  - [9.0 EntryGate (진입 분기)](#90-entrygate-진입-분기)
   - [9.1 SplashPage](#91-splashpage)
   - [9.2 OnboardingPage](#92-onboardingpage)
   - [9.3 LoginPage](#93-loginpage)
@@ -50,7 +51,7 @@
 | **앱 이름** | BookShelf (북쉘프) |
 | **슬로건** | "나만의 독서 기록 공간" / "내 독서의 모든 순간을 기록하세요" |
 | **프론트엔드** | React 18.3.1 + TypeScript 5.9.3 + Vite 6.3.5 |
-| **UI 프레임워크** | Tailwind CSS + shadcn/ui (47개 래퍼) + Lucide React 아이콘 |
+| **UI 프레임워크** | Tailwind CSS 4.1.12 + 21개 핵심 UI 컴포넌트 (17차: 40개 미사용 shadcn/ui 래퍼 삭제) + Lucide React 0.525.0 |
 | **상태 관리** | Zustand v5.0.11 (authStore, uiStore) + TanStack Query v5.90.21 |
 | **차트** | recharts (BarChart, PieChart) |
 | **애니메이션** | framer-motion (AnimatePresence) |
@@ -155,9 +156,10 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 
 ```
 <ToastProvider>
+ <TooltipProvider>                  ← ★ 16차: Radix UI Tooltip 글로벌 래퍼
   <div class="min-h-svh bg-[#F8FAFC] dark:bg-[#0F172A]">
-    <SideNav />                    ← 데스크톱 전용 (lg:flex, 240px 고정 좌측)
-    <div class="lg:ml-60">        ← 데스크톱에서 SideNav 여백
+    <SideNav />                    ← 데스크톱 전용 (lg:flex, 240px↔️68px 접기/펼치기)
+    <div :class="sidebarOpen ? 'lg:ml-60' : 'lg:ml-[68px]'">  ← ★ 16차: 동적 마진
       <TopBar />                   ← sticky top-0, 56px 높이
       <OfflineBanner />            ← 오프라인 시만 표시
       <main class="min-h-[calc(100svh-var(--topbar-h))] pb-[var(--page-pb)] lg:pb-0">
@@ -168,6 +170,7 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
     </div>
     <BottomNavBar />               ← 모바일 전용 (lg:hidden, 60px 하단 고정)
   </div>
+ </TooltipProvider>
 </ToastProvider>
 ```
 
@@ -175,8 +178,9 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 
 | 요소 | 모바일 (<1024px) | 데스크톱 (≥1024px) |
 |------|-----------------|-------------------|
-| **SideNav** | 숨김 (`hidden`) | 왼쪽 240px 고정 (`lg:flex`) |
-| **TopBar** | 로고(32px) + 타이틀 + 액션버튼 | SideNav 옆 (ml-60) |
+| **SideNav** | 숨김 (`hidden`) | 왼쪽 240px↔️68px (`lg:flex`) ★ 16차: 접기/펼치기 |
+| **메인 영역 마진** | 0 | `sidebarOpen ? ml-60 : ml-[68px]` ★ 16차 + `transition-all duration-300` |
+| **TopBar** | 로고(32px) + 타이틀 + 액션버튼 | SideNav 옆 (동적 마진) |
 | **BottomNavBar** | 하단 60px 고정 | 숨김 (`lg:hidden`) |
 | **Main 최대 너비** | `max-w-2xl` (672px) | `max-w-3xl` (768px) |
 | **하단 패딩** | `var(--page-pb)` (~68px) | 0 |
@@ -280,8 +284,8 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 | 버튼 | 아이콘 | 크기 | 표시 조건 | 동작 |
 |------|--------|------|----------|------|
 | 테마 토글 | `Clock`/`Sun`/`Moon` 19px | 40px(xs)/44px(sm+) | `hidden sm:flex` | `cycleThemeMode()` |
-| 책 추가 | `Plus` 19px | 40/44px | 항상 | `navigate('/register-flow')` |
-| 검색 | `Search` 19px | 40/44px | 항상 | `navigate('/notes-search')` |
+| 책 추가 | `BookPlus` 19px ★ (16차) | 40px(xs)/44px(sm+) | 항상 | `navigate('/register-flow')` |
+| 검색 | `FileSearch` 19px ★ (16차) | 40/44px | 항상 | `navigate('/notes-search')` |
 | 알림 | `Bell` 19px + 배지 | 40/44px | 항상 | `setNotifOpen(toggle)` → NotificationPanel |
 | 아바타 | 이니셜(12px) | 32px 원형 | 항상 | `Link to="/splash"` |
 
@@ -411,7 +415,26 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 
 ---
 
-## 9. 페이지별 상세 UI/UX (15개)
+## 9. 페이지별 상세 UI/UX (16개)
+
+---
+
+### 9.0 EntryGate (진입 분기) ★ 16차 신규
+
+- **파일**: `src/app/components/auth/EntryGate.tsx`
+- **경로**: `/entry`
+- **용도**: 앱 최초 진입점 — 인증 상태에 따라 적절한 페이지로 자동 라우팅
+
+#### 동작 로직
+
+| 인증 상태 | 동작 |
+|---------|------|
+| `authenticated` | `<Navigate to="/" replace />` |
+| `unauthenticated` | `<Navigate to="/splash" replace />` |
+| `idle` / `loading` | 로딩 스피너 표시 |
+
+- **데이터 바인딩**: `useAuthStore(s => s.status)`
+- **UI**: 로딩 시 보라색 스피너 + "로딩 중..." 텍스트
 
 ---
 
@@ -1277,7 +1300,7 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 
 - **파일**: `src/app/pages/DesignSystemPage.tsx` (~580줄)
 - **경로**: `/design-system`
-- **보호**: ProtectedRoute
+- **보호**: ProtectedRoute + **admin gate** ★ (16차: `isAdmin = user?.role === 'admin'`, 비admin → 리다이렉트)
 
 #### 컴포넌트 쇼케이스 (12개 섹션)
 
@@ -1383,11 +1406,13 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 | **GenreDonutChart** | `stats/StatsComponents.tsx` | 장르 파이 차트 (recharts) |
 | **ReadingHeatmap** | `stats/StatsComponents.tsx` | 독서 히트맵 |
 
-### 10.7 shadcn/ui 래퍼 (47개)
+### 10.7 잔존 UI 컴포넌트 (21개) ★ 17차 정리
 
-`src/app/components/ui/` 디렉토리에 shadcn/ui 기반 래퍼 파일:
+17차 코드 정리에서 **40개 미사용 shadcn/ui 래퍼를 삭제**하여, `src/app/components/ui/` 디렉토리에 **21개 핵심 컴포넌트만 잔존**:
 
-accordion, alert-dialog, alert, aspect-ratio, avatar, badge, breadcrumb, button, calendar, card, carousel, chart, checkbox, collapsible, command, context-menu, dialog, drawer, dropdown-menu, form, hover-card, input-otp, input, label, menubar, navigation-menu, pagination, popover, progress, radio-group, resizable, scroll-area, select, separator, sheet, sidebar, skeleton, slider, sonner, switch, table, tabs, textarea, toggle-group, toggle, tooltip, utils
+**잔존 컴포넌트**: Buttons, EmptyState, GenreBadge, Inputs, InstallBanner, Modal, NotificationPanel, OfflineBanner, ProgressBar, StarRating, Toast, Skeleton, alert-dialog, dialog, dropdown-menu, slot, tooltip, BookCard (books/), GenreFilterBar (books/), CameraOCRSheet (books/), ISBNScanner (books/)
+
+**삭제된 래퍼 (40개)**: accordion, alert, aspect-ratio, avatar, badge, breadcrumb, button, calendar, card, carousel, chart, checkbox, collapsible, command, context-menu, drawer, form, hover-card, input-otp, input, label, menubar, navigation-menu, pagination, popover, progress, radio-group, resizable, scroll-area, select, separator, sheet, sidebar, slider, sonner, switch, table, tabs, textarea, toggle-group, toggle, utils
 
 ### 10.8 기타
 
@@ -1396,8 +1421,7 @@ accordion, alert-dialog, alert, aspect-ratio, avatar, badge, breadcrumb, button,
 | **RouteErrorFallback** | `RouteErrorFallback.tsx` | 라우트 에러 바운더리 |
 | **AuthPreviewNav** | `auth/AuthPreviewNav.tsx` | 개발용 하단 인증 페이지 네비 |
 | **ProtectedRoute** | `auth/ProtectedRoute.tsx` | 인증 가드 |
-| **ImageWithFallback** | `figma/ImageWithFallback.tsx` | 이미지 로드 실패 시 fallback |
-| **use-mobile** | `ui/use-mobile.ts` | 모바일 감지 훅 |
+| **EntryGate** | `auth/EntryGate.tsx` | 인증 전 진입 게이트 |
 
 ---
 
