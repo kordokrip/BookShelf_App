@@ -127,25 +127,4 @@ export const authMiddleware = createMiddleware<{ Bindings: Bindings; Variables: 
   },
 );
 
-/**
- * 선택적 인증 — 토큰이 있으면 검증, 없으면 userId = null
- * GET 라우트에서 비인증 사용자도 접근 가능한 엔드포인트용 (현재 미사용)
- */
-export const optionalAuth = createMiddleware<{ Bindings: Bindings; Variables: { userId: string } }>(
-  async (c, next) => {
-    const header = c.req.header('Authorization');
-    if (header?.startsWith('Bearer ')) {
-      const token = header.slice(7);
-      try {
-        const payload = await Jwt.verify(token, c.env.JWT_SECRET, 'HS256') as unknown as JwtPayload;
-        c.set('userId', payload.sub);
-      } catch {
-        return c.json({ error: '유효하지 않은 토큰입니다.' }, 401);
-      }
-    } else {
-      // demo-user 폴백 제거 — 토큰 없으면 인증 없이 진행
-      c.set('userId', '');
-    }
-    await next();
-  },
-);
+

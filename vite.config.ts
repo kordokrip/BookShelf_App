@@ -82,6 +82,9 @@ export default defineConfig({
           if (id.includes('recharts') || id.includes('d3-') || id.includes('victory')) {
             return 'vendor-charts';
           }
+          if (id.includes('motion') && !id.includes('@emotion')) {
+            return 'vendor-motion';
+          }
           if (id.includes('@tanstack/react-query')) {
             return 'vendor-query';
           }

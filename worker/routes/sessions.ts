@@ -19,7 +19,7 @@ const createSessionSchema = z.object({
 sessionsRouter.get('/', authMiddleware, async (c) => {
   const userId = c.get('userId');
   const bookId = c.req.query('book_id');
-  const limit = parseInt(c.req.query('limit') ?? '30');
+  const limit = Math.min(parseInt(c.req.query('limit') ?? '30'), 1000);
 
   let query =
     'SELECT * FROM reading_sessions WHERE user_id = ?';
@@ -62,6 +62,21 @@ sessionsRouter.post(
       throw new HTTPException(404, {
         message: '현재 읽고 있는 책을 찾을 수 없습니다.',
       });
+
+    // 중복 방지: 동일 book_id + session_date + pages_read 세션이 10초 이내에 생성되었으면 기존 반환
+    const dup = await c.env.DB.prepare(
+      `SELECT * FROM reading_sessions
+       WHERE book_id = ? AND user_id = ? AND session_date = ? AND pages_read = ?
+         AND created_at > datetime('now', '-10 seconds')
+       LIMIT 1`,
+    ).bind(body.book_id, userId, today, body.pages_read).first<DbReadingSession>();
+
+    if (dup) {
+      const currentBook = await c.env.DB.prepare(
+        'SELECT current_page FROM books WHERE id = ?',
+      ).bind(body.book_id).first<{ current_page: number }>();
+      return c.json({ data: dup, new_current_page: currentBook?.current_page ?? book.current_page }, 200);
+    }
 
     const newCurrentPage = book.current_page + body.pages_read;
 

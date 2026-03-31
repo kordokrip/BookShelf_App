@@ -135,7 +135,7 @@ booksRouter.get('/', authMiddleware, async (c) => {
   const limit = parseInt(c.req.query('limit') ?? '100');
   const offset = parseInt(c.req.query('offset') ?? '0');
 
-  let query = 'SELECT * FROM books WHERE user_id = ?';
+  let query = `SELECT *, CASE WHEN goal_date IS NOT NULL AND goal_date < date('now') AND status = 'reading' THEN 1 ELSE 0 END AS is_overdue FROM books WHERE user_id = ?`;
   const params: (string | number)[] = [userId];
 
   if (status) {
@@ -174,7 +174,7 @@ booksRouter.get('/:id', authMiddleware, async (c) => {
   const id = c.req.param('id');
 
   const book = await c.env.DB.prepare(
-    'SELECT * FROM books WHERE id = ? AND user_id = ?',
+    `SELECT *, CASE WHEN goal_date IS NOT NULL AND goal_date < date('now') AND status = 'reading' THEN 1 ELSE 0 END AS is_overdue FROM books WHERE id = ? AND user_id = ?`,
   )
     .bind(id, userId)
     .first<DbBook>();
