@@ -14,9 +14,11 @@ export interface AuthUser {
   email: string;
   name: string;
   avatar_url: string | null;
+  profile_emoji: string | null;
   role: string; // 'admin' | 'user'
   favorite_genres?: string[];
   reading_goal?: number;
+  created_at?: string;
 }
 
 type AuthStatus = 'idle' | 'authenticated' | 'unauthenticated';
@@ -63,6 +65,8 @@ export const useAuthStore = create<AuthState>()(
             favorite_genres?: string | string[];
             reading_goal?: number;
             role?: string;
+            created_at?: string;
+            profile_emoji?: string | null;
           };
           const favoriteGenres =
             typeof raw.favorite_genres === 'string'
@@ -75,9 +79,11 @@ export const useAuthStore = create<AuthState>()(
                 email: raw.email,
                 name: raw.name,
                 avatar_url: raw.avatar_url,
+                profile_emoji: raw.profile_emoji ?? null,
                 role: raw.role ?? 'user',
                 favorite_genres: favoriteGenres,
                 reading_goal: raw.reading_goal,
+                created_at: raw.created_at,
               },
               status: 'authenticated',
               isLoading: false,
@@ -136,7 +142,7 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true }, false, 'auth/check:start');
         try {
           const res = await usersApi.getProfile();
-          const raw = res.data as AuthUser & { favorite_genres?: string | string[]; role?: string };
+          const raw = res.data as AuthUser & { favorite_genres?: string | string[]; role?: string; created_at?: string; profile_emoji?: string | null };
           const favoriteGenres =
             typeof raw.favorite_genres === 'string'
               ? (JSON.parse(raw.favorite_genres || '[]') as string[])
@@ -148,9 +154,11 @@ export const useAuthStore = create<AuthState>()(
                 email: raw.email,
                 name: raw.name,
                 avatar_url: raw.avatar_url,
+                profile_emoji: raw.profile_emoji ?? null,
                 role: raw.role ?? 'user',
                 favorite_genres: favoriteGenres,
                 reading_goal: raw.reading_goal,
+                created_at: raw.created_at,
               },
               status: 'authenticated',
               isLoading: false,

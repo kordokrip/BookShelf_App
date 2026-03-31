@@ -296,6 +296,7 @@ export const usersApi = {
     favorite_genres?: string[];
     reading_goal?: number;
     avatar_url?: string;
+    profile_emoji?: string | null;
   }) =>
     apiFetch<{ data: unknown }>('/api/users/profile', {
       method: 'PATCH',

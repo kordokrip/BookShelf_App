@@ -3,6 +3,7 @@ import { BookMarked, BookOpen, Star, BarChart2, Settings, Palette, PlusCircle, F
 import { useAuthStore } from "../../../stores/authStore";
 import { useBooks } from "../../../hooks/useBooks";
 import { useUiStore } from "../../../stores/uiStore";
+import { ProfileAvatar } from "../ui/ProfilePopup";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 
 interface SideNavItem {
@@ -169,9 +170,13 @@ export function SideNav() {
         <div className={`flex items-center gap-3 ${sidebarOpen ? "" : "justify-center"}`}>
           {sidebarOpen ? (
             <>
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] flex items-center justify-center shadow-sm flex-shrink-0">
-                <span className="text-white" style={{ fontSize: 14, fontWeight: 700 }}>{avatarInitial}</span>
-              </div>
+              {user ? (
+                <ProfileAvatar user={user} size={40} fontSize={14} />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] flex items-center justify-center shadow-sm flex-shrink-0">
+                  <span className="text-white" style={{ fontSize: 14, fontWeight: 700 }}>{avatarInitial}</span>
+                </div>
+              )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
                   <p className="text-[#1E293B] dark:text-[#F8FAFC] truncate" style={{ fontSize: 13, fontWeight: 600 }}>
@@ -194,9 +199,13 @@ export function SideNav() {
           ) : (
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] flex items-center justify-center shadow-sm cursor-pointer">
-                  <span className="text-white" style={{ fontSize: 14, fontWeight: 700 }}>{avatarInitial}</span>
-                </div>
+                {user ? (
+                  <ProfileAvatar user={user} size={40} fontSize={14} className="cursor-pointer" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] flex items-center justify-center shadow-sm cursor-pointer">
+                    <span className="text-white" style={{ fontSize: 14, fontWeight: 700 }}>{avatarInitial}</span>
+                  </div>
+                )}
               </TooltipTrigger>
               <TooltipContent side="right" sideOffset={8}>
                 {displayName}{isAdmin ? " (Admin)" : ""} · 올해 {yearDoneCount}권

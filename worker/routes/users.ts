@@ -164,6 +164,7 @@ const updateProfileSchema = z.object({
   favorite_genres: z.array(z.string()).optional(),
   reading_goal: z.number().int().min(1).max(100).optional(),
   avatar_url: z.string().url().optional(),
+  profile_emoji: z.string().max(10).nullable().optional(),
 });
 
 // ─── PATCH /api/users/profile ───────────────────────────────────
@@ -198,6 +199,11 @@ usersRouter.patch(
       values.push(body.avatar_url);
     }
 
+    if (body.profile_emoji !== undefined) {
+      updates.push('profile_emoji = ?');
+      values.push(body.profile_emoji);
+    }
+
     if (updates.length === 0) {
       return c.json({ error: '업데이트할 내용이 없습니다' }, 400);
     }
@@ -210,7 +216,7 @@ usersRouter.patch(
     ).bind(...values).run();
 
     const user = await c.env.DB.prepare(
-      'SELECT id, email, name, avatar_url, favorite_genres, reading_goal, role, created_at, updated_at FROM users WHERE id = ?'
+      'SELECT id, email, name, avatar_url, profile_emoji, favorite_genres, reading_goal, role, created_at, updated_at FROM users WHERE id = ?'
     ).bind(userId).first();
 
     return c.json({ data: user });

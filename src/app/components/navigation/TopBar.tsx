@@ -11,6 +11,7 @@ import { Link, useLocation, useNavigate } from 'react-router';
 import { useAuthStore } from '../../../stores/authStore';
 import { useUiStore } from '../../../stores/uiStore';
 import { NotificationPanel } from '../ui/NotificationPanel';
+import { ProfilePopup, ProfileAvatar } from '../ui/ProfilePopup';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
 
 const pageTitles: Record<string, string> = {
@@ -33,13 +34,13 @@ export function TopBar() {
   const navigate = useNavigate();
   const title = pageTitles[location.pathname] ?? 'BookShelf';
   const user = useAuthStore((s) => s.user);
-  const avatarInitial = user?.name?.[0] ?? '?';
 
   const themeMode      = useUiStore((s) => s.themeMode);
   const cycleThemeMode = useUiStore((s) => s.cycleThemeMode);
   const unreadCount    = useUiStore((s) => s.unreadCount);
 
   const [notifOpen, setNotifOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const bellRef = useRef<HTMLDivElement>(null);
 
   return (
@@ -153,19 +154,32 @@ export function TopBar() {
             )}
           </div>
 
-          {/* 아바타 */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link
-                to="/splash"
-                className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] flex items-center justify-center ml-1 shadow-sm flex-shrink-0"
-                aria-label="프로필"
-              >
-                <span className="text-white text-xs font-semibold">{avatarInitial}</span>
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" sideOffset={4}>내 프로필</TooltipContent>
-          </Tooltip>
+          {/* 아바타 + 프로필 팝업 */}
+          <div className="relative">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setProfileOpen((v) => !v)}
+                  className="ml-1 flex-shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5]"
+                  aria-label="프로필"
+                  aria-expanded={profileOpen}
+                >
+                  {user ? (
+                    <ProfileAvatar user={user} size={32} fontSize={12} />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] flex items-center justify-center">
+                      <span className="text-white text-xs font-semibold">?</span>
+                    </div>
+                  )}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" sideOffset={4}>내 프로필</TooltipContent>
+            </Tooltip>
+
+            {profileOpen && user && (
+              <ProfilePopup user={user} onClose={() => setProfileOpen(false)} />
+            )}
+          </div>
         </div>
       </div>
     </header>
