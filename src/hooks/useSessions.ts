@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { sessionsApi, queryKeys } from '../lib/api';
 import { normalizeSession, type UISession } from '../types/book';
+import { useUiStore } from '../stores/uiStore';
 
 /** 독서 세션 목록 조회 */
 export function useSessions(params?: { bookId?: string; limit?: number }) {
@@ -23,6 +24,7 @@ export function useSessions(params?: { bookId?: string; limit?: number }) {
 /** 독서 세션 기록 — 성공 시 books + sessions 캐시 무효화 */
 export function useAddSession() {
   const qc = useQueryClient();
+  const addNotification = useUiStore((s) => s.addNotification);
   return useMutation({
     mutationFn: (data: {
       bookId: string;
@@ -35,10 +37,17 @@ export function useAddSession() {
         pages_read: data.endPage - data.startPage,
         duration_min: data.durationMinutes,
       }),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: queryKeys.sessions.all });
       qc.invalidateQueries({ queryKey: queryKeys.books.all });
       qc.invalidateQueries({ queryKey: queryKeys.stats.all });
+      const pages = variables.endPage - variables.startPage;
+      const mins = variables.durationMinutes;
+      addNotification(
+        'session_saved',
+        '독서 세션을 기록했습니다 ⏱️',
+        `${pages}페이지${mins ? ` · ${mins}분` : ''}`,
+      );
     },
   });
 }

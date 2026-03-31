@@ -6,6 +6,39 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
+/** 현재 시각 기반 테마 결정: 06:00 ~ 18:00 = light, 그 외 = dark */
+export function getTimeBasedTheme(): 'light' | 'dark' {
+  const h = new Date().getHours();
+  return h >= 6 && h < 18 ? 'light' : 'dark';
+}
+
+// ─── 알림 타입 ──────────────────────────────────────────────
+export type NotificationType = 'book_added' | 'book_updated' | 'session_saved' | 'note_saved' | 'sync' | 'info';
+
+export interface NotificationItem {
+  id: string;
+  type: NotificationType;
+  message: string;
+  detail?: string;
+  read: boolean;
+  createdAt: number; // Date.now()
+}
+
+const MAX_NOTIFICATIONS = 20;
+
+function loadNotifications(): NotificationItem[] {
+  if (typeof localStorage === 'undefined') return [];
+  try {
+    return JSON.parse(localStorage.getItem('notifications') ?? '[]');
+  } catch { return []; }
+}
+
+function saveNotifications(items: NotificationItem[]) {
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem('notifications', JSON.stringify(items));
+  }
+}
+
 // ─── 모달 타입 ────────────────────────────────────────────────
 export type ModalType =
   | 'addBook'          // 책 추가 (바코드/수동)
@@ -59,9 +92,16 @@ interface UiState {
   activeTab: string;
   setActiveTab: (tab: string) => void;
 
-  // 다크모드
-  theme: 'light' | 'dark';
-  toggleTheme: () => void;
+  // 테마 모드 (auto = 시간 기반 자동, light/dark = 수동 고정)
+  themeMode: 'auto' | 'light' | 'dark';
+  cycleThemeMode: () => void;
+
+  // 인앱 알림
+  notifications: NotificationItem[];
+  unreadCount: number;
+  addNotification: (type: NotificationType, message: string, detail?: string) => void;
+  markAllRead: () => void;
+  clearNotifications: () => void;
 }
 
 let toastIdCounter = 0;
@@ -124,17 +164,45 @@ export const useUiStore = create<UiState>()(
       setActiveTab: (tab) =>
         set({ activeTab: tab }, false, 'ui/setActiveTab'),
 
-      // 다크모드 (localStorage 영속)
-      theme: (typeof localStorage !== 'undefined'
-        ? (localStorage.getItem('theme') as 'light' | 'dark' | null) ?? 'light'
-        : 'light'),
-      toggleTheme: () =>
+      // 테마 모드 (localStorage 영속, 기본값: 'auto' = 시간 기반 자동 전환)
+      themeMode: (typeof localStorage !== 'undefined'
+        ? (localStorage.getItem('themeMode') as 'auto' | 'light' | 'dark' | null) ?? 'auto'
+        : 'auto'),
+      cycleThemeMode: () =>
         set((s) => {
-          const next = s.theme === 'light' ? 'dark' : 'light';
-          localStorage.setItem('theme', next);
-          document.documentElement.classList.toggle('dark', next === 'dark');
-          return { theme: next };
-        }, false, 'ui/toggleTheme'),
+          const order: ('auto' | 'light' | 'dark')[] = ['auto', 'light', 'dark'];
+          const next = order[(order.indexOf(s.themeMode) + 1) % order.length];
+          localStorage.setItem('themeMode', next);
+          return { themeMode: next };
+        }, false, 'ui/cycleThemeMode'),
+
+      // 인앱 알림
+      notifications: loadNotifications(),
+      unreadCount: loadNotifications().filter((n) => !n.read).length,
+      addNotification: (type, message, detail) =>
+        set((s) => {
+          const item: NotificationItem = {
+            id: String(Date.now()),
+            type,
+            message,
+            detail,
+            read: false,
+            createdAt: Date.now(),
+          };
+          const next = [item, ...s.notifications].slice(0, MAX_NOTIFICATIONS);
+          saveNotifications(next);
+          return { notifications: next, unreadCount: next.filter((n) => !n.read).length };
+        }, false, 'ui/addNotification'),
+      markAllRead: () =>
+        set((s) => {
+          const next = s.notifications.map((n) => ({ ...n, read: true }));
+          saveNotifications(next);
+          return { notifications: next, unreadCount: 0 };
+        }, false, 'ui/markAllRead'),
+      clearNotifications: () => {
+        saveNotifications([]);
+        set({ notifications: [], unreadCount: 0 }, false, 'ui/clearNotifications');
+      },
     }),
     { name: 'UiStore' },
   ),

@@ -1,7 +1,7 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate, useParams } from "react-router";
-import { ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, BookMarked, BookOpen, Heart, ScanLine, Clock, Search, Share2 } from "lucide-react";
+import { ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, BookMarked, BookOpen, Heart, ScanLine, Clock, Search, Share2, Sparkles, RefreshCw } from "lucide-react";
 import type { BookNote } from "../../types/book";
 import type { UIBook } from "../../types/book";
 import { BookCover } from "../components/books/BookCard";
@@ -534,8 +534,9 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
 
 /* ─── Book Info Tab ──────────────────────────────────────────── */
 function BookInfoTab({ book }: { book: UIBook }) {
-  const [descInput, setDescInput] = useState("");
   const [summaryResult, setSummaryResult] = useState<string | null>(null);
+  const [displayedSummary, setDisplayedSummary] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
   const [goalDateVal, setGoalDateVal] = useState(book.goalDate ?? "");
   const summarizeMutation = useBookSummaryMutation();
   const updateBook = useUpdateBook();
@@ -554,18 +555,37 @@ function BookInfoTab({ book }: { book: UIBook }) {
     ...(book.finishedDate ? [{ label: "완독일", value: book.finishedDate.replace(/-/g, ".") }] : []),
   ];
 
+  // 타이핑 애니메이션 효과
+  useEffect(() => {
+    if (!summaryResult) {
+      setDisplayedSummary("");
+      setIsTyping(false);
+      return;
+    }
+    setDisplayedSummary("");
+    setIsTyping(true);
+    let i = 0;
+    const timer = setInterval(() => {
+      i++;
+      setDisplayedSummary(summaryResult.slice(0, i));
+      if (i >= summaryResult.length) {
+        clearInterval(timer);
+        setIsTyping(false);
+      }
+    }, 18);
+    return () => clearInterval(timer);
+  }, [summaryResult]);
+
   const handleSummarize = async () => {
-    const text = descInput.trim();
-    if (text.length < 20) return;
+    setSummaryResult(null);
     try {
       const res = await summarizeMutation.mutateAsync({
-        description: text,
         title: book.title,
         author: book.author,
       });
       setSummaryResult(res.summary);
     } catch {
-      // 오류는 무시 (네트워크 등)
+      // 오류는 summarizeMutation.isError 로 표시
     }
   };
 
@@ -683,37 +703,95 @@ function BookInfoTab({ book }: { book: UIBook }) {
         )}
       </div>
 
-      {/* AI 요약 섹션 */}
-      <div className="rounded-2xl border border-[#DDD6FE] overflow-hidden" style={{ background: "linear-gradient(135deg, #F5F3FF 0%, #FAFAFA 100%)" }}>
-        <div className="px-4 pt-4 pb-2 flex items-center gap-2">
-          <span style={{ fontSize: 16 }}>✨</span>
-          <p style={{ fontSize: 13, fontWeight: 700, color: "#6D28D9" }}>AI 책 설명 요약</p>
-        </div>
-        <div className="px-4 pb-4 flex flex-col gap-2">
-          <Textarea
-            value={descInput}
-            onChange={(e) => { setDescInput(e.target.value); setSummaryResult(null); }}
-            placeholder="책 뒷면 소개글이나 책 설명을 붙여넣으세요 (20자 이상)"
-            rows={3}
-            className="resize-none text-sm border-[#DDD6FE] bg-white focus-visible:ring-[#7C3AED]"
-          />
-          <Button
-            onClick={handleSummarize}
-            disabled={descInput.trim().length < 20 || summarizeMutation.isPending}
-            size="sm"
-            className="self-end bg-[#7C3AED] hover:bg-[#6D28D9] text-white disabled:opacity-40"
-          >
-            {summarizeMutation.isPending ? "요약 중..." : "AI 요약 생성"}
-          </Button>
-          {summarizeMutation.isError && (
-            <p className="text-red-500" style={{ fontSize: 12 }}>요약 생성에 실패했습니다. 다시 시도해주세요.</p>
-          )}
-          {summaryResult && (
-            <div className="rounded-xl p-3 bg-white border border-[#DDD6FE]">
-              <p className="text-[#4C1D95]" style={{ fontSize: 13, lineHeight: 1.7 }}>{summaryResult}</p>
+      {/* AI 분석 섹션 */}
+      <div className="rounded-2xl overflow-hidden border border-[#DDD6FE]" style={{ background: "linear-gradient(135deg, #F5F3FF 0%, #EEF2FF 100%)" }}>
+        {/* Header */}
+        <div className="px-4 pt-4 pb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div
+              className="w-7 h-7 rounded-xl flex items-center justify-center"
+              style={{ background: "linear-gradient(135deg, #7C3AED, #4F46E5)" }}
+            >
+              <Sparkles size={14} className="text-white" />
             </div>
+            <span style={{ fontSize: 14, fontWeight: 700, color: "#4C1D95" }}>AI 책 분석</span>
+          </div>
+          {summaryResult && !summarizeMutation.isPending && (
+            <button
+              onClick={() => void handleSummarize()}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[#7C3AED] hover:bg-white/60 transition-colors"
+              style={{ fontSize: 11, fontWeight: 600 }}
+            >
+              <RefreshCw size={11} />
+              다시 생성
+            </button>
           )}
         </div>
+
+        {/* Idle: 분석 시작 버튼 */}
+        {!summaryResult && !summarizeMutation.isPending && !summarizeMutation.isError && (
+          <div className="px-4 pb-4 flex flex-col gap-3">
+            <p style={{ fontSize: 12, color: "#7C3AED", lineHeight: 1.65 }}>
+              AI가 이 책의 핵심 내용과 읽어야 할 이유를 분석해 드립니다
+            </p>
+            <button
+              onClick={() => void handleSummarize()}
+              className="flex items-center justify-center gap-2 py-3 rounded-xl text-white transition-all active:scale-[0.98]"
+              style={{ background: "linear-gradient(135deg, #7C3AED, #4F46E5)", fontSize: 14, fontWeight: 700 }}
+            >
+              <Sparkles size={15} />
+              AI 분석 시작
+            </button>
+          </div>
+        )}
+
+        {/* Loading: 스켈레톤 */}
+        {summarizeMutation.isPending && (
+          <div className="px-4 pb-4 flex flex-col gap-2">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-4 h-4 rounded-full border-2 border-[#7C3AED] border-t-transparent animate-spin" />
+              <span style={{ fontSize: 12, color: "#7C3AED", fontWeight: 600 }}>AI가 분석 중...</span>
+            </div>
+            <div className="h-3 rounded-full animate-pulse" style={{ background: "#DDD6FE", width: "100%" }} />
+            <div className="h-3 rounded-full animate-pulse" style={{ background: "#DDD6FE", width: "80%" }} />
+            <div className="h-3 rounded-full animate-pulse" style={{ background: "#DDD6FE", width: "60%" }} />
+          </div>
+        )}
+
+        {/* Result: 타이핑 애니메이션 */}
+        {summaryResult && !summarizeMutation.isPending && (
+          <div className="px-4 pb-4">
+            <div className="rounded-xl p-3.5 border border-[#DDD6FE]" style={{ background: "rgba(255,255,255,0.75)" }}>
+              <p style={{ fontSize: 13, lineHeight: 1.85, color: "#3B1F70" }}>
+                {displayedSummary}
+                {isTyping && (
+                  <span
+                    className="inline-block ml-0.5 rounded-sm animate-pulse align-middle"
+                    style={{ width: 2, height: 14, background: "#7C3AED" }}
+                  />
+                )}
+              </p>
+            </div>
+            {summarizeMutation.data?.cached && (
+              <p className="mt-1.5 text-right" style={{ fontSize: 11, color: "#A78BFA" }}>⚡ 캐시된 분석 결과</p>
+            )}
+          </div>
+        )}
+
+        {/* Error: 재시도 */}
+        {summarizeMutation.isError && !summarizeMutation.isPending && (
+          <div className="px-4 pb-4 flex flex-col gap-2">
+            <p style={{ fontSize: 12, color: "#EF4444" }}>분석 중 오류가 발생했습니다</p>
+            <button
+              onClick={() => void handleSummarize()}
+              className="self-start flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
+              style={{ fontSize: 12, fontWeight: 600 }}
+            >
+              <RefreshCw size={11} />
+              다시 시도
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

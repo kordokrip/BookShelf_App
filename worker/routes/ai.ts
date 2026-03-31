@@ -8,31 +8,39 @@ const aiRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>
 // ─── POST /api/ai/summarize — 책 설명 한국어 요약 ────────────
 aiRouter.post('/summarize', rateLimit({ limit: 5, windowMs: 60_000, keyPrefix: 'ai' }), optionalAuth, async (c) => {
   const { description, title, author } = await c.req.json() as {
-    description: string;
+    description?: string;
     title: string;
     author: string;
   };
 
-  if (!description || description.length < 20) {
-    return c.json({ error: '요약할 내용이 너무 짧습니다' }, 400);
+  if (!title || !author) {
+    return c.json({ error: '책 제목과 저자 정보가 필요합니다' }, 400);
   }
 
-  // KV 캐시 확인
-  const cacheKey = `ai_summary:${btoa(unescape(encodeURIComponent(description.slice(0, 50)))).replace(/[+/=]/g, '')}`;
+  const hasDescription = typeof description === 'string' && description.length >= 20;
+
+  // KV 캐시 키 생성 (description 유무에 따라 다른 키)
+  const cacheInput = hasDescription ? description!.slice(0, 50) : `${title}::${author}`;
+  const cacheKey = `ai_summary:${btoa(unescape(encodeURIComponent(cacheInput))).replace(/[+/=]/g, '')}`;
   const cached = await c.env.KV.get(cacheKey);
   if (cached) {
     return c.json({ summary: cached, cached: true });
   }
 
+  // 프롬프트 구성 (description 유무에 따라 분기)
+  const systemPrompt = hasDescription
+    ? '당신은 독서 앱의 AI 어시스턴트입니다. 책 설명을 한국어로 2-3문장으로 간결하게 요약해주세요.'
+    : '당신은 독서 전문가 AI입니다. 책 제목과 저자를 바탕으로 이 책이 어떤 내용인지 한국어로 2-3문장으로 소개해주세요. 핵심 주제와 독자가 얻을 수 있는 가치를 포함하세요.';
+  const userPrompt = hasDescription
+    ? `책 제목: "${title}" (저자: ${author})\n\n책 설명:\n${description}\n\n위 내용을 한국어로 2-3문장으로 요약해주세요.`
+    : `책 제목: "${title}"\n저자: ${author}\n\n이 책이 어떤 책인지 2-3문장으로 소개해주세요.`;
+
   try {
     const model = '@cf/meta/llama-3.1-8b-instruct' as Parameters<Ai['run']>[0];
     const response = await c.env.AI.run(model, {
       messages: [
-        { role: 'system', content: '당신은 독서 앱의 AI 어시스턴트입니다. 책 설명을 한국어로 2-3문장으로 간결하게 요약해주세요.' },
-        {
-          role: 'user',
-          content: `책 제목: "${title}" (저자: ${author})\n\n책 설명:\n${description}\n\n위 내용을 한국어로 2-3문장으로 요약해주세요.`,
-        },
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
       ],
       max_tokens: 200,
     });

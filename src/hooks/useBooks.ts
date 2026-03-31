@@ -3,6 +3,7 @@ import { booksApi, queryKeys } from '../lib/api';
 import type { BookStatus, CreateBookInput, UpdateBookInput } from '../lib/api';
 import { normalizeBook, denormalizeBook } from '../types/book';
 import type { UIBook } from '../types/book';
+import { useUiStore } from '../stores/uiStore';
 
 /** 도서 목록 조회 (status / genre / sort 필터) */
 export function useBooks(filters?: { status?: BookStatus; genre?: string; sort?: 'created_at_desc' | 'title_asc' | 'author_asc' | 'rating_desc' | 'finished_date_desc' }) {
@@ -46,20 +47,36 @@ export function useBookDetail(id: string) {
 /** 도서 추가 */
 export function useAddBook() {
   const qc = useQueryClient();
+  const addNotification = useUiStore((s) => s.addNotification);
   return useMutation({
     mutationFn: (book: Partial<UIBook>) =>
       booksApi.create(denormalizeBook(book) as CreateBookInput),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.books.all }),
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: queryKeys.books.all });
+      addNotification('book_added', '새 책을 서재에 추가했습니다', variables.title ?? '');
+    },
   });
 }
 
 /** 도서 수정 */
 export function useUpdateBook() {
   const qc = useQueryClient();
+  const addNotification = useUiStore((s) => s.addNotification);
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<UIBook> }) =>
       booksApi.update(id, denormalizeBook(data) as UpdateBookInput),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.books.all }),
+    onSuccess: (_, { data }) => {
+      qc.invalidateQueries({ queryKey: queryKeys.books.all });
+      const statusMap: Record<string, string> = {
+        done: '완독으로 이동했습니다 🎉',
+        reading: '읽는 중으로 이동했습니다 📖',
+        wish: '위시리스트에 추가했습니다 💫',
+      };
+      const msg = data.status
+        ? (statusMap[data.status] ?? '책 정보를 업데이트했습니다')
+        : '책 정보를 업데이트했습니다';
+      addNotification('book_updated', msg, data.title ?? '');
+    },
   });
 }
 

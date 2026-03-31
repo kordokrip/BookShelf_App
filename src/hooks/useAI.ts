@@ -24,7 +24,7 @@ interface RecommendResponse {
 export function useBookSummary() {
   return useMutation({
     mutationFn: ({ description, title, author }: {
-      description: string;
+      description?: string;
       title: string;
       author: string;
     }) =>

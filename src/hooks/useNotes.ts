@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { notesApi, queryKeys } from '../lib/api';
 import { normalizeBookNote } from '../types/book';
+import { useUiStore } from '../stores/uiStore';
 
 /** 노트 목록 조회 (필터: bookId / type / search) */
 export function useNotes(filters?: { bookId?: string; type?: string; search?: string }) {
@@ -33,6 +34,7 @@ export function useBookNotes(bookId: string) {
 /** 노트 생성 */
 export function useAddNote() {
   const qc = useQueryClient();
+  const addNotification = useUiStore((s) => s.addNotification);
   return useMutation({
     mutationFn: (data: {
       book_id: string;
@@ -41,7 +43,15 @@ export function useAddNote() {
       page_number?: number;
       color?: string;
     }) => notesApi.create(data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.notes.all }),
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: queryKeys.notes.all });
+      const typeLabel: Record<string, string> = {
+        quote: '인용구',
+        memo: '메모',
+        review: '리뉴',
+      };
+      addNotification('note_saved', `새 ${typeLabel[variables.type] ?? '노트'}를 저장했습니다`, `p.${variables.page_number ?? '?'}`);
+    },
   });
 }
 
