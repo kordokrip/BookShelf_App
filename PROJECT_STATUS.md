@@ -1,6 +1,6 @@
 # BookShelf App — 프로젝트 상태 보고서
 
-> **최종 업데이트:** 2026-04-01 (17차 업데이트 — 대규모 코드 정리: UI 컴포넌트 40개→21개, npm 의존성 39개 제거, 문서 통합)
+> **최종 업데이트:** 2026-04-01 (21차 업데이트 — 독서 모임 그룹 + 채팅 + 일정/피드백 + 통계 공유 기능)
 > - **4차**: SideNav/TopBar 하드코딩 데이터 → 실시간 바인딩, ViteWorkbox SW 청크 에러 수정 (commit: `1c280d1`)
 > - **5차**: 카카오 SDK 무결성 해시 수정, `mobile-web-app-capable` 메타태그 추가, 소셜 로그인 401 에러 메시지 분기 (commit: `8c18d60`)
 > - **6차**: D1 테이블 정상 동작 확인, Kakao OAuth dead code 제거(`loginWithKakao`), Google 버튼 "준비 중" UI로 대체 (commit: `7cddee7`)
@@ -27,14 +27,25 @@
 >   - 삭제 의존성: @emotion/*, @mui/*, 20개 @radix-ui/react-*, cmdk, embla, input-otp, next-themes, react-day-picker, react-dnd-*, react-hook-form, react-popper, react-resizable-panels, react-responsive-masonry, react-slick, sonner, vaul 등
 >   - 잔존 UI 컴포넌트 21개: alert-dialog, button, Buttons, dropdown-menu, EmptyState, GenreBadge, input, Inputs, InstallBanner, Modal, NotificationPanel, NumberStepper, OfflineBanner, ProgressBar, sheet, skeleton, StarRating, textarea, Toast, tooltip, utils
 >   - 배포: CF `17eba81b`, Git `0f3cf28`
+> - **18차~19차**: 개선_제안서 12/12 항목 완료 (commit: `cccb075`, CF `dcc3f33c`)
+> - **20차**: 프로필 팝업 + 이모지 아바타 (TopBar 아바타 클릭 → Google 스타일 프로필 팝업) (commit: `5b10eee`, CF `62c678a9`)
+> - **21차**: 독서 모임 그룹 시스템 + 통계 공유 기능 ★
+>   - **DB**: 마이그레이션 `0008_groups_and_sharing.sql` — 6개 테이블 (groups, group_members, group_messages, group_meetings, meeting_feedbacks, shared_reports)
+>   - **백엔드**: `groups.ts` (~320줄) — 그룹 CRUD, 멤버 관리, 채팅(폴링), 일정(leader only), 피드백
+>   - **백엔드**: `share.ts` (~120줄) — 독서 통계 보고서 공유/수신함/발신함/읽음 처리
+>   - **프론트엔드**: `groupsApi`(15메서드) + `shareApi`(5메서드) + 6개 타입 + queryKeys
+>   - **프론트엔드**: `useGroups.ts` 17개 React Query hooks
+>   - **프론트엔드**: GroupsPage(목록/생성/가입) + GroupDetailView(채팅/일정/피드백/멤버 탭)
+>   - **네비게이션**: SideNav + TopBar에 독서 모임 메뉴 추가, `/groups` 라우트 등록
+>   - 배포: CF `f40fb457`, Git `43c43e4`
 >
-> **Git 브랜치:** `main` (kordokrip/BookShelf_App) · `0f3cf28` ★ (17차)
-> **Cloudflare Workers Version:** `17eba81b-7637-4721-9a8b-0d6385efa55f` ★ (17차 배포)
+> **Git 브랜치:** `main` (kordokrip/BookShelf_App) · `43c43e4` ★ (21차)
+> **Cloudflare Workers Version:** `f40fb457-37b9-4b44-a718-84681a6404ec` ★ (21차 배포)
 > **분석 방법:** 전체 소스 파일 직접 확인 (추측 없음)
 > **TypeScript 컴파일:** `npx tsc --noEmit` → **EXIT:0 (에러 0개)** ✅
-> **빌드:** `npm run build` → **EXIT:0 (PWA precache 39 entries, 1944.57 KiB)** ✅ ★ (17차)
+> **빌드:** `npm run build` → **EXIT:0 (3.10s)** ✅ ★ (21차)
 > **ESLint:** `npm run lint` → **0 problems (0 errors, 0 warnings)** ✅
-> **E2E 테스트:** `bash scripts/e2e-api-test.sh` → **27/27 PASS** ✅ ★ (16차 교차검증)
+> **E2E 테스트:** `bash scripts/e2e-api-test.sh` → **27/27 PASS** ✅ ★ (21차)
 
 ---
 
@@ -284,6 +295,8 @@ BookShelf_App/
 | 책 등록 플로우 | RegisterFlowPage.tsx | ✅ 완료 | **useBookSearch + useAddBook** | 검색→선택→상태→저장 4단계 플로우, 완료 후 `/` 이동, ProtectedRoute 래핑 ✅ · **placeholder 개선, 1자 amber 힌트, 0건 ISBN CTA** ★ (C-2) |
 | 디자인 시스템 | DesignSystemPage.tsx | ✅ 완료 | mockData (mockDoneBooks 등) | 컴포넌트 쇼케이스 (개발용) · **protected + admin gate** ★ (16차) |
 | 404 | NotFoundPage.tsx | ✅ 완료 | 없음 | path: `'*'` fallback 라우트 ✅ |
+| 독서 모임 | GroupsPage.tsx | ✅ 완료 | **useGroups + useCreateGroup + useJoinGroup** | 그룹 목록(내 모임/공개 모임), 생성 모달(이름/설명/이모지), 가입, 검색 ★ (21차) |
+| 모임 상세 | GroupDetailView.tsx | ✅ 완료 | **useGroupDetail + useGroupMessages + useGroupMeetings + useMeetingFeedbacks** | 탭 UI(채팅/일정/멤버), 실시간 채팅(10초 폴링), 모임 일정 생성/삭제(leader), 피드백 별점/작성, 멤버 관리/추방/탈퇴 ★ (21차) |
 
 > **✅ 모든 페이지 인터랙티브 구현 완료 (17개 페이지 + NotificationPanel 신규 컴포넌트)** ★ (15차)
 > 모든 페이지 TanStack Query 훅으로 실제 API에 연결됨.
@@ -335,6 +348,8 @@ Hono<{ Bindings: Bindings }>
 ├── /api/search/*         → searchRouter
 ├── /api/ai/*             → aiRouter        (Workers AI)
 ├── /api/stats/*          → statsRouter     ★ (신규 2026-03-28)
+├── /api/groups/*         → groupsRouter    ★ (21차 — 독서 모임 그룹)
+├── /api/share/*          → shareRouter     ★ (21차 — 통계 공유)
 │
 ├── GET  *                → ASSETS.fetch() → SPA index.html 폴백
 │
@@ -1499,3 +1514,9 @@ $ npm run lint
 | **[17차] UI 컴포넌트 대량 정리** | 47개 (shadcn/ui 래퍼 포함) | ✅ 40개 미사용 삭제 → 21개 핵심만 잔존 ★ |
 | **[17차] npm 의존성 정리** | 60+개 | ✅ 39개 미사용 제거 (22개 핵심만 잔존) ★ |
 | **[17차] 문서 정리** | 중복 문서 존재 | ✅ page-ui-ux-analysis.md 삭제 (BookShelf_UI_UX.md와 통합) ★ |
+| **[21차] 독서 모임 그룹 시스템** | 없음 | ✅ DB 6테이블 + groups.ts API(15엔드포인트) + GroupsPage + GroupDetailView ★ |
+| **[21차] 그룹 채팅** | 없음 | ✅ D1 폴링(10초) 방식 채팅 + 메시지 전송/조회 + bubble UI ★ |
+| **[21차] 모임 일정 관리** | 없음 | ✅ 장소/시간/주제/책 정보 CRUD(leader only) + 피드백 게시판(별점+댓글) ★ |
+| **[21차] 독서 통계 공유** | 없음 | ✅ share.ts API(5엔드포인트) + 이메일 기반 사용자간 보고서 전송/수신함/읽음 ★ |
+| **[21차] useGroups.ts hooks** | 없음 | ✅ 17개 React Query hooks (queries + mutations + 폴링) ★ |
+| **[21차] SideNav 독서 모임 메뉴** | 없음 | ✅ Users 아이콘 + "독서 모임 👥" 메뉴 항목 추가 ★ |

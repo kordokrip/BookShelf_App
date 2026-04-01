@@ -1,8 +1,8 @@
 # BookShelf App — UI/UX 완전 명세서
 
-> **문서 버전**: v1.2  
-> **최종 업데이트**: 2025-07-16 (17차 코드 정리 반영)  
-> **대상 커밋**: `0f3cf28` / Cloudflare `17eba81b`  
+> **문서 버전**: v1.3  
+> **최종 업데이트**: 2026-04-01 (21차 독서 모임 + 통계 공유 반영)  
+> **대상 커밋**: `43c43e4` / Cloudflare `f40fb457`  
 > **목적**: 코드레벨 교차 검증을 통한 완전한 UI/UX 명세. 이 문서만으로 모든 버튼, 이미지, 데이터 바인딩, API 호출을 파악할 수 있도록 작성.
 
 ---
@@ -18,7 +18,7 @@
 - [6. 알림 시스템](#6-알림-시스템)
 - [7. 토스트 시스템](#7-토스트-시스템)
 - [8. 인증 플로우](#8-인증-플로우)
-- [9. 페이지별 상세 UI/UX (16개)](#9-페이지별-상세-uiux-16개)
+- [9. 페이지별 상세 UI/UX (18개)](#9-페이지별-상세-uiux-18개)
   - [9.0 EntryGate (진입 분기)](#90-entrygate-진입-분기)
   - [9.1 SplashPage](#91-splashpage)
   - [9.2 OnboardingPage](#92-onboardingpage)
@@ -415,7 +415,7 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 
 ---
 
-## 9. 페이지별 상세 UI/UX (16개)
+## 9. 페이지별 상세 UI/UX (18개)
 
 ---
 
@@ -1338,6 +1338,93 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 - "페이지를 찾을 수 없습니다"
 - 안내 메시지
 - **"홈으로 돌아가기" 버튼**: 인디고→바이올렛 그래디언트, h=44px, border-radius=12px → `navigate("/")`
+
+---
+
+### 9.16 GroupsPage (독서 모임)
+
+- **파일**: `src/app/pages/GroupsPage.tsx`
+- **경로**: `/groups` (Lazy loaded, 인증 필수)
+
+#### 레이아웃
+
+- **헤더**: "독서 모임 👥" + "새 모임 만들기" 버튼 (인디고 그래디언트)
+- **내 모임 섹션**: 가입한 그룹 카드 리스트 (가로 스크롤 또는 그리드)
+- **공개 모임 섹션**: 검색 필터 + 가입 가능 그룹 리스트
+- **상세 뷰**: `selectedGroupId` state → `GroupDetailView` 조건부 렌더링
+
+#### GroupCard 컴포넌트
+
+- 커버 이모지 (48px) + 그룹명 (weight 600)
+- 모임장 표시: 👑 crown 아이콘
+- 멤버 수 배지: `{current}/{max_members}`
+- 내 모임: 클릭 → 상세 뷰 전환
+- 공개 모임: "가입" CTA 버튼 (인디고 그래디언트)
+
+#### 모임 생성 모달
+
+- **이름 입력**: TextInput, 필수
+- **설명 입력**: textarea, 선택
+- **커버 이모지 선택**: 12개 이모지 그리드 (📚📖🎯🌟💡🔥🎨🌈🏆💎🎭🎪), 선택 시 ring-2 하이라이트
+- **공개 여부**: 기본 공개 (향후 비공개 토글 가능)
+- 생성 성공 시 그룹 목록 자동 갱신
+
+#### 인터랙션
+
+- 가입 시 `useJoinGroup` mutation → 정원 초과/중복 가입 서버 검증
+- `framer-motion` AnimatePresence로 카드 등장/퇴장 애니메이션
+- 빈 상태: "아직 가입한 모임이 없습니다" / "공개 모임이 없습니다" 안내
+
+---
+
+### 9.17 GroupDetailView (모임 상세)
+
+- **파일**: `src/app/components/groups/GroupDetailView.tsx`
+- **부모**: GroupsPage 내 조건부 렌더링
+
+#### 탭 구조 (3탭)
+
+| 탭 | 아이콘 | 설명 |
+|---|--------|------|
+| **채팅** | MessageCircle | 실시간 대화방 (폴링) |
+| **일정** | Calendar | 모임 일정 관리 + 피드백 |
+| **멤버** | Users | 멤버 목록 + 역할 관리 |
+
+#### ChatTab (채팅)
+
+- **메시지 버블 UI**: 내 메시지(오른쪽, 인디고 배경) / 상대(왼쪽, 그레이 배경)
+- **표시 정보**: 프로필 이모지 + 닉네임 + 시간 (HH:mm)
+- **입력**: 하단 고정, TextInput + 전송 버튼 (Send 아이콘)
+- **전송**: Enter 키 또는 전송 버튼 → `useSendMessage` mutation
+- **자동 스크롤**: `useRef` bottomRef, 새 메시지 시 `scrollIntoView`
+- **폴링**: `useGroupMessages` 10초 interval (`refetchInterval: 10000`)
+- **역순 정렬**: 최신 메시지가 하단
+
+#### MeetingsTab (일정)
+
+- **일정 카드 리스트**: 제목, 설명, 📖 책 정보, 📍 장소, 📅 날짜, 🕐 시간
+- **과거 일정**: 회색 배경, "종료된 일정" 표시
+- **일정 생성 폼** (leader 전용):
+  - 제목, 설명, 책 제목/저자, 장소, 날짜 (DatePicker), 시간 입력
+  - 생성 시 `useCreateMeeting` mutation
+- **일정 삭제**: leader 전용, 확인 다이얼로그
+- **FeedbackSection** (일정 카드 내 중첩):
+  - 피드백 목록: 작성자 이모지 + 닉네임 + 별점(1-5⭐) + 내용
+  - 작성 폼: 별점 선택기(★ 1-5, 클릭/호버) + 내용 textarea
+  - 중복 방지: `alreadyFeedbacked` 체크 → 이미 작성 시 폼 숨김
+  - 삭제: 본인 피드백 또는 leader가 삭제 가능
+
+#### MembersTab (멤버)
+
+- **멤버 리스트**: 프로필 이모지 (40px) + 닉네임 + 역할 배지
+  - 👑 **모임장** (leader): amber 배지
+  - 일반 멤버: 가입일 표시
+- **Leader 전용 액션**:
+  - 멤버 추방 버튼 (UserMinus 아이콘, red)
+  - 모임 삭제 버튼 (danger variant, 확인 다이얼로그)
+- **Member 전용 액션**:
+  - 모임 탈퇴 버튼 (`useLeaveGroup`, 확인 다이얼로그)
+- **제약**: leader는 탈퇴 불가 (모임 삭제만 가능)
 
 ---
 

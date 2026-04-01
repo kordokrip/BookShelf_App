@@ -3,8 +3,8 @@
 > 작성 기준: 실제 소스 코드 전수 분석 (2026-03 기준)
 > 목적: 프로덕션 오류 발생 시 UI → Hook → API → DB 레이어를 빠르게 추적하기 위한 기준 문서
 >
-> **최신 변경**: 2026-04-01 — 17차 코드 정리 (40개 UI 컴포넌트 삭제·39개 npm 의존성 제거·문서 정리)
-> **이전 변경**: 2026-04-01 — 16차 교차검증 (E2E 27/27 PASS·버그 6건 수정·데스크톱 UI/Admin/Tooltip·SideNav 접기/펼치기·EntryGate)
+> **최신 변경**: 2026-04-01 — 21차 독서 모임 그룹 + 채팅 + 일정/피드백 + 통계 공유
+> **이전 변경**: 2026-04-01 — 20차 프로필 팝업 + 이모지 아바타
 
 ---
 
@@ -22,12 +22,12 @@
 | **AI** | Workers AI (`@cf/meta/llama-3.1-8b-instruct`, `@cf/meta/llama-3.2-11b-vision-instruct`) |
 | **Storage** | Cloudflare R2 (`covers/{userId}/{bookId}.{ext}`) |
 | **TypeScript check** | ✅ 0 errors |
-| **Build** | ✅ 성공 (built in 3.31s, PWA precache 39 entries, 1944.57 KiB) ★ (17차) |
+| **Build** | ✅ 성공 (built in 3.10s) ★ (21차) |
 | **Production Health** | ✅ `{"status":"ok","env":"production"}` |
-| **E2E 테스트** | ✅ 27/27 PASS ★ (16차 교차검증) |
-| **GitHub 커밋** | `0f3cf28` (main) ★ (17차) |
-| **Cloudflare Workers** | Version ID `17eba81b-7637-4721-9a8b-0d6385efa55f` ★ (17차 배포) |
-| **D1 Tables** | users(★role), books, reading_sessions, notes(★type 'review'), notes_fts (FTS5), d1_migrations, _cf_KV, sqlite_sequence |
+| **E2E 테스트** | ✅ 27/27 PASS ★ (21차) |
+| **GitHub 커밋** | `43c43e4` (main) ★ (21차) |
+| **Cloudflare Workers** | Version ID `f40fb457-37b9-4b44-a718-84681a6404ec` ★ (21차 배포) |
+| **D1 Tables** | users(★role), books, reading_sessions, notes(★type 'review'), notes_fts (FTS5), groups, group_members, group_messages, group_meetings, meeting_feedbacks, shared_reports ★ (21차), d1_migrations, _cf_KV, sqlite_sequence |
 
 ---
 
@@ -53,6 +53,7 @@
 | `/books/:id` | `Root` > `BookDetailPage` | **보호** | |
 | `/design-system` | `DesignSystemPage` (lazy) | **보호** ★ (16차) | `protected_(withSuspense(Lazy))` + 컴포넌트 내부 admin gate (`role==='admin'`) |
 | `/entry` | `EntryGate` | 공개 ★ (16차) | 인증→`/`, 비인증→`/splash` 분기 |
+| `/groups` | `GroupsPage` (lazy) | **보호** ★ (21차) | 독서 모임 목록/생성/가입 + GroupDetailView(채팅/일정/피드백/멤버 탭) |
 | `*` | `NotFoundPage` | 공개 | 404 fallback 라우트 ✅ |
 
 > **공통**: 모든 라우트에 `errorElement={RouteErrorFallback}` 적용 — 청크 로드 오류 시 1회 자동 새로고침
@@ -70,6 +71,8 @@
 | `/api/search/*` | `worker/routes/search.ts` | 없음 (공개) |
 | `/api/ai/*` | `worker/routes/ai.ts` | `optionalAuth` 각 핸들러 |
 | `/api/stats/*` | `worker/routes/stats.ts` | `authMiddleware` (전체) ✅ |
+| `/api/groups/*` | `worker/routes/groups.ts` | `authMiddleware` (전체) ★ (21차) — 그룹/멤버/채팅/일정/피드백 |
+| `/api/share/*` | `worker/routes/share.ts` | `authMiddleware` (전체) ★ (21차) — 통계 보고서 공유 |
 | `GET *` | SPA 폴백 | 없음 (ASSETS 서빙) |
 
 ---
@@ -1512,6 +1515,18 @@ queryKeys:
   stats.all           = ['stats']                   ← ★ 신규 (2026-03-28)
   stats.user()        = ['stats', 'user']           ← ★ 신규 (2026-03-28)
 
+  groups.all          = ['groups']                   ← ★ 신규 (21차)
+  groups.lists()      = ['groups', 'lists']
+  groups.detail(id)   = ['groups', 'detail', id]
+  groups.messages(id) = ['groups', 'messages', id]
+  groups.meetings(id) = ['groups', 'meetings', id]
+  groups.feedbacks(gId, mId) = ['groups', 'feedbacks', gId, mId]
+
+  share.all           = ['share']                    ← ★ 신규 (21차)
+  share.inbox()       = ['share', 'inbox']
+  share.sent()        = ['share', 'sent']
+  share.unread()      = ['share', 'unread']
+
 Global QueryClient 설정:
   staleTime: 60초  ← ★ 변경 (2026-03-28, 기존 30초)
   gcTime: 5분
@@ -1536,6 +1551,7 @@ Global QueryClient 설정:
 | 2026-03-30 | 12차 반영 (ReadingPage Quick Actions 3대 완전 구현: LogTodayModal·GoalModal·타이머 연동, StatsPage 목표 달성률 카드, useSessions stats 캐시 무효화) — GitHub `1d3c7a2` / Cloudflare `cfb4f121` |
 | 2026-03-30 | 13차 반영 (27개 COPILOT 개선항목 전체 완료: FEAT-101 성취배지, FEAT-102 OCR신뢰도, FEAT-103 Web Share, FEAT-104 YearlyReviewPage, UX-101~107 전체 — WishBookDetailSheet·최근검색어·노트필터+색상바·로그인UX·스플래시슬로건) — GitHub `82a94e1e` / Cloudflare `82a94e1e-6334-456a-a6a2-6d11656d5722` |
 | 2026-03-31 | 14차 반영 (BOOKSHELF_COPILOT_PROMPT_14TH 19개 항목: A-1 Google OAuth · A-4 useRecentSearches · C-1 타이머 자동기록 · C-2 검색UX · C-3 온보딩스킵→마지막슬라이드 · C-4 Stats 연간결산카드+목표미설정amber · C-5 BookDetail 빠른노트캡처바 · C-6 OfflineBanner+uiStore.isOnline+App.tsx이벤트) — GitHub `16c06bc` / Cloudflare `9dc85ef0-452a-4d72-a2a9-e50ac54615df` |
+| 2026-04-01 | 21차 반영 (독서 모임 그룹 시스템 + 채팅 + 일정/피드백 + 통계 공유: DB 6테이블 · groups.ts 15엔드포인트 · share.ts 5엔드포인트 · GroupsPage + GroupDetailView · useGroups 17hooks · SideNav/TopBar 메뉴 추가) — GitHub `43c43e4` / Cloudflare `f40fb457` |
 | 2026-03-31 | 15차 반영 (자동 테마(themeMode auto/light/dark·06:00~18:00=light·setInterval 60_000) · 알림 시스템(NotificationItem 6타입·localStorage max20·NotificationPanel 드롭다운) · TopBar 3-column grid(grid-cols-[auto_1fr_auto]·Bell 배지) · AI one-click UX(description optional·타이핑효과 18ms/char·스켈레톤·에러재시도)) — GitHub `29ec33e` / Cloudflare `d4b79c4b-24f2-49f6-8631-203449189e13` |
 | 2026-04-01 | 16차 반영 (교차검증: E2E 27/27 PASS · 프론트엔드 버그 6건 수정 · SideNav 접기/펼치기+Tooltip+Admin 체계 · TopBar BookPlus/FileSearch 아이콘 · EntryGate /entry 라우트 · Root 동적 마진 · D1 0004_user_role.sql · PATCH /api/users/profile role · authStore role) — Git `0f3cf28` / Cloudflare `719eeb80` |
 | 2026-04-01 | 17차 반영 (코드 정리: 40개 미사용 UI 컴포넌트 삭제(47→21개 잔존) · 39개 npm 의존성 제거 · 문서 정리·중복 파일 삭제) — Cloudflare `17eba81b-7637-4721-9a8b-0d6385efa55f` |

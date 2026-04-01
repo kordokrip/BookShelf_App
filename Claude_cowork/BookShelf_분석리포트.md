@@ -1,9 +1,9 @@
 # BookShelf PWA — 종합 분석 및 개선 리포트
 
-> **분석 기준**: TRACE_MAP.md + PROJECT_STATUS.md 전수 분석 (2026-03-28, 17차까지 반영)
+> **분석 기준**: TRACE_MAP.md + PROJECT_STATUS.md 전수 분석 (2026-07-17, 21차까지 반영)
 > **기술 스택**: React 18.3.1 · Vite 6.3.5 · Hono 4.12.4 · D1(SQLite) · Zustand v5 · TanStack Query v5 · TailwindCSS 4
 > **현재 빌드 상태**: TypeScript 0 errors ✅ · ESLint 0 problems ✅ · E2E 27/27 PASS ✅
-> **최신 배포**: Git `0f3cf28` / Cloudflare `17eba81b`
+> **최신 배포**: Git `43c43e4` / Cloudflare `f40fb457`
 
 ---
 
@@ -25,8 +25,13 @@
 **구조적 설계**
 - `ApiBook(snake_case)` → `normalizeBook()` → `UIBook(camelCase)` 양방향 변환 레이어가 `src/types/book.ts`에 집중 관리되어 있어 API 변경 영향 범위가 명확하다.
 - `src/hooks/` 5개 파일(useBooks, useNotes, useSessions, useBookSearch, useAI)이 TanStack Query 훅으로 완전 캡슐화되어 있어 페이지 컴포넌트의 데이터 의존성이 추적하기 쉽다.
-- `queryKeys` 팩토리 패턴 적용으로 캐시 무효화 일관성이 확보되었다.
+- `queryKeys` 팩토리 패턴 적용으로 캐시 무효화 일관성이 확보되었다. (21차에서 groups/share queryKeys 추가)
 - `manualChunks` 전략으로 vendor-react(285KB) / vendor-charts(375KB, lazy) / vendor-query(35KB) / vendor-ui(22KB) 분리 완료.
+
+**독서 모임 시스템 (21차 신규)**
+- `useGroups.ts` (17개 hooks)로 그룹/채팅/일정/피드백/공유 전체를 TanStack Query로 캐스마이징.
+- GroupsPage + GroupDetailView(ChatTab/MeetingsTab/MembersTab)로 탭 기반 UI 구성.
+- 채팅 폴링(10초), 공유 안읽 수 폴링(30초)으로 D1 리소스 한도 내 실시간 UX 제공.
 
 **모바일 최적화 (9차 업데이트 기준)**
 - `touch-action: manipulation` 전역 적용 → 300ms 탭 딜레이 제거
@@ -187,9 +192,9 @@ is_overdue INTEGER NOT NULL DEFAULT 0  -- 자동 갱신 없음
 |------|-----------|------------|---------|-----------|---------------|
 | 독서 타이머 | ✅ | ✅ | ✅ | ✅ | ✅ **10차 구현 완료** (useReadingTimer) |
 | 독서 연속 스트릭 | ✅ | ✅ | ✅ | ✅ | ✅ **10차 구현 완료** (calcReadingStreak) |
-| 소셜 (친구/팔로우) | ✅ | ✅ | ✅ | ❌ | ❌ 미구현 |
+| 소셜 (친구/팔로우) | ✅ | ✅ | ✅ | ❌ | ⚠️ **21차 부분 구현** (독서 모임 그룹/채팅/통계 공유) |
 | 독서 챌린지 시스템 | ✅ | ✅ | ❌ | ❌ | ⚠️ 연간 목표만 존재 |
-| 도서 리뷰 공개 공유 | ✅ | ✅ | ✅ | ❌ | ❌ 미구현 |
+| 도서 리뷰 공개 공유 | ✅ | ✅ | ✅ | ❌ | ⚠️ **21차 통계 보고서 공유** (shareApi) |
 | 도서 시리즈/컬렉션 | ✅ | ✅ | ✅ | ❌ | ❌ 미구현 |
 | Push 알림 (독서 리마인더) | ❌ | ❌ | ✅ | ✅ | ❌ 미구현 |
 | 다양한 통계 Export | ❌ | ✅ CSV | ❌ | ❌ | ❌ 미구현 |
@@ -336,6 +341,18 @@ D1.batch([
 ])
 ```
 네트워크 재시도 또는 사용자 더블탭 시 동일 세션이 중복 삽입될 수 있다. `current_page`도 동일 값으로 중복 업데이트된다. `session_date + book_id` 복합 유니크 제약 또는 idempotency key 도입이 필요하다.
+
+#### RISK-B05: 그룹 채팅 D1 폴링 부하 (21차 신규)
+
+```typescript
+// useGroups.ts
+useGroupMessages(groupId, { refetchInterval: 10000 }) // 10초마다 D1 쿼리
+```
+그룹 채팅이 D1 폴링(10초 interval)으로 구현되어 있어, 동시 접속 사용자가 N명이면 10초당 N회 D1 쿼리가 발생한다. Workers 단일 인스턴스 동시성 제약과 결합하면 대규모 그룹에서 응답 지연이 발생할 수 있다. 향후 Durable Objects + WebSocket 전환이 권장된다.
+
+#### RISK-B06: 그룹 권한 모델 단순화 (21차 신규)
+
+현재 leader/member 2단계 역할만 존재하며, leader가 탈퇴할 수 없어 그룹 삭제만 가능하다. leader 이양(위임) 기능이 없어, leader가 활동을 중단하면 그룹이 사실상 정체된다. 모임장 위임 또는 자동 승계 로직이 필요하다.
 
 ---
 
@@ -764,6 +781,12 @@ POST /api/notes 요청을 SyncManager 큐에 등록
 | Push Notification | ❌ 미구현 | VAPID + KV 구독 저장 | 2일 |
 | Refresh Token | ❌ 미구현 (SESSIONS KV 선언만) | 30일 Refresh | 1일 |
 | Background Sync | ❌ 미구현 | Workbox BackgroundSync | 1일 |
+| **독서 모임 그룹** | **✅ 21차 구현** | **— 완료** | **—** |
+| **그룹 채팅** | **✅ 21차 D1 폴링** | **Durable Objects WebSocket** | **3일** |
+| **모임 일정/피드백** | **✅ 21차 구현** | **— 완료** | **—** |
+| **통계 보고서 공유** | **✅ 21차 구현** | **전용 UI 페이지 추가** | **1일** |
+| 공유 보고서 전용 UI | ❌ shareApi만 존재 | Inbox/Sent 전용 페이지 | 1일 |
+| 모임장 위임 | ❌ 미구현 | leader 이양 API | 0.5일 |
 
 ---
 
@@ -771,16 +794,20 @@ POST /api/notes 요청을 SyncManager 큐에 등록
 
 BookShelf는 **기술적 완성도가 매우 높은 1인 프로젝트**다. TypeScript strict 모드, ESLint 0 errors, E2E 27/27 Pass, CI/CD 4-job 파이프라인, 보안 미들웨어 분리, D1 batch 원자성 등 프로덕션 레벨의 기준을 갖추고 있다.
 
-**16~17차까지 달성한 주요 개선 사항:**
+**16~21차까지 달성한 주요 개선 사항:**
 - ✅ PBKDF2 비밀번호 해싱, KV Rate Limiting, FTS5 전문 검색, Stats 전용 API (10차)
 - ✅ Google OAuth, OfflineBanner, 독서 타이머/스트릭 (10~14차)
 - ✅ SideNav 접기/펼치기+Tooltip+Admin 체계, EntryGate, 데스크톱 UI 전면 개편 (16차)
 - ✅ 40개 미사용 UI 컴포넌트 삭제, 39개 npm 의존성 제거, 코드 정리 (17차)
+- ✅ 연간 리뷰 페이지 + 확컥 시스템 기반 컴렉션 (18차)
+- ✅ 프로필 팝업 + 이모지 아바타 시스템 (20차)
+- ✅ **독서 모임 시스템**: 그룹 생성/가입, 채팅, 일정 관리, 피드백, 통계 공유 (21차)
 
 **잔존 개선 우선순위:**
 
-1. **보안** — `optionalAuth` demo-user 폴백 제거, CORS 와일드카드 범위 축소, JWT Refresh Token
-2. **신뢰성** — reading_sessions 중복 방지, cover_image 타입 명확화, is_overdue 자동 갱신
-3. **기능** — Web Push 독서 리마인더, Background Sync, 통계 Export
+1. **보안** — `optionalAuth` demo-user 폴백 제거, CORS 와일드카드 범위 축소, JWT Refresh Token, 그룹 채팅 XSS 방지
+2. **신뢰성** — reading_sessions 중복 방지, cover_image 타입 명확화, is_overdue 자동 갱신, 모임장 위임 기능
+3. **성능** — 채팅 WebSocket 전환 (Durable Objects), 대규모 그룹 페이지네이션
+4. **기능** — Web Push 독서 리마인더, Background Sync, 통계 Export, 공유 보고서 전용 UI 페이지
 
-AI 추천 + OCR + ISBN 스캔의 조합은 한국 독서 앱 시장에서 명확한 차별점이다. 이 기능의 **진입점 통합과 가시성 향상**에 집중하면 경쟁 앱 대비 강력한 포지셔닝이 가능하다.
+AI 추천 + OCR + ISBN 스캔의 조합은 한국 독서 앱 시장에서 명확한 차별점이다. 21차에서 독서 모임 기능이 추가되며 **개인 독서 관리 → 소셜 독서 커뮤니티**로 진화하였다. 향후 친구/팔로우 시스템, 공유 보고서 전용 UI, WebSocket 실시간 채팅으로 확장하면 경쟁 앱 대비 강력한 포지셔닝이 가능하다.
