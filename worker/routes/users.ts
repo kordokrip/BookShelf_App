@@ -63,7 +63,7 @@ usersRouter.post(
       .bind(id).first<DbUser>();
 
     const token = await createToken({ sub: id, email }, c.env.JWT_SECRET);
-    const refreshToken = await createRefreshToken(id, c.env.SESSIONS);
+    const refreshToken = await createRefreshToken(id, c.env.KV);
 
     return c.json({ data: { user: safeUser(user!), token, refreshToken } }, 201);
   },
@@ -102,7 +102,7 @@ usersRouter.post(
     }
 
     const token = await createToken({ sub: user.id, email }, c.env.JWT_SECRET);
-    const refreshToken = await createRefreshToken(user.id, c.env.SESSIONS);
+    const refreshToken = await createRefreshToken(user.id, c.env.KV);
 
     return c.json({ data: { user: safeUser(user), token, refreshToken } });
   },
@@ -122,7 +122,9 @@ usersRouter.get('/profile', authMiddleware, async (c) => {
 });
 
 // ─── GET /api/users/:id ───────────────────────────────────────
-usersRouter.get('/:id', async (c) => {
+// SEC-01: 인증 필수, 자신은 전체 조회 / 타인은 공개 필드만
+usersRouter.get('/:id', authMiddleware, async (c) => {
+  const requesterId = c.get('userId');
   const id = c.req.param('id');
 
   const user = await c.env.DB.prepare(
@@ -131,13 +133,18 @@ usersRouter.get('/:id', async (c) => {
 
   if (!user) throw new HTTPException(404, { message: '사용자를 찾을 수 없습니다.' });
 
-  return c.json({ data: safeUser(user) });
+  if (requesterId === id) {
+    return c.json({ data: safeUser(user) });
+  }
+  // 타인 프로필: 공개 필드만
+  return c.json({ data: { id: user.id, name: user.name, avatar_url: user.avatar_url, profile_emoji: user.profile_emoji } });
 });
 
 // ─── POST /api/users ───────────────────────────────────────────
-// 소셜 로그인 upsert
+// ARCH-05: 소셜 로그인 upsert — 인증 필수
 usersRouter.post(
   '/',
+  authMiddleware,
   zValidator('json', upsertSchema),
   async (c) => {
     const body = c.req.valid('json');

@@ -27,44 +27,55 @@ shareRouter.post('/report', authMiddleware, zValidator('json', shareReportSchema
     return c.json({ data: { id: crypto.randomUUID(), shared: true } }, 201);
   }
 
-  // 통계 데이터 수집
-  const [statusCounts, genreStats, totals, sender] = await db.batch([
-    db.prepare(
-      `SELECT status, COUNT(*) AS count FROM books WHERE user_id = ? GROUP BY status`,
-    ).bind(senderId),
-    db.prepare(
-      `SELECT genre, COUNT(*) AS count FROM books WHERE user_id = ? GROUP BY genre ORDER BY count DESC LIMIT 5`,
-    ).bind(senderId),
-    db.prepare(
-      `SELECT SUM(pages_read) AS total_pages, SUM(duration_min) AS total_minutes, COUNT(*) AS session_count
-       FROM reading_sessions WHERE user_id = ?`,
-    ).bind(senderId),
-    db.prepare(
-      'SELECT name, email FROM users WHERE id = ?',
-    ).bind(senderId),
-  ]);
+  // PERF-03: KV 캐시로 동일 사용자 반복 공유 시 DB 쿼리 절감
+  const cacheKey = `report:${senderId}`;
+  let reportData: Record<string, unknown> | null = null;
+  const cached = await c.env.KV.get(cacheKey);
+  if (cached) {
+    reportData = JSON.parse(cached);
+  } else {
+    // 통계 데이터 수집
+    const [statusCounts, genreStats, totals, sender] = await db.batch([
+      db.prepare(
+        `SELECT status, COUNT(*) AS count FROM books WHERE user_id = ? GROUP BY status`,
+      ).bind(senderId),
+      db.prepare(
+        `SELECT genre, COUNT(*) AS count FROM books WHERE user_id = ? GROUP BY genre ORDER BY count DESC LIMIT 5`,
+      ).bind(senderId),
+      db.prepare(
+        `SELECT SUM(pages_read) AS total_pages, SUM(duration_min) AS total_minutes, COUNT(*) AS session_count
+         FROM reading_sessions WHERE user_id = ?`,
+      ).bind(senderId),
+      db.prepare(
+        'SELECT name, email FROM users WHERE id = ?',
+      ).bind(senderId),
+    ]);
 
-  type StatusRow = { status: string; count: number };
-  const counts = { done: 0, reading: 0, wish: 0 };
-  for (const row of statusCounts.results as StatusRow[]) {
-    if (row.status in counts) counts[row.status as keyof typeof counts] = row.count;
+    type StatusRow = { status: string; count: number };
+    const counts = { done: 0, reading: 0, wish: 0 };
+    for (const row of statusCounts.results as StatusRow[]) {
+      if (row.status in counts) counts[row.status as keyof typeof counts] = row.count;
+    }
+
+    const totalsRow = (totals.results[0] ?? {}) as {
+      total_pages: number | null; total_minutes: number | null; session_count: number;
+    };
+
+    reportData = {
+      sender: sender.results[0],
+      statusCounts: counts,
+      topGenres: genreStats.results,
+      totals: {
+        totalPages: totalsRow.total_pages ?? 0,
+        totalMinutes: totalsRow.total_minutes ?? 0,
+        sessionCount: totalsRow.session_count ?? 0,
+      },
+      generatedAt: new Date().toISOString(),
+    };
+
+    // 5분 캐시
+    await c.env.KV.put(cacheKey, JSON.stringify(reportData), { expirationTtl: 300 });
   }
-
-  const totalsRow = (totals.results[0] ?? {}) as {
-    total_pages: number | null; total_minutes: number | null; session_count: number;
-  };
-
-  const reportData = {
-    sender: sender.results[0],
-    statusCounts: counts,
-    topGenres: genreStats.results,
-    totals: {
-      totalPages: totalsRow.total_pages ?? 0,
-      totalMinutes: totalsRow.total_minutes ?? 0,
-      sessionCount: totalsRow.session_count ?? 0,
-    },
-    generatedAt: new Date().toISOString(),
-  };
 
   const id = crypto.randomUUID();
   await db.prepare(
@@ -75,10 +86,12 @@ shareRouter.post('/report', authMiddleware, zValidator('json', shareReportSchema
   return c.json({ data: { id, shared: true } }, 201);
 });
 
-/** GET /api/share/inbox — 내가 받은 공유 보고서 */
+/** GET /api/share/inbox — 내가 받은 공유 보고서 (PERF-05: 동적 페이지네이션) */
 shareRouter.get('/inbox', authMiddleware, async (c) => {
   const userId = c.get('userId');
   const db = c.env.DB;
+  const limit = Math.min(Math.max(1, parseInt(c.req.query('limit') ?? '20')), 100);
+  const offset = Math.max(0, parseInt(c.req.query('offset') ?? '0'));
 
   const result = await db.prepare(`
     SELECT sr.*, u.name AS sender_name, u.email AS sender_email, u.avatar_url AS sender_avatar, u.profile_emoji AS sender_emoji
@@ -86,16 +99,18 @@ shareRouter.get('/inbox', authMiddleware, async (c) => {
     JOIN users u ON u.id = sr.sender_id
     WHERE sr.recipient_id = ?
     ORDER BY sr.created_at DESC
-    LIMIT 50
-  `).bind(userId).all();
+    LIMIT ? OFFSET ?
+  `).bind(userId, limit, offset).all();
 
-  return c.json({ data: result.results });
+  return c.json({ data: result.results, count: result.results.length });
 });
 
-/** GET /api/share/sent — 내가 보낸 공유 보고서 */
+/** GET /api/share/sent — 내가 보낸 공유 보고서 (PERF-05: 동적 페이지네이션) */
 shareRouter.get('/sent', authMiddleware, async (c) => {
   const userId = c.get('userId');
   const db = c.env.DB;
+  const limit = Math.min(Math.max(1, parseInt(c.req.query('limit') ?? '20')), 100);
+  const offset = Math.max(0, parseInt(c.req.query('offset') ?? '0'));
 
   const result = await db.prepare(`
     SELECT sr.*, u.name AS recipient_name, u.email AS recipient_email
@@ -103,10 +118,10 @@ shareRouter.get('/sent', authMiddleware, async (c) => {
     JOIN users u ON u.id = sr.recipient_id
     WHERE sr.sender_id = ?
     ORDER BY sr.created_at DESC
-    LIMIT 50
-  `).bind(userId).all();
+    LIMIT ? OFFSET ?
+  `).bind(userId, limit, offset).all();
 
-  return c.json({ data: result.results });
+  return c.json({ data: result.results, count: result.results.length });
 });
 
 /** PATCH /api/share/:id/read — 보고서 읽음 처리 */

@@ -44,12 +44,12 @@ export default defineConfig({
             handler: 'NetworkOnly',
           },
           {
-            // 책 표지 이미지 → CacheFirst
+            // PERF-04: 책 표지 이미지 → StaleWhileRevalidate (7일)
             urlPattern: /^https?:\/\/.*\.(png|jpg|jpeg|webp|avif)/i,
-            handler: 'CacheFirst',
+            handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'bookshelf-images-cache',
-              expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 7 },
               cacheableResponse: { statuses: [0, 200] },
             },
           },

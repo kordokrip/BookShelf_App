@@ -105,6 +105,13 @@ export interface CreateNoteBody {
 
 export type UpdateNoteBody = Partial<Omit<CreateNoteBody, 'book_id'>>;
 
+/** ARCH-02: 표준 에러 응답 타입 */
+export interface ApiErrorResponse {
+  error: string;
+  code?: string;
+  requestId?: string;
+}
+
 // Cloudflare Bindings — wrangler.toml과 1:1 매핑
 export interface Bindings {
   // 스토리지

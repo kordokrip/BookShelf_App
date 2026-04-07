@@ -77,5 +77,27 @@ name = "bookshelf-api-staging"
 
 [env.staging.vars]
 ENVIRONMENT = "staging"
+APP_NAME = "BookShelf Staging"
+FRONTEND_URL = "https://bookshelf-api-staging.kordokrip.workers.dev"
+
+# 스테이징 D1 (프로덕션과 동일 스키마, 분리된 데이터)
+# [[env.staging.d1_databases]]
+# binding = "DB"
+# database_name = "bookshelf-db-staging"
+# database_id = "<staging-db-id>"  # wrangler d1 create bookshelf-db-staging 으로 생성 후 기입
+
+# 스테이징 KV
+# [[env.staging.kv_namespaces]]
+# binding = "KV"
+# id = "<staging-kv-id>"
+
+# [[env.staging.kv_namespaces]]
+# binding = "SESSIONS"
+# id = "<staging-sessions-kv-id>"
+
+# 스테이징 R2
+# [[env.staging.r2_buckets]]
+# binding = "R2"
+# bucket_name = "bookshelf-covers-staging"
 
 

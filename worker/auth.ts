@@ -10,14 +10,14 @@ export interface JwtPayload {
   exp: number;
 }
 
-/** JWT Access Token 생성 (24시간 유효 — 개인 서재앱 편의 우선) */
+/** JWT Access Token 생성 (2시간 유효 — Refresh Token으로 자동 갱신) */
 export async function createToken(
   payload: { sub: string; email: string },
   secret: string,
 ): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   return Jwt.sign(
-    { ...payload, iat: now, exp: now + 86400 },
+    { ...payload, iat: now, exp: now + 7200 },
     secret,
   );
 }
@@ -108,6 +108,15 @@ export async function verifyPassword(password: string, stored: string): Promise<
   return legacy === stored;
 }
 
+/** ARCH-04: JWT 페이로드 런타임 타입 검증 */
+function isValidJwtPayload(p: unknown): p is JwtPayload {
+  return (
+    typeof p === 'object' && p !== null &&
+    typeof (p as JwtPayload).sub === 'string' &&
+    typeof (p as JwtPayload).exp === 'number'
+  );
+}
+
 /** 인증 미들웨어 — Authorization: Bearer <token> 검증 */
 export const authMiddleware = createMiddleware<{ Bindings: Bindings; Variables: { userId: string } }>(
   async (c, next) => {
@@ -118,8 +127,11 @@ export const authMiddleware = createMiddleware<{ Bindings: Bindings; Variables: 
 
     const token = header.slice(7);
     try {
-      const payload = await Jwt.verify(token, c.env.JWT_SECRET, 'HS256') as unknown as JwtPayload;
-      c.set('userId', payload.sub);
+      const raw = await Jwt.verify(token, c.env.JWT_SECRET, 'HS256');
+      if (!isValidJwtPayload(raw)) {
+        return c.json({ error: '잘못된 토큰 형식입니다.' }, 401);
+      }
+      c.set('userId', raw.sub);
       await next();
     } catch {
       return c.json({ error: '유효하지 않은 토큰입니다.' }, 401);

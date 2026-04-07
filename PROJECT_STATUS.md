@@ -1,6 +1,6 @@
 # BookShelf App — 프로젝트 상태 보고서
 
-> **최종 업데이트:** 2026-04-01 (21차 업데이트 — 독서 모임 그룹 + 채팅 + 일정/피드백 + 통계 공유 기능)
+> **최종 업데이트:** 2025-07-25 (23차 업데이트 — 보안 및 개선 27건 구현: SEC 10 + PERF 4 + ARCH 5 + OPS 4)
 > - **4차**: SideNav/TopBar 하드코딩 데이터 → 실시간 바인딩, ViteWorkbox SW 청크 에러 수정 (commit: `1c280d1`)
 > - **5차**: 카카오 SDK 무결성 해시 수정, `mobile-web-app-capable` 메타태그 추가, 소셜 로그인 401 에러 메시지 분기 (commit: `8c18d60`)
 > - **6차**: D1 테이블 정상 동작 확인, Kakao OAuth dead code 제거(`loginWithKakao`), Google 버튼 "준비 중" UI로 대체 (commit: `7cddee7`)
@@ -38,14 +38,22 @@
 >   - **프론트엔드**: GroupsPage(목록/생성/가입) + GroupDetailView(채팅/일정/피드백/멤버 탭)
 >   - **네비게이션**: SideNav + TopBar에 독서 모임 메뉴 추가, `/groups` 라우트 등록
 >   - 배포: CF `f40fb457`, Git `43c43e4`
+> - **22차**: 보안_리팩토링_제안서 20/20 항목 전체 구현 (commit: `fe39fa3`, CF `bd934ea3`)
+> - **23차**: 23차_보안_개선_제안서 27/28 항목 구현 ★
+>   - **보안**: SEC-01~10 (프로필 인증, Refresh Rate Limit, 보안 헤더, limit 검증, AI 프롬프트 방어, HttpOnly 쿠키, JWT 2h, LIKE 이스케이프, PBKDF2 문서화, SSRF 강화)
+>   - **성능**: PERF-02~05 (refresh-covers 배치, 보고서 KV 캐싱, 이미지 StaleWhileRevalidate 7d, share 페이지네이션)
+>   - **아키텍처**: ARCH-01~05 (SESSIONS→KV 통합, 에러 표준화, 요청 추적 ID, JWT 타입 가드, upsert 인증)
+>   - **인프라**: OPS-01~02,04~05 (헬스체크 DB/KV, 환경변수 검증, SECURITY.md, 스테이징 템플릿)
+>   - **미구현**: PERF-01 WebSocket/Durable Objects (유료 기능, 별도 세션 권장)
+>   - 배포: CF `96e9abbe`, E2E 27/27 PASS + 보안검증 7/7 PASS
 >
-> **Git 브랜치:** `main` (kordokrip/BookShelf_App) · `43c43e4` ★ (21차)
-> **Cloudflare Workers Version:** `f40fb457-37b9-4b44-a718-84681a6404ec` ★ (21차 배포)
+> **Git 브랜치:** `main` (kordokrip/BookShelf_App)
+> **Cloudflare Workers Version:** `96e9abbe-c322-4e87-a533-d205097efdad` ★ (23차 배포)
 > **분석 방법:** 전체 소스 파일 직접 확인 (추측 없음)
 > **TypeScript 컴파일:** `npx tsc --noEmit` → **EXIT:0 (에러 0개)** ✅
-> **빌드:** `npm run build` → **EXIT:0 (3.10s)** ✅ ★ (21차)
+> **빌드:** `npm run build` → **EXIT:0 (3.30s)** ✅ ★ (23차)
 > **ESLint:** `npm run lint` → **0 problems (0 errors, 0 warnings)** ✅
-> **E2E 테스트:** `bash scripts/e2e-api-test.sh` → **27/27 PASS** ✅ ★ (21차)
+> **E2E 테스트:** `bash scripts/e2e-api-test.sh` → **27/27 PASS** ✅ ★ (23차)
 
 ---
 

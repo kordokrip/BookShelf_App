@@ -77,8 +77,10 @@ groupsRouter.get('/', authMiddleware, async (c) => {
   const publicParams: unknown[] = [];
 
   if (search) {
-    publicQuery += ' AND g.name LIKE ?';
-    publicParams.push(`%${search}%`);
+    // SEC-08: LIKE 와일드카드 이스케이프
+    const escaped = search.replace(/[%_\\]/g, '\\$&').slice(0, 100);
+    publicQuery += ` AND g.name LIKE ? ESCAPE '\\'`;
+    publicParams.push(`%${escaped}%`);
   }
 
   publicQuery += ' ORDER BY g.created_at DESC LIMIT ? OFFSET ?';

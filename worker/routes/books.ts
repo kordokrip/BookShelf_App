@@ -74,24 +74,29 @@ booksRouter.post('/refresh-covers', authMiddleware, async (c) => {
   let updated = 0;
 
   // ── Step 1: 직접 CDN URL → 프록시 URL 변환 ──────────────────
-  // 이미 커버가 있지만 직접 CDN URL(CORS 오류 발생)인 책들을 프록시 URL로 교체
+  // PERF-02: BATCH_SIZE 제한 + db.batch()로 일괄 UPDATE
+  const BATCH_SIZE = 50;
   const CDN_PATTERNS = [
     'https://search1.kakaocdn.net/%',
     'https://search2.kakaocdn.net/%',
     'https://shopping.phinf.naver.net/%',
   ];
 
+  const db = c.env.DB;
   for (const pattern of CDN_PATTERNS) {
-    const { results: cdnBooks } = await c.env.DB.prepare(
-      `SELECT id, cover_image FROM books WHERE user_id = ? AND cover_image LIKE ?`,
-    ).bind(userId, pattern).all<{ id: string; cover_image: string }>();
+    const { results: cdnBooks } = await db.prepare(
+      `SELECT id, cover_image FROM books WHERE user_id = ? AND cover_image LIKE ? LIMIT ?`,
+    ).bind(userId, pattern, BATCH_SIZE).all<{ id: string; cover_image: string }>();
 
-    for (const book of cdnBooks ?? []) {
-      const proxyUrl = `${proxyOrigin}/api/cover-proxy?url=${encodeURIComponent(book.cover_image)}`;
-      await c.env.DB.prepare(
-        `UPDATE books SET cover_image = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?`,
-      ).bind(proxyUrl, book.id, userId).run();
-      migrated++;
+    if (cdnBooks && cdnBooks.length > 0) {
+      const stmts = cdnBooks.map((book) => {
+        const proxyUrl = `${proxyOrigin}/api/cover-proxy?url=${encodeURIComponent(book.cover_image)}`;
+        return db.prepare(
+          `UPDATE books SET cover_image = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?`,
+        ).bind(proxyUrl, book.id, userId);
+      });
+      await db.batch(stmts);
+      migrated += cdnBooks.length;
     }
   }
 
@@ -148,8 +153,9 @@ booksRouter.get('/', authMiddleware, async (c) => {
   const status = c.req.query('status');
   const genre = c.req.query('genre');
   const sort = c.req.query('sort') ?? 'created_at_desc';
-  const limit = parseInt(c.req.query('limit') ?? '100');
-  const offset = parseInt(c.req.query('offset') ?? '0');
+  // SEC-04: limit 최댓값 검증
+  const limit = Math.min(Math.max(1, parseInt(c.req.query('limit') ?? '100')), 500);
+  const offset = Math.max(0, parseInt(c.req.query('offset') ?? '0'));
 
   let query = `SELECT *, CASE WHEN goal_date IS NOT NULL AND goal_date < date('now') AND status = 'reading' THEN 1 ELSE 0 END AS is_overdue FROM books WHERE user_id = ?`;
   const params: (string | number)[] = [userId];

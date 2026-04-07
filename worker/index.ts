@@ -21,6 +21,25 @@ import { authMiddleware } from './auth';
 // ─── App 인스턴스 ─────────────────────────────────────────────
 const app = new Hono<{ Bindings: Bindings }>();
 
+// ─── SEC-03: 보안 응답 헤더 ───────────────────────────────────
+app.use('*', async (c, next) => {
+  await next();
+  c.header('X-Frame-Options', 'DENY');
+  c.header('X-Content-Type-Options', 'nosniff');
+  c.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  c.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+  c.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  c.header('X-Permitted-Cross-Domain-Policies', 'none');
+});
+
+// ─── ARCH-03: 요청 추적 ID ───────────────────────────────────
+app.use('/api/*', async (c, next) => {
+  const requestId = crypto.randomUUID().slice(0, 8);
+  c.set('requestId' as never, requestId);
+  c.header('X-Request-Id', requestId);
+  await next();
+});
+
 // ─── 글로벌 미들웨어 ──────────────────────────────────────────
 app.use('*', logger());
 app.use('*', prettyJSON());
@@ -30,7 +49,7 @@ app.use(
     origin: (origin) => {
       // 개발: 모든 localhost 허용
       // 프로덕션: 정확한 프로젝트 도메인만 허용
-      if (!origin) return '*';   // 동일 오리진(Origin 헤더 없음) 통과
+      if (!origin) return 'https://bookshelf-api.kordokrip.workers.dev';
       const allowed = [
         /^http:\/\/localhost:\d+$/,
         /^https:\/\/bookshelf-api\.kordokrip\.workers\.dev$/,
@@ -40,18 +59,46 @@ app.use(
     },
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
     maxAge: 86400,
   }),
 );
 
-// ─── 헬스체크 ────────────────────────────────────────────────
-app.get('/api/health', (c) =>
-  c.json({
-    status: 'ok',
+// ─── OPS-02: 환경 변수 검증 ──────────────────────────────────
+app.use('/api/*', async (c, next) => {
+  const required = ['JWT_SECRET', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'] as const;
+  for (const key of required) {
+    if (!c.env[key]) {
+      console.error(`[Config] 필수 환경 변수 누락: ${key}`);
+      return c.json({ error: '서버 설정 오류', code: 'CONFIG_ERROR' }, 500);
+    }
+  }
+  await next();
+});
+
+// ─── OPS-01: 헬스체크 (DB/KV 확인) ──────────────────────────
+app.get('/api/health', async (c) => {
+  const checks: Record<string, string> = {};
+  try {
+    await c.env.DB.prepare('SELECT 1').first();
+    checks.db = 'ok';
+  } catch {
+    checks.db = 'error';
+  }
+  try {
+    await c.env.KV.get('__health');
+    checks.kv = 'ok';
+  } catch {
+    checks.kv = 'error';
+  }
+  const allOk = Object.values(checks).every((v) => v === 'ok');
+  return c.json({
+    status: allOk ? 'ok' : 'degraded',
     env: c.env.ENVIRONMENT,
     timestamp: new Date().toISOString(),
-  }),
-);
+    checks,
+  }, allOk ? 200 : 503);
+});
 
 // ─── 책 표지 이미지 프록시 ────────────────────────────────────
 // 카카오/네이버 CDN 이미지를 CORS 없이 서빙 (PWA 서비스워커 캐시 문제 해결)
@@ -87,10 +134,21 @@ app.get('/api/cover-proxy', async (c) => {
   if (!isAllowed) return c.json({ error: '허용되지 않는 도메인입니다.' }, 403);
 
   try {
-    const upstream = await fetch(decoded);
+    const upstream = await fetch(decoded, { redirect: 'error' });
     if (!upstream.ok) return c.json({ error: '이미지를 가져오는데 실패했습니다.' }, 502);
 
-    const contentType = upstream.headers.get('content-type') ?? 'image/jpeg';
+    const contentType = upstream.headers.get('content-type') ?? '';
+    // SEC-10: Content-Type 검증 — 이미지만 서빙
+    if (!contentType.startsWith('image/')) {
+      return c.json({ error: '이미지가 아닌 응답입니다.' }, 502);
+    }
+
+    // SEC-10: 응답 크기 제한 (10MB)
+    const size = parseInt(upstream.headers.get('content-length') ?? '0');
+    if (size > 10 * 1024 * 1024) {
+      return c.json({ error: '이미지가 너무 큽니다.' }, 413);
+    }
+
     return new Response(upstream.body, {
       headers: {
         'Content-Type': contentType,
@@ -163,13 +221,14 @@ app.get('*', async (c) => {
   return c.env.ASSETS.fetch(new Request(`${new URL(c.req.url).origin}/index.html`));
 });
 
-// ─── 글로벌 에러 핸들러 ───────────────────────────────────────
+// ─── ARCH-02: 글로벌 에러 핸들러 (표준화) ────────────────────
 app.onError((err, c) => {
+  const requestId = (c.get('requestId' as never) as string) ?? '';
   if (err instanceof HTTPException) {
-    return c.json({ error: err.message }, err.status);
+    return c.json({ error: err.message, code: `HTTP_${err.status}`, requestId }, err.status);
   }
-  console.error('[Worker Error]', err);
-  return c.json({ error: 'Internal Server Error' }, 500);
+  console.error(`[Worker Error] rid=${requestId}`, err);
+  return c.json({ error: 'Internal Server Error', code: 'INTERNAL_ERROR', requestId }, 500);
 });
 
 app.notFound((c) => c.json({ error: 'Not Found' }, 404));

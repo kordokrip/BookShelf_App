@@ -105,19 +105,23 @@ let refreshPromise: Promise<boolean> | null = null;
 
 async function tryRefreshToken(): Promise<boolean> {
   const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
-  if (!refreshToken) return false;
 
   try {
+    // SEC-06: credentials: 'include' → HttpOnly 쿠키로 refreshToken 전달
     const res = await fetch(`${BASE_URL}/api/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
+      credentials: 'include',
+      body: JSON.stringify({ refreshToken: refreshToken ?? undefined }),
     });
     if (!res.ok) return false;
 
     const data = await res.json() as { token: string; refreshToken: string };
     localStorage.setItem(TOKEN_KEY, data.token);
-    localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
+    // refreshToken은 이제 HttpOnly 쿠키로도 관리되지만, 하위 호환을 위해 localStorage에도 저장
+    if (data.refreshToken) {
+      localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
+    }
     return true;
   } catch {
     return false;

@@ -5,6 +5,12 @@ import { rateLimit } from '../middleware/rateLimit';
 
 const aiRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
+/** SEC-05: 프롬프트 인젝션 방어 — 특수문자 제거 + 길이 제한 */
+const sanitizeForPrompt = (s: string) =>
+  s.replace(/[\r\n]/g, ' ')
+   .replace(/[<>{}[\]]/g, '')
+   .slice(0, 500);
+
 // ─── POST /api/ai/summarize — 책 설명 한국어 요약 ────────────
 aiRouter.post('/summarize', rateLimit({ limit: 5, windowMs: 60_000, keyPrefix: 'ai' }), authMiddleware, async (c) => {
   const { description, title, author } = await c.req.json() as {
@@ -17,23 +23,26 @@ aiRouter.post('/summarize', rateLimit({ limit: 5, windowMs: 60_000, keyPrefix: '
     return c.json({ error: '책 제목과 저자 정보가 필요합니다' }, 400);
   }
 
-  const hasDescription = typeof description === 'string' && description.length >= 20;
+  const safeTitle = sanitizeForPrompt(title);
+  const safeAuthor = sanitizeForPrompt(author);
+  const safeDesc = typeof description === 'string' ? sanitizeForPrompt(description) : '';
+  const hasDescription = safeDesc.length >= 20;
 
   // KV 캐시 키 생성 (description 유무에 따라 다른 키)
-  const cacheInput = hasDescription ? description!.slice(0, 50) : `${title}::${author}`;
+  const cacheInput = hasDescription ? safeDesc.slice(0, 50) : `${safeTitle}::${safeAuthor}`;
   const cacheKey = `ai_summary:${btoa(unescape(encodeURIComponent(cacheInput))).replace(/[+/=]/g, '')}`;
   const cached = await c.env.KV.get(cacheKey);
   if (cached) {
     return c.json({ summary: cached, cached: true });
   }
 
-  // 프롬프트 구성 (description 유무에 따라 분기)
+  // 프롬프트 구성 (sanitized 값 사용)
   const systemPrompt = hasDescription
     ? '당신은 독서 앱의 AI 어시스턴트입니다. 책 설명을 한국어로 2-3문장으로 간결하게 요약해주세요.'
     : '당신은 독서 전문가 AI입니다. 책 제목과 저자를 바탕으로 이 책이 어떤 내용인지 한국어로 2-3문장으로 소개해주세요. 핵심 주제와 독자가 얻을 수 있는 가치를 포함하세요.';
   const userPrompt = hasDescription
-    ? `책 제목: "${title}" (저자: ${author})\n\n책 설명:\n${description}\n\n위 내용을 한국어로 2-3문장으로 요약해주세요.`
-    : `책 제목: "${title}"\n저자: ${author}\n\n이 책이 어떤 책인지 2-3문장으로 소개해주세요.`;
+    ? `책 제목: "${safeTitle}" (저자: ${safeAuthor})\n\n책 설명:\n${safeDesc}\n\n위 내용을 한국어로 2-3문장으로 요약해주세요.`
+    : `책 제목: "${safeTitle}"\n저자: ${safeAuthor}\n\n이 책이 어떤 책인지 2-3문장으로 소개해주세요.`;
 
   try {
     const model = '@cf/meta/llama-3.1-8b-instruct' as Parameters<Ai['run']>[0];
