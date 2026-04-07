@@ -659,6 +659,11 @@ export const groupsApi = {
   removeMember: (groupId: string, userId: string) =>
     apiFetch<{ data: { removed: boolean } }>(`/api/groups/${groupId}/members/${userId}`, { method: 'DELETE' }),
 
+  transferLeader: (groupId: string, newLeaderId: string) =>
+    apiFetch<{ data: { transferred: boolean } }>(`/api/groups/${groupId}/transfer-leader`, {
+      method: 'PATCH', body: JSON.stringify({ newLeaderId }),
+    }),
+
   // 메시지
   getMessages: (groupId: string, params?: { limit?: number; before?: string }) => {
     const qs = new URLSearchParams();

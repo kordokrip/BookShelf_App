@@ -83,7 +83,7 @@ sessionsRouter.post(
     // 트랜잭션 (D1은 batch로 원자적 실행)
     await c.env.DB.batch([
       c.env.DB.prepare(
-        `INSERT INTO reading_sessions
+        `INSERT OR IGNORE INTO reading_sessions
            (id, book_id, user_id, pages_read, session_date, duration_min, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
       ).bind(

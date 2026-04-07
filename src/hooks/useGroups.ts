@@ -1,5 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { groupsApi, shareApi, queryKeys } from '../lib/api';
+import type { GroupMessage } from '../lib/api';
 
 // ═══════════════════════════════════════════════════════════════
 // Groups Hooks
@@ -26,12 +27,20 @@ export function useGroupDetail(groupId: string | undefined) {
 
 /** 그룹 메시지 */
 export function useGroupMessages(groupId: string | undefined) {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: queryKeys.groups.messages(groupId ?? ''),
-    queryFn: () => groupsApi.getMessages(groupId!),
-    select: (res) => res.data,
+    queryFn: ({ pageParam }: { pageParam: string | undefined }) =>
+      groupsApi.getMessages(groupId!, { limit: 50, before: pageParam }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => {
+      const msgs = lastPage.data;
+      if (!msgs || msgs.length < 50) return undefined;
+      return msgs[msgs.length - 1]?.created_at;
+    },
+    select: (data) => data.pages.flatMap((p) => p.data).reverse(),
     enabled: !!groupId,
-    refetchInterval: 10_000, // 10초 폴링
+    refetchInterval: 10_000,
+    refetchIntervalInBackground: false, // PERF-01: 탭 비활성 시 폴링 중단
   });
 }
 
@@ -120,6 +129,32 @@ export function useCreateFeedback(groupId: string, meetingId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.groups.feedbacks(groupId, meetingId) });
       qc.invalidateQueries({ queryKey: queryKeys.groups.meetings(groupId) });
+    },
+  });
+}
+
+/** REF-02: 멤버 추방 */
+export function useRemoveMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ groupId, userId }: { groupId: string; userId: string }) =>
+      groupsApi.removeMember(groupId, userId),
+    onSuccess: (_, { groupId }) => {
+      qc.invalidateQueries({ queryKey: queryKeys.groups.detail(groupId) });
+      qc.invalidateQueries({ queryKey: queryKeys.groups.all });
+    },
+  });
+}
+
+/** UX-02: 모임장 위임 */
+export function useTransferLeader() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ groupId, newLeaderId }: { groupId: string; newLeaderId: string }) =>
+      groupsApi.transferLeader(groupId, newLeaderId),
+    onSuccess: (_, { groupId }) => {
+      qc.invalidateQueries({ queryKey: queryKeys.groups.detail(groupId) });
+      qc.invalidateQueries({ queryKey: queryKeys.groups.all });
     },
   });
 }

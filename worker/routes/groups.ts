@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import type { Bindings } from '../types';
 import { authMiddleware } from '../auth';
+import { rateLimit } from '../middleware/rateLimit';
 
 export const groupsRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -35,6 +36,11 @@ const createFeedbackSchema = z.object({
 });
 
 // ─── helpers ──────────────────────────────────────────────────
+/** HTML 태그 제거 (XSS 방지) */
+function stripHtml(input: string): string {
+  return input.replace(/<[^>]*>/g, '');
+}
+
 async function isMember(db: D1Database, groupId: string, userId: string) {
   const row = await db.prepare(
     'SELECT id FROM group_members WHERE group_id = ? AND user_id = ?',
@@ -57,17 +63,29 @@ async function isLeader(db: D1Database, groupId: string, userId: string) {
 groupsRouter.get('/', authMiddleware, async (c) => {
   const userId = c.get('userId');
   const db = c.env.DB;
+  const search = c.req.query('search')?.trim();
+  const limit = Math.min(Number(c.req.query('limit') ?? 20), 50);
+  const offset = Math.max(Number(c.req.query('offset') ?? 0), 0);
+
+  let publicQuery = `
+    SELECT g.*, u.name AS owner_name,
+      (SELECT COUNT(*) FROM group_members WHERE group_id = g.id) AS member_count
+    FROM groups g
+    JOIN users u ON u.id = g.owner_id
+    WHERE g.is_public = 1
+  `;
+  const publicParams: unknown[] = [];
+
+  if (search) {
+    publicQuery += ' AND g.name LIKE ?';
+    publicParams.push(`%${search}%`);
+  }
+
+  publicQuery += ' ORDER BY g.created_at DESC LIMIT ? OFFSET ?';
+  publicParams.push(limit, offset);
 
   const [publicGroups, myGroups] = await db.batch([
-    db.prepare(`
-      SELECT g.*, u.name AS owner_name,
-        (SELECT COUNT(*) FROM group_members WHERE group_id = g.id) AS member_count
-      FROM groups g
-      JOIN users u ON u.id = g.owner_id
-      WHERE g.is_public = 1
-      ORDER BY g.created_at DESC
-      LIMIT 50
-    `),
+    db.prepare(publicQuery).bind(...publicParams),
     db.prepare(`
       SELECT g.*, gm.role AS my_role, u.name AS owner_name,
         (SELECT COUNT(*) FROM group_members WHERE group_id = g.id) AS member_count
@@ -234,6 +252,40 @@ groupsRouter.delete('/:id/members/:userId', authMiddleware, async (c) => {
   return c.json({ data: { removed: true } });
 });
 
+/** PATCH /api/groups/:id/transfer-leader — 모임장 위임 (leader only) */
+groupsRouter.patch('/:id/transfer-leader', authMiddleware, async (c) => {
+  const currentUserId = c.get('userId');
+  const groupId = c.req.param('id');
+  const db = c.env.DB;
+
+  if (!(await isLeader(db, groupId, currentUserId))) {
+    return c.json({ error: '모임장만 위임할 수 있습니다.' }, 403);
+  }
+
+  const { newLeaderId } = await c.req.json<{ newLeaderId: string }>();
+  if (!newLeaderId || newLeaderId === currentUserId) {
+    return c.json({ error: '유효하지 않은 대상입니다.' }, 400);
+  }
+
+  if (!(await isMember(db, groupId, newLeaderId))) {
+    return c.json({ error: '대상이 그룹 멤버가 아닙니다.' }, 404);
+  }
+
+  await db.batch([
+    db.prepare(
+      `UPDATE group_members SET role = 'member' WHERE group_id = ? AND user_id = ?`,
+    ).bind(groupId, currentUserId),
+    db.prepare(
+      `UPDATE group_members SET role = 'leader' WHERE group_id = ? AND user_id = ?`,
+    ).bind(groupId, newLeaderId),
+    db.prepare(
+      `UPDATE groups SET owner_id = ? WHERE id = ?`,
+    ).bind(newLeaderId, groupId),
+  ]);
+
+  return c.json({ data: { transferred: true } });
+});
+
 // ═══════════════════════════════════════════════════════════════
 // 그룹 채팅 메시지
 // ═══════════════════════════════════════════════════════════════
@@ -271,7 +323,7 @@ groupsRouter.get('/:id/messages', authMiddleware, async (c) => {
 });
 
 /** POST /api/groups/:id/messages — 메시지 전송 */
-groupsRouter.post('/:id/messages', authMiddleware, zValidator('json', createMessageSchema), async (c) => {
+groupsRouter.post('/:id/messages', authMiddleware, rateLimit({ limit: 30, windowMs: 60_000, keyPrefix: 'msg' }), zValidator('json', createMessageSchema), async (c) => {
   const userId = c.get('userId');
   const groupId = c.req.param('id');
   const body = c.req.valid('json');
@@ -284,7 +336,7 @@ groupsRouter.post('/:id/messages', authMiddleware, zValidator('json', createMess
   const id = crypto.randomUUID();
   await db.prepare(
     'INSERT INTO group_messages (id, group_id, user_id, content) VALUES (?, ?, ?, ?)',
-  ).bind(id, groupId, userId, body.content.trim()).run();
+  ).bind(id, groupId, userId, stripHtml(body.content.trim())).run();
 
   const msg = await db.prepare(`
     SELECT m.*, u.name AS user_name, u.avatar_url, u.profile_emoji
@@ -394,7 +446,7 @@ groupsRouter.get('/:id/meetings/:meetingId/feedbacks', authMiddleware, async (c)
 });
 
 /** POST /api/groups/:id/meetings/:meetingId/feedbacks — 피드백 작성 */
-groupsRouter.post('/:id/meetings/:meetingId/feedbacks', authMiddleware, zValidator('json', createFeedbackSchema), async (c) => {
+groupsRouter.post('/:id/meetings/:meetingId/feedbacks', authMiddleware, rateLimit({ limit: 10, windowMs: 60_000, keyPrefix: 'fb' }), zValidator('json', createFeedbackSchema), async (c) => {
   const userId = c.get('userId');
   const groupId = c.req.param('id');
   const meetingId = c.req.param('meetingId');
@@ -416,7 +468,7 @@ groupsRouter.post('/:id/meetings/:meetingId/feedbacks', authMiddleware, zValidat
   const id = crypto.randomUUID();
   await db.prepare(
     'INSERT INTO meeting_feedbacks (id, meeting_id, user_id, content, rating) VALUES (?, ?, ?, ?, ?)',
-  ).bind(id, meetingId, userId, body.content.trim(), body.rating ?? null).run();
+  ).bind(id, meetingId, userId, stripHtml(body.content.trim()), body.rating ?? null).run();
 
   const feedback = await db.prepare(`
     SELECT f.*, u.name AS user_name, u.avatar_url, u.profile_emoji

@@ -17,15 +17,14 @@ shareRouter.post('/report', authMiddleware, zValidator('json', shareReportSchema
   const body = c.req.valid('json');
   const db = c.env.DB;
 
-  // 수신자 조회
+  // 수신자 조회 — 미존재 시에도 동일 성공 응답 (이메일 열거 방지)
   const recipient = await db.prepare(
     'SELECT id FROM users WHERE email = ?',
   ).bind(body.recipient_email).first<{ id: string }>();
-  if (!recipient) {
-    return c.json({ error: '해당 이메일의 사용자를 찾을 수 없습니다.' }, 404);
-  }
-  if (recipient.id === senderId) {
-    return c.json({ error: '자신에게는 공유할 수 없습니다.' }, 400);
+
+  if (!recipient || recipient.id === senderId) {
+    // 실제 전송 없이 성공으로 응답 (정보 유출 차단)
+    return c.json({ data: { id: crypto.randomUUID(), shared: true } }, 201);
   }
 
   // 통계 데이터 수집

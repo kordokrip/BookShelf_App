@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Plus, LogIn, Crown, ChevronRight, Search } from 'lucide-react';
 import { useGroups, useCreateGroup, useJoinGroup } from '../../hooks/useGroups';
 import { useAuthStore } from '../../stores/authStore';
 import type { Group } from '../../lib/api';
-import { GroupDetailView } from '../components/groups/GroupDetailView';
+
+const GroupDetailView = lazy(() => import('../components/groups/GroupDetailView').then(m => ({ default: m.GroupDetailView })));
 
 export function GroupsPage() {
   const user = useAuthStore((s) => s.user);
@@ -18,7 +19,11 @@ export function GroupsPage() {
   const [form, setForm] = useState({ name: '', description: '', cover_emoji: '📖' });
 
   if (selectedGroupId) {
-    return <GroupDetailView groupId={selectedGroupId} onBack={() => setSelectedGroupId(null)} />;
+    return (
+      <Suspense fallback={<div className="flex items-center justify-center h-screen text-muted-foreground text-sm">모임 로딩 중...</div>}>
+        <GroupDetailView groupId={selectedGroupId} onBack={() => setSelectedGroupId(null)} />
+      </Suspense>
+    );
   }
 
   const myGroups = data?.myGroups ?? [];
@@ -62,7 +67,7 @@ export function GroupsPage() {
       </div>
 
       {/* 내 모임 */}
-      {myGroups.length > 0 && (
+      {myGroups.length > 0 ? (
         <section>
           <h2 className="text-lg font-semibold text-[#1E293B] dark:text-[#F8FAFC] mb-3 flex items-center gap-2">
             <Users size={18} className="text-[#4F46E5]" />
@@ -78,6 +83,22 @@ export function GroupsPage() {
               />
             ))}
           </div>
+        </section>
+      ) : !isLoading && (
+        <section className="text-center py-10 px-6 bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 rounded-2xl border border-indigo-100 dark:border-indigo-900/50">
+          <div className="text-4xl mb-3">📚</div>
+          <h3 className="text-lg font-bold text-[#1E293B] dark:text-[#F8FAFC]">독서 모임을 시작해보세요!</h3>
+          <p className="text-sm text-[#64748B] dark:text-[#94A3B8] mt-2 max-w-md mx-auto">
+            모임을 만들어 친구들과 함께 책을 읽고, 일정을 잡고, 후기를 공유하세요.
+            아래 공개 모임에 참여하거나 직접 만들 수 있습니다.
+          </p>
+          <button
+            onClick={() => setShowCreate(true)}
+            className="mt-4 px-5 py-2.5 bg-[#4F46E5] text-white rounded-xl text-sm font-medium hover:bg-[#4338CA] transition-colors shadow-sm inline-flex items-center gap-2"
+          >
+            <Plus size={16} />
+            첫 모임 만들기
+          </button>
         </section>
       )}
 
