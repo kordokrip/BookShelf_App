@@ -570,6 +570,7 @@ export interface Group {
   is_public: number;
   member_count?: number;
   my_role?: string;
+  my_status?: string; // 'approved' | 'pending'
   created_at: string;
   updated_at: string;
 }
@@ -581,7 +582,19 @@ export interface GroupMember {
   avatar_url: string | null;
   profile_emoji: string | null;
   role: string;
+  status: string; // 'approved' | 'pending'
   joined_at: string;
+}
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: string;
+  title: string;
+  body: string | null;
+  group_id: string | null;
+  is_read: number;
+  created_at: string;
 }
 
 export interface GroupMessage {
@@ -655,7 +668,17 @@ export const groupsApi = {
     apiFetch<{ data: { deleted: boolean } }>(`/api/groups/${id}`, { method: 'DELETE' }),
 
   join: (id: string) =>
-    apiFetch<{ data: { joined: boolean } }>(`/api/groups/${id}/join`, { method: 'POST' }),
+    apiFetch<{ data: { requested: boolean; status: string } }>(`/api/groups/${id}/join`, { method: 'POST' }),
+
+  approveMember: (groupId: string, userId: string) =>
+    apiFetch<{ data: { approved: boolean } }>(`/api/groups/${groupId}/approve-member`, {
+      method: 'POST', body: JSON.stringify({ userId }),
+    }),
+
+  rejectMember: (groupId: string, userId: string) =>
+    apiFetch<{ data: { rejected: boolean } }>(`/api/groups/${groupId}/reject-member`, {
+      method: 'POST', body: JSON.stringify({ userId }),
+    }),
 
   leave: (id: string) =>
     apiFetch<{ data: { left: boolean } }>(`/api/groups/${id}/leave`, { method: 'POST' }),
@@ -681,6 +704,12 @@ export const groupsApi = {
     apiFetch<{ data: GroupMessage }>(`/api/groups/${groupId}/messages`, {
       method: 'POST', body: JSON.stringify({ content }),
     }),
+
+  deleteMessage: (groupId: string, messageId: string) =>
+    apiFetch<{ data: { deleted: boolean } }>(`/api/groups/${groupId}/messages/${messageId}`, { method: 'DELETE' }),
+
+  markRead: (groupId: string) =>
+    apiFetch<{ data: { read: boolean } }>(`/api/groups/${groupId}/mark-read`, { method: 'POST' }),
 
   // 모임 일정
   getMeetings: (groupId: string) =>
@@ -708,6 +737,26 @@ export const groupsApi = {
 
   deleteFeedback: (groupId: string, meetingId: string, feedbackId: string) =>
     apiFetch<{ data: { deleted: boolean } }>(`/api/groups/${groupId}/meetings/${meetingId}/feedbacks/${feedbackId}`, { method: 'DELETE' }),
+};
+
+// ─── Notifications API ────────────────────────────────────────
+export const notificationsApi = {
+  list: (params?: { limit?: number; offset?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.limit) qs.set('limit', String(params.limit));
+    if (params?.offset) qs.set('offset', String(params.offset));
+    const q = qs.toString() ? `?${qs.toString()}` : '';
+    return apiFetch<{ data: Notification[] }>(`/api/notifications${q}`);
+  },
+
+  unreadCount: () =>
+    apiFetch<{ data: { count: number } }>('/api/notifications/unread-count'),
+
+  markRead: (id: string) =>
+    apiFetch<{ data: { read: boolean } }>(`/api/notifications/${id}/read`, { method: 'PATCH' }),
+
+  markAllRead: () =>
+    apiFetch<{ data: { read: boolean } }>('/api/notifications/read-all', { method: 'POST' }),
 };
 
 // ─── Share API ────────────────────────────────────────────────
@@ -785,6 +834,11 @@ export const queryKeys = {
     messages: (id: string) => [...queryKeys.groups.all, id, 'messages'] as const,
     meetings: (id: string) => [...queryKeys.groups.all, id, 'meetings'] as const,
     feedbacks: (groupId: string, meetingId: string) => [...queryKeys.groups.all, groupId, 'meetings', meetingId, 'feedbacks'] as const,
+  },
+  notifications: {
+    all: ['notifications'] as const,
+    list: () => [...queryKeys.notifications.all, 'list'] as const,
+    unreadCount: () => [...queryKeys.notifications.all, 'unread-count'] as const,
   },
   share: {
     all: ['share'] as const,

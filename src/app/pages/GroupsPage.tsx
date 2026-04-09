@@ -1,6 +1,6 @@
 import { useState, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Plus, LogIn, Crown, ChevronRight, Search } from 'lucide-react';
+import { Users, Plus, LogIn, Crown, ChevronRight, Search, Clock } from 'lucide-react';
 import { useGroups, useCreateGroup, useJoinGroup } from '../../hooks/useGroups';
 import { useAuthStore } from '../../stores/authStore';
 import type { Group } from '../../lib/api';
@@ -27,6 +27,9 @@ export function GroupsPage() {
   }
 
   const myGroups = data?.myGroups ?? [];
+  const approvedGroups = myGroups.filter((g) => g.my_status === 'approved');
+  const pendingGroups = myGroups.filter((g) => g.my_status === 'pending');
+  const ownsGroup = myGroups.some((g) => g.owner_id === user?.id);
   const publicGroups = (data?.publicGroups ?? []).filter(
     (g) => !myGroups.some((mg) => mg.id === g.id),
   );
@@ -59,7 +62,9 @@ export function GroupsPage() {
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-[#4F46E5] text-white rounded-xl text-sm font-medium hover:bg-[#4338CA] transition-colors shadow-sm"
+          disabled={ownsGroup}
+          title={ownsGroup ? '유저당 1개의 모임만 만들 수 있습니다' : undefined}
+          className="flex items-center gap-2 px-4 py-2.5 bg-[#4F46E5] text-white rounded-xl text-sm font-medium hover:bg-[#4338CA] disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
         >
           <Plus size={16} />
           모임 만들기
@@ -67,14 +72,14 @@ export function GroupsPage() {
       </div>
 
       {/* 내 모임 */}
-      {myGroups.length > 0 ? (
+      {(approvedGroups.length > 0 || pendingGroups.length > 0) ? (
         <section>
           <h2 className="text-lg font-semibold text-[#1E293B] dark:text-[#F8FAFC] mb-3 flex items-center gap-2">
             <Users size={18} className="text-[#4F46E5]" />
             내 모임
           </h2>
           <div className="grid gap-3 sm:grid-cols-2">
-            {myGroups.map((group) => (
+            {approvedGroups.map((group) => (
               <GroupCard
                 key={group.id}
                 group={group}
@@ -83,6 +88,24 @@ export function GroupsPage() {
               />
             ))}
           </div>
+          {pendingGroups.length > 0 && (
+            <>
+              <h3 className="text-sm font-medium text-[#94A3B8] mt-4 mb-2 flex items-center gap-1.5">
+                <Clock size={14} /> 승인 대기 중
+              </h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {pendingGroups.map((group) => (
+                  <GroupCard
+                    key={group.id}
+                    group={group}
+                    userId={user?.id}
+                    onClick={() => {}}
+                    isPending
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </section>
       ) : !isLoading && (
         <section className="text-center py-10 px-6 bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 rounded-2xl border border-indigo-100 dark:border-indigo-900/50">
@@ -218,21 +241,22 @@ export function GroupsPage() {
 }
 
 // ─── GroupCard ─────────────────────────────────────────────────
-function GroupCard({ group, userId, onClick, onJoin, showJoin }: {
+function GroupCard({ group, userId, onClick, onJoin, showJoin, isPending }: {
   group: Group;
   userId?: string;
   onClick: () => void;
   onJoin?: () => void;
   showJoin?: boolean;
+  isPending?: boolean;
 }) {
   const isOwner = group.owner_id === userId;
   const isMyGroup = group.my_role != null;
 
   return (
     <motion.div
-      whileHover={{ y: -2 }}
-      className="bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-[#334155] p-4 cursor-pointer hover:shadow-md transition-shadow"
-      onClick={onClick}
+      whileHover={{ y: isPending ? 0 : -2 }}
+      className={`bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-[#334155] p-4 transition-shadow ${isPending ? 'opacity-70' : 'cursor-pointer hover:shadow-md'}`}
+      onClick={isPending ? undefined : onClick}
     >
       <div className="flex items-start gap-3">
         <div className="w-12 h-12 rounded-xl bg-[#EEF2FF] dark:bg-[#312E81] flex items-center justify-center text-2xl flex-shrink-0">
@@ -244,6 +268,11 @@ function GroupCard({ group, userId, onClick, onJoin, showJoin }: {
               {group.name}
             </h3>
             {isOwner && <Crown size={14} className="text-amber-500 flex-shrink-0" />}
+            {isPending && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 font-medium flex-shrink-0">
+                대기중
+              </span>
+            )}
           </div>
           {group.description && (
             <p className="text-xs text-[#64748B] dark:text-[#94A3B8] line-clamp-2 mt-0.5">

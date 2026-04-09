@@ -1,5 +1,5 @@
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { groupsApi, shareApi, queryKeys } from '../lib/api';
+import { groupsApi, shareApi, notificationsApi, queryKeys } from '../lib/api';
 import type { GroupMessage } from '../lib/api';
 
 // ═══════════════════════════════════════════════════════════════
@@ -155,6 +155,97 @@ export function useTransferLeader() {
     onSuccess: (_, { groupId }) => {
       qc.invalidateQueries({ queryKey: queryKeys.groups.detail(groupId) });
       qc.invalidateQueries({ queryKey: queryKeys.groups.all });
+    },
+  });
+}
+
+/** 가입 승인 (모임장 only) */
+export function useApproveMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ groupId, userId }: { groupId: string; userId: string }) =>
+      groupsApi.approveMember(groupId, userId),
+    onSuccess: (_, { groupId }) => {
+      qc.invalidateQueries({ queryKey: queryKeys.groups.detail(groupId) });
+      qc.invalidateQueries({ queryKey: queryKeys.groups.all });
+      qc.invalidateQueries({ queryKey: queryKeys.notifications.all });
+    },
+  });
+}
+
+/** 가입 거절 (모임장 only) */
+export function useRejectMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ groupId, userId }: { groupId: string; userId: string }) =>
+      groupsApi.rejectMember(groupId, userId),
+    onSuccess: (_, { groupId }) => {
+      qc.invalidateQueries({ queryKey: queryKeys.groups.detail(groupId) });
+      qc.invalidateQueries({ queryKey: queryKeys.notifications.all });
+    },
+  });
+}
+
+/** 메시지 삭제 (모임장 only) */
+export function useDeleteMessage(groupId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (messageId: string) => groupsApi.deleteMessage(groupId, messageId),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.groups.messages(groupId) }); },
+  });
+}
+
+/** 채팅 읽음 표시 */
+export function useMarkGroupRead(groupId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => groupsApi.markRead(groupId),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.notifications.unreadCount() }); },
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Notifications Hooks
+// ═══════════════════════════════════════════════════════════════
+
+/** 서버 알림 목록 */
+export function useNotifications() {
+  return useQuery({
+    queryKey: queryKeys.notifications.list(),
+    queryFn: () => notificationsApi.list(),
+    select: (res) => res.data,
+  });
+}
+
+/** 서버 알림 미읽음 개수 (30초 폴링) */
+export function useNotificationUnreadCount() {
+  return useQuery({
+    queryKey: queryKeys.notifications.unreadCount(),
+    queryFn: () => notificationsApi.unreadCount(),
+    select: (res) => res.data.count,
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
+  });
+}
+
+/** 개별 알림 읽음 */
+export function useMarkNotificationRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => notificationsApi.markRead(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.notifications.all });
+    },
+  });
+}
+
+/** 전체 알림 읽음 */
+export function useMarkAllNotificationsRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => notificationsApi.markAllRead(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.notifications.all });
     },
   });
 }

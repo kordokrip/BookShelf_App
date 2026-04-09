@@ -16,6 +16,7 @@ import { collectionsRouter } from './routes/collections';
 import { pushRouter, sendDailyReminders } from './routes/push';
 import { groupsRouter } from './routes/groups';
 import { shareRouter } from './routes/share';
+import { notificationsRouter } from './routes/notifications';
 import { authMiddleware } from './auth';
 
 // ─── App 인스턴스 ─────────────────────────────────────────────
@@ -134,7 +135,7 @@ app.get('/api/cover-proxy', async (c) => {
   if (!isAllowed) return c.json({ error: '허용되지 않는 도메인입니다.' }, 403);
 
   try {
-    const upstream = await fetch(decoded, { redirect: 'error' });
+    const upstream = await fetch(decoded, { redirect: 'follow' });
     if (!upstream.ok) return c.json({ error: '이미지를 가져오는데 실패했습니다.' }, 502);
 
     const contentType = upstream.headers.get('content-type') ?? '';
@@ -174,6 +175,7 @@ app.route('/api/collections', collectionsRouter);
 app.route('/api/push', pushRouter);
 app.route('/api/groups', groupsRouter);
 app.route('/api/share', shareRouter);
+app.route('/api/notifications', notificationsRouter);
 
 // ─── GET /api/initial-data — 앱 첫 진입 시 일괄 로드 ──────────
 // BottomNavBar 상태별 카운트 + 사용자 프로필을 단일 요청으로 반환

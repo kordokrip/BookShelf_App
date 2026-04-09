@@ -74,7 +74,7 @@ export function GroupDetailView({ groupId, onBack }: { groupId: string; onBack: 
 
       {/* 탭 콘텐츠 */}
       <div className="flex-1 overflow-hidden">
-        {activeTab === 'chat' && <ChatTab groupId={groupId} />}
+        {activeTab === 'chat' && <ChatTab groupId={groupId} isLeader={isLeader} />}
         {activeTab === 'meetings' && <MeetingsTab groupId={groupId} isLeader={isLeader} />}
         {activeTab === 'members' && (
           <MembersTab

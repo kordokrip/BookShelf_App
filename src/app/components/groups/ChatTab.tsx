@@ -1,17 +1,24 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Loader2 } from 'lucide-react';
-import { useGroupMessages, useSendMessage } from '../../../hooks/useGroups';
+import { Send, Loader2, Trash2 } from 'lucide-react';
+import { useGroupMessages, useSendMessage, useDeleteMessage, useMarkGroupRead } from '../../../hooks/useGroups';
 import { useAuthStore } from '../../../stores/authStore';
 import type { GroupMessage } from '../../../lib/api';
 
-export function ChatTab({ groupId }: { groupId: string }) {
+export function ChatTab({ groupId, isLeader }: { groupId: string; isLeader?: boolean }) {
   const user = useAuthStore((s) => s.user);
   const { data: messages = [], isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useGroupMessages(groupId);
   const sendMessage = useSendMessage(groupId);
+  const deleteMessage = useDeleteMessage(groupId);
+  const markRead = useMarkGroupRead(groupId);
   const [text, setText] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevLenRef = useRef(0);
+
+  // 탭 진입 시 읽음 표시
+  useEffect(() => {
+    markRead.mutate();
+  }, [groupId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 새 메시지가 추가되면 아래로 스크롤
   useEffect(() => {
@@ -92,7 +99,7 @@ export function ChatTab({ groupId }: { groupId: string }) {
                 </div>
               )}
               <div className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[75%] ${isMine ? 'order-1' : ''}`}>
+                <div className={`max-w-[75%] group/msg ${isMine ? 'order-1' : ''}`}>
                   {!isMine && (!prevMsg || prevMsg.user_id !== msg.user_id || showDate) && (
                     <p className="text-xs text-[#94A3B8] mb-0.5 ml-1">{msg.user_name ?? '알 수 없음'}</p>
                   )}
@@ -103,11 +110,22 @@ export function ChatTab({ groupId }: { groupId: string }) {
                   }`}>
                     {msg.content}
                   </div>
-                  {showTime && (
-                    <p className={`text-[10px] text-[#CBD5E1] mt-0.5 ${isMine ? 'text-right mr-1' : 'ml-1'}`}>
-                      {new Date(msg.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  )}
+                  <div className={`flex items-center gap-1 ${isMine ? 'justify-end' : ''}`}>
+                    {showTime && (
+                      <p className={`text-[10px] text-[#CBD5E1] mt-0.5 ${isMine ? 'mr-1' : 'ml-1'}`}>
+                        {new Date(msg.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    )}
+                    {isLeader && (
+                      <button
+                        onClick={() => { if (confirm('이 메시지를 삭제하시겠습니까?')) deleteMessage.mutate(msg.id); }}
+                        className="text-[10px] text-red-400 hover:text-red-500 mt-0.5 ml-1 opacity-0 group-hover/msg:opacity-100 transition-opacity"
+                        title="메시지 삭제"
+                      >
+                        <Trash2 size={11} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

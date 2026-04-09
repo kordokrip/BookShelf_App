@@ -10,6 +10,7 @@ import { Bell, BookPlus, Sun, Moon, Clock, FileSearch } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { useAuthStore } from '../../../stores/authStore';
 import { useUiStore } from '../../../stores/uiStore';
+import { useNotificationUnreadCount } from '../../../hooks/useGroups';
 import { NotificationPanel } from '../ui/NotificationPanel';
 import { ProfilePopup, ProfileAvatar } from '../ui/ProfilePopup';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
@@ -38,7 +39,9 @@ export function TopBar() {
 
   const themeMode      = useUiStore((s) => s.themeMode);
   const cycleThemeMode = useUiStore((s) => s.cycleThemeMode);
-  const unreadCount    = useUiStore((s) => s.unreadCount);
+  const localUnread    = useUiStore((s) => s.unreadCount);
+  const { data: serverUnread = 0 } = useNotificationUnreadCount();
+  const unreadCount = localUnread + serverUnread;
 
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);

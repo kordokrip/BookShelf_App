@@ -18,22 +18,26 @@ export function MeetingsTab({ groupId, isLeader }: { groupId: string; isLeader: 
 
   const handleCreate = async () => {
     if (!form.title.trim() || !form.meeting_date) return;
-    await createMeeting.mutateAsync(form);
-    setForm({ title: '', description: '', book_title: '', book_author: '', location: '', meeting_date: '', meeting_time: '' });
-    setShowCreate(false);
+    try {
+      await createMeeting.mutateAsync(form);
+      setForm({ title: '', description: '', book_title: '', book_author: '', location: '', meeting_date: '', meeting_time: '' });
+      setShowCreate(false);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '일정 생성에 실패했습니다.';
+      alert(msg);
+    }
   };
 
   return (
     <div className="overflow-y-auto h-full px-4 py-3 space-y-3">
-      {isLeader && (
-        <button
-          onClick={() => setShowCreate(!showCreate)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#4F46E5] text-white rounded-xl text-sm font-medium hover:bg-[#4338CA] transition-colors w-full justify-center"
-        >
-          <Plus size={16} />
-          모임 일정 추가
-        </button>
-      )}
+      <button
+        onClick={() => setShowCreate(!showCreate)}
+        className="flex items-center gap-2 px-4 py-2 bg-[#4F46E5] text-white rounded-xl text-sm font-medium hover:bg-[#4338CA] transition-colors w-full justify-center"
+      >
+        <Plus size={16} />
+        모임 일정 추가
+      </button>
+      <p className="text-xs text-[#94A3B8] text-center">모든 멤버가 일정을 등록할 수 있습니다 (하루 최대 2개)</p>
       <AnimatePresence>
         {showCreate && (
           <motion.div
