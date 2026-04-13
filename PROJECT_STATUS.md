@@ -1,6 +1,6 @@
-# BookShelf App — 프로젝트 상태 보고서
+ # BookShelf App — 프로젝트 상태 보고서
 
-> **최종 업데이트:** 2025-07-25 (23차 업데이트 — 보안 및 개선 27건 구현: SEC 10 + PERF 4 + ARCH 5 + OPS 4)
+> **최종 업데이트:** 2026-04-13 (24차 업데이트 — 독서모임 대규모 기능 개선 + 책 이미지 버그 수정)
 > - **4차**: SideNav/TopBar 하드코딩 데이터 → 실시간 바인딩, ViteWorkbox SW 청크 에러 수정 (commit: `1c280d1`)
 > - **5차**: 카카오 SDK 무결성 해시 수정, `mobile-web-app-capable` 메타태그 추가, 소셜 로그인 401 에러 메시지 분기 (commit: `8c18d60`)
 > - **6차**: D1 테이블 정상 동작 확인, Kakao OAuth dead code 제거(`loginWithKakao`), Google 버튼 "준비 중" UI로 대체 (commit: `7cddee7`)
@@ -46,14 +46,22 @@
 >   - **인프라**: OPS-01~02,04~05 (헬스체크 DB/KV, 환경변수 검증, SECURITY.md, 스테이징 템플릿)
 >   - **미구현**: PERF-01 WebSocket/Durable Objects (유료 기능, 별도 세션 권장)
 >   - 배포: CF `96e9abbe`, E2E 27/27 PASS + 보안검증 7/7 PASS
+> - **24차**: 독서모임 대규모 기능 개선 + 책 이미지 버그 수정 ★
+>   - **버그 수정**: cover-proxy `redirect: 'error'` → `redirect: 'follow'` (Kakao CDN 리다이렉트 허용)
+>   - **가입 승인 시스템**: DB migration 0010 (group_members.status/last_read_at, notifications 테이블), pending→approved 흐름, 리더 승인/거절
+>   - **유저당 1개 그룹 생성 제한** (409 응답)
+>   - **채팅**: approved 멤버만, 리더만 메시지 삭제, mark-read
+>   - **일정 등록**: 모든 멤버 가능, 하루 최대 2개 제한
+>   - **알림 시스템**: notifications 라우터 신규, 가입 신청/승인/채팅 알림, TopBar 서버 폴링(30초)
+>   - **프론트엔드**: GroupsPage(내 모임/대기 분리), MembersTab(승인/거절), ChatTab(삭제), MeetingsTab(전원 등록)
+>   - 배포: CF `1ca99946`, E2E 27/27 PASS, Git `83ff556`
+> - **24차 프로젝트 정리**: Claude_cowork/ 전체 삭제, 구식 문서 5건 삭제, data-connection-report→TRACE_MAP 병합, oracleJdk 로컬 삭제(371MB)
 >
 > **Git 브랜치:** `main` (kordokrip/BookShelf_App)
-> **Cloudflare Workers Version:** `96e9abbe-c322-4e87-a533-d205097efdad` ★ (23차 배포)
+> **Cloudflare Workers Version:** `1ca99946-0aa4-461e-8b14-09753d03c91f` ★ (24차 배포)
 > **분석 방법:** 전체 소스 파일 직접 확인 (추측 없음)
-> **TypeScript 컴파일:** `npx tsc --noEmit` → **EXIT:0 (에러 0개)** ✅
-> **빌드:** `npm run build` → **EXIT:0 (3.30s)** ✅ ★ (23차)
-> **ESLint:** `npm run lint` → **0 problems (0 errors, 0 warnings)** ✅
-> **E2E 테스트:** `bash scripts/e2e-api-test.sh` → **27/27 PASS** ✅ ★ (23차)
+> **빌드:** `npm run build` → ✅ ★ (24차)
+> **E2E 테스트:** `bash scripts/e2e-api-test.sh` → **27/27 PASS** ✅ ★ (24차)
 
 ---
 
@@ -270,9 +278,8 @@ BookShelf_App/
 │   └── icons/                         # icon-192x192.png, icon-512x512.png
 │
 ├── scripts/
-│   └── generate-icons.mjs             # 아이콘 생성 유틸
-│
-├── dist-worker/                       # Worker 빌드 출력 (참고용)
+│   ├── generate-icons.mjs             # 아이콘 생성 유틸
+│   └── e2e-api-test.sh                # E2E API 테스트 (27건)
 │
 └── .github/
     └── workflows/

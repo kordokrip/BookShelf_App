@@ -1,10 +1,10 @@
 # BookShelf App — 전체 시스템 추적 맵 (TRACE MAP)
 
-> 작성 기준: 실제 소스 코드 전수 분석 (2026-03 기준)
+> 작성 기준: 실제 소스 코드 전수 분석 (2026-04 기준)
 > 목적: 프로덕션 오류 발생 시 UI → Hook → API → DB 레이어를 빠르게 추적하기 위한 기준 문서
 >
-> **최신 변경**: 2026-04-01 — 21차 독서 모임 그룹 + 채팅 + 일정/피드백 + 통계 공유
-> **이전 변경**: 2026-04-01 — 20차 프로필 팝업 + 이모지 아바타
+> **최신 변경**: 2026-04-13 — 24차 독서모임 대규모 기능 개선 (가입 승인 시스템, 알림, 채팅 삭제, 미팅 전원 등록)
+> **이전 변경**: 2026-04-09 — 23차 보안 및 개선 27건 구현
 
 ---
 
@@ -22,12 +22,12 @@
 | **AI** | Workers AI (`@cf/meta/llama-3.1-8b-instruct`, `@cf/meta/llama-3.2-11b-vision-instruct`) |
 | **Storage** | Cloudflare R2 (`covers/{userId}/{bookId}.{ext}`) |
 | **TypeScript check** | ✅ 0 errors |
-| **Build** | ✅ 성공 (built in 3.10s) ★ (21차) |
+| **Build** | ✅ 성공 ★ (24차) |
 | **Production Health** | ✅ `{"status":"ok","env":"production"}` |
-| **E2E 테스트** | ✅ 27/27 PASS ★ (21차) |
-| **GitHub 커밋** | `43c43e4` (main) ★ (21차) |
-| **Cloudflare Workers** | Version ID `f40fb457-37b9-4b44-a718-84681a6404ec` ★ (21차 배포) |
-| **D1 Tables** | users(★role), books, reading_sessions, notes(★type 'review'), notes_fts (FTS5), groups, group_members, group_messages, group_meetings, meeting_feedbacks, shared_reports ★ (21차), d1_migrations, _cf_KV, sqlite_sequence |
+| **E2E 테스트** | ✅ 27/27 PASS ★ (24차) |
+| **GitHub 커밋** | `83ff556` (main) ★ (24차) |
+| **Cloudflare Workers** | Version ID `1ca99946-0aa4-461e-8b14-09753d03c91f` ★ (24차 배포) |
+| **D1 Tables** | users(★role), books, reading_sessions, notes(★type 'review'), notes_fts (FTS5), groups, group_members(★status,last_read_at), group_messages, group_meetings, meeting_feedbacks, shared_reports, notifications ★ (24차), d1_migrations, _cf_KV, sqlite_sequence |
 
 ---
 
@@ -71,7 +71,8 @@
 | `/api/search/*` | `worker/routes/search.ts` | 없음 (공개) |
 | `/api/ai/*` | `worker/routes/ai.ts` | `optionalAuth` 각 핸들러 |
 | `/api/stats/*` | `worker/routes/stats.ts` | `authMiddleware` (전체) ✅ |
-| `/api/groups/*` | `worker/routes/groups.ts` | `authMiddleware` (전체) ★ (21차) — 그룹/멤버/채팅/일정/피드백 |
+| `/api/groups/*` | `worker/routes/groups.ts` | `authMiddleware` (전체) ★ (24차) — 그룹/멤버 승인/채팅 삭제/일정(전원,2개/일)/피드백 |
+| `/api/notifications/*` | `worker/routes/notifications.ts` | `authMiddleware` (전체) ★ (24차) — 알림 목록/미읽음/읽음 처리 |
 | `/api/share/*` | `worker/routes/share.ts` | `authMiddleware` (전체) ★ (21차) — 통계 보고서 공유 |
 | `GET *` | SPA 폴백 | 없음 (ASSETS 서빙) |
 
@@ -920,6 +921,39 @@ totals:       { totalPages: number; totalMinutes: number }
 
 ---
 
+### 독서 모임 (`/api/groups`) ★ 24차 대폭 개선
+
+| Method | 경로 | 인증 | 요청 | 응답 | 비고 |
+|---|---|---|---|---|---|
+| GET | `/api/groups` | **authMiddleware** | — | `{data: Group[], count}` | 가입 모임만 (approved+pending), my_status 포함 |
+| POST | `/api/groups` | **authMiddleware** | `{name, description?, max_members?}` | `{data: Group}` 201 / **409** 중복 | 유저당 1개 제한 ★ |
+| GET | `/api/groups/:id` | **authMiddleware** | — | `{data: Group}` (members 포함, status/last_read_at) | members에 status 필드 포함 ★ |
+| POST | `/api/groups/:id/join` | **authMiddleware** | — | `{requested: true, status: "pending"}` | pending 가입 + 리더에게 알림 ★ |
+| POST | `/api/groups/:id/approve-member` | **authMiddleware** | `{userId}` | `{data: {approved: true}}` | 리더만. 요청자에게 승인 알림 ★ |
+| POST | `/api/groups/:id/reject-member` | **authMiddleware** | `{userId}` | `{data: {rejected: true}}` | 리더만. pending 멤버 삭제 ★ |
+| DELETE | `/api/groups/:id/leave` | **authMiddleware** | — | `{data: {left: true}}` | 멤버 탈퇴 |
+| DELETE | `/api/groups/:id/members/:userId` | **authMiddleware** | — | `{data: {removed: true}}` | 리더 직권 탈퇴 |
+| GET | `/api/groups/:id/messages` | **authMiddleware** | `?limit=&before=` | `{data: Message[]}` | approved 멤버만 |
+| POST | `/api/groups/:id/messages` | **authMiddleware** | `{content}` | `{data: Message}` | approved만. 다른 멤버에게 채팅 알림 ★ |
+| DELETE | `/api/groups/:id/messages/:msgId` | **authMiddleware** | — | `{data: {deleted: true}}` | 리더만 삭제 ★ |
+| POST | `/api/groups/:id/mark-read` | **authMiddleware** | — | `{success: true}` | last_read_at 갱신 + 채팅 알림 읽음 ★ |
+| GET | `/api/groups/:id/meetings` | **authMiddleware** | — | `{data: Meeting[]}` | |
+| POST | `/api/groups/:id/meetings` | **authMiddleware** | `{title, meeting_date, location?}` | `{data: Meeting}` / **429** | 모든 멤버 등록 가능, 하루 2개 제한 ★ |
+| DELETE | `/api/groups/:id/meetings/:mId` | **authMiddleware** | — | `{data: {deleted: true}}` | 본인 또는 리더 ★ |
+| GET | `/api/groups/:id/meetings/:mId/feedbacks` | **authMiddleware** | — | `{data: Feedback[]}` | |
+| POST | `/api/groups/:id/meetings/:mId/feedbacks` | **authMiddleware** | `{content}` | `{data: Feedback}` | |
+
+### 알림 (`/api/notifications`) ★ (24차 신규)
+
+| Method | 경로 | 인증 | 요청 | 응답 | Worker 파일 |
+|---|---|---|---|---|---|
+| GET | `/api/notifications` | **authMiddleware** | `?limit=&offset=` | `{data: Notification[]}` | `routes/notifications.ts` |
+| GET | `/api/notifications/unread-count` | **authMiddleware** | — | `{data: {count: N}}` | `routes/notifications.ts` |
+| PATCH | `/api/notifications/:id/read` | **authMiddleware** | — | `{data: {success: true}}` | `routes/notifications.ts` |
+| POST | `/api/notifications/read-all` | **authMiddleware** | — | `{data: {success: true}}` | `routes/notifications.ts` |
+
+---
+
 ## 4. D1 테이블 스키마
 
 ### `users`
@@ -1019,6 +1053,41 @@ totals:       { totalPages: number; totalMinutes: number }
 | 마이그레이션 | `worker/db/migrations/0002_fts5_notes.sql` |
 
 **동작 방식**: FTS5 외부 콘텐츠 테이블 — notes 테이블을 원본으로 참조, 트리거로 동기화
+
+---
+
+### `group_members` ★ (24차 확장)
+
+| 컬럼 | 타입 | 제약 | 설명 |
+|---|---|---|---|
+| `id` | TEXT | PK | UUID v4 |
+| `group_id` | TEXT | FK → groups.id | |
+| `user_id` | TEXT | FK → users.id | |
+| `role` | TEXT | NOT NULL DEFAULT 'member' | 'leader' \| 'member' |
+| `status` | TEXT | NOT NULL DEFAULT 'approved' | 'pending' \| 'approved' ★ (24차) |
+| `last_read_at` | TEXT | nullable | 채팅 읽음 시각 ★ (24차) |
+| `joined_at` | TEXT | DEFAULT datetime('now') | |
+
+**인덱스**: `idx_group_members_group`, `idx_group_members_user`
+
+---
+
+### `notifications` ★ (24차 신규)
+
+| 컬럼 | 타입 | 제약 | 설명 |
+|---|---|---|---|
+| `id` | TEXT | PK | UUID v4 |
+| `user_id` | TEXT | NOT NULL, FK → users.id | 알림 수신자 |
+| `type` | TEXT | NOT NULL | 'group_join_request' \| 'group_join_approved' \| 'group_new_message' |
+| `title` | TEXT | NOT NULL | 알림 제목 |
+| `body` | TEXT | | 알림 본문 |
+| `group_id` | TEXT | nullable | 관련 그룹 ID |
+| `is_read` | INTEGER | NOT NULL DEFAULT 0 | 0=미읽음, 1=읽음 |
+| `created_at` | TEXT | DEFAULT datetime('now') | |
+
+**인덱스**: `idx_notifications_user_unread(user_id, is_read)`, `idx_notifications_user_created(user_id, created_at DESC)`
+
+**마이그레이션**: `worker/db/migrations/0010_group_approval_notifications.sql`
 
 ---
 
@@ -1527,6 +1596,10 @@ queryKeys:
   share.sent()        = ['share', 'sent']
   share.unread()      = ['share', 'unread']
 
+  notifications.all        = ['notifications']          ← ★ 신규 (24차)
+  notifications.list()     = ['notifications', 'list']
+  notifications.unreadCount() = ['notifications', 'unread-count']  ← 30초 폴링
+
 Global QueryClient 설정:
   staleTime: 60초  ← ★ 변경 (2026-03-28, 기존 30초)
   gcTime: 5분
@@ -1552,6 +1625,9 @@ Global QueryClient 설정:
 | 2026-03-30 | 13차 반영 (27개 COPILOT 개선항목 전체 완료: FEAT-101 성취배지, FEAT-102 OCR신뢰도, FEAT-103 Web Share, FEAT-104 YearlyReviewPage, UX-101~107 전체 — WishBookDetailSheet·최근검색어·노트필터+색상바·로그인UX·스플래시슬로건) — GitHub `82a94e1e` / Cloudflare `82a94e1e-6334-456a-a6a2-6d11656d5722` |
 | 2026-03-31 | 14차 반영 (BOOKSHELF_COPILOT_PROMPT_14TH 19개 항목: A-1 Google OAuth · A-4 useRecentSearches · C-1 타이머 자동기록 · C-2 검색UX · C-3 온보딩스킵→마지막슬라이드 · C-4 Stats 연간결산카드+목표미설정amber · C-5 BookDetail 빠른노트캡처바 · C-6 OfflineBanner+uiStore.isOnline+App.tsx이벤트) — GitHub `16c06bc` / Cloudflare `9dc85ef0-452a-4d72-a2a9-e50ac54615df` |
 | 2026-04-01 | 21차 반영 (독서 모임 그룹 시스템 + 채팅 + 일정/피드백 + 통계 공유: DB 6테이블 · groups.ts 15엔드포인트 · share.ts 5엔드포인트 · GroupsPage + GroupDetailView · useGroups 17hooks · SideNav/TopBar 메뉴 추가) — GitHub `43c43e4` / Cloudflare `f40fb457` |
+| 2026-04-09 | 22~23차 반영 (보안 리팩토링 20건 + 보안/개선 27건: SEC 10 + PERF 4 + ARCH 5 + OPS 4) — GitHub `84d8228` / Cloudflare `96e9abbe` |
+| 2026-04-13 | 24차 반영 (독서모임 대규모 기능 개선: 가입 승인 시스템·알림(notifications 테이블+라우터)·채팅 삭제(leader)·일정 전원 등록(2개/일)·유저당 1그룹 제한·TopBar 서버 알림 폴링·책 이미지 프록시 redirect 버그 수정) — GitHub `83ff556` / Cloudflare `1ca99946` |
+| 2026-04-13 | 프로젝트 정리: Claude_cowork/ 전체 삭제, 구식 문서 5건 삭제, data-connection-report→TRACE_MAP 병합, oracleJdk 로컬 삭제(371MB) |
 | 2026-03-31 | 15차 반영 (자동 테마(themeMode auto/light/dark·06:00~18:00=light·setInterval 60_000) · 알림 시스템(NotificationItem 6타입·localStorage max20·NotificationPanel 드롭다운) · TopBar 3-column grid(grid-cols-[auto_1fr_auto]·Bell 배지) · AI one-click UX(description optional·타이핑효과 18ms/char·스켈레톤·에러재시도)) — GitHub `29ec33e` / Cloudflare `d4b79c4b-24f2-49f6-8631-203449189e13` |
 | 2026-04-01 | 16차 반영 (교차검증: E2E 27/27 PASS · 프론트엔드 버그 6건 수정 · SideNav 접기/펼치기+Tooltip+Admin 체계 · TopBar BookPlus/FileSearch 아이콘 · EntryGate /entry 라우트 · Root 동적 마진 · D1 0004_user_role.sql · PATCH /api/users/profile role · authStore role) — Git `0f3cf28` / Cloudflare `719eeb80` |
 | 2026-04-01 | 17차 반영 (코드 정리: 40개 미사용 UI 컴포넌트 삭제(47→21개 잔존) · 39개 npm 의존성 제거 · 문서 정리·중복 파일 삭제) — Cloudflare `17eba81b-7637-4721-9a8b-0d6385efa55f` |
