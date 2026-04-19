@@ -30,7 +30,9 @@ function PageUpdateModal({
   onSave: (page: number) => void;
 }) {
   const [page, setPage] = useState(book.currentPage ?? 0);
-  const progress = book.totalPages ? Math.round((page / book.totalPages) * 100) : 0;
+  const progress = book.totalPages && book.totalPages > 0
+    ? Math.min(Math.round((page / book.totalPages) * 100), 100)
+    : 0;
   const todayRead = page - (book.currentPage ?? 0);
 
   const today = new Date();
@@ -90,7 +92,7 @@ function PageUpdateModal({
               min={0}
               max={book.totalPages ?? 9999}
               onChange={setPage}
-              unit={`/ ${book.totalPages} 페이지`}
+              unit={book.totalPages ? `/ ${book.totalPages} 페이지` : '페이지'}
             />
           </div>
 

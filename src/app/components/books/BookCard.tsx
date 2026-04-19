@@ -184,8 +184,8 @@ export function ReadingBookCard({
   onClick?: () => void;
 }) {
   const progress =
-    book.totalPages && book.currentPage != null
-      ? Math.round((book.currentPage / book.totalPages) * 100)
+    book.totalPages && book.totalPages > 0 && book.currentPage != null
+      ? Math.min(Math.round((book.currentPage / book.totalPages) * 100), 100)
       : 0;
 
   const isOverdue = book.isOverdue === true;
@@ -272,7 +272,7 @@ export function ReadingBookCard({
             color: isOverdue ? "#EF4444" : "#4F46E5",
           }}
         >
-          {book.currentPage}p / {book.totalPages}p
+          {book.currentPage ?? 0}p{book.totalPages ? ` / ${book.totalPages}p` : ''}
         </span>
         <span style={{ fontSize: 12, fontWeight: 700, color: "#64748B" }}>
           {progress}%

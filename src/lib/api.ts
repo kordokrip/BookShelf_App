@@ -161,10 +161,18 @@ export async function apiFetch<T>(
       if (retryResponse.ok) {
         return retryResponse.json<T>();
       }
+      // refresh는 성공했지만 retry가 다른 이유로 실패한 경우 → 토큰은 유지, 에러만 전달
+      let retryMessage = `HTTP ${retryResponse.status}`;
+      try {
+        const err = await retryResponse.json<{ error: string }>();
+        retryMessage = err.error ?? retryMessage;
+      } catch { /* JSON 파싱 실패 시 기본 메시지 */ }
+      throw new ApiError(retryResponse.status, retryMessage);
     }
-    // 갱신 실패 → 토큰 정리 후 로그인 페이지로
+    // 갱신 실패 → 토큰 정리 + 인증 만료 이벤트 발행
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
+    window.dispatchEvent(new Event('auth:expired'));
   }
 
   if (!response.ok) {

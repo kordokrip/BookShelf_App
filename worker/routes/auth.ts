@@ -181,6 +181,9 @@ authRouter.post(
       return c.json({ error: '유효하지 않거나 만료된 토큰입니다.' }, 401);
     }
 
+    // refresh 사용 시 KV TTL 30일 갱신 (장기 활성 사용자 세션 유지)
+    await c.env.KV.put(`refresh:${refreshToken}`, userId, { expirationTtl: 60 * 60 * 24 * 30 });
+
     const user = await c.env.DB.prepare(
       'SELECT id, email FROM users WHERE id = ?',
     ).bind(userId).first<{ id: string; email: string }>();

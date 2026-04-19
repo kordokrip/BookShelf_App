@@ -65,8 +65,9 @@ export function useUpdateBook() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<UIBook> }) =>
       booksApi.update(id, denormalizeBook(data) as UpdateBookInput),
-    onSuccess: (_, { data }) => {
+    onSuccess: (_, { id, data }) => {
       qc.invalidateQueries({ queryKey: queryKeys.books.all });
+      qc.invalidateQueries({ queryKey: queryKeys.books.detail(id) });
       const statusMap: Record<string, string> = {
         done: '완독으로 이동했습니다 🎉',
         reading: '읽는 중으로 이동했습니다 📖',

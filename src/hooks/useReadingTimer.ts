@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useTimerStore } from '../stores/timerStore';
 
 export interface UseReadingTimerReturn {
   isRunning: boolean;
@@ -10,61 +11,58 @@ export interface UseReadingTimerReturn {
   reset: () => void;
 }
 
+/**
+ * 독서 타이머 훅 — Zustand store 기반 (BUG-001 수정)
+ * 화면 전환 시에도 타이머 상태가 유지됨.
+ * 1초 interval은 화면 갱신용(display)만 담당.
+ */
 export function useReadingTimer(onStop?: (elapsedMinutes: number) => void): UseReadingTimerReturn {
-  const [elapsed, setElapsed] = useState(0);
-  const [isRunning, setIsRunning] = useState(false);
+  const store = useTimerStore();
+  const [displayElapsed, setDisplayElapsed] = useState(() => store.getElapsed());
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const elapsedRef = useRef(0);
   const onStopRef = useRef(onStop);
   onStopRef.current = onStop;
 
-  // elapsed를 ref에 동기화
+  // 실행 중이면 1초 interval로 displayElapsed 갱신
   useEffect(() => {
-    elapsedRef.current = elapsed;
-  }, [elapsed]);
-
-  // 컴포넌트 언마운트 시 interval 정리
-  useEffect(() => {
+    if (store.isRunning) {
+      // 마운트 시 즉시 동기화
+      setDisplayElapsed(store.getElapsed());
+      intervalRef.current = setInterval(() => {
+        setDisplayElapsed(useTimerStore.getState().getElapsed());
+      }, 1000);
+    } else {
+      setDisplayElapsed(store.getElapsed());
+    }
     return () => {
       if (intervalRef.current !== null) {
         clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
     };
-  }, []);
+  }, [store.isRunning]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const start = useCallback(() => {
-    if (intervalRef.current !== null) return; // 이미 실행 중
-    setIsRunning(true);
-    intervalRef.current = setInterval(() => {
-      setElapsed((prev) => prev + 1);
-    }, 1000);
-  }, []);
+    store.start();
+  }, [store]);
 
   const pause = useCallback(() => {
-    if (intervalRef.current !== null) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    setIsRunning(false);
-    const minutes = Math.floor(elapsedRef.current / 60);
+    const totalSec = store.pause();
+    setDisplayElapsed(totalSec);
+    const minutes = Math.floor(totalSec / 60);
     if (minutes >= 1) {
       onStopRef.current?.(minutes);
     }
-  }, []);
+  }, [store]);
 
   const reset = useCallback(() => {
-    if (intervalRef.current !== null) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    setIsRunning(false);
-    setElapsed(0);
-    elapsedRef.current = 0;
-  }, []);
+    store.reset();
+    setDisplayElapsed(0);
+  }, [store]);
 
-  const minutes = Math.floor(elapsed / 60);
-  const seconds = elapsed % 60;
+  const minutes = Math.floor(displayElapsed / 60);
+  const seconds = displayElapsed % 60;
   const displayTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 
-  return { isRunning, elapsed, minutes, displayTime, start, pause, reset };
+  return { isRunning: store.isRunning, elapsed: displayElapsed, minutes, displayTime, start, pause, reset };
 }

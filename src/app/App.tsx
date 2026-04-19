@@ -49,6 +49,18 @@ export default function App() {
     checkAuth();
   }, [checkAuth]);
 
+  // apiFetch에서 refresh 실패 시 발행하는 auth:expired 이벤트 수신 → 자동 로그아웃
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      const { status, logout } = useAuthStore.getState();
+      if (status === 'authenticated') {
+        logout();
+      }
+    };
+    window.addEventListener('auth:expired', handleAuthExpired);
+    return () => window.removeEventListener('auth:expired', handleAuthExpired);
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider delayDuration={200}>

@@ -78,7 +78,11 @@ sessionsRouter.post(
       return c.json({ data: dup, new_current_page: currentBook?.current_page ?? book.current_page }, 200);
     }
 
-    const newCurrentPage = book.current_page + body.pages_read;
+    // BUG-005: total_pages 초과 방지 (clamp)
+    const rawNewPage = book.current_page + body.pages_read;
+    const newCurrentPage = book.total_pages && book.total_pages > 0
+      ? Math.min(rawNewPage, book.total_pages)
+      : rawNewPage;
 
     // 트랜잭션 (D1은 batch로 원자적 실행)
     await c.env.DB.batch([

@@ -1005,7 +1005,7 @@ export function BookDetailPage() {
             <p className="text-[#64748B]" style={{ fontSize: 14 }}>{book.author}</p>
             {/* 출판사 · 연도 · 페이지수: 12px #94A3B8, · separator */}
             <p className="text-[#94A3B8]" style={{ fontSize: 12 }}>
-              {book.publisher} · {book.finishedDate?.slice(0, 4) ?? book.addedDate.slice(0, 4)} · {book.totalPages}p
+              {book.publisher} · {book.finishedDate?.slice(0, 4) ?? book.addedDate.slice(0, 4)}{book.totalPages ? ` · ${book.totalPages}p` : ''}
             </p>
             {/* Genre badge: centered, md variant (28px height) */}
             <GenreBadge genre={book.genre} size="lg" />

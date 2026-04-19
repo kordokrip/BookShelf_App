@@ -265,12 +265,20 @@ booksRouter.put('/:id', authMiddleware, zValidator('json', updateBookSchema), as
   const body = c.req.valid('json');
 
   const existing = await c.env.DB.prepare(
-    'SELECT id FROM books WHERE id = ? AND user_id = ?',
+    'SELECT id, total_pages FROM books WHERE id = ? AND user_id = ?',
   )
     .bind(id, userId)
-    .first();
+    .first<{ id: string; total_pages: number | null }>();
 
   if (!existing) throw new HTTPException(404, { message: '책을 찾을 수 없습니다.' });
+
+  // BUG-005: current_page가 total_pages를 초과하면 clamp
+  if (body.current_page !== undefined) {
+    const totalPages = body.total_pages ?? existing.total_pages;
+    if (totalPages && totalPages > 0) {
+      body.current_page = Math.min(body.current_page, totalPages);
+    }
+  }
 
   // 동적 SET 절 생성 (변경된 필드만 업데이트)
   const fieldMap: Record<string, string> = {
