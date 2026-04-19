@@ -185,6 +185,49 @@ export const GENRE_CONFIG: Record<GenreKey, { bg: string; text: string; emoji: s
 /** 앱 전체에서 사용하는 장르 목록 (GENRE_CONFIG 기반 단일 출처) */
 export const ALL_GENRES = Object.keys(GENRE_CONFIG) as GenreKey[];
 
+/**
+ * 카카오 카테고리 또는 제목/설명에서 장르를 자동 감지
+ * category: 카카오 API의 category 필드 (예: "소설>한국소설")
+ * title, description: 보조 키워드 매칭용
+ */
+export function detectGenre(category: string | null, title: string, description?: string | null): GenreKey {
+  const text = `${category ?? ''} ${title} ${description ?? ''}`.toLowerCase();
+
+  // 카카오 카테고리 기반 매핑 (우선순위 높음)
+  if (category) {
+    const cat = category.toLowerCase();
+    if (cat.includes('컴퓨터') || cat.includes('프로그래밍') || cat.includes('it')) return '컴퓨터·프로그래밍';
+    if (cat.includes('인공지능') || cat.includes('머신러닝') || cat.includes('딥러닝') || cat.includes('데이터')) return 'AI/데이터';
+    if (cat.includes('소설') && (cat.includes('한국') || cat.includes('국내'))) return '현대문학';
+    if (cat.includes('소설') && (cat.includes('외국') || cat.includes('영미') || cat.includes('일본'))) return '해외문학';
+    if (cat.includes('고전')) return '고전문학';
+    if (cat.includes('시') || cat.includes('에세이') || cat.includes('문학')) return '현대문학';
+    if (cat.includes('경제') || cat.includes('경영') || cat.includes('재테크') || cat.includes('투자')) return '경제/경영';
+    if (cat.includes('자기계발') || cat.includes('성공') || cat.includes('처세')) return '자기계발';
+    if (cat.includes('심리') || cat.includes('정신')) return '심리학';
+    if (cat.includes('철학')) return '철학';
+    if (cat.includes('인문')) return '인문학';
+    if (cat.includes('사회') || cat.includes('정치') || cat.includes('법')) return category.includes('정치') || category.includes('법') ? '정치/법률' : '사회과학';
+    if (cat.includes('과학') || cat.includes('수학') || cat.includes('물리') || cat.includes('화학')) return '과학/수학';
+    if (cat.includes('역사') && (cat.includes('한국') || cat.includes('국내'))) return '한국사';
+    if (cat.includes('역사') || cat.includes('세계사')) return '해외사';
+    if (cat.includes('종교') || cat.includes('기독교') || cat.includes('불교')) return '종교/영성';
+    if (cat.includes('예술') || cat.includes('디자인') || cat.includes('미술') || cat.includes('음악')) return '예술/디자인';
+  }
+
+  // 키워드 기반 보조 매칭
+  if (/프로그래밍|코딩|개발자|자바스크립트|파이썬|리액트|java|python/.test(text)) return '컴퓨터·프로그래밍';
+  if (/인공지능|ai|머신러닝|딥러닝|데이터\s?사이언스|빅데이터/.test(text)) return 'AI/데이터';
+  if (/경제|경영|투자|재테크|주식|마케팅|스타트업|mba/.test(text)) return '경제/경영';
+  if (/자기계발|성공|습관|동기부여|리더십/.test(text)) return '자기계발';
+  if (/심리|상담|정신|마음/.test(text)) return '심리학';
+  if (/철학|니체|플라톤|존재|윤리/.test(text)) return '철학';
+  if (/소설|장편|단편/.test(text)) return '현대문학';
+  if (/역사|조선|삼국/.test(text)) return '한국사';
+
+  return '기타';
+}
+
 export const COVER_GRADIENTS = [
   "from-indigo-500 to-violet-600",
   "from-violet-500 to-purple-700",

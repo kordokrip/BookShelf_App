@@ -46,32 +46,31 @@ function PageUpdateModal({
 
       {/* Sheet */}
       <div
-        className="relative bg-white rounded-t-2xl lg:rounded-3xl w-full lg:max-w-md lg:mx-4 z-10"
+        className="relative bg-white dark:bg-[#1E293B] rounded-t-2xl lg:rounded-3xl w-full lg:max-w-md lg:mx-4 z-10"
         style={{ boxShadow: "0 -8px 40px rgba(0,0,0,0.12)" }}
       >
         {/* Handle bar: 4×32px, bg #D1D5DB, centered */}
         <div className="flex justify-center pt-3 pb-2 lg:hidden">
-          <div className="rounded-full bg-[#D1D5DB]" style={{ width: 32, height: 4 }} />
+          <div className="rounded-full bg-[#D1D5DB] dark:bg-[#475569]" style={{ width: 32, height: 4 }} />
         </div>
 
         <div className="px-5 pb-6 pt-4">
           {/* Close (desktop) */}
           <button
             onClick={onClose}
-            className="hidden lg:flex absolute top-4 right-4 w-11 h-11 items-center justify-center rounded-full hover:bg-[#F1F5F9] transition-colors"
-            style={{ color: "#94A3B8" }}
+            className="hidden lg:flex absolute top-4 right-4 w-11 h-11 items-center justify-center rounded-full hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors text-[#94A3B8]"
           >
             <X size={18} />
           </button>
 
           {/* Book mini header: 40×56px cover + title + % badge */}
-          <div className="flex items-center gap-3 p-3 rounded-2xl bg-[#F8FAFC] mb-5">
+          <div className="flex items-center gap-3 p-3 rounded-2xl bg-[#F8FAFC] dark:bg-[#334155] mb-5">
             <BookCover book={book} size="sm" />
             <div className="flex-1 min-w-0">
-              <p className="text-[#1E293B] truncate" style={{ fontSize: 14, fontWeight: 700 }}>
+              <p className="text-[#1E293B] dark:text-[#F8FAFC] truncate" style={{ fontSize: 14, fontWeight: 700 }}>
                 {book.title}
               </p>
-              <p className="text-[#94A3B8]" style={{ fontSize: 12 }}>{book.author}</p>
+              <p className="text-[#94A3B8] dark:text-[#CBD5E1]" style={{ fontSize: 12 }}>{book.author}</p>
             </div>
             <span
               className="px-2.5 py-1 rounded-full text-white"
@@ -81,7 +80,7 @@ function PageUpdateModal({
             </span>
           </div>
 
-          <h2 className="text-[#1E293B] mb-5" style={{ fontSize: 18, fontWeight: 800 }}>
+          <h2 className="text-[#1E293B] dark:text-[#F8FAFC] mb-5" style={{ fontSize: 18, fontWeight: 800 }}>
             현재 페이지 업데이트
           </h2>
 
@@ -816,12 +815,12 @@ export function ReadingPage() {
 
       {/* Section header row */}
       <div className="flex items-center justify-between px-4 mb-2">
-        <h2 style={{ fontSize: 18, fontWeight: 600, color: "#1E293B" }}>
+        <h2 className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 18, fontWeight: 600 }}>
           읽고 있는 책
         </h2>
         <span
-          className="rounded-full"
-          style={{ fontSize: 12, fontWeight: 500, backgroundColor: "#EEF2FF", color: "#4F46E5", padding: "2px 8px" }}
+          className="rounded-full bg-[#EEF2FF] dark:bg-[#312E81]"
+          style={{ fontSize: 12, fontWeight: 500, color: "#4F46E5", padding: "2px 8px" }}
         >
           {books.length}권
         </span>

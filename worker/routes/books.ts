@@ -212,19 +212,32 @@ booksRouter.post('/', authMiddleware, zValidator('json', createBookSchema), asyn
   const userId = c.get('userId');
   const body = c.req.valid('json');
 
-  // 위시리스트 제한 및 중복 체크
+  // ── 중복 체크: ISBN 또는 제목+저자 조합 (전체 상태 대상) ────
+  if (body.isbn) {
+    const dupByIsbn = await c.env.DB.prepare(
+      `SELECT id, title, status FROM books WHERE user_id = ? AND isbn = ?`,
+    ).bind(userId, body.isbn).first<{ id: string; title: string; status: string }>();
+    if (dupByIsbn) {
+      const statusLabel = dupByIsbn.status === 'done' ? '완독' : dupByIsbn.status === 'reading' ? '읽는 중' : '위시리스트';
+      return c.json({ error: `이미 등록된 책입니다 (${statusLabel}: "${dupByIsbn.title}")`, duplicateId: dupByIsbn.id }, 409);
+    }
+  }
+  // ISBN 없을 경우 제목+저자로 중복 체크
+  const dupByTitleAuthor = await c.env.DB.prepare(
+    `SELECT id, title, status FROM books WHERE user_id = ? AND title = ? AND author = ?`,
+  ).bind(userId, body.title, body.author).first<{ id: string; title: string; status: string }>();
+  if (dupByTitleAuthor) {
+    const statusLabel = dupByTitleAuthor.status === 'done' ? '완독' : dupByTitleAuthor.status === 'reading' ? '읽는 중' : '위시리스트';
+    return c.json({ error: `이미 등록된 책입니다 (${statusLabel}: "${dupByTitleAuthor.title}")`, duplicateId: dupByTitleAuthor.id }, 409);
+  }
+
+  // 위시리스트 제한
   if (body.status === 'wish') {
     const countResult = await c.env.DB.prepare(
       `SELECT COUNT(*) as cnt FROM books WHERE user_id = ? AND status = 'wish'`,
     ).bind(userId).first<{ cnt: number }>();
     if ((countResult?.cnt ?? 0) >= 10) {
       return c.json({ error: '위시리스트는 최대 10권까지 등록 가능합니다.' }, 400);
-    }
-    const dup = await c.env.DB.prepare(
-      `SELECT id FROM books WHERE user_id = ? AND status = 'wish' AND title = ?`,
-    ).bind(userId, body.title).first();
-    if (dup) {
-      return c.json({ error: '이미 위시리스트에 있는 책입니다.' }, 409);
     }
   }
 

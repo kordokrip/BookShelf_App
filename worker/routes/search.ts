@@ -16,6 +16,7 @@ interface KakaoDocument {
   sale_price: number;
   thumbnail: string;
   status: string;
+  category?: string;   // 예: "소설>한국소설>한국현대소설"
 }
 
 interface KakaoMeta {
@@ -61,6 +62,7 @@ export interface SearchBook {
   publishedDate: string | null;
   pageCount: number | null;
   description: string | null;
+  category: string | null;
 }
 
 export interface SearchBooksResponse {
@@ -89,6 +91,7 @@ function kakaoDocToSearchBook(doc: KakaoDocument, proxyOrigin: string): SearchBo
     publishedDate: doc.datetime ? doc.datetime.slice(0, 10) : null,
     pageCount: null,   // 카카오 API는 페이지 수 미제공
     description: doc.contents || null,
+    category: doc.category || null,
   };
 }
 
@@ -107,6 +110,7 @@ function naverItemToSearchBook(item: NaverBook, proxyOrigin: string): SearchBook
       : null,
     pageCount: null,
     description: clean(item.description) || null,
+    category: null,   // 네이버 API는 카테고리 미제공
   };
 }
 
@@ -124,67 +128,85 @@ searchRouter.get('/books', rateLimit({ limit: 20, windowMs: 60_000, keyPrefix: '
   }
 
   const page = Math.max(1, parseInt(c.req.query('page') ?? '1', 10));
-  const size = Math.min(50, Math.max(1, parseInt(c.req.query('size') ?? '10', 10)));
+  const size = Math.min(50, Math.max(1, parseInt(c.req.query('size') ?? '20', 10)));
   const proxyOrigin = new URL(c.req.url).origin;
 
-  // ── 카카오 도서 검색 ──────────────────────────────────────
   const kakaoKey = c.env.KAKAO_REST_API_KEY;
-  if (kakaoKey) {
-    try {
-      const kakaoUrl = new URL('https://dapi.kakao.com/v3/search/book');
-      kakaoUrl.searchParams.set('query', q);
-      kakaoUrl.searchParams.set('page', String(page));
-      kakaoUrl.searchParams.set('size', String(size));
-      kakaoUrl.searchParams.set('target', 'title');
-
-      const kakaoRes = await fetch(kakaoUrl.toString(), {
-        headers: { Authorization: `KakaoAK ${kakaoKey}` },
-      });
-
-      if (kakaoRes.ok) {
-        const data = await kakaoRes.json<KakaoSearchResponse>();
-        const response: SearchBooksResponse = {
-          books: data.documents.map((doc) => kakaoDocToSearchBook(doc, proxyOrigin)),
-          total: data.meta.total_count,
-          isEnd: data.meta.is_end,
-        };
-        return c.json(response);
-      }
-    } catch {
-      // 카카오 실패 → 네이버 폴백
-    }
-  }
-
-  // ── 네이버 도서 검색 폴백 ─────────────────────────────────
   const naverId = c.env.NAVER_CLIENT_ID;
   const naverSecret = c.env.NAVER_CLIENT_SECRET;
-  if (naverId && naverSecret) {
-    try {
-      const naverUrl = new URL('https://openapi.naver.com/v1/search/book.json');
-      naverUrl.searchParams.set('query', q);
-      naverUrl.searchParams.set('start', String((page - 1) * size + 1));
-      naverUrl.searchParams.set('display', String(size));
 
-      const naverRes = await fetch(naverUrl.toString(), {
-        headers: {
-          'X-Naver-Client-Id': naverId,
-          'X-Naver-Client-Secret': naverSecret,
-        },
-      });
+  // ── 카카오 + 네이버 병렬 호출 → 결과 병합 ─────────────────
+  const kakaoPromise = kakaoKey
+    ? (async () => {
+        try {
+          const kakaoUrl = new URL('https://dapi.kakao.com/v3/search/book');
+          kakaoUrl.searchParams.set('query', q);
+          kakaoUrl.searchParams.set('page', String(page));
+          kakaoUrl.searchParams.set('size', String(size));
+          // target 생략 → 제목+저자+출판사+ISBN 전체 검색
 
-      if (naverRes.ok) {
-        const data = await naverRes.json<NaverSearchResponse>();
-        const response: SearchBooksResponse = {
-          books: data.items.map((item) => naverItemToSearchBook(item, proxyOrigin)),
-          total: data.total,
-          isEnd: page * size >= data.total,
-        };
-        return c.json(response);
-      }
-    } catch {
-      // 네이버도 실패
+          const res = await fetch(kakaoUrl.toString(), {
+            headers: { Authorization: `KakaoAK ${kakaoKey}` },
+          });
+          if (!res.ok) return null;
+          const data = await res.json<KakaoSearchResponse>();
+          return {
+            books: data.documents.map((doc) => kakaoDocToSearchBook(doc, proxyOrigin)),
+            total: data.meta.total_count,
+            isEnd: data.meta.is_end,
+          };
+        } catch {
+          return null;
+        }
+      })()
+    : Promise.resolve(null);
+
+  const naverPromise = naverId && naverSecret
+    ? (async () => {
+        try {
+          const naverUrl = new URL('https://openapi.naver.com/v1/search/book.json');
+          naverUrl.searchParams.set('query', q);
+          naverUrl.searchParams.set('start', String((page - 1) * size + 1));
+          naverUrl.searchParams.set('display', String(size));
+
+          const res = await fetch(naverUrl.toString(), {
+            headers: {
+              'X-Naver-Client-Id': naverId,
+              'X-Naver-Client-Secret': naverSecret,
+            },
+          });
+          if (!res.ok) return null;
+          const data = await res.json<NaverSearchResponse>();
+          return {
+            books: data.items.map((item) => naverItemToSearchBook(item, proxyOrigin)),
+            total: data.total,
+            isEnd: page * size >= data.total,
+          };
+        } catch {
+          return null;
+        }
+      })()
+    : Promise.resolve(null);
+
+  const [kakaoResult, naverResult] = await Promise.all([kakaoPromise, naverPromise]);
+
+  // 카카오 결과 우선, 네이버로 보충 (ISBN 기반 중복 제거)
+  if (kakaoResult && naverResult) {
+    const seenIsbns = new Set(kakaoResult.books.map((b) => b.isbn).filter(Boolean));
+    const merged = [...kakaoResult.books];
+    for (const nb of naverResult.books) {
+      if (nb.isbn && seenIsbns.has(nb.isbn)) continue;
+      merged.push(nb);
+      if (nb.isbn) seenIsbns.add(nb.isbn);
     }
+    return c.json({
+      books: merged,
+      total: kakaoResult.total + naverResult.total,
+      isEnd: kakaoResult.isEnd && naverResult.isEnd,
+    } satisfies SearchBooksResponse);
   }
+  if (kakaoResult) return c.json(kakaoResult satisfies SearchBooksResponse);
+  if (naverResult) return c.json(naverResult satisfies SearchBooksResponse);
 
   return c.json({ error: '도서 검색에 실패했습니다. 잠시 후 다시 시도해주세요.' }, 502);
 });

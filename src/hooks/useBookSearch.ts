@@ -7,7 +7,7 @@ import { searchApi, queryKeys } from '../lib/api';
  * @param page  페이지 번호 (기본값: 1)
  * @param size  페이지 크기 (기본값: 10)
  */
-export function useBookSearch(query: string, page = 1, size = 10) {
+export function useBookSearch(query: string, page = 1, size = 20) {
   return useQuery({
     queryKey: queryKeys.search.books(query),
     queryFn: () => searchApi.searchBooks(query, page, size),

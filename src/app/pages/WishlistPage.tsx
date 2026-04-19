@@ -36,26 +36,28 @@ function SortDropdown({
     <div className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1"
-        style={{ fontSize: 14, fontWeight: 400, color: "#64748B" }}
+        className="flex items-center gap-1 text-[#64748B] dark:text-[#94A3B8]"
+        style={{ fontSize: 14, fontWeight: 400 }}
       >
         정렬
         <ChevronDown size={14} className={`transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 bg-white rounded-xl border border-[#E2E8F0] shadow-lg z-50 overflow-hidden min-w-[120px]">
+        <div className="absolute right-0 top-full mt-1 bg-white dark:bg-[#1E293B] rounded-xl border border-[#E2E8F0] dark:border-[#334155] shadow-lg z-50 overflow-hidden min-w-[120px]">
           {SORT_OPTIONS.map((opt) => (
             <button
               key={opt.value}
               onClick={() => { onChange(opt.value); setOpen(false); }}
-              className="w-full text-left px-3 py-2.5 transition-colors hover:bg-[#F8FAFC]"
+              className="w-full text-left px-3 py-2.5 transition-colors hover:bg-[#F8FAFC] dark:hover:bg-[#334155]"
               style={{
                 fontSize: 13,
                 fontWeight: opt.value === value ? 700 : 400,
-                color: opt.value === value ? "#4F46E5" : "#374151",
+                color: opt.value === value ? "#4F46E5" : undefined,
               }}
             >
-              {opt.label}
+              <span className={opt.value === value ? '' : 'text-[#374151] dark:text-[#CBD5E1]'}>
+                {opt.label}
+              </span>
             </button>
           ))}
         </div>
@@ -672,12 +674,12 @@ export function WishlistPage() {
       <div className="flex items-center justify-between px-4 mb-2">
         <div className="flex items-center gap-2">
           {/* Spec: 18px SemiBold #1E293B */}
-          <h2 style={{ fontSize: 18, fontWeight: 600, color: "#1E293B" }}>
+          <h2 className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 18, fontWeight: 600 }}>
             읽고 싶은 책
           </h2>
-          {/* Count badge: bg #EEF2FF text #4F46E5 */}
+          {/* Count badge */}
           <span
-            className="rounded-full"
+            className="rounded-full bg-[#EEF2FF] dark:bg-[#312E81]"
             style={{
               fontSize: 12,
               fontWeight: 500,

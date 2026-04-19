@@ -426,6 +426,7 @@ export interface SearchBook {
   publishedDate: string | null;
   pageCount: number | null;
   description: string | null;
+  category: string | null;
 }
 
 export interface SearchBooksResponse {

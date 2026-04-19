@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
-import { ChevronDown, Plus, ChevronRight, LayoutGrid, List, GitBranch, Search, X, FolderOpen } from "lucide-react";
+import { ChevronDown, Plus, ChevronRight, LayoutGrid, List, GitBranch, Search, X, FolderOpen, BookMarked } from "lucide-react";
 import type { UIBook, GenreKey } from "../../types/book";
-import { ALL_GENRES } from "../../types/book";
+import { ALL_GENRES, GENRE_CONFIG } from "../../types/book";
 import { useBooks, useRefreshBookCovers } from "../../hooks/useBooks";
 import { DoneBookCard } from "../components/books/BookCard";
 import { GenreFilterBar } from "../components/books/GenreFilterBar";
@@ -49,7 +49,7 @@ function TimelineView({ grouped, monthKeys, onBookClick }: {
                 style={{ width: 12, height: 12, backgroundColor: "#4F46E5", marginTop: 2 }}
               />
               {idx < monthKeys.length - 1 && (
-                <div className="flex-1 mt-1" style={{ width: 2, backgroundColor: "#E2E8F0", minHeight: 20 }} />
+                <div className="flex-1 mt-1 dark:opacity-50" style={{ width: 2, backgroundColor: "#E2E8F0", minHeight: 20 }} />
               )}
             </div>
             {/* 콘텐츠 */}
@@ -74,6 +74,105 @@ function TimelineView({ grouped, monthKeys, onBookClick }: {
   );
 }
 
+/* ─── Bookshelf View (나무 책장 디자인) ──────────────────── */
+function BookshelfView({ books, onBookClick }: { books: UIBook[]; onBookClick: (id: string) => void }) {
+  // 한 선반당 4권씩 배치
+  const shelvesOf = 4;
+  const shelves: UIBook[][] = [];
+  for (let i = 0; i < books.length; i += shelvesOf) {
+    shelves.push(books.slice(i, i + shelvesOf));
+  }
+
+  return (
+    <div className="px-4 pt-2 pb-4">
+      {shelves.map((shelf, si) => (
+        <div key={si} className="mb-0">
+          {/* 책들 */}
+          <div
+            className="flex items-end gap-3 px-4 pt-4 pb-2 rounded-t-xl"
+            style={{
+              background: "linear-gradient(180deg, rgba(139,90,43,0.06) 0%, rgba(139,90,43,0.12) 100%)",
+              minHeight: 180,
+            }}
+          >
+            {shelf.map((book) => {
+              const genreConfig = GENRE_CONFIG[book.genre] ?? GENRE_CONFIG["기타"];
+              return (
+                <button
+                  key={book.id}
+                  onClick={() => onBookClick(book.id)}
+                  className="flex flex-col items-center flex-1 min-w-0 transition-transform hover:scale-[1.03] active:scale-[0.97] group"
+                >
+                  {/* 책 표지 */}
+                  <div className="relative mb-1.5">
+                    {book.coverImage ? (
+                      <img
+                        src={book.coverImage}
+                        alt={book.title}
+                        className="w-[60px] h-[85px] rounded-lg object-cover shadow-md"
+                        style={{ boxShadow: "2px 2px 8px rgba(0,0,0,0.15)" }}
+                      />
+                    ) : (
+                      <div
+                        className={`w-[60px] h-[85px] rounded-lg bg-gradient-to-br ${book.coverColor} flex items-center justify-center shadow-md`}
+                        style={{ boxShadow: "2px 2px 8px rgba(0,0,0,0.15)" }}
+                      >
+                        <span className="text-2xl">{genreConfig.emoji}</span>
+                      </div>
+                    )}
+                  </div>
+                  {/* 제목 */}
+                  <p
+                    className="text-center text-[#1E293B] dark:text-[#F8FAFC] line-clamp-2 w-full"
+                    style={{ fontSize: 11, fontWeight: 600, lineHeight: 1.3 }}
+                  >
+                    {book.title}
+                  </p>
+                  {/* 저자 */}
+                  <p
+                    className="text-center text-[#64748B] dark:text-[#94A3B8] truncate w-full"
+                    style={{ fontSize: 10 }}
+                  >
+                    {book.author}
+                  </p>
+                  {/* 완독일 */}
+                  {book.finishedDate && (
+                    <p
+                      className="text-center text-[#94A3B8] dark:text-[#CBD5E1]"
+                      style={{ fontSize: 9 }}
+                    >
+                      {book.finishedDate.replace(/-/g, ".")}
+                    </p>
+                  )}
+                </button>
+              );
+            })}
+            {/* 빈 슬롯 채우기 */}
+            {shelf.length < shelvesOf && Array.from({ length: shelvesOf - shelf.length }).map((_, i) => (
+              <div key={`empty-${i}`} className="flex-1" />
+            ))}
+          </div>
+          {/* 나무 선반 */}
+          <div
+            className="h-3 rounded-b-lg"
+            style={{
+              background: "linear-gradient(180deg, #8B5A2B 0%, #A0522D 40%, #6B3A1F 100%)",
+              boxShadow: "0 4px 8px rgba(107,58,31,0.3), inset 0 1px 0 rgba(255,255,255,0.15)",
+            }}
+          />
+          {/* 선반 아래 그림자 */}
+          <div
+            className="h-2 mx-2"
+            style={{
+              background: "linear-gradient(180deg, rgba(107,58,31,0.15) 0%, transparent 100%)",
+            }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const SORT_OPTIONS = [
   { value: "date" as const, label: "최근순" },
   { value: "rating" as const, label: "평점순" },
@@ -84,11 +183,10 @@ const SORT_OPTIONS = [
 function MonthGroupHeader({ label, count }: { label: string; count: number }) {
   return (
     <div
-      className="flex items-center px-4 w-full sticky top-0 z-10"
-      style={{ height: 36, backgroundColor: "#F8FAFC" }}
+      className="flex items-center px-4 w-full sticky top-0 z-10 bg-[#F8FAFC] dark:bg-[#0F172A]"
+      style={{ height: 36 }}
     >
-      {/* Spec: "2025년 3월 · 3권" format, 13px SemiBold #64748B */}
-      <span style={{ fontSize: 13, fontWeight: 600, color: "#64748B" }}>
+      <span className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 13, fontWeight: 600 }}>
         {label} · {count}권
       </span>
     </div>
@@ -110,26 +208,28 @@ function SortDropdown({
     <div className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1"
-        style={{ fontSize: 14, fontWeight: 400, color: "#64748B" }}
+        className="flex items-center gap-1 text-[#64748B] dark:text-[#94A3B8]"
+        style={{ fontSize: 14, fontWeight: 400 }}
       >
         {current.label}
         <ChevronDown size={14} className={`transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 bg-white rounded-xl border border-[#E2E8F0] shadow-lg z-50 overflow-hidden min-w-[96px]">
+        <div className="absolute right-0 top-full mt-1 bg-white dark:bg-[#1E293B] rounded-xl border border-[#E2E8F0] dark:border-[#334155] shadow-lg z-50 overflow-hidden min-w-[96px]">
           {SORT_OPTIONS.map((opt) => (
             <button
               key={opt.value}
               onClick={() => { onChange(opt.value); setOpen(false); }}
-              className="w-full text-left px-3 py-2.5 transition-colors hover:bg-[#F8FAFC]"
+              className="w-full text-left px-3 py-2.5 transition-colors hover:bg-[#F8FAFC] dark:hover:bg-[#334155]"
               style={{
                 fontSize: 13,
                 fontWeight: opt.value === value ? 700 : 400,
-                color: opt.value === value ? "#4F46E5" : "#374151",
+                color: opt.value === value ? "#4F46E5" : undefined,
               }}
             >
-              {opt.label}
+              <span className={opt.value === value ? '' : 'text-[#374151] dark:text-[#CBD5E1]'}>
+                {opt.label}
+              </span>
             </button>
           ))}
         </div>
@@ -161,7 +261,7 @@ export function LibraryPage() {
   const [selectedGenre, setSelectedGenre] = useState<GenreKey | null>(null);
   const [sortBy, setSortBy] = useState<"date" | "rating" | "title">("date");
   const [showAll, setShowAll] = useState(false);
-  const [viewMode, setViewMode] = useState<"grid" | "list" | "timeline">("list");
+  const [viewMode, setViewMode] = useState<"grid" | "list" | "timeline" | "bookshelf">("list");
   const [searchQuery, setSearchQuery] = useState("");
   const { data: books = [], isLoading, isError, refetch } = useBooks({ status: 'done' });
   const loadState = isLoading ? "loading" : isError ? "error" : "success";
@@ -210,14 +310,13 @@ export function LibraryPage() {
       <div className="flex items-center justify-between px-4 pt-5 pb-3">
         <div className="flex items-center gap-2">
           {/* Spec: 18px SemiBold #1E293B */}
-          <h1 style={{ fontSize: 18, fontWeight: 600, color: "#1E293B" }}>
+          <h1 className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 18, fontWeight: 600 }}>
             완독한 책
           </h1>
-          {/* Count badge: bg #EEF2FF, text #4F46E5, 12px Medium, pill */}
+          {/* Count badge */}
           <span
-            className="rounded-full"
+            className="rounded-full bg-[#EEF2FF] dark:bg-[#312E81]"
             style={{
-              backgroundColor: "#EEF2FF",
               color: "#4F46E5",
               fontSize: 12,
               fontWeight: 500,
@@ -229,10 +328,11 @@ export function LibraryPage() {
         </div>
         <div className="flex items-center gap-3">
           {/* 뷰 모드 토글 */}
-          <div className="flex items-center gap-0.5 bg-[#F1F5F9] rounded-xl p-0.5">
+          <div className="flex items-center gap-0.5 bg-[#F1F5F9] dark:bg-[#334155] rounded-xl p-0.5">
             {([
               { v: "list" as const, icon: <List size={14} />, label: "리스트" },
               { v: "grid" as const, icon: <LayoutGrid size={14} />, label: "그리드" },
+              { v: "bookshelf" as const, icon: <BookMarked size={14} />, label: "책장" },
               { v: "timeline" as const, icon: <GitBranch size={14} />, label: "타임라인" },
             ] as const).map(({ v, icon, label }) => (
               <button
@@ -240,13 +340,8 @@ export function LibraryPage() {
                 onClick={() => setViewMode(v)}
                 aria-label={label}
                 title={label}
-                className="flex items-center justify-center rounded-lg transition-all"
-                style={{
-                  width: 30, height: 28,
-                  backgroundColor: viewMode === v ? "white" : "transparent",
-                  color: viewMode === v ? "#4F46E5" : "#94A3B8",
-                  boxShadow: viewMode === v ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
-                }}
+                className={`flex items-center justify-center rounded-lg transition-all ${viewMode === v ? 'bg-white dark:bg-[#1E293B] shadow-sm text-[#4F46E5]' : 'text-[#94A3B8]'}`}
+                style={{ width: 30, height: 28 }}
               >
                 {icon}
               </button>
@@ -279,33 +374,31 @@ export function LibraryPage() {
           <div className="px-4 mb-3">
             <Link
               to="/collections"
-              className="flex items-center gap-3 w-full rounded-2xl px-4 py-3 hover:bg-[#EEF2FF] transition-colors"
-              style={{ backgroundColor: "#F8FAFC", border: "1px solid #E2E8F0" }}
+              className="flex items-center gap-3 w-full rounded-2xl px-4 py-3 bg-[#F8FAFC] dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] hover:bg-[#EEF2FF] dark:hover:bg-[#334155] transition-colors"
             >
               <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ backgroundColor: "#EEF2FF" }}
+                className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-[#EEF2FF] dark:bg-[#312E81]"
               >
                 <FolderOpen size={16} style={{ color: "#4F46E5" }} />
               </div>
               <div className="flex-1 min-w-0">
-                <p style={{ fontSize: 13, fontWeight: 700, color: "#1E293B" }}>내 컬렉션</p>
-                <p style={{ fontSize: 11, color: "#94A3B8" }}>시리즈, 주제별로 책을 모아보세요</p>
+                <p className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 13, fontWeight: 700 }}>내 컬렉션</p>
+                <p className="text-[#94A3B8] dark:text-[#CBD5E1]" style={{ fontSize: 11 }}>시리즈, 주제별로 책을 모아보세요</p>
               </div>
-              <ChevronRight size={16} style={{ color: "#94A3B8", flexShrink: 0 }} />
+              <ChevronRight size={16} className="text-[#94A3B8] dark:text-[#CBD5E1] flex-shrink-0" />
             </Link>
           </div>
 
           {/* ── 인라인 검색 바 ── */}
           <div className="px-4 mb-3">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8] pointer-events-none" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8] dark:text-[#CBD5E1] pointer-events-none" />
               <input
                 type="text"
                 placeholder="제목 또는 저자로 검색..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-10 bg-[#F1F5F9] rounded-xl pl-9 pr-9 text-sm outline-none border border-transparent focus:border-[#4F46E5]/30 focus:bg-white transition-colors"
+                className="w-full h-10 bg-[#F1F5F9] dark:bg-[#334155] rounded-xl pl-9 pr-9 text-sm text-[#1E293B] dark:text-[#F8FAFC] placeholder:text-[#94A3B8] dark:placeholder:text-[#64748B] outline-none border border-transparent focus:border-[#4F46E5]/30 focus:bg-white dark:focus:bg-[#1E293B] transition-colors"
               />
               {searchQuery && (
                 <button
@@ -344,6 +437,12 @@ export function LibraryPage() {
             <TimelineView
               grouped={groupByMonth(filtered.slice().sort((a, b) => (b.finishedDate ?? "").localeCompare(a.finishedDate ?? "")))}
               monthKeys={Array.from(groupByMonth(filtered.slice().sort((a, b) => (b.finishedDate ?? "").localeCompare(a.finishedDate ?? ""))).keys())}
+              onBookClick={(id) => navigate(`/book/${id}`)}
+            />
+          ) : viewMode === "bookshelf" ? (
+            /* ── 책장 뷰 ── */
+            <BookshelfView
+              books={filtered}
               onBookClick={(id) => navigate(`/book/${id}`)}
             />
           ) : (
@@ -400,8 +499,8 @@ export function LibraryPage() {
                       <div className="px-4 py-3">
                         <button
                           onClick={() => setShowAll(true)}
-                          className="w-full py-3 rounded-2xl border border-dashed border-[#CBD5E1] flex items-center justify-center gap-2 transition-colors hover:border-[#4F46E5] hover:bg-[#F8FAFF]"
-                          style={{ color: "#64748B", fontSize: 14, fontWeight: 600 }}
+                          className="w-full py-3 rounded-2xl border border-dashed border-[#CBD5E1] dark:border-[#475569] flex items-center justify-center gap-2 transition-colors hover:border-[#4F46E5] hover:bg-[#F8FAFF] dark:hover:bg-[#1E293B] text-[#64748B] dark:text-[#94A3B8]"
+                          style={{ fontSize: 14, fontWeight: 600 }}
                         >
                           <ChevronRight size={16} />
                           {hiddenCount}권 더 보기

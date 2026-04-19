@@ -4,7 +4,7 @@ import { ArrowLeft, Camera, Search, X, Check, ChevronRight, PenLine, Star } from
 import { useBookSearch } from "../../hooks/useBookSearch";
 import { useAddBook } from "../../hooks/useBooks";
 import type { GenreKey, BookStatus } from "../../types/book";
-import { GENRE_CONFIG, COVER_GRADIENTS } from "../../types/book";
+import { GENRE_CONFIG, COVER_GRADIENTS, detectGenre } from "../../types/book";
 import { Skeleton } from "../components/ui/skeleton";
 import type { SearchBook } from "../../lib/api";
 import ISBNScanner from "../components/books/ISBNScanner";
@@ -645,6 +645,7 @@ export function RegisterFlowPage() {
     setForm((f) => ({ ...f, ...patch }));
 
   const fillFromSearch = (book: SearchBook) => {
+    const autoGenre = detectGenre(book.category ?? null, book.title, book.description);
     update({
       title:      book.title,
       author:     book.author,
@@ -652,6 +653,8 @@ export function RegisterFlowPage() {
       isbn:       book.isbn,
       totalPages: book.pageCount ? String(book.pageCount) : "",
       coverImage: book.coverImage ?? "",
+      genre:      autoGenre,
+      coverEmoji: GENRE_CONFIG[autoGenre]?.emoji ?? "📚",
     });
     setStep(2);
   };

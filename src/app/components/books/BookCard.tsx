@@ -127,7 +127,7 @@ export function DoneBookCard({
   return (
     <div
       onClick={onClick}
-      className="bg-white rounded-xl p-3 flex gap-3 cursor-pointer hover:shadow-md hover:border-[#E0E7FF] transition-all active:scale-[0.99] border border-[#F1F5F9]"
+      className="bg-white dark:bg-[#1E293B] rounded-xl p-3 flex gap-3 cursor-pointer hover:shadow-md hover:border-[#E0E7FF] dark:hover:border-[#4338CA] transition-all active:scale-[0.99] border border-[#F1F5F9] dark:border-[#334155]"
       style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
     >
       {/* Cover 60×85px */}
@@ -136,14 +136,14 @@ export function DoneBookCard({
       <div className="flex-1 min-w-0 flex flex-col gap-1.5">
         {/* Title: 14px Bold #1E293B, max 2 lines */}
         <h3
-          className="text-[#1E293B] line-clamp-2"
+          className="text-[#1E293B] dark:text-[#F8FAFC] line-clamp-2"
           style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.4 }}
         >
           {book.title}
         </h3>
 
         {/* Author · Publisher: 12px Regular #64748B */}
-        <p className="text-[#64748B] truncate" style={{ fontSize: 12 }}>
+        <p className="text-[#64748B] dark:text-[#94A3B8] truncate" style={{ fontSize: 12 }}>
           {book.author} · {book.publisher}
         </p>
 
@@ -154,8 +154,8 @@ export function DoneBookCard({
         <div className="flex items-center justify-between mt-auto pt-1">
           {book.finishedDate && (
             <span
-              className="flex items-center gap-1 text-[#94A3B8]"
-              style={{ fontSize: 12 }}   // spec: 12px Regular #94A3B8
+              className="flex items-center gap-1 text-[#94A3B8] dark:text-[#CBD5E1]"
+              style={{ fontSize: 12 }}
             >
               <Calendar size={11} />
               완독: {book.finishedDate.replace(/-/g, ".")}
@@ -193,9 +193,8 @@ export function ReadingBookCard({
   return (
     <div
       onClick={onClick}
-      className="bg-white rounded-xl p-3 flex flex-col gap-3 cursor-pointer hover:shadow-md transition-all active:scale-[0.99] border"
+      className={`bg-white dark:bg-[#1E293B] rounded-xl p-3 flex flex-col gap-3 cursor-pointer hover:shadow-md transition-all active:scale-[0.99] border ${isOverdue ? 'border-[#FECACA] dark:border-[#7F1D1D]' : 'border-[#F1F5F9] dark:border-[#334155]'}`}
       style={{
-        borderColor: isOverdue ? "#FECACA" : "#F1F5F9",
         boxShadow: isOverdue
           ? "0 1px 3px rgba(239,68,68,0.08)"
           : "0 1px 3px rgba(0,0,0,0.06)",
@@ -217,7 +216,7 @@ export function ReadingBookCard({
             {/* Track circle */}
             <circle
               cx="14" cy="14" r="11"
-              fill="white"
+              className="fill-white dark:fill-[#1E293B]"
               stroke="#E2E8F0"
               strokeWidth="3"
             />
@@ -250,12 +249,12 @@ export function ReadingBookCard({
         </div>
         <div className="flex-1 min-w-0 flex flex-col gap-1.5">
           <h3
-            className="text-[#1E293B] line-clamp-2"
+            className="text-[#1E293B] dark:text-[#F8FAFC] line-clamp-2"
             style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.4 }}
           >
             {book.title}
           </h3>
-          <p className="text-[#64748B] truncate" style={{ fontSize: 12 }}>
+          <p className="text-[#64748B] dark:text-[#94A3B8] truncate" style={{ fontSize: 12 }}>
             {book.author} · {book.publisher}
           </p>
           {/* Genre badge only — D-day moves to bottom chips row */}
@@ -347,20 +346,20 @@ export function WishBookCard({
 
   return (
     <div
-      className="bg-white rounded-xl border p-3 flex flex-col gap-2.5 transition-all hover:border-[#4F46E5]/30 hover:shadow-md"
-      style={{ borderColor: "#F1F5F9", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
+      className="bg-white dark:bg-[#1E293B] rounded-xl border border-[#F1F5F9] dark:border-[#334155] p-3 flex flex-col gap-2.5 transition-all hover:border-[#4F46E5]/30 dark:hover:border-[#4338CA] hover:shadow-md"
+      style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
     >
       <div className="flex gap-3">
         <BookCover book={book} size="md" />
 
         <div className="flex-1 min-w-0 flex flex-col gap-1.5">
           <h3
-            className="text-[#1E293B] line-clamp-2"
+            className="text-[#1E293B] dark:text-[#F8FAFC] line-clamp-2"
             style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.4 }}
           >
             {book.title}
           </h3>
-          <p className="text-[#64748B] truncate" style={{ fontSize: 12 }}>
+          <p className="text-[#64748B] dark:text-[#94A3B8] truncate" style={{ fontSize: 12 }}>
             {book.author} · {book.publisher}
           </p>
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -376,7 +375,7 @@ export function WishBookCard({
 
           {/* 추가일: YYYY.MM.DD — spec format */}
           <span
-            className="flex items-center gap-1 text-[#94A3B8]"
+            className="flex items-center gap-1 text-[#94A3B8] dark:text-[#CBD5E1]"
             style={{ fontSize: 12 }}
           >
             <Calendar size={11} />
@@ -402,7 +401,7 @@ export function WishBookCard({
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); onDelete?.(); }}
-          className="flex items-center gap-1 rounded-xl transition-colors hover:bg-[#FEF2F2] px-3"
+          className="flex items-center gap-1 rounded-xl transition-colors hover:bg-[#FEF2F2] dark:hover:bg-[#450A0A] px-3"
           style={{
             height: 32,
             border: "1.5px solid #FEE2E2",
