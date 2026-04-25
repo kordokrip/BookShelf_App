@@ -1,7 +1,25 @@
+/**
+ * auth 라우터 — Google OAuth 콜백 + Refresh Token 갱신
+ *
+ * GET  /api/auth/google/callback — Google OAuth 서버 코드 수신
+ *   1. 코드 → Google 액세스 토큰 교환
+ *   2. 액세스 토큰 → 사용자 정보 조회 (email, name, avatar_url)
+ *   3. DB에서 사용자 조회/신규 생성 (ALLOWED_EMAILS 게이트)
+ *   4. JWT(2h) + Refresh Token(30d) 발급 → 프론트엔드로 리다이렉트
+ *
+ * POST /api/auth/refresh — Refresh Token → 새 Access Token 발급
+ *   - KV에서 Refresh Token 검증 후 새 JWT 발급
+ *   - Rate Limit: 10회/분 (브루트포스 방지)
+ *
+ * 보안:
+ *   - Refresh Token은 HttpOnly Secure SameSite=Strict 쿠키로 전달
+ *   - ALLOWED_EMAILS 환경 변수로 가입 허용 이메일 제한 가능
+ */
 import { Hono } from 'hono';
 import type { Bindings, DbUser } from '../types';
 import { createToken, createRefreshToken, verifyRefreshToken } from '../auth';
 import { rateLimit } from '../middleware/rateLimit';
+import { logActivity } from './admin';
 
 const authRouter = new Hono<{ Bindings: Bindings }>();
 
@@ -128,12 +146,25 @@ authRouter.get('/google/callback', async (c) => {
       return c.redirect(`${frontendUrl}/login?error=google_db`);
     }
 
+    // ★ STEP 5: 관리자 이메일 자동 승격 (kordokrip@gmail.com)
+    const ADMIN_EMAILS = ['kordokrip@gmail.com'];
+    if (ADMIN_EMAILS.includes(user.email) && user.role !== 'admin') {
+      await c.env.DB.prepare(
+        "UPDATE users SET role = 'admin', updated_at = ? WHERE id = ?",
+      ).bind(new Date().toISOString(), user.id).run();
+      user = { ...user, role: 'admin' };
+    }
+
     // 4. JWT + Refresh Token 발급 → 프론트엔드로 리다이렉트
     const token = await createToken(
       { sub: user.id, email: user.email },
       c.env.JWT_SECRET,
     );
     const refreshToken = await createRefreshToken(user.id, c.env.KV);
+
+    const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? 'unknown';
+    await logActivity(c.env.DB, user.id, 'user:login_oauth', { provider: 'google', email: user.email }, ip);
+
     // SEC-06: HttpOnly 쿠키 + URL 파라미터 (하위 호환)
     const redirectUrl = `${frontendUrl}/?token=${encodeURIComponent(token)}&refreshToken=${encodeURIComponent(refreshToken)}&provider=google`;
     return new Response(null, {
@@ -160,7 +191,7 @@ authRouter.post(
     const cookieMatch = cookie.match(/refreshToken=([^;]+)/);
     let refreshToken = cookieMatch?.[1] ?? '';
     if (!refreshToken) {
-      const body = await c.req.json<{ refreshToken?: string }>().catch(() => ({}));
+      const body = await c.req.json<{ refreshToken?: string }>().catch(() => ({ refreshToken: undefined }));
       refreshToken = body.refreshToken ?? '';
     }
     if (!refreshToken) {

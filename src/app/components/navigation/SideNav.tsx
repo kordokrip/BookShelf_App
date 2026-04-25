@@ -41,7 +41,7 @@ export function SideNav() {
   const navItems: SideNavItem[] = [
     { path: "/", label: "완독 📚", icon: BookMarked, badge: doneBooks.length || undefined },
     { path: "/reading", label: "읽는 중 📖", icon: BookOpen, badge: readingBooks.length || undefined },
-    { path: "/wishlist", label: "위시리스트 💫", icon: Star, badge: wishBooks.length || undefined },
+    { path: "/wishlist", label: "책 추천 📚", icon: Star, badge: wishBooks.length || undefined },
     { path: "/stats", label: "독서 통계 📊", icon: BarChart2 },
     { path: "/register-flow", label: "책 등록 플로우", icon: PlusCircle },
     { path: "/notes-search", label: "노트 & 검색", icon: FileText },

@@ -1,6 +1,6 @@
  # BookShelf App — 프로젝트 상태 보고서
 
-> **최종 업데이트:** 2026-04-13 (24차 업데이트 — 독서모임 대규모 기능 개선 + 책 이미지 버그 수정)
+> **최종 업데이트:** 2026-04-25 (27차 업데이트 — activity_logs 실활동 로깅 구현)
 > - **4차**: SideNav/TopBar 하드코딩 데이터 → 실시간 바인딩, ViteWorkbox SW 청크 에러 수정 (commit: `1c280d1`)
 > - **5차**: 카카오 SDK 무결성 해시 수정, `mobile-web-app-capable` 메타태그 추가, 소셜 로그인 401 에러 메시지 분기 (commit: `8c18d60`)
 > - **6차**: D1 테이블 정상 동작 확인, Kakao OAuth dead code 제거(`loginWithKakao`), Google 버튼 "준비 중" UI로 대체 (commit: `7cddee7`)
@@ -56,11 +56,29 @@
 >   - **프론트엔드**: GroupsPage(내 모임/대기 분리), MembersTab(승인/거절), ChatTab(삭제), MeetingsTab(전원 등록)
 >   - 배포: CF `1ca99946`, E2E 27/27 PASS, Git `83ff556`
 > - **24차 프로젝트 정리**: Claude_cowork/ 전체 삭제, 구식 문서 5건 삭제, data-connection-report→TRACE_MAP 병합, oracleJdk 로컬 삭제(371MB)
+> - **25차**: OCR 리팩토링 — `@cf/meta/llama-3.2-11b-vision-instruct` + agree 자동시도 + `@cf/llava-1.5-7b-hf` 폴백, 전처리 그레이스케일 제거, 8/8 테스트 PASS (commit: OCR fix, CF `52b698a7`)
+> - **25차 프로젝트 정리**: .DS_Store·루트 PNG·test-ocr.mjs 삭제, QA 문서 4개→2개 통합, 소스코드 한글 주석 보강
+> - **26차**: 관리자(Admin) 기능 4종 전면 구현 ★
+>   - **DB**: 마이그레이션 `0011_admin_notifications.sql` — `admin_messages`, `activity_logs` 테이블 + 5개 인덱스
+>   - **백엔드**: `worker/routes/admin.ts` 신규 (~520줄) — 8개 엔드포인트 (`/stats`, `/users`, `/users/:id`, `/users/:id/role`, `/activity`, `/messages`, `/seed-admins`)
+>   - **관리자 자동 승격**: Google OAuth 콜백 + 로컬 로그인 시 `kordokrip@gmail.com` → role='admin' 자동 설정
+>   - **프론트엔드**: `AdminPage.tsx` 4탭 UI (대시보드/회원관리/알림발송/발송내역), `adminApi` 9개 메서드
+>   - **네비게이션**: TopBar에 `UserCog` 아이콘 관리자 버튼 (role=admin 조건부), `/admin` 라우트 등록
+>   - **TypeScript**: `const` → `let` 버그 수정, `createMiddleware` 기반 재작성, 타입 오류 전량 해결
+>   - 배포: CF `2e42c1af-9228-4c9b-a72c-46fb118f58ea`
+> - **27차**: activity_logs 실활동 로깅 전면 구현 ★
+>   - `logActivity()` 헬퍼 함수 `admin.ts`에 추가 후 export
+>   - `users.ts`: register, login 시 `user:register` / `user:login` 로그 기록
+>   - `books.ts`: 책 추가 `book:add`, 삭제 `book:delete` 로그 기록
+>   - `sessions.ts`: 독서 세션 기록 시 `session:log` 로그 기록
+>   - `notes.ts`: 노트 생성 시 `note:create` 로그 기록
+>   - `auth.ts`: Google OAuth 로그인 시 `user:login_oauth` 로그 기록
+>   - E2E 27/27 PASS, 배포: CF `267e7868-66b0-44c9-bddf-595981dd8223`
 >
 > **Git 브랜치:** `main` (kordokrip/BookShelf_App)
-> **Cloudflare Workers Version:** `1ca99946-0aa4-461e-8b14-09753d03c91f` ★ (24차 배포)
+> **Cloudflare Workers Version:** `267e7868-66b0-44c9-bddf-595981dd8223` ★ (27차 배포)
 > **분석 방법:** 전체 소스 파일 직접 확인 (추측 없음)
-> **빌드:** `npm run build` → ✅ ★ (24차)
+> **빌드:** `npm run build` → ✅ ★ (26차)
 > **E2E 테스트:** `bash scripts/e2e-api-test.sh` → **27/27 PASS** ✅ ★ (24차)
 
 ---
@@ -312,6 +330,7 @@ BookShelf_App/
 | 404 | NotFoundPage.tsx | ✅ 완료 | 없음 | path: `'*'` fallback 라우트 ✅ |
 | 독서 모임 | GroupsPage.tsx | ✅ 완료 | **useGroups + useCreateGroup + useJoinGroup** | 그룹 목록(내 모임/공개 모임), 생성 모달(이름/설명/이모지), 가입, 검색 ★ (21차) |
 | 모임 상세 | GroupDetailView.tsx | ✅ 완료 | **useGroupDetail + useGroupMessages + useGroupMeetings + useMeetingFeedbacks** | 탭 UI(채팅/일정/멤버), 실시간 채팅(10초 폴링), 모임 일정 생성/삭제(leader), 피드백 별점/작성, 멤버 관리/추방/탈퇴 ★ (21차) |
+| 관리자 대시보드 | AdminPage.tsx | ✅ 완료 | **adminApi 9개 메서드** | 4탭 UI(대시보드·회원관리·알림발송·발송내역), 월별 가입/일별 활성 차트, Top5 회원, 회원 상세 모달+역할 변경, 전체/개별 알림 발송, 발송 내역 ★ (26차) |
 
 > **✅ 모든 페이지 인터랙티브 구현 완료 (17개 페이지 + NotificationPanel 신규 컴포넌트)** ★ (15차)
 > 모든 페이지 TanStack Query 훅으로 실제 API에 연결됨.
@@ -1014,6 +1033,8 @@ function ProtectedRoute({ children }) {
 | /book/:id | BookDetailPage | **보호** | |
 | /design-system | DesignSystemPage | **보호** | protected + admin gate ★ (16차) |
 | /entry | EntryGate | 공개 | 진입 게이트 ★ (16차) |
+| /groups | GroupsPage (lazy) | **보호** | 독서 모임 ★ (21차) |
+| /admin | AdminPage (lazy) | **보호** | 관리자 대시보드 (role=admin) ★ (26차) |
 | * | NotFoundPage | 공개 | |
 
 ---
@@ -1329,9 +1350,8 @@ $ npm run lint
 
 ### 🟢 Nice to Have
 
-4. **`src/app/data/mockData.ts` 완전 삭제**
-   - [ ] DesignSystemPage가 직접 mock 데이터 정의하도록 수정
-   - [ ] 파일 삭제
+4. **`src/app/data/mockData.ts` 완전 삭제** ✅ 완료
+   - mockData.ts 파일 이미 삭제됨, DesignSystemPage에서 미사용
 
 ### ✅ 완료된 항목 (이전에 남은 작업이었다가 해소됨)
 
@@ -1375,7 +1395,7 @@ $ npm run lint
 | 4 | ~~🟡 Important~~ ✅ | ~~D1 원격 마이그레이션 실행 여부 불확실~~ | ~~모든 API 500 오류 가능성~~ | **[6차] GET /api/books 실데이터 응답으로 정상 동작 확인** |
 | 5 | ~~🔴 Critical~~ ✅ | ~~Kakao OAuth dead code (`loginWithKakao`)~~ | ~~존재하지 않는 엔드포인트 호출~~ | **[6차] `api.ts`, `authStore.ts`, `KakaoCallbackPage.tsx` dead code 전체 제거** |
 | 6 | ~~🔴 Critical~~ ✅ | ~~`/library` 라우트 404~~ | ~~SignUpPage/RegisterFlowPage 완료 후 라우트 없음~~ | **[7차] `navigate('/')` 로 수정** |
-| 7 | 🟢 Minor | `src/app/data/mockData.ts` 남아 있음 | 불필요한 파일 잔류 | DesignSystemPage 수정 후 삭제 |
+| 7 | ~~🟢 Minor~~ ✅ | ~~`src/app/data/mockData.ts` 남아 있음~~ | 해소 | **mockData.ts 이미 삭제됨** |
 | 8 | ~~🔴 Critical~~ ✅ | BUG-001: /register-flow ProtectedRoute 없음 | 보안 (비인증 접근) | **[8차] `protected_()` 래핑 완료** |
 | 9 | ~~🔴 Critical~~ ✅ | BUG-002: 쓰기 API optionalAuth — 비인증 요청 허용 | 보안 취약점 | **[8차] books/sessions/notes authMiddleware 분리 완료** |
 | 10 | ~~🔴 Critical~~ ✅ | BUG-003: SplashPage 인증 상태 무시 | UX (항상 /onboarding 이동) | **[8차] authenticated→/ / else→/onboarding 분기** |

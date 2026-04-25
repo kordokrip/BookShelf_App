@@ -6,7 +6,7 @@
  * - 알림 벨: 미읽음 카운트 배지 + NotificationPanel 드롭다운
  */
 import { useState, useRef } from 'react';
-import { Bell, BookPlus, Sun, Moon, Clock, FileSearch } from 'lucide-react';
+import { Bell, BookPlus, Sun, Moon, Clock, FileSearch, UserCog } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { useAuthStore } from '../../../stores/authStore';
 import { useUiStore } from '../../../stores/uiStore';
@@ -18,11 +18,12 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
 const pageTitles: Record<string, string> = {
   '/': '완독 📚',
   '/reading': '읽는 중 📖',
-  '/wishlist': '위시리스트 💫',
+  '/wishlist': '당신을 위한 책 추천 📚',
   '/stats': '독서 통계 📊',
   '/design-system': '디자인 시스템',
   '/notes-search': '노트 & 검색',
   '/groups': '독서 모임 👥',
+  '/admin': '관리자 대시보드 🛡️',
 };
 
 const THEME_LABEL = {
@@ -126,6 +127,22 @@ export function TopBar() {
             <TooltipContent side="bottom" sideOffset={4}>노트 & 검색</TooltipContent>
           </Tooltip>
 
+          {/* 관리자 패널 (role='admin'일 때만 표시) */}
+          {user?.role === 'admin' && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => navigate('/admin')}
+                  aria-label="관리자 대시보드"
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                >
+                  <UserCog size={19} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" sideOffset={4}>관리자 대시보드</TooltipContent>
+            </Tooltip>
+          )}
+
           {/* 🔔 알림 벨 + 패널 드롭다운 */}
           <div ref={bellRef} className="relative">
             <Tooltip>
@@ -181,7 +198,7 @@ export function TopBar() {
             </Tooltip>
 
             {profileOpen && user && (
-              <ProfilePopup user={user} onClose={() => setProfileOpen(false)} />
+              <ProfilePopup onClose={() => setProfileOpen(false)} />
             )}
           </div>
         </div>

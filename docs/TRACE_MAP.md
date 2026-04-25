@@ -1,10 +1,10 @@
 # BookShelf App — 전체 시스템 추적 맵 (TRACE MAP)
 
-> 작성 기준: 실제 소스 코드 전수 분석 (2026-04 기준)
+> 작성 기준: 실제 소스 코드 전수 분석 (2026-04-25 기준)
 > 목적: 프로덕션 오류 발생 시 UI → Hook → API → DB 레이어를 빠르게 추적하기 위한 기준 문서
 >
-> **최신 변경**: 2026-04-13 — 24차 독서모임 대규모 기능 개선 (가입 승인 시스템, 알림, 채팅 삭제, 미팅 전원 등록)
-> **이전 변경**: 2026-04-09 — 23차 보안 및 개선 27건 구현
+> **최신 변경**: 2026-04-25 — 25차 OCR 리팩토링 (llama-3.2-11b + agree 자동시도 + llava 폴백, 8/8 테스트 PASS)
+> **이전 변경**: 2026-04-13 — 24차 독서모임 대규모 기능 개선 (가입 승인 시스템, 알림, 채팅 삭제, 미팅 전원 등록)
 
 ---
 
@@ -19,14 +19,14 @@
 | **TanStack Query** | v5.90.21 |
 | **Zustand** | v5.0.11 |
 | **Database** | Cloudflare D1 (`bookshelf-db`, ID: `013db269-dc7a-4a60-9920-ed40c12ab623`) |
-| **AI** | Workers AI (`@cf/meta/llama-3.1-8b-instruct`, `@cf/meta/llama-3.2-11b-vision-instruct`) |
+| **AI** | Workers AI (`@cf/meta/llama-3.1-8b-instruct`, `@cf/meta/llama-3.2-11b-vision-instruct` + 폴백 `@cf/llava-1.5-7b-hf`) |
 | **Storage** | Cloudflare R2 (`covers/{userId}/{bookId}.{ext}`) |
 | **TypeScript check** | ✅ 0 errors |
-| **Build** | ✅ 성공 ★ (24차) |
+| **Build** | ✅ 성공 ★ (25차) |
 | **Production Health** | ✅ `{"status":"ok","env":"production"}` |
 | **E2E 테스트** | ✅ 27/27 PASS ★ (24차) |
-| **GitHub 커밋** | `83ff556` (main) ★ (24차) |
-| **Cloudflare Workers** | Version ID `1ca99946-0aa4-461e-8b14-09753d03c91f` ★ (24차 배포) |
+| **GitHub 커밋** | `83ff556` (main) ★ (24차 이후 OCR 수정) |
+| **Cloudflare Workers** | Version ID `52b698a7-aac6-4715-a040-77a40ddd395a` ★ (25차 배포) |
 | **D1 Tables** | users(★role), books, reading_sessions, notes(★type 'review'), notes_fts (FTS5), groups, group_members(★status,last_read_at), group_messages, group_meetings, meeting_feedbacks, shared_reports, notifications ★ (24차), d1_migrations, _cf_KV, sqlite_sequence |
 
 ---

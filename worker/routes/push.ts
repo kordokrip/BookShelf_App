@@ -1,3 +1,14 @@
+/**
+ * push 라우터 — Web Push 알림 구독 관리
+ *
+ * GET    /api/push/vapid-key   — VAPID 공개키 반환 (PWA 등록에 필요)
+ * POST   /api/push/subscribe   — Push 구독 등록 (endpoint + p256dh + auth 키)
+ * DELETE /api/push/unsubscribe — Push 구독 해제
+ * POST   /api/push/test        — 테스트 Push 발송 (개발/테스트 용도)
+ *
+ * 구독 정보는 push_subscriptions 테이블(D1)에 저장,
+ * 실제 Push 발송은 Worker 내에서 Web Push Protocol로 직접 수행
+ */
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';

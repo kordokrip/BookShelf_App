@@ -103,6 +103,32 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 /** 진행 중인 refresh 요청을 공유하여 동시 401 다중 호출 방지 */
 let refreshPromise: Promise<boolean> | null = null;
 
+/**
+ * JWT 토큰이 만료 임박(5분 이내)하면 사전에 갱신.
+ * 30초 폴링 훅들이 만료 직후 401을 받아 강제 로그아웃되는 현상 방지.
+ */
+let proactiveRefreshPromise: Promise<void> | null = null;
+
+async function refreshTokenIfNeeded(): Promise<void> {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token || !localStorage.getItem(REFRESH_TOKEN_KEY)) return;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1] ?? '')) as { exp?: number };
+    const exp = payload.exp;
+    if (!exp) return;
+    const secondsLeft = exp - Math.floor(Date.now() / 1000);
+    if (secondsLeft > 300) return; // 5분 넘게 남으면 갱신 불필요
+    if (!proactiveRefreshPromise) {
+      proactiveRefreshPromise = tryRefreshToken()
+        .then(() => undefined)
+        .finally(() => { proactiveRefreshPromise = null; });
+    }
+    await proactiveRefreshPromise;
+  } catch {
+    // JWT 파싱 실패 시 무시
+  }
+}
+
 async function tryRefreshToken(): Promise<boolean> {
   const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
 
@@ -133,6 +159,9 @@ export async function apiFetch<T>(
   options: RequestInit = {},
 ): Promise<T> {
   const url = `${BASE_URL}${path}`;
+
+  // 토큰이 만료 임박하면 요청 전 사전 갱신 (401 발생 → 강제 로그아웃 방지)
+  await refreshTokenIfNeeded();
 
   const response = await fetch(url, {
     ...options,
@@ -447,6 +476,18 @@ export const searchApi = {
     apiFetch<{ book: SearchBook }>(
       `/api/search/books/isbn?isbn=${encodeURIComponent(isbn)}`,
     ),
+
+  /**
+   * Google Books → Open Library 순서로 책 페이지 수 + 카테고리 조회.
+   * categories는 장르 자동 감지에 활용됩니다.
+   */
+  getPageCount: (params: { isbn?: string; title?: string; author?: string }) => {
+    const q = new URLSearchParams();
+    if (params.isbn) q.set('isbn', params.isbn);
+    if (params.title) q.set('title', params.title);
+    if (params.author) q.set('author', params.author);
+    return apiFetch<{ pageCount: number | null; categories: string[] }>(`/api/search/pagecount?${q.toString()}`);
+  },
 };
 
 // ─── Stats API ────────────────────────────────────────────────
@@ -549,21 +590,35 @@ export const pushApi = {
 };
 
 // ─── OCR API ──────────────────────────────────────────────────
-export const ocrApi = {  /** 이미지에서 텍스트 추출 (Workers AI Vision) */
+export const ocrApi = {  /** 이미지에서 텍스트 추출 (Workers AI Vision) — 503/500 시 1회 자동 재시도 */
   extractText: async (imageFile: File): Promise<{ text: string; confidence?: number }> => {
     const formData = new FormData();
     formData.append('image', imageFile);
     const token = localStorage.getItem('auth_token');
-    const res = await fetch(`${BASE_URL}/api/ai/ocr`, {
-      method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: formData,
-    });
-    if (!res.ok) {
-      const err = await res.json() as { error?: string };
-      throw new ApiError(res.status, err.error ?? 'OCR 실패');
+
+    const attempt = async () => {
+      const res = await fetch(`${BASE_URL}/api/ai/ocr`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+      if (!res.ok) {
+        const err = await res.json() as { error?: string };
+        throw new ApiError(res.status, err.error ?? 'OCR 실패');
+      }
+      return res.json() as Promise<{ text: string; confidence?: number }>;
+    };
+
+    try {
+      return await attempt();
+    } catch (e) {
+      // 503(모델 일시 불가) / 500(서버 오류) 시 1.2초 후 1회 재시도
+      if (e instanceof ApiError && (e.status === 503 || e.status === 500)) {
+        await new Promise((r) => setTimeout(r, 1200));
+        return attempt();
+      }
+      throw e;
     }
-    return res.json() as Promise<{ text: string }>;
   },
 };
 
@@ -858,4 +913,257 @@ export const queryKeys = {
   initialData: {
     all: ['initial-data'] as const,
   },
+  discover: {
+    all: ['discover'] as const,
+    list: (tab: string, genre: string) => ['discover', 'list', tab, genre] as const,
+    external: (tab: string) => ['discover', 'external', tab] as const,
+  },
+};
+
+// ─── Discover API ─────────────────────────────────────────────
+/** 탐색 도서 단건 타입 (백엔드 DiscoverBook과 동일) */
+export interface DiscoverBook {
+  key: string;
+  isbn: string;
+  title: string;
+  author: string;
+  publisher: string | null;
+  published_year: string | null;
+  cover_image: string | null;
+  genre: string;
+  library_count: number;
+  wish_count: number;
+  done_count: number;
+  note_count: number;
+  avg_rating: number | null;
+}
+
+export interface DiscoverResponse {
+  books: DiscoverBook[];
+  hasMore: boolean;
+}
+
+export const discoverApi = {
+  /**
+   * 탐색 도서 목록 조회
+   * @param tab    'popular' | 'new' | 'life'
+   * @param genre  장르 필터 ('전체' 또는 특정 장르)
+   * @param page   페이지 번호 (기본 1)
+   * @param size   페이지 크기 (기본 20, 최대 50)
+   */
+  list: (tab = 'popular', genre = '', page = 1, size = 20) => {
+    const qs = new URLSearchParams({ tab, page: String(page), size: String(size) });
+    if (genre && genre !== '전체') qs.set('genre', genre);
+    return apiFetch<DiscoverResponse>(`/api/discover?${qs.toString()}`);
+  },
+};
+
+// ─── 외부 도서 API (신간/베스트셀러) ─────────────────────────
+/** 외부 API(카카오/네이버)에서 가져온 단일 도서 */
+export interface ExternalBook {
+  rank?: number;            // 베스트셀러 순위 (1-10)
+  isbn: string;
+  title: string;
+  author: string;
+  publisher: string | null;
+  publishedDate: string | null;   // YYYY-MM-DD
+  coverImage: string | null;
+  description: string | null;
+  source: 'kakao' | 'naver';
+}
+
+export interface ExternalBooksResponse {
+  books: ExternalBook[];
+  fetchedAt: string;
+}
+
+export const externalBooksApi = {
+  /** 신간(최근 2주) 또는 베스트셀러 목록 조회 */
+  list: (tab: 'new' | 'bestseller') =>
+    apiFetch<ExternalBooksResponse>(`/api/discover/external?tab=${tab}`),
+};
+
+// ─── Admin API ────────────────────────────────────────────────
+export interface AdminStats {
+  users: {
+    total: number;
+    newToday: number;
+    newWeek: number;
+    activeToday: number;
+    activeWeek: number;
+  };
+  books: {
+    total: number;
+    thisMonth: number;
+    done: number;
+    reading: number;
+    wish: number;
+  };
+  engagement: {
+    totalNotes: number;
+    totalSessions: number;
+    totalGroups: number;
+    broadcastSent: number;
+    activityToday: number;
+  };
+  charts: {
+    monthlySignups: Array<{ month: string; cnt: number }>;
+    dailyActive: Array<{ day: string; cnt: number }>;
+  };
+  topUsers: Array<{
+    id: string;
+    name: string;
+    email: string;
+    avatar_url: string | null;
+    role: string;
+    activity_count: number;
+    created_at: string;
+  }>;
+}
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  avatar_url: string | null;
+  role: string;
+  auth_provider: string;
+  created_at: string;
+  updated_at: string;
+  book_count: number;
+  note_count: number;
+  session_count: number;
+  last_active: string | null;
+}
+
+export interface AdminUserDetail {
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    avatar_url: string | null;
+    role: string;
+    auth_provider: string;
+    favorite_genres: string | null;
+    reading_goal: number | null;
+    created_at: string;
+    updated_at: string;
+  };
+  stats: {
+    total_books: number;
+    done_books: number;
+    reading_books: number;
+    wish_books: number;
+    total_notes: number;
+    total_sessions: number;
+    total_reading_min: number;
+    total_pages_read: number;
+    group_count: number;
+  };
+  recentActivity: Array<{ action: string; detail: string | null; ip: string | null; created_at: string }>;
+  recentBooks: Array<{ id: string; title: string; author: string; status: string; rating: number | null; genre: string; cover_image: string | null; created_at: string }>;
+  recentSessions: Array<{ session_date: string; pages_read: number; duration_min: number | null; title: string }>;
+}
+
+export interface AdminMessage {
+  id: string;
+  type: 'broadcast' | 'individual';
+  title: string;
+  body: string;
+  created_at: string;
+  sender_name: string;
+  target_name: string | null;
+  target_email: string | null;
+}
+
+export interface AdminActivityLog {
+  id: string;
+  action: string;
+  detail: string | null;
+  ip: string | null;
+  created_at: string;
+  user_name: string;
+  user_email: string;
+  avatar_url: string | null;
+}
+
+export const adminApi = {
+  /** 대시보드 요약 통계 */
+  getStats: () =>
+    apiFetch<{ data: AdminStats }>('/api/admin/stats'),
+
+  /** 회원 목록 */
+  getUsers: (params: {
+    q?: string;
+    role?: string;
+    sort?: string;
+    order?: string;
+    page?: number;
+    size?: number;
+  } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.q)     qs.set('q',     params.q);
+    if (params.role)  qs.set('role',  params.role);
+    if (params.sort)  qs.set('sort',  params.sort);
+    if (params.order) qs.set('order', params.order);
+    if (params.page)  qs.set('page',  String(params.page));
+    if (params.size)  qs.set('size',  String(params.size));
+    const query = qs.toString() ? `?${qs.toString()}` : '';
+    return apiFetch<{ data: AdminUser[]; meta: { total: number; page: number; size: number; pages: number } }>(
+      `/api/admin/users${query}`,
+    );
+  },
+
+  /** 회원 상세 */
+  getUserDetail: (id: string) =>
+    apiFetch<{ data: AdminUserDetail }>(`/api/admin/users/${id}`),
+
+  /** 회원 역할 변경 */
+  updateUserRole: (id: string, role: 'admin' | 'user') =>
+    apiFetch<{ data: { id: string; role: string } }>(`/api/admin/users/${id}/role`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    }),
+
+  /** 전체 활동 로그 */
+  getActivity: (params: { action?: string; userId?: string; limit?: number; offset?: number } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.action) qs.set('action', params.action);
+    if (params.userId) qs.set('userId', params.userId);
+    if (params.limit)  qs.set('limit',  String(params.limit));
+    if (params.offset) qs.set('offset', String(params.offset));
+    const query = qs.toString() ? `?${qs.toString()}` : '';
+    return apiFetch<{ data: AdminActivityLog[]; total: number }>(`/api/admin/activity${query}`);
+  },
+
+  /** 관리자 메시지 목록 */
+  getMessages: (params: { limit?: number; offset?: number } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.limit)  qs.set('limit',  String(params.limit));
+    if (params.offset) qs.set('offset', String(params.offset));
+    const query = qs.toString() ? `?${qs.toString()}` : '';
+    return apiFetch<{ data: AdminMessage[]; total: number }>(`/api/admin/messages${query}`);
+  },
+
+  /** 메시지 발송 */
+  sendMessage: (data: {
+    type: 'broadcast' | 'individual';
+    title: string;
+    body: string;
+    targetUserId?: string;
+  }) =>
+    apiFetch<{ data: { id: string; sent: boolean } }>('/api/admin/messages', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  /** 메시지 삭제 */
+  deleteMessage: (id: string) =>
+    apiFetch<{ data: { deleted: boolean } }>(`/api/admin/messages/${id}`, {
+      method: 'DELETE',
+    }),
+
+  /** 초기 관리자 시드 */
+  seedAdmins: () =>
+    apiFetch<{ data: unknown }>('/api/admin/seed-admins', { method: 'POST' }),
 };

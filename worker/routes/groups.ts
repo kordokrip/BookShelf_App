@@ -1,3 +1,20 @@
+/**
+ * groups 라우터 — 독서 모임 (CRUD + 채팅 + 일정)
+ *
+ * POST   /api/groups              — 모임 생성 (수낙 필요, Rate Limit: 5회/분)
+ * GET    /api/groups              — 공개 모임 목록 (인증 불필요)
+ * GET    /api/groups/my           — 내가 가입한 모임 목록
+ * GET    /api/groups/:id          — 모임 상세 (멤버 목록 포함)
+ * PATCH  /api/groups/:id          — 모임 정보 수정 (주장만)
+ * DELETE /api/groups/:id          — 모임 지우기 (주장만)
+ * POST   /api/groups/:id/join     — 입장 신청 (is_public=false 시 승인 대기)
+ * POST   /api/groups/:id/leave    — 모임 탈퇴
+ * GET    /api/groups/:id/messages — 채팅 메시지 목록
+ * POST   /api/groups/:id/messages — 메시지 발송 (Rate Limit: 30회/분)
+ * GET    /api/groups/:id/meetings — 일정 목록
+ * POST   /api/groups/:id/meetings — 일정 생성
+ * DELETE /api/groups/:id/meetings/:meetingId — 일정 삭제
+ */
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
@@ -101,8 +118,8 @@ groupsRouter.get('/', authMiddleware, async (c) => {
 
   return c.json({
     data: {
-      publicGroups: publicGroups.results,
-      myGroups: myGroups.results,
+      publicGroups: publicGroups?.results ?? [],
+      myGroups: myGroups?.results ?? [],
     },
   });
 });
@@ -162,11 +179,11 @@ groupsRouter.get('/:id', authMiddleware, async (c) => {
     `).bind(groupId),
   ]);
 
-  const group = groupRes.results[0];
+  const group = groupRes?.results[0];
   if (!group) return c.json({ error: '그룹을 찾을 수 없습니다.' }, 404);
 
   return c.json({
-    data: { ...group, members: membersRes.results },
+    data: { ...group, members: membersRes?.results ?? [] },
   });
 });
 

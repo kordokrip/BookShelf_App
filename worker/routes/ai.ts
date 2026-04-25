@@ -173,7 +173,7 @@ ${wishExclude}
 
 // ─── POST /ocr ────────────────────────────────────────────────
 // 이미지에서 텍스트를 추출해 독서 노트로 저장할 수 있도록 반환
-aiRouter.post('/ocr', rateLimit({ limit: 3, windowMs: 60_000, keyPrefix: 'ai' }), authMiddleware, async (c) => {
+aiRouter.post('/ocr', rateLimit({ limit: 10, windowMs: 60_000, keyPrefix: 'ocr' }), authMiddleware, async (c) => {
   try {
     let formData: FormData;
     try {
@@ -187,46 +187,123 @@ aiRouter.post('/ocr', rateLimit({ limit: 3, windowMs: 60_000, keyPrefix: 'ai' })
     if (!imageFile) {
       return c.json({ error: 'image 필드가 필요합니다' }, 400);
     }
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(imageFile.type)) {
+      return c.json({ error: '지원하지 않는 이미지 형식입니다 (JPEG/PNG/WebP)' }, 400);
+    }
+
     if (imageFile.size > 5 * 1024 * 1024) {
       return c.json({ error: '이미지 크기는 5MB 이하여야 합니다' }, 400);
     }
-
-    const arrayBuffer = await imageFile.arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer);
-
-    const model = '@cf/meta/llama-3.2-11b-vision-instruct' as Parameters<Ai['run']>[0];
-    const response = await c.env.AI.run(model, {
-      prompt:
-        'You are an expert OCR system specialized in Korean and English text from book pages. ' +
-        'Extract ALL visible text from this image with maximum accuracy. ' +
-        'Rules: ' +
-        '1. Output ONLY the extracted text — no explanations, labels, or image descriptions. ' +
-        '2. Preserve line breaks exactly as they appear. ' +
-        '3. For Korean text: maintain exact syllable spacing and word boundaries. ' +
-        '4. Do not translate, summarize, or modify the text in any way. ' +
-        '5. If text is partially obscured, provide your best interpretation based on context.',
-      image: [...uint8Array],
-      max_tokens: 1024,
-      temperature: 0.1,
-    });
-
-    const extractedText = (response as { response?: string }).response?.trim() ?? '';
-    if (!extractedText) {
-      return c.json({ error: '이미지에서 텍스트를 인식하지 못했습니다. 더 선명한 이미지를 촬영해주세요.' }, 422);
+    if (imageFile.size < 1024) {
+      return c.json({ error: '이미지 파일이 너무 작습니다' }, 400);
     }
 
-    // 신뢰도 휴리스틱: 한국어·영문 단어 밀도 기반 (0~100)
+    const arrayBuffer = await imageFile.arrayBuffer();
+    const imageBytes = [...new Uint8Array(arrayBuffer)];
+
+    /**
+     * OCR 전용 프롬프트 — 간결·직접적이어야 비전 모델 성능이 높아짐.
+     */
+    const OCR_PROMPT =
+      'Extract all text from this book page image. ' +
+      'Output ONLY the extracted text, preserving line breaks. ' +
+      'Do not add explanations, descriptions, or translations. ' +
+      'Korean text: preserve exact spacing and characters.';
+
+    /**
+     * 단일 모델 OCR 실행 헬퍼
+     */
+    async function runWithModel(
+      model: Parameters<Ai['run']>[0],
+      prompt: string,
+    ): Promise<string> {
+      const response = await c.env.AI.run(model, {
+        prompt,
+        image: imageBytes,
+        max_tokens: 1024,
+        temperature: 0.1,
+      });
+      return (response as { response?: string }).response?.trim() ?? '';
+    }
+
+    /**
+     * CF Workers AI 라이선스 게이팅 오류 판별
+     * 오류 코드 5016 또는 "agree" 문구 포함 시 해당
+     */
+    function isAgreementRequired(err: unknown): boolean {
+      const msg = err instanceof Error ? err.message : String(err);
+      return msg.includes('5016') || msg.toLowerCase().includes('agree');
+    }
+
+    // ── 모델 실행 전략 ────────────────────────────────────────
+    // 1순위: llama-3.2-11b-vision — 최고 품질 OCR
+    // 2순위: llava-1.5-7b        — 폴백 (라이선스 게이트 없음)
+    const PRIMARY_MODEL = '@cf/meta/llama-3.2-11b-vision-instruct' as Parameters<Ai['run']>[0];
+    const FALLBACK_MODEL = '@cf/llava-1.5-7b-hf' as Parameters<Ai['run']>[0];
+
+    let extractedText = '';
+    let usedFallback = false;
+
+    // ── 1차: 기본 모델 시도 ──────────────────────────────────
+    try {
+      extractedText = await runWithModel(PRIMARY_MODEL, OCR_PROMPT);
+    } catch (e) {
+      if (isAgreementRequired(e)) {
+        // CF 라이선스 게이팅: 이미지 없이 prompt='agree' 만 제출해야 약관 동의가 등록됨
+        // (계정당 1회 — 이후 요청은 게이트 통과)
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await c.env.AI.run(PRIMARY_MODEL, { prompt: 'agree' } as any);
+        } catch {
+          // 동의 자체는 오류가 발생해도 무시 (등록은 완료됨)
+        }
+        // CF 측 동의 반영에 충분한 시간 부여
+        await new Promise((r) => setTimeout(r, 1500));
+        try {
+          extractedText = await runWithModel(PRIMARY_MODEL, OCR_PROMPT);
+        } catch (e2) {
+          console.error('OCR agree 후 기본 모델 재시도 실패:', e2 instanceof Error ? e2.message : String(e2));
+          // 동의 후에도 실패 → 폴백으로 진행
+        }
+      }
+      // 다른 오류도 폴백으로 진행
+    }
+
+    // ── 2차: 폴백 모델 ───────────────────────────────────────
+    if (!extractedText) {
+      try {
+        extractedText = await runWithModel(FALLBACK_MODEL, OCR_PROMPT);
+        usedFallback = true;
+      } catch (e) {
+        console.error('OCR 폴백 모델 오류:', e instanceof Error ? e.message : String(e));
+        return c.json({ error: '이미지에서 텍스트를 인식하지 못했습니다. 잠시 후 다시 시도해주세요.' }, 503);
+      }
+    }
+
+    // ── 텍스트 추출 불가 ─────────────────────────────────────
+    if (!extractedText) {
+      return c.json({
+        error: '이미지에서 텍스트를 인식하지 못했습니다. 글자가 잘 보이는 사진을 다시 촬영해주세요.',
+      }, 422);
+    }
+
+    // ── 신뢰도 계산 (0~100) ───────────────────────────────────
     const words = extractedText.split(/\s+/).filter(Boolean);
     const koreanChars = (extractedText.match(/[가-힣]/g) ?? []).length;
+    const englishChars = (extractedText.match(/[a-zA-Z]/g) ?? []).length;
     const totalChars = extractedText.replace(/\s/g, '').length;
-    const langDensity = totalChars > 0 ? (koreanChars + (totalChars - koreanChars)) / totalChars : 0;
-    const lengthScore = Math.min(100, words.length * 3); // 최대 33단어 이상이면 100
-    const confidence = Math.round((langDensity * 0.4 + (lengthScore / 100) * 0.6) * 100);
+    const meaningfulRatio = totalChars > 0 ? (koreanChars + englishChars) / totalChars : 0;
+    const lengthScore = Math.min(1, words.length / 30);
+    const rawConfidence = Math.round((meaningfulRatio * 0.5 + lengthScore * 0.5) * 100);
+    // 폴백 모델은 품질이 다소 낮을 수 있으므로 신뢰도 보정
+    const confidence = usedFallback ? Math.round(rawConfidence * 0.85) : rawConfidence;
 
     return c.json({ text: extractedText, confidence });
   } catch (err) {
-    console.error('OCR 오류:', err);
-    return c.json({ error: 'OCR 처리 중 오류가 발생했습니다' }, 500);
+    console.error('OCR 예기치 않은 오류:', err instanceof Error ? err.message : String(err));
+    return c.json({ error: 'OCR 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }, 500);
   }
 });
 

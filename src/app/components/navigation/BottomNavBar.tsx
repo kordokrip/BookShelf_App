@@ -26,7 +26,7 @@ export function BottomNavBar() {
     },
     {
       path: "/wishlist",
-      label: "Wish",
+      label: "추천",
       icon: <Star size={22} strokeWidth={1.5} />,
       activeIcon: <Star size={22} strokeWidth={2.5} />,
       badge: wishCount > 0 ? wishCount : undefined,
@@ -42,13 +42,14 @@ export function BottomNavBar() {
 
   return (
     /* fixed-nav: GPU 합성 레이어 강제 → iOS Safari에서 스크롤 시 떨림 방지
-       transform: translateZ(0) 는 index.css의 .fixed-nav 클래스에서 적용 */
+       transform: translateZ(0) 는 index.css의 .fixed-nav 클래스에서 적용
+       lg:hidden: 데스크톱(1024px+)에서는 SideNav로 대체되므로 숨김 */
     <nav
       className="fixed-nav fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-md border-t border-[#E2E8F0] dark:border-[#334155] lg:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       aria-label="하단 네비게이션"
     >
-      <div className="flex items-stretch h-[60px] max-w-screen-sm mx-auto">
+      <div className="flex items-stretch min-h-[56px] h-[60px] max-w-screen-sm mx-auto">
         {navItems.map((item) => {
           const isActive =
             item.path === "/"

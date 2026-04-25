@@ -1,3 +1,9 @@
+/**
+ * 내 서재 (도서 목록) 페이지
+ * - 상태(읽은중·완료·위시리스트) 탭 필터
+ * - 장르·정렬 필터, 그리드/리스트/심어나무 레이아웃 전환
+ * - 컨렉션 폸 표시
+ */
 import { useState, useEffect, useMemo } from "react";
 import { ChevronDown, Plus, ChevronRight, LayoutGrid, List, GitBranch, Search, X, FolderOpen, BookMarked } from "lucide-react";
 import type { UIBook, GenreKey } from "../../types/book";
@@ -447,13 +453,13 @@ export function LibraryPage() {
             />
           ) : (
             <>
-              {/* Desktop: 3-col grid */}
-              <div className="hidden lg:block">
+              {/* Desktop/Tablet: 2-col(md) → 3-col(lg) grid */}
+              <div className="hidden md:block">
                 {sortBy === "date" ? (
                   monthKeys.map((key) => (
                     <div key={key}>
                       <MonthGroupHeader label={key} count={grouped.get(key)!.length} />
-                      <div className="px-4 py-3 grid grid-cols-3 gap-3">
+                      <div className="px-4 py-3 grid grid-cols-2 lg:grid-cols-3 gap-3">
                         {grouped.get(key)!.map((book) => (
                           <DoneBookCard
                             key={book.id}
@@ -465,7 +471,7 @@ export function LibraryPage() {
                     </div>
                   ))
                 ) : (
-                  <div className="px-4 py-2 grid grid-cols-3 gap-3">
+                  <div className="px-4 py-2 grid grid-cols-2 lg:grid-cols-3 gap-3">
                     {filtered.map((book) => (
                       <DoneBookCard
                         key={book.id}
@@ -478,13 +484,13 @@ export function LibraryPage() {
               </div>
 
               {/* Mobile: single column */}
-              <div className={viewMode === "grid" ? "lg:hidden" : ""}>
+              <div className={viewMode === "grid" ? "md:hidden" : ""}>
                 {sortBy === "date" ? (
                   <>
                     {visibleKeys.map((key) => (
                       <div key={key}>
                         <MonthGroupHeader label={key} count={grouped.get(key)!.length} />
-                        <div className={`px-4 py-3 ${viewMode === "grid" ? "grid grid-cols-2 gap-3" : "flex flex-col gap-3"}`}>
+                        <div className={`px-4 py-3 ${viewMode === "grid" ? "grid grid-cols-2 sm:grid-cols-3 gap-3" : "flex flex-col gap-3"}` }>
                           {grouped.get(key)!.map((book) => (
                             <DoneBookCard
                               key={book.id}
@@ -509,7 +515,7 @@ export function LibraryPage() {
                     )}
                   </>
                 ) : (
-                  <div className={`px-4 py-2 ${viewMode === "grid" ? "grid grid-cols-2 gap-3" : "flex flex-col gap-3"}`}>
+                  <div className={`px-4 py-2 ${viewMode === "grid" ? "grid grid-cols-2 sm:grid-cols-3 gap-3" : "flex flex-col gap-3"}`}>
                     {filtered.map((book) => (
                       <DoneBookCard
                         key={book.id}

@@ -1,3 +1,10 @@
+/**
+ * 도서 상세 페이지
+ * - 도서 메타데이터 표시 (제목·저자·장르·평점·진도)
+ * - 노트·하이라이트·인용 목록 뷰 및 CRUD
+ * - AI 요약 / OCR 스쾔지드 시트 / 커버 이미지 케시
+ * - 독서 시작/종료 보고, 영구 삭제
+ */
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate, useParams } from "react-router";

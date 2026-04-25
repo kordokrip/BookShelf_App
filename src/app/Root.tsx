@@ -32,7 +32,7 @@ export function Root() {
           <main
             className="min-h-[calc(100svh-var(--topbar-h))] pb-[var(--page-pb)] lg:pb-0"
           >
-            <div className="max-w-2xl mx-auto lg:max-w-3xl">
+            <div className="w-full max-w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl xl:max-w-5xl mx-auto px-0 md:px-4 lg:px-0">
               <Outlet />
             </div>
           </main>

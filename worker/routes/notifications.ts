@@ -1,3 +1,14 @@
+/**
+ * notifications 라우터 — 인앱 알림 CRUD
+ *
+ * GET    /api/notifications          — 알림 목록 (최신순, limit/offset 페이잠)
+ * PATCH  /api/notifications/:id/read — 단일 알림 읽음 처리
+ * PATCH  /api/notifications/read-all — 전체 않음 취최
+ * DELETE /api/notifications/:id      — 알림 삭제
+ *
+ * 알림 생성 시점: 그룹 가입 승인/거절 이벤트 시
+ * (worker/routes/groups.ts등에서 DB INSERT 목록에 삽입)
+ */
 import { Hono } from 'hono';
 import type { Bindings } from '../types';
 import { authMiddleware } from '../auth';

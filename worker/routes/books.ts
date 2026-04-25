@@ -1,9 +1,27 @@
+/**
+ * books 라우터 — 도서 CRUD + 커버 이미지 관리
+ *
+ * POST   /api/books/refresh-covers  — CDN URL → 프록시 변환 + ISBN 기반 커버 백필
+ * GET    /api/books                 — 도서 목록 조회 (status/genre/sort 필터)
+ * GET    /api/books/:id             — 단일 도서 상세 조회
+ * POST   /api/books                 — 도서 추가 (ISBN 중복 체크, 위시리스트 10권 제한)
+ * PUT    /api/books/:id             — 도서 수정 (변경 필드만 UPDATE, done 전환 시 finished_date 자동 설정)
+ * DELETE /api/books/:id             — 도서 삭제
+ * POST   /api/books/:id/cover       — R2 커버 이미지 업로드 (JPEG/PNG/WebP, 2MB 제한)
+ * GET    /api/books/:id/cover       — R2 커버 이미지 서빙 또는 외부 URL 리다이렉트
+ *
+ * cover_image 처리 흐름:
+ *   r2://covers/... → /api/books/:id/cover (R2 서빙)
+ *   CDN URL         → /api/cover-proxy?url=... (CORS 우회)
+ *   이미 프록시 URL  → 그대로 반환
+ */
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { HTTPException } from 'hono/http-exception';
 import type { Bindings, DbBook } from '../types';
 import { authMiddleware } from '../auth';
+import { logActivity } from './admin';
 
 export const booksRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -268,6 +286,9 @@ booksRouter.post('/', authMiddleware, zValidator('json', createBookSchema), asyn
     .bind(id)
     .first<DbBook>();
 
+  const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? 'unknown';
+  await logActivity(c.env.DB, userId, 'book:add', { bookId: id, title: body.title, status: body.status }, ip);
+
   return c.json({ data: created }, 201);
 });
 
@@ -348,6 +369,9 @@ booksRouter.delete('/:id', authMiddleware, async (c) => {
 
   if (meta.changes === 0)
     throw new HTTPException(404, { message: '책을 찾을 수 없습니다.' });
+
+  const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? 'unknown';
+  await logActivity(c.env.DB, userId, 'book:delete', { bookId: id }, ip);
 
   return c.json({ success: true });
 });

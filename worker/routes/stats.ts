@@ -1,3 +1,14 @@
+/**
+ * stats 라우터 — 독서 통계 집계 API
+ *
+ * GET /api/stats — 6개 쿼리를 D1.batch로 원자적 실행
+ *   1. 월별 완독 집계 (최근 12개월)
+ *   2. 장르 분포 (전체 상태)
+ *   3. 요일별 독서 설룬 (독서 세션 통계)
+ *   4. 상태별 책 수
+ *   5. 유효 평점 있는 상위 5권 제목
+ *   6. 타이머 개요 (전체 독서 시간, 세션 수, 평균 수)
+ */
 import { Hono } from 'hono';
 import type { Bindings } from '../types';
 import { authMiddleware } from '../auth';

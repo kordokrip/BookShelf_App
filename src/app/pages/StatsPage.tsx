@@ -1,10 +1,17 @@
+/**
+ * 독서 통계 페이지
+ * - 연간/월별 독서량 차트
+ * - 장르 분포도넛, 연속 읽기 스트릭
+ * - 연간 리뷰 페이지 링크
+ */
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { BookMarked, BookOpen, Sparkles, FileText, Target, ChevronRight, ChevronDown, Download } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { SummaryCard, MonthlyBarChart, GenreDonutChart, ReadingHeatmap, StreakCard } from "../components/stats/StatsComponents";
+import { SummaryCard, MonthlyBarChart, GenreDonutChart, ReadingHeatmap, StreakCard, ReadingCalendar } from "../components/stats/StatsComponents";
 import { StatCardSkeleton, ChartSkeleton } from "../components/ui/skeleton";
 import { useStats } from "../../hooks/useStats";
+import { useBooks } from "../../hooks/useBooks";
 import type { UISession } from "../../types/book";
 import { GENRE_CONFIG } from "../../types/book";
 import { useAuthStore } from "../../stores/authStore";
@@ -203,6 +210,7 @@ function AchievementBadges({ totalDone, totalPages }: { totalDone: number; total
 
 export function StatsPage() {
   const { data: stats, isLoading, isError } = useStats();
+  const { data: doneBooks = [] } = useBooks({ status: "done" });
   const user = useAuthStore((s) => s.user);
   const readingGoal = user?.reading_goal;
 
@@ -402,10 +410,23 @@ export function StatsPage() {
           {/* Charts */}
           <div className="px-4">
             {/* Mobile stacked */}
-            <div className="lg:hidden flex flex-col gap-3">
+            <div className="md:hidden flex flex-col gap-3">
               <MonthlyBarChart data={monthlyData} />
               <GenreDonutChart allData={genreDataAll} doneData={[]} readingData={[]} />
               <ReadingHeatmap sessions={syntheticSessions} />
+            </div>
+
+            {/* Tablet: 2-col grid */}
+            <div className="hidden md:grid lg:hidden grid-cols-2 gap-4">
+              <div className="flex flex-col gap-4">
+                <MonthlyBarChart data={monthlyData} />
+              </div>
+              <div className="flex flex-col gap-4">
+                <GenreDonutChart allData={genreDataAll} doneData={[]} readingData={[]} />
+              </div>
+              <div className="col-span-2">
+                <ReadingHeatmap sessions={syntheticSessions} />
+              </div>
             </div>
 
             {/* Desktop 2-col dashboard */}
@@ -418,6 +439,17 @@ export function StatsPage() {
                 <GenreDonutChart allData={genreDataAll} doneData={[]} readingData={[]} />
               </div>
             </div>
+          </div>
+
+          {/* 독서 달력 */}
+          <div className="px-4 mt-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: "#1E293B" }}>📅 독서 달력</h3>
+            </div>
+            <ReadingCalendar
+              doneBooks={doneBooks}
+              sessionDates={stats?.sessionDates ?? []}
+            />
           </div>
 
           {/* CSV Export */}

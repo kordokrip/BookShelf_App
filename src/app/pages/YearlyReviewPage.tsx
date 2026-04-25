@@ -1,3 +1,9 @@
+/**
+ * 연간 리뷰 페이지
+ * - 해당 연도의 독서 요약 (권수·페이지·시간·연속읽기)
+ * - 상위 장르 / 최다 읽은 달 통계
+ * - 이미지 공유 옵션
+ */
 import { useMemo } from "react";
 import { useNavigate } from "react-router";
 import { ChevronLeft, Share2, BookMarked, FileText, Clock, Flame } from "lucide-react";

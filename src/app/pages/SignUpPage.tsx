@@ -1,9 +1,14 @@
+/**
+ * 회원가입 페이지
+ * - 이메일·비밀번호·닉네임 입력 유효성 검사
+ * - Google OAuth 링크 제공
+ */
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
-import { AuthPreviewNav } from "../components/auth/AuthPreviewNav";
-import { GENRE_CONFIG } from "@/types/book";
+import { useNavigate, Link } from "react-router";
 import { useAuthStore } from "../../stores/authStore";
 import { usersApi } from "../../lib/api";
+import { GENRE_CONFIG } from "../../types/book";
+import { AuthPreviewNav } from "../components/auth/AuthPreviewNav";
 import { NumberStepper } from "../components/ui/NumberStepper";
 
 type GenreKey = keyof typeof GENRE_CONFIG;

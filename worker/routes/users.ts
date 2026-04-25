@@ -1,3 +1,18 @@
+/**
+ * users 라우터 — 사용자 계정 관련 API
+ *
+ * POST   /api/users/register  — 이메일/비밀번호 회원가입 (Rate Limit: 3회/분)
+ * POST   /api/users/login     — 로그인, JWT + Refresh Token 발급 (Rate Limit: 5회/분)
+ * GET    /api/users/profile   — 내 프로필 조회 (인증 필요)
+ * PATCH  /api/users/profile   — 프로필 수정 (이름/장르/목표/아바타)
+ * GET    /api/users/:id       — 사용자 조회 (자신: 전체, 타인: 공개 필드만)
+ * POST   /api/users           — 소셜 로그인 upsert (인증 필요)
+ * GET    /api/users/:id/stats — 공개 독서 통계
+ *
+ * 보안 주의사항:
+ * - password_hash는 외부에 절대 노출되지 않도록 safeUser() 사용
+ * - 레거시 SHA-256 해시는 로그인 시 PBKDF2로 자동 마이그레이션
+ */
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
@@ -5,6 +20,7 @@ import { HTTPException } from 'hono/http-exception';
 import type { Bindings, DbUser } from '../types';
 import { hashPassword, verifyPassword, createToken, createRefreshToken, authMiddleware } from '../auth';
 import { rateLimit } from '../middleware/rateLimit';
+import { logActivity } from './admin';
 
 export const usersRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -65,6 +81,9 @@ usersRouter.post(
     const token = await createToken({ sub: id, email }, c.env.JWT_SECRET);
     const refreshToken = await createRefreshToken(id, c.env.KV);
 
+    const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? 'unknown';
+    await logActivity(c.env.DB, id, 'user:register', { email }, ip);
+
     return c.json({ data: { user: safeUser(user!), token, refreshToken } }, 201);
   },
 );
@@ -77,7 +96,7 @@ usersRouter.post(
   async (c) => {
     const { email, password } = c.req.valid('json');
 
-    const user = await c.env.DB.prepare(
+    let user = await c.env.DB.prepare(
       'SELECT * FROM users WHERE email = ?',
     ).bind(email).first<DbUser>();
 
@@ -101,8 +120,20 @@ usersRouter.post(
       ).bind(newHash, user.id).run();
     }
 
+    // 관리자 이메일 자동 승격
+    const ADMIN_EMAILS = ['kordokrip@gmail.com'];
+    if (ADMIN_EMAILS.includes(user.email) && user.role !== 'admin') {
+      await c.env.DB.prepare(
+        "UPDATE users SET role = 'admin', updated_at = ? WHERE id = ?",
+      ).bind(new Date().toISOString(), user.id).run();
+      user = { ...user, role: 'admin' };
+    }
+
     const token = await createToken({ sub: user.id, email }, c.env.JWT_SECRET);
     const refreshToken = await createRefreshToken(user.id, c.env.KV);
+
+    const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? 'unknown';
+    await logActivity(c.env.DB, user.id, 'user:login', { email }, ip);
 
     return c.json({ data: { user: safeUser(user), token, refreshToken } });
   },

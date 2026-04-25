@@ -1,3 +1,9 @@
+/**
+ * 독서 타이머 훅
+ * - 시작·일시정지·리셋 제어
+ * - 경과 시간(초) 및 "MM:SS" 포맷 제공
+ * - timerStore와 동기화하여 페이지 전환 시에도 타이머 유지
+ */
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTimerStore } from '../stores/timerStore';
 

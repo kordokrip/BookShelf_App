@@ -1,5 +1,11 @@
+/**
+ * 독서 중 페이지
+ * - 읽는 중 도서 목록 표시
+ * - 정타이머(시작·일시정지·리셋) + 세션 기록 저장
+ * - 읽기 목표(읽는 중 도서 제한) 설정
+ */
 import { useState, useEffect, useRef } from "react";
-import { Plus, X, Target, BookOpen, Play, Pause, RotateCcw, Timer, ChevronDown } from "lucide-react";
+import { Plus, X, Target, BookOpen, Play, Pause, RotateCcw, Timer, ChevronDown, Download, RefreshCw, CheckCircle2 } from "lucide-react";
 import type { UIBook, GenreKey } from "../../types/book";
 import { ALL_GENRES } from "../../types/book";
 import { ReadingBookCard, BookCover } from "../components/books/BookCard";
@@ -13,7 +19,7 @@ import { useBooks, useUpdateBook, useRefreshBookCovers } from "../../hooks/useBo
 import { useAddSession } from "../../hooks/useSessions";
 import { useReadingTimer } from "../../hooks/useReadingTimer";
 import { useQueryClient } from "@tanstack/react-query";
-import { usersApi, queryKeys } from "../../lib/api";
+import { usersApi, queryKeys, searchApi } from "../../lib/api";
 import { useAuthStore } from "../../stores/authStore";
 import { useStats } from "../../hooks/useStats";
 
@@ -24,20 +30,55 @@ function PageUpdateModal({
   book,
   onClose,
   onSave,
+  onComplete,
 }: {
   book: UIBook;
   onClose: () => void;
-  onSave: (page: number) => void;
+  onSave: (page: number, newTotalPages?: number) => void;
+  onComplete: (page: number, newTotalPages?: number) => void;
 }) {
   const [page, setPage] = useState(book.currentPage ?? 0);
-  const progress = book.totalPages && book.totalPages > 0
-    ? Math.min(Math.round((page / book.totalPages) * 100), 100)
+  const [localTotalPages, setLocalTotalPages] = useState(book.totalPages ?? 0);
+  const [isFetchingPages, setIsFetchingPages] = useState(false);
+  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
+  const { showToast } = useToast();
+
+  const effectiveTotalPages = localTotalPages > 0 ? localTotalPages : undefined;
+  const progress = effectiveTotalPages && effectiveTotalPages > 0
+    ? Math.min(Math.round((page / effectiveTotalPages) * 100), 100)
     : 0;
   const todayRead = page - (book.currentPage ?? 0);
+  const isComplete = effectiveTotalPages != null && effectiveTotalPages > 0 && page >= effectiveTotalPages;
 
   const today = new Date();
   const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
   const dateStr = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일 (${dayNames[today.getDay()]})`;
+
+  /** Google Books → Open Library 순서로 총 페이지 수 조회 */
+  async function fetchTotalPagesFromWeb() {
+    setIsFetchingPages(true);
+    try {
+      const result = await searchApi.getPageCount({
+        isbn: book.isbn || undefined,
+        title: book.title,
+        author: book.author,
+      });
+
+      const pageCount = result.pageCount;
+
+      if (pageCount && pageCount > 0) {
+        setLocalTotalPages(pageCount);
+        if (page > pageCount) setPage(pageCount);
+        showToast(`📚 총 ${pageCount}페이지 정보를 가져왔습니다`, "success");
+      } else {
+        showToast("페이지 정보를 찾지 못했어요. 직접 입력해주세요.", "info");
+      }
+    } catch {
+      showToast("페이지 정보 조회에 실패했습니다. 잠시 후 다시 시도해주세요.", "error");
+    } finally {
+      setIsFetchingPages(false);
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end lg:items-center lg:justify-center">
@@ -74,36 +115,71 @@ function PageUpdateModal({
             </div>
             <span
               className="px-2.5 py-1 rounded-full text-white"
-              style={{ fontSize: 12, fontWeight: 700, background: "linear-gradient(135deg, #4F46E5, #7C3AED)" }}
+              style={{ fontSize: 12, fontWeight: 700, background: isComplete ? "linear-gradient(135deg, #10B981, #059669)" : "linear-gradient(135deg, #4F46E5, #7C3AED)" }}
             >
               {progress}%
             </span>
           </div>
 
-          <h2 className="text-[#1E293B] dark:text-[#F8FAFC] mb-5" style={{ fontSize: 18, fontWeight: 800 }}>
+          <h2 className="text-[#1E293B] dark:text-[#F8FAFC] mb-4" style={{ fontSize: 18, fontWeight: 800 }}>
             현재 페이지 업데이트
           </h2>
 
-          {/* Shared NumberStepper — max = totalPages */}
+          {/* ── 현재 페이지 Stepper */}
+          <p className="text-[#64748B] dark:text-[#94A3B8] mb-1.5" style={{ fontSize: 12, fontWeight: 600 }}>현재 페이지</p>
           <div className="mb-3">
             <NumberStepper
               value={page}
               min={0}
-              max={book.totalPages ?? 9999}
+              max={effectiveTotalPages ?? 9999}
               onChange={setPage}
-              unit={book.totalPages ? `/ ${book.totalPages} 페이지` : '페이지'}
+              unit={effectiveTotalPages ? `/ ${effectiveTotalPages} 페이지` : '페이지'}
+            />
+          </div>
+
+          {/* ── 총 페이지 수 입력 + 웹 조회 버튼 */}
+          <div className="mb-3">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 12, fontWeight: 600 }}>
+                총 페이지 수
+              </p>
+              <button
+                onClick={fetchTotalPagesFromWeb}
+                disabled={isFetchingPages}
+                className="flex items-center gap-1 rounded-xl px-2.5 py-1 transition-colors disabled:opacity-60"
+                style={{ fontSize: 11, fontWeight: 600, color: "#4F46E5", backgroundColor: "#EEF2FF" }}
+              >
+                <RefreshCw size={11} className={isFetchingPages ? "animate-spin" : ""} />
+                {isFetchingPages ? "조회 중..." : "웹에서 가져오기"}
+              </button>
+            </div>
+            <NumberStepper
+              value={localTotalPages}
+              min={0}
+              max={9999}
+              onChange={(v) => {
+                setLocalTotalPages(v);
+                if (page > v && v > 0) setPage(v);
+              }}
+              unit="페이지"
+              label={localTotalPages === 0 ? "미설정 — 직접 입력하거나 웹에서 가져오세요" : undefined}
             />
           </div>
 
           {/* Live progress bar */}
-          <div className="w-full rounded-full overflow-hidden mb-5" style={{ height: 8, backgroundColor: "#E2E8F0" }}>
+          <div className="w-full rounded-full overflow-hidden mb-4" style={{ height: 8, backgroundColor: "#E2E8F0" }}>
             <div
               className="h-full rounded-full transition-all"
-              style={{ width: `${progress}%`, background: "linear-gradient(90deg, #4F46E5, #7C3AED)" }}
+              style={{
+                width: `${progress}%`,
+                background: isComplete
+                  ? "linear-gradient(90deg, #10B981, #059669)"
+                  : "linear-gradient(90deg, #4F46E5, #7C3AED)",
+              }}
             />
           </div>
 
-          {/* Date row: 오늘: YYYY년 M월 D일 (요일), 13px #64748B */}
+          {/* Date row */}
           <div className="flex items-center justify-between mb-3 px-1">
             <span style={{ fontSize: 13, color: "#64748B" }}>
               📅 오늘: {dateStr}
@@ -123,35 +199,96 @@ function PageUpdateModal({
             </div>
           )}
 
-          {/* Buttons: 저장하기 48px indigo, 취소 48px ghost */}
-          <div className="flex flex-col gap-2.5">
-            <button
-              onClick={() => onSave(page)}
-              className="w-full rounded-2xl text-white transition-opacity hover:opacity-90 active:scale-[0.98]"
-              style={{
-                height: 48,
-                background: "linear-gradient(135deg, #4F46E5, #7C3AED)",
-                fontSize: 15,
-                fontWeight: 700,
-                fontFamily: "var(--font-pretendard)",
-              }}
+          {/* 완독 달성 배너 */}
+          {isComplete && (
+            <div
+              className="flex items-center justify-center gap-2 py-3 rounded-2xl mb-4"
+              style={{ background: "linear-gradient(135deg, #DCFCE7, #BBF7D0)", border: "1.5px solid #10B981" }}
             >
-              저장하기
-            </button>
-            <button
-              onClick={onClose}
-              className="w-full rounded-2xl border border-[#E2E8F0] transition-colors hover:bg-[#F8FAFC]"
-              style={{ height: 48, fontSize: 14, fontWeight: 600, color: "#64748B" }}
+              <span style={{ fontSize: 18 }}>🏆</span>
+              <span style={{ fontSize: 14, fontWeight: 800, color: "#065F46" }}>
+                모든 페이지를 읽었어요!
+              </span>
+            </div>
+          )}
+
+          {/* ── 완독 확인 패널 */}
+          {showCompleteConfirm && (
+            <div
+              className="rounded-2xl p-4 mb-4"
+              style={{ background: "linear-gradient(135deg, #F0FDF4, #DCFCE7)", border: "1.5px solid #10B981" }}
             >
-              취소
-            </button>
-          </div>
+              <p className="text-center mb-3" style={{ fontSize: 14, fontWeight: 700, color: "#065F46" }}>
+                📚 「{book.title}」을 완독 처리할까요?
+              </p>
+              <p className="text-center mb-4" style={{ fontSize: 12, color: "#16A34A" }}>
+                완독 목록으로 이동되고 읽는 중 목록에서 제거됩니다
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowCompleteConfirm(false)}
+                  className="flex-1 rounded-xl border border-[#D1FAE5] py-2.5"
+                  style={{ fontSize: 13, fontWeight: 600, color: "#64748B" }}
+                >
+                  취소
+                </button>
+                <button
+                  onClick={() => onComplete(page, localTotalPages > 0 ? localTotalPages : undefined)}
+                  className="flex-1 rounded-xl text-white py-2.5"
+                  style={{ fontSize: 13, fontWeight: 700, background: "linear-gradient(135deg, #10B981, #059669)" }}
+                >
+                  완독 완료! 🎉
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Buttons */}
+          {!showCompleteConfirm && (
+            <div className="flex flex-col gap-2.5">
+              {/* 완독 완료 버튼 — 항상 노출 (100% 달성 시 강조) */}
+              <button
+                onClick={() => setShowCompleteConfirm(true)}
+                className="w-full rounded-2xl text-white flex items-center justify-center gap-2 transition-opacity hover:opacity-90 active:scale-[0.98]"
+                style={{
+                  height: 48,
+                  background: isComplete
+                    ? "linear-gradient(135deg, #10B981, #059669)"
+                    : "linear-gradient(135deg, #6EE7B7, #10B981)",
+                  fontSize: 15,
+                  fontWeight: 700,
+                  boxShadow: isComplete ? "0 4px 14px rgba(16,185,129,0.4)" : "none",
+                }}
+              >
+                <CheckCircle2 size={18} />
+                완독 완료!
+              </button>
+              <button
+                onClick={() => onSave(page, localTotalPages > 0 ? localTotalPages : undefined)}
+                className="w-full rounded-2xl text-white transition-opacity hover:opacity-90 active:scale-[0.98]"
+                style={{
+                  height: 48,
+                  background: "linear-gradient(135deg, #4F46E5, #7C3AED)",
+                  fontSize: 15,
+                  fontWeight: 700,
+                }}
+              >
+                저장하기
+              </button>
+              <button
+                onClick={onClose}
+                className="w-full rounded-2xl border border-[#E2E8F0] transition-colors hover:bg-[#F8FAFC]"
+                style={{ height: 48, fontSize: 14, fontWeight: 600, color: "#64748B" }}
+              >
+                취소
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
-
 /* ─── Overview banner ──────────────────────────────────────── */
 function ReadingOverviewBanner({ books, weeklyPages, annualGoal, annualDone }: {
   books: UIBook[];
@@ -715,7 +852,7 @@ export function ReadingPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function handleSave(page: number) {
+  function handleSave(page: number, newTotalPages?: number) {
     if (!selectedBook) return;
     const startPage = selectedBook.currentPage ?? 0;
 
@@ -736,11 +873,51 @@ export function ReadingPage() {
       );
     }
 
+    const updateData: Partial<UIBook> = { currentPage: page };
+    if (newTotalPages != null && newTotalPages > 0) {
+      updateData.totalPages = newTotalPages;
+    }
+
     updateBook.mutate(
-      { id: selectedBook.id, data: { currentPage: page } },
+      { id: selectedBook.id, data: updateData },
       {
         onSuccess: () => {
           showToast(`📖 ${page}p 업데이트 완료!`, "success");
+          setSelectedBook(null);
+        },
+      },
+    );
+  }
+
+  function handleComplete(page: number, newTotalPages?: number) {
+    if (!selectedBook) return;
+    const startPage = selectedBook.currentPage ?? 0;
+    const today = new Date().toISOString().split("T")[0];
+
+    if (page > startPage) {
+      addSession.mutate({
+        bookId: selectedBook.id,
+        startPage,
+        endPage: page,
+        durationMinutes: timer.minutes > 0 ? timer.minutes : undefined,
+      });
+    }
+
+    const updateData: Partial<UIBook> = {
+      status: "done",
+      currentPage: page,
+      finishedDate: today,
+    };
+    if (newTotalPages != null && newTotalPages > 0) {
+      updateData.totalPages = newTotalPages;
+    }
+
+    updateBook.mutate(
+      { id: selectedBook.id, data: updateData },
+      {
+        onSuccess: () => {
+          timer.reset();
+          showToast(`🎉 「${selectedBook.title}」 완독 완료!`, "success");
           setSelectedBook(null);
         },
       },
@@ -895,6 +1072,7 @@ export function ReadingPage() {
           book={selectedBook}
           onClose={() => setSelectedBook(null)}
           onSave={handleSave}
+          onComplete={handleComplete}
         />
       )}
 

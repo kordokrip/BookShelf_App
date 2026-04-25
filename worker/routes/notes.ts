@@ -1,9 +1,22 @@
+/**
+ * notes 라우터 — 독서 노트/하이라이트/인용/리뷰 CRUD
+ *
+ * GET    /api/notes/export    — 노트 마크다운 파일 내보내기 (book_id 필터 가능)
+ * GET    /api/notes           — 노트 목록 조회 (book_id, type, search 필터 + FTS5 전문검색)
+ * POST   /api/notes           — 노트 생성
+ * PATCH  /api/notes/:id       — 노트 수정
+ * DELETE /api/notes/:id       — 노트 삭제
+ *
+ * 노트 타입: memo | highlight | quote | review
+ * 검색: FTS5 전문검색 기본, 미지원 환경은 LIKE 폴백
+ */
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { HTTPException } from 'hono/http-exception';
 import type { Bindings, DbNote } from '../types';
 import { authMiddleware } from '../auth';
+import { logActivity } from './admin';
 
 export const notesRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -245,6 +258,9 @@ notesRouter.post('/', authMiddleware, zValidator('json', createNoteSchema), asyn
   const created = await c.env.DB.prepare('SELECT * FROM notes WHERE id = ?')
     .bind(id)
     .first<DbNote>();
+
+  const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? 'unknown';
+  await logActivity(c.env.DB, userId, 'note:create', { noteId: id, type: body.type }, ip);
 
   return c.json({ data: created }, 201);
 });

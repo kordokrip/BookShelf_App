@@ -37,7 +37,7 @@ export function FeedbackSection({ groupId, meetingId }: { groupId: string; meeti
                 <span className="text-xs font-medium text-[#1E293B] dark:text-[#F8FAFC]">{fb.user_name ?? '익명'}</span>
                 <div className="flex gap-0.5">
                   {Array.from({ length: 5 }).map((_, i) => (
-                    <Star key={i} size={10} className={i < fb.rating ? 'text-amber-400 fill-amber-400' : 'text-[#CBD5E1]'} />
+                    <Star key={i} size={10} className={i < (fb.rating ?? 0) ? 'text-amber-400 fill-amber-400' : 'text-[#CBD5E1]'} />
                   ))}
                 </div>
               </div>

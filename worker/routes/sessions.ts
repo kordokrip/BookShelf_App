@@ -1,9 +1,22 @@
+/**
+ * sessions 라우터 — 독서 세션 기록 (how many pages + how long)
+ *
+ * GET    /api/sessions          — 세션 목록 조회 (book_id 필터, 최대 1,000건)
+ * POST   /api/sessions          — 세션 기록 추가
+ *                                  (pages_read 남은 페이지 확인 시완 시에 current_page 자동 증가)
+ * DELETE /api/sessions/:id      — 세션 삭제
+ *
+ * 특이 사항:
+ *   - pages_read를 books.current_page에 누적 반영 (코사 업데이트)
+ *   - total_pages 초과 시 clamp 안함 (pages_read는 단위 세션 페이지, 추적 전용)
+ */
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { HTTPException } from 'hono/http-exception';
 import type { Bindings, DbReadingSession } from '../types';
 import { authMiddleware } from '../auth';
+import { logActivity } from './admin';
 
 export const sessionsRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -106,6 +119,9 @@ sessionsRouter.post(
     )
       .bind(id)
       .first<DbReadingSession>();
+
+    const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? 'unknown';
+    await logActivity(c.env.DB, userId, 'session:log', { bookId: body.book_id, pagesRead: body.pages_read }, ip);
 
     return c.json({ data: session, new_current_page: newCurrentPage }, 201);
   },

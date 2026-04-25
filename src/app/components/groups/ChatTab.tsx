@@ -58,6 +58,7 @@ export function ChatTab({ groupId, isLeader }: { groupId: string; isLeader?: boo
   /** 같은 사용자의 연속 메시지 시 타임스탬프 표시 여부 판단 */
   const shouldShowTime = (msgs: GroupMessage[], index: number) => {
     const msg = msgs[index];
+    if (!msg) return true;
     const next = msgs[index + 1];
     if (!next) return true;
     if (next.user_id !== msg.user_id) return true;

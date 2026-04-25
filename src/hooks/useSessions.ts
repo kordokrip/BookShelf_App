@@ -1,3 +1,8 @@
+/**
+ * 독서 세션 React Query 훅 모음
+ * - useSessions: 세션 목록 조회 (bookId / limit 필터)
+ * - useAddSession / useDeleteSession: CRUD 뮤테이션
+ */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { sessionsApi, queryKeys } from '../lib/api';
 import { normalizeSession, type UISession } from '../types/book';

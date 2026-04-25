@@ -32,10 +32,13 @@ export interface DbUser {
   name: string;
   password_hash: string | null;
   avatar_url: string | null;
+  profile_emoji: string | null;
   kakao_id: string | null;
   google_id: string | null;
   auth_provider: string;
   role: string; // 'admin' | 'user'
+  favorite_genres?: string;
+  reading_goal?: number;
   created_at: string;
   updated_at: string;
 }

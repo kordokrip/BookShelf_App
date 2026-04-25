@@ -1,3 +1,8 @@
+/**
+ * 스플래시 화면 (앱 진입점)
+ * - 로그인 상태에 따라 라이브러리 / 로그인 페이지로 자동 리다이렉트
+ * - AuthPreviewNav 퉬로 비로그인 상에서도 스캐폼/디자인 편집 가능
+ */
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { AuthPreviewNav } from "../components/auth/AuthPreviewNav";

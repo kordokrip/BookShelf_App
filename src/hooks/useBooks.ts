@@ -1,3 +1,10 @@
+/**
+ * 도서 관련 React Query 훅 모음
+ * - useBooks: 목록 조회 (상태·장르·정렬 필터)
+ * - useBook: 단건 상세 조회
+ * - useAddBook / useUpdateBook / useDeleteBook: CRUD 뮤테이션
+ * - useRefreshCovers: 커버 이미지 일괄 갱신
+ */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { booksApi, queryKeys } from '../lib/api';
 import type { BookStatus, CreateBookInput, UpdateBookInput } from '../lib/api';

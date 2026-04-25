@@ -1,3 +1,6 @@
+/**
+ * 404 페이지 — 존재하지 않는 경로 접근 시 표시
+ */
 import { useNavigate } from "react-router";
 
 export function NotFoundPage() {

@@ -1,6 +1,12 @@
+/**
+ * 노트 전체 검색 페이지
+ * - 텐스킵크 Query 전체검색 API 연동
+ * - 검색어 입력 디바운싱(300마스)
+ * - 검색결과 노트 수정·삭제
+ */
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { ArrowLeft, Clock, Search, X, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Search, X, Clock, Pencil, Trash2 } from "lucide-react";
 import { useNotes, useUpdateNote, useDeleteNote } from "../../hooks/useNotes";
 import { useRecentSearches } from "../../hooks/useRecentSearches";
 

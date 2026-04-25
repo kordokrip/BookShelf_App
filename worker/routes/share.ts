@@ -53,18 +53,18 @@ shareRouter.post('/report', authMiddleware, zValidator('json', shareReportSchema
 
     type StatusRow = { status: string; count: number };
     const counts = { done: 0, reading: 0, wish: 0 };
-    for (const row of statusCounts.results as StatusRow[]) {
+    for (const row of (statusCounts?.results ?? []) as StatusRow[]) {
       if (row.status in counts) counts[row.status as keyof typeof counts] = row.count;
     }
 
-    const totalsRow = (totals.results[0] ?? {}) as {
+    const totalsRow = ((totals?.results[0]) ?? {}) as {
       total_pages: number | null; total_minutes: number | null; session_count: number;
     };
 
     reportData = {
-      sender: sender.results[0],
+      sender: sender?.results[0],
       statusCounts: counts,
-      topGenres: genreStats.results,
+      topGenres: genreStats?.results ?? [],
       totals: {
         totalPages: totalsRow.total_pages ?? 0,
         totalMinutes: totalsRow.total_minutes ?? 0,

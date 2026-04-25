@@ -213,6 +213,32 @@ export function detectGenre(category: string | null, title: string, description?
     if (cat.includes('역사') || cat.includes('세계사')) return '해외사';
     if (cat.includes('종교') || cat.includes('기독교') || cat.includes('불교')) return '종교/영성';
     if (cat.includes('예술') || cat.includes('디자인') || cat.includes('미술') || cat.includes('음악')) return '예술/디자인';
+
+    // ── Google Books 영문 카테고리 매핑 ──────────────────────
+    if (cat.includes('computer') || cat.includes('programming') || cat.includes('software engineering')) return '컴퓨터·프로그래밍';
+    if (cat.includes('artificial intelligence') || cat.includes('machine learning') || cat.includes('data science')) return 'AI/데이터';
+    if (cat.includes('business') || cat.includes('economics') || cat.includes('finance') || cat.includes('management') || cat.includes('marketing')) return '경제/경영';
+    if (cat.includes('self-help') || cat.includes('self help') || cat.includes('personal development') || cat.includes('motivation') || cat.includes('success')) return '자기계발';
+    if (cat.includes('psychology') || cat.includes('mental health') || cat.includes('cognitive science')) return '심리학';
+    if (cat.includes('philosophy') || cat.includes('ethics')) return '철학';
+    if (cat.includes('social science') || cat.includes('sociology') || cat.includes('anthropology') || cat.includes('political science')) return '사회과학';
+    if (cat.includes('law') || cat.includes('legal')) return '정치/법률';
+    if (cat.includes('science') && !cat.includes('social') && !cat.includes('political') && !cat.includes('computer')) return '과학/수학';
+    if (cat.includes('mathematics') || cat.includes('math')) return '과학/수학';
+    if (cat.includes('korean history') || cat.includes('korea')) return '한국사';
+    if (cat.includes('history') || cat.includes('world history') || cat.includes('biography') || cat.includes('autobiography')) return '해외사';
+    if (cat.includes('religion') || cat.includes('spirituality') || cat.includes('buddhism') || cat.includes('christianity') || cat.includes('islam')) return '종교/영성';
+    if (cat.includes('art') || cat.includes('design') || cat.includes('music') || cat.includes('photography') || cat.includes('architecture') || cat.includes('performing arts')) return '예술/디자인';
+    if (cat.includes('literary criticism') || cat.includes('literary collections')) return '고전문학';
+    if (cat.includes('comics') || cat.includes('graphic novel') || cat.includes('manga')) return '예술/디자인';
+    // Fiction 계열 — 장르별 분류 후 일반 소설 처리
+    if (cat.includes('mystery') || cat.includes('detective') || cat.includes('thriller') || cat.includes('crime') || cat.includes('suspense')) return '해외문학';
+    if (cat.includes('science fiction') || cat.includes('fantasy')) return '해외문학';
+    if (cat.includes('romance') || cat.includes('love stories')) return '현대문학';
+    if (cat.includes('fiction') && !cat.includes('non')) return '현대문학';
+    if (cat.includes('juvenile fiction') || cat.includes('young adult') || cat.includes('children')) return '현대문학';
+    if (cat.includes('nonfiction') || cat.includes('non-fiction') || cat.includes('essays')) return '인문학';
+    if (cat.includes('humor') || cat.includes('satire')) return '현대문학';
   }
 
   // 키워드 기반 보조 매칭

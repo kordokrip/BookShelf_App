@@ -1,12 +1,33 @@
-@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
+/*
+ * Pretendard 폰트 로딩
+ * font-display: swap  → 폰트 로드 전에 시스템 폰트로 텍스트를 먼저 표시 (CLS/FCP 개선)
+ * variable subset     → 한글 최적화 서브셋으로 번들 크기 절감
+ */
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
 
 :root {
-  --font-pretendard: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  /* 시스템 폰트 스택:
+     - iOS/macOS: -apple-system, BlinkMacSystemFont
+     - Android:   'Noto Sans KR'(웹폰트 폴백)
+     - Windows:   'Malgun Gothic'
+     - 공통 폴백: system-ui, sans-serif
+  */
+  --font-pretendard: 'Pretendard Variable', 'Pretendard',
+    -apple-system, BlinkMacSystemFont,
+    'Apple SD Gothic Neo',
+    'Noto Sans KR',
+    'Malgun Gothic',
+    system-ui, sans-serif;
 }
 
 body {
   font-family: var(--font-pretendard);
+  /* fluid typography: 320px에서 16px, 1280px에서 17px 사이 선형 보간 */
+  font-size: clamp(1rem, 0.9688rem + 0.1563vw, 1.0625rem);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Firefox: 서브픽셀 렌더링 활성화 */
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'kern' 1;
 }

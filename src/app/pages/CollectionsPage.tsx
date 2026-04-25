@@ -1,7 +1,12 @@
+/**
+ * 컬렉션 목록 / 상세 페이지
+ * - 사용자 정의 도서 컬렉션 조회·생성·삭제·이름 수정
+ * - 컬렉션별 도서 목록 및 추가/제거 조작
+ */
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { ChevronLeft, Plus, Trash2, Edit2, BookOpen, FolderOpen } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { ChevronLeft, BookOpen, Plus, FolderOpen, Trash2 } from "lucide-react";
 import {
   useCollections,
   useCreateCollection,

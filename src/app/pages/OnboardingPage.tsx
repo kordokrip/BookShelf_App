@@ -1,8 +1,13 @@
+/**
+ * 온보딩 페이지
+ * - 회원가입 후 닉네임·선호 장르 설정
+ * - 스텝별 진행 (닉네임 → 장르 선택 → 완료)
+ */
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { AuthPreviewNav } from "../components/auth/AuthPreviewNav";
-import { GENRE_CONFIG } from "../../types/book";
 import { usersApi } from "../../lib/api";
+import { GENRE_CONFIG } from "../../types/book";
+import { AuthPreviewNav } from "../components/auth/AuthPreviewNav";
 import { useToast } from "../components/ui/Toast";
 
 /* ─── Slide 1: Isometric Bookshelf ──────────────────────────── */

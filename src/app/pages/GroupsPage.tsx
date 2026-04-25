@@ -1,3 +1,9 @@
+/**
+ * 독서 모임 목록 / 상세 페이지
+ * - 공개 그룹 탐색 및 참여 요청
+ * - 내 모임 목록 (코럨 생성, lazy 구로 분할)
+ * - 그룹 상세(채팅·멤버·일정) 내지 탭
+ */
 import { useState, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Plus, LogIn, Crown, ChevronRight, Search, Clock } from 'lucide-react';

@@ -292,7 +292,6 @@ users ──┬── books ──── shelf_items ──┬── reading_not
 | 도구 | 역할 |
 |------|------|
 | VS Code | 코드 에디터 |
-| GitHub Copilot (Claude Sonnet 4.6) | AI 코딩 보조 |
 | Figma AI Make | UI 목업 생성 및 컴포넌트 생성 |
 | Wrangler CLI v4 | Cloudflare 배포 도구 |
 
@@ -750,7 +749,6 @@ git commit -m "docs: 문서 업데이트"
 - **[OpenAI](https://openai.com)** — gpt-4o-mini API (독후감 보조)
 - **[Naver Developers](https://developers.naver.com)** — Books API (ISBN 조회)
 - **[Open Library](https://openlibrary.org)** — 책 메타데이터 API
-- **[GitHub Copilot](https://github.com/features/copilot)** — AI 코딩 보조 (Claude Sonnet 4.6)
 
 ---
 

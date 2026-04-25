@@ -1,7 +1,13 @@
+/**
+ * 로그인 페이지
+ * - 이메일/비밀번호 처리
+ * - Google OAuth 링크 제공
+ * - 로그인 실패 시 에러 메시지 표시
+ */
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
-import { AuthPreviewNav } from "../components/auth/AuthPreviewNav";
+import { useNavigate, Link } from "react-router";
 import { useAuthStore } from "../../stores/authStore";
+import { AuthPreviewNav } from "../components/auth/AuthPreviewNav";
 
 /* ─── Floating book decorations ──────────────────────────────── */
 function FloatingBookIcons() {

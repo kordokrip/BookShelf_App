@@ -1,5 +1,17 @@
 @custom-variant dark (&:is(.dark *));
 
+/* ── Light mode 기본값 ────────────────────────────────────────── */
+:root {
+  color-scheme: light;
+  --bg-primary: #F8FAFC;
+  --bg-secondary: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --text-primary: #1E293B;
+  --text-secondary: #64748B;
+  --border-color: #E2E8F0;
+  --nav-bg: rgba(255, 255, 255, 0.95);
+}
+
 /* ── Dark mode CSS variables ─────────────────────────────────── */
 .dark {
   --bg-primary: #0F172A;
@@ -13,8 +25,8 @@
 }
 
 :root {
-  /* ── Safe Areas (노치/홈 인디케이터 대응) ───────────────────────
-   * env() 값은 CSS 내에서 직접 사용 가능 (Chrome 69+, Safari 11.2+)
+  /* ── Safe Areas (노치/홈 인디케이터/Dynamic Island 대응) ────────
+   * env(): Chrome 69+, Safari 11.2+, Firefox 65+
    * 기본값 0px → 노치 없는 기기에서는 패딩 없음
    */
   --safe-top:    env(safe-area-inset-top,    0px);
@@ -22,18 +34,51 @@
   --safe-left:   env(safe-area-inset-left,   0px);
   --safe-right:  env(safe-area-inset-right,  0px);
 
-  /* ── 레이아웃 치수 ─────────────────────────────────────────────
+  /* ── 레이아웃 치수 ──────────────────────────────────────────────
    * TopBar: 콘텐츠 56px + 노치 여백
    * BottomNav: 콘텐츠 60px + 홈 인디케이터 여백
-   * --page-pb: 페이지 하단 패딩 = 바텀 내비 전체 높이 + 여유 16px
+   * --page-pb: 페이지 하단 패딩 = BottomNav 전체 높이 + 여유 16px
    */
-  --topbar-content-h: 56px;
+  --topbar-content-h:   56px;
   --bottomnav-content-h: 60px;
-  --topbar-h:    calc(var(--topbar-content-h) + var(--safe-top));
+  --topbar-h:    calc(var(--topbar-content-h)    + var(--safe-top));
   --bottomnav-h: calc(var(--bottomnav-content-h) + var(--safe-bottom));
   --page-pb:     calc(var(--bottomnav-h) + 1rem);
 
-  /* ── useViewport 훅이 실제 값으로 덮어씀 (초기 기본값) ──────── */
+  /* ── 브레이크포인트 참조 변수 ───────────────────────────────────
+   * JS(useViewport)에서 읽어 조건 분기에 활용 가능
+   * (CSS에서 직접 비교 불가 — 참조 목적)
+   */
+  --bp-xs:  375px;   /* 소형 폰 (iPhone SE 등) */
+  --bp-sm:  480px;   /* 일반 폰 */
+  --bp-md:  640px;   /* 대형 폰 / 소형 태블릿 */
+  --bp-tab: 768px;   /* iPad Mini / 안드로이드 태블릿 */
+  --bp-lg:  1024px;  /* iPad Pro / 소형 데스크톱 */
+  --bp-xl:  1280px;  /* 데스크톱 */
+  --bp-2xl: 1536px;  /* 광폭 모니터 */
+
+  /* ── Fluid Typography: clamp(min, 선형보간, max) ────────────────
+   * 320px → min 값, 1280px → max 값, 사이는 선형 보간
+   * 공식: clamp(min, min + (max-min) * (100vw - 320px) / (1280-320), max)
+   */
+  --text-xs:   clamp(0.625rem,  0.5938rem + 0.1563vw, 0.6875rem); /* 10–11px */
+  --text-sm:   clamp(0.75rem,   0.7188rem + 0.1563vw, 0.8125rem);  /* 12–13px */
+  --text-base: clamp(0.875rem,  0.8438rem + 0.1563vw, 0.9375rem);  /* 14–15px */
+  --text-md:   clamp(1rem,      0.9688rem + 0.1563vw, 1.0625rem);  /* 16–17px */
+  --text-lg:   clamp(1.0625rem, 1rem      + 0.3125vw, 1.1875rem);  /* 17–19px */
+  --text-xl:   clamp(1.125rem,  1.0313rem + 0.4688vw, 1.3125rem);  /* 18–21px */
+  --text-2xl:  clamp(1.25rem,   1.125rem  + 0.625vw,  1.5rem);     /* 20–24px */
+  --text-3xl:  clamp(1.5rem,    1.3125rem + 0.9375vw, 1.875rem);   /* 24–30px */
+
+  /* ── 페이지 최대 너비 ────────────────────────────────────────── */
+  --page-max-w-mobile: 100%;      /* 폰: 전체 너비 */
+  --page-max-w-tablet: 768px;     /* 태블릿: 중앙 정렬 */
+  --page-max-w-desktop: 1024px;   /* 데스크톱: 콘텐츠 중앙 */
+
+  /* ── 간격 스케일 ─────────────────────────────────────────────── */
+  --space-page-x: clamp(1rem, 4vw, 2rem); /* 페이지 좌우 패딩 */
+
+  /* ── useViewport 훅이 실제 값으로 덮어씀 (초기 기본값) ───────── */
   --vp-h: 100svh;
   --vp-w: 100vw;
 

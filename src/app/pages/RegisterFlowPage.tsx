@@ -1,12 +1,19 @@
-import { useState, useEffect } from "react";
+/**
+ * 도서 등록 팔로우 페이지
+ * - 스텝 1: 카카오/네이버 API 도서 검색
+ * - 스텝 2: 도서 정보 편집 (제목·저자·평점 등)
+ * - 스텝 3: 상태 / 장르 선택 후 등록
+ */
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
-import { ArrowLeft, Camera, Search, X, Check, ChevronRight, PenLine, Star } from "lucide-react";
+import { Check, Search, X, Camera, ChevronRight, PenLine, Loader2, Globe, Star, ArrowLeft } from "lucide-react";
 import { useBookSearch } from "../../hooks/useBookSearch";
 import { useAddBook } from "../../hooks/useBooks";
 import type { GenreKey, BookStatus } from "../../types/book";
 import { GENRE_CONFIG, COVER_GRADIENTS, detectGenre } from "../../types/book";
 import { Skeleton } from "../components/ui/skeleton";
 import type { SearchBook } from "../../lib/api";
+import { searchApi } from "../../lib/api";
 import ISBNScanner from "../components/books/ISBNScanner";
 
 /* ─── 타입 ──────────────────────────────────────────────────── */
@@ -254,6 +261,55 @@ function StepBookInfo({
 }) {
   const genres = Object.keys(GENRE_CONFIG) as GenreKey[];
   const canNext = form.title.trim().length > 0 && form.author.trim().length > 0;
+  const [isFetchingPages, setIsFetchingPages] = useState(false);
+  const autoFetchedRef = useRef(false);
+
+  /** Google Books / Open Library에서 페이지 수 + 카테고리 조회 */
+  async function handleFetchPageCount() {
+    if (isFetchingPages || (!form.isbn && !form.title)) return;
+    setIsFetchingPages(true);
+    try {
+      const result = await searchApi.getPageCount({
+        isbn: form.isbn || undefined,
+        title: form.title || undefined,
+        author: form.author || undefined,
+      });
+
+      const patch: Partial<FormState> = {};
+
+      if (result.pageCount && result.pageCount > 0) {
+        patch.totalPages = String(result.pageCount);
+      }
+
+      // Google Books 카테고리로 장르 + 이모지 자동 감지
+      if (result.categories && result.categories.length > 0) {
+        const googleCategory = result.categories.join(' / ');
+        const detectedGenre = detectGenre(googleCategory, form.title, null);
+        if (detectedGenre !== '기타') {
+          patch.genre = detectedGenre;
+          patch.coverEmoji = GENRE_CONFIG[detectedGenre]?.emoji ?? form.coverEmoji;
+        }
+      }
+
+      if (Object.keys(patch).length > 0) {
+        update(patch);
+      }
+    } catch {
+      // 실패 시 무시 — 사용자가 직접 입력 가능
+    } finally {
+      setIsFetchingPages(false);
+    }
+  }
+
+  // Step 2 진입 시 totalPages가 비어있으면 자동 조회
+  useEffect(() => {
+    if (autoFetchedRef.current) return;
+    autoFetchedRef.current = true;
+    if (!form.totalPages && (form.isbn || form.title)) {
+      handleFetchPageCount();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const inputClass =
     "w-full h-11 px-3 rounded-xl border border-border bg-muted text-sm outline-none focus:border-primary/50 focus:bg-background transition-colors";
@@ -310,14 +366,35 @@ function StepBookInfo({
           {/* 총 페이지 */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-1.5">총 페이지</label>
-            <input
-              type="number"
-              min={1}
-              value={form.totalPages}
-              onChange={(e) => update({ totalPages: e.target.value })}
-              placeholder="페이지 수 (선택)"
-              className={inputClass}
-            />
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={1}
+                value={form.totalPages}
+                onChange={(e) => update({ totalPages: e.target.value })}
+                placeholder="페이지 수 (선택)"
+                className={cn(inputClass, "flex-1")}
+              />
+              <button
+                type="button"
+                onClick={handleFetchPageCount}
+                disabled={isFetchingPages || (!form.isbn && !form.title)}
+                title="Google Books에서 페이지 수 자동 조회"
+                className="flex-shrink-0 h-11 px-3 rounded-xl border border-primary/40 bg-primary/5 text-primary text-xs font-medium hover:bg-primary/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 whitespace-nowrap"
+              >
+                {isFetchingPages ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Globe className="h-3.5 w-3.5" />
+                )}
+                {isFetchingPages ? "조회 중" : "웹에서 가져오기"}
+              </button>
+            </div>
+            {isFetchingPages && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Google Books에서 페이지 정보를 가져오고 있어요...
+              </p>
+            )}
           </div>
 
           {/* 장르 */}

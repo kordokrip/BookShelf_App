@@ -4,7 +4,7 @@ import { useAuthStore } from '../../../stores/authStore';
 
 export function MembersTab({ groupId, members, isLeader, ownerId, onBack }: {
   groupId: string;
-  members: Array<{ user_id: string; name: string; role: string; status: string; profile_emoji?: string; joined_at: string }>;
+  members: Array<{ user_id: string; name: string; role: string; status: string; profile_emoji?: string | null; joined_at: string }>;
   isLeader: boolean; ownerId: string; onBack: () => void;
 }) {
   const user = useAuthStore((s) => s.user);

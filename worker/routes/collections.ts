@@ -1,3 +1,14 @@
+/**
+ * collections 라우터 — 사용자 정의 독서 콜렉션 CRUD
+ *
+ * GET    /api/collections        — 콜렉션 목록 조회
+ * POST   /api/collections        — 콜렉션 생성
+ * GET    /api/collections/:id    — 콜렉션 상세 (포함 독서 목록)
+ * PATCH  /api/collections/:id    — 콜렉션 수정
+ * DELETE /api/collections/:id    — 콜렉션 삭제
+ * POST   /api/collections/:id/books     — 콜렉션에 독서 추가
+ * DELETE /api/collections/:id/books/:bookId — 콜렉션에서 독서 제거
+ */
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';

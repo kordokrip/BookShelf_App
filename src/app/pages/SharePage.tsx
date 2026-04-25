@@ -1,3 +1,8 @@
+/**
+ * 독서 데이터 공유 페이지
+ * - 보내기 / 받기 노트원지 타빙
+ * - 연간 독서 리포트 생성 및 코피 링크
+ */
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Inbox, Send, Mail, Clock, CheckCircle2, User } from 'lucide-react';

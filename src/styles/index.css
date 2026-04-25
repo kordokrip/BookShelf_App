@@ -3,101 +3,135 @@
 @import './theme.css';
 
 /* ═══════════════════════════════════════════════════════════════
- * 모바일 Web App 글로벌 최적화
+ * 반응형 크로스브라우저 글로벌 최적화
  * ─────────────────────────────────────────────────────────────
- * 대상 브라우저: iOS Safari 15+, Chrome Mobile 100+, Firefox 110+
+ * 지원 대상:
+ *   모바일  : iOS Safari 16+, Chrome for Android 106+, Firefox 110+
+ *   태블릿  : iPad (768–1024px), Android Tab (600–1024px)
+ *   데스크톱: Chrome 106+, Firefox 110+, Safari 16+, Edge 106+
  * ═══════════════════════════════════════════════════════════════ */
 
 /* ── 1. 뷰포트 & 스크롤 ──────────────────────────────────────── */
 html {
   overscroll-behavior: none;
-  -webkit-text-size-adjust: 100%; /* iOS 가로 전환 시 폰트 자동 확대 방지 */
+  /* iOS 가로 전환 시 폰트 자동 확대 방지 (크로스브라우저) */
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
   text-size-adjust: 100%;
-  /* 모든 스크롤 컨테이너의 부드러운 스크롤 */
   scroll-behavior: smooth;
+  /* 박스 크기 계산 통일 (서브픽셀 렌더링 방지) */
+  box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+  /* 모든 요소에서 기본 탭 하이라이트 제거 (iOS/Android) */
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
   width: 100%;
   overflow-x: hidden;
-  overscroll-behavior: none;
-  /* iOS Safari: -webkit-overflow-scrolling 대신 최신 방식 */
   overscroll-behavior-y: contain;
+  /* 하드웨어 가속으로 스크롤 성능 향상 */
+  -webkit-overflow-scrolling: touch;
 }
 
 #root {
+  /* dvh: 브라우저 UI 포함 실제 높이 (iOS Safari 주소창 반영) */
   min-height: 100svh;
   display: flex;
   flex-direction: column;
 }
 
-/* ── 2. 터치 최적화 — 300ms 딜레이 제거 & 탭 하이라이트 ────── */
-*,
-*::before,
-*::after {
-  /* 모든 요소에서 기본 탭 하이라이트 제거 (iOS/Android) */
-  -webkit-tap-highlight-color: transparent;
+/* dvh 지원 브라우저에서 더 정확한 높이 사용 */
+@supports (height: 100dvh) {
+  #root { min-height: 100dvh; }
 }
 
+/* ── 2. 터치 최적화 ──────────────────────────────────────────── */
 button,
 a,
 [role="button"],
 input[type="submit"],
 input[type="button"],
 label {
-  /* 더블탭 줌 방지 — 300ms 딜레이 제거 */
+  /* 300ms 딜레이 제거 + 더블탭 줌 방지 */
   touch-action: manipulation;
-  /* iOS Safari 텍스트 선택 방지 (버튼/링크) */
   -webkit-user-select: none;
   user-select: none;
+  /* 최소 터치 영역: Apple HIG 44pt / Google Material 48dp */
+  min-height: 44px;
+}
+
+/* 인라인 요소(a, label)는 min-height 제외 — 레이아웃 왜곡 방지 */
+a:not([role]),
+span[role="button"] {
+  min-height: unset;
 }
 
 /* ── 3. 입력 필드 — iOS 줌 방지 ─────────────────────────────── */
-/* iOS Safari는 font-size < 16px 인 입력 필드에 자동 줌 적용
-   → 모든 input/select/textarea를 최소 16px로 강제 */
+/*
+  iOS Safari: font-size < 16px 입력 필드에 자동 줌 적용
+  → 16px 강제로 줌 방지. 시각적 크기는 Tailwind 클래스로 제어.
+*/
 input,
 select,
 textarea {
   font-size: max(16px, 1rem);
-  /* 입력 필드 터치 시 하이라이트 없애기 */
   -webkit-tap-highlight-color: transparent;
+  /* iOS 기본 스타일 제거 */
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: 0; /* iOS 기본 둥근 모서리 제거 */
 }
 
-/* ── 4. 포커스 링 — 키보드 접근성은 유지, 터치 시 제거 ─────── */
-@media (pointer: coarse) {
-  /* 터치 디바이스 — 포커스 링 숨김 (시각적 잡음 제거) */
-  button:focus:not(:focus-visible),
-  a:focus:not(:focus-visible) {
-    outline: none;
-  }
+/* select는 appearance:none이 Firefox에서 화살표 제거하므로 별도 처리 */
+select {
+  background-image: none;
 }
 
-/* ── 5. 스크롤 성능 최적화 ───────────────────────────────────── */
-/* 스크롤 가능한 컨테이너에 GPU 가속 힌트 */
-.scroll-container {
-  -webkit-overflow-scrolling: touch;
-  will-change: scroll-position;
+/* ── 4. 포커스 — 키보드 접근성 유지, 터치 시 제거 ────────────── */
+/* 마우스/터치 클릭: 포커스 링 숨김 */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+/* 키보드 탐색: 포커스 링 표시 (접근성) */
+:focus-visible {
+  outline: 2px solid #4F46E5;
+  outline-offset: 2px;
 }
 
-/* ── 6. 이미지 — 드래그 방지 & 선택 방지 ───────────────────── */
-img {
+/* ── 5. 이미지 반응형 기본값 ──────────────────────────────────── */
+img,
+video,
+svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  /* 드래그/선택 방지 */
   -webkit-user-drag: none;
-  user-select: none;
   -webkit-user-select: none;
+  user-select: none;
 }
 
-/* ── 7. 네비게이션 바 — 스크롤 시 분리 방지 ─────────────────── */
-/* iOS Safari에서 fixed 요소가 스크롤 시 떨리는 현상 방지 */
+/* ── 6. 네비게이션 바 — GPU 레이어 고정 ──────────────────────── */
+/*
+  iOS Safari: fixed 요소가 스크롤 시 떨리는 현상 방지
+  → transform: translateZ(0) 으로 합성 레이어 분리 강제
+*/
 .fixed-nav {
-  /* transform: translateZ(0) 로 레이어 분리 강제 */
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
-  /* 백페이스 렌더링 방지 */
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+  /* 페인트 영역을 레이어로 격리 */
+  will-change: transform;
 }
 
-/* ── 8. 터치 피드백 — 물리적 클릭감 ─────────────────────────── */
+/* ── 7. 터치 피드백 ──────────────────────────────────────────── */
 .touch-feedback {
   transition: transform 0.1s ease, opacity 0.1s ease;
 }
@@ -106,33 +140,146 @@ img {
   opacity: 0.85;
 }
 
-/* ── 9. Scrollbar 숨김 유틸리티 ──────────────────────────────── */
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-/* ── 10. iOS Safari — position:fixed + 키보드 대응 ─────────── */
-/* 가상 키보드가 올라올 때 fixed 레이아웃 안정화 */
-@supports (height: 100dvh) {
-  #root {
-    min-height: 100dvh;
+/* prefers-reduced-motion: 애니메이션 민감 사용자 대응 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .touch-feedback:active {
+    transform: none;
+    opacity: 0.85;
   }
 }
 
-/* ── 11. Firefox Mobile 스크롤바 스타일 ─────────────────────── */
+/* ── 8. 스크롤바 유틸리티 ─────────────────────────────────────── */
+/* 숨김 */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* 얇은 스크롤바 (데스크톱) */
 * {
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
 }
 *:hover {
-  scrollbar-color: rgba(0,0,0,0.15) transparent;
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+}
+.dark *:hover {
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
 
-/* ── 12. 선택 텍스트 색상 (읽기 편의성) ─────────────────────── */
+/* Webkit 스크롤바 */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.15); border-radius: 2px; }
+.dark ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); }
+
+/* ── 9. 스크롤 컨테이너 성능 ──────────────────────────────────── */
+.scroll-container {
+  -webkit-overflow-scrolling: touch;
+  /* 스크롤 오버슈팅 제어 */
+  overscroll-behavior: contain;
+}
+
+/* 수평 스냅 스크롤 (카드 목록 등) */
+.snap-x-container {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+.snap-x-container > * {
+  scroll-snap-align: start;
+}
+
+/* ── 10. 텍스트 선택 색상 ─────────────────────────────────────── */
 ::selection {
-  background-color: #4F46E520;
+  background-color: rgba(79, 70, 229, 0.15);
   color: #4F46E5;
 }
-::-webkit-selection {
-  background-color: #4F46E520;
+::-moz-selection {
+  background-color: rgba(79, 70, 229, 0.15);
   color: #4F46E5;
+}
+
+/* ── 11. 인쇄 최적화 ──────────────────────────────────────────── */
+@media print {
+  /* 네비게이션 숨김 */
+  nav, .fixed-nav, [role="navigation"] { display: none !important; }
+  /* 배경색 인쇄 */
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  /* 페이지 분리 방지 */
+  .card, article { break-inside: avoid; page-break-inside: avoid; }
+}
+
+/* ── 12. 고대비 모드 대응 ──────────────────────────────────────── */
+@media (forced-colors: active) {
+  .touch-feedback:active { opacity: 1; }
+  button, a { forced-color-adjust: auto; }
+}
+
+/* ── 13. 태블릿/데스크톱 반응형 레이아웃 유틸리티 ────────────── */
+/*
+  Tailwind 기본 breakpoints를 보완하는 커스텀 유틸리티
+  xs  : max-width 479px  (소형 폰: iPhone SE 등)
+  sm  : 480–639px       (일반 폰)
+  md  : 640–767px       (대형 폰/소형 태블릿)
+  tab : 768–1023px      (iPad / Android 태블릿) ← 핵심 추가
+  lg  : 1024px+         (데스크톱/iPad Pro)
+*/
+
+/* 태블릿 전용 그리드 헬퍼 */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .tablet-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+  .tablet-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+  .tablet-px     { padding-left: 2rem; padding-right: 2rem; }
+  .tablet-hidden { display: none !important; }
+}
+
+/* 소형 폰 대응 (320px – 374px: 구형 iPhone SE 등) */
+@media (max-width: 374px) {
+  html { font-size: 14px; }
+  .xs-compact { padding-left: 0.75rem; padding-right: 0.75rem; }
+}
+
+/* 가로 모드 + 소형 높이 대응 (스마트폰 landscape) */
+@media (max-height: 500px) and (orientation: landscape) {
+  /* 바텀 네비 숨김 → 내용 영역 최대화 */
+  .landscape-hide { display: none !important; }
+  /* 컨텐츠 패딩 최소화 */
+  main { padding-bottom: 0.5rem !important; }
+}
+
+/* ── 14. content-visibility: 긴 목록 렌더링 최적화 ───────────── */
+/*
+  content-visibility: auto: 뷰포트 밖 요소 렌더링 지연
+  → 긴 도서 목록에서 초기 렌더링 성능 향상
+  contain-intrinsic-size: 레이아웃 안정성 유지용 예비 크기
+*/
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 120px;
+}
+
+/* ── 15. 컨테이너 쿼리 지원 (Chrome 106+, Safari 16+, FF 110+) ── */
+.card-container {
+  container-type: inline-size;
+  container-name: card;
+}
+
+/* 컨테이너 너비 < 320px: 최소 표시 모드 */
+@container card (max-width: 319px) {
+  .card-title { font-size: 0.875rem; }
+  .card-meta  { display: none; }
+}
+
+/* 컨테이너 너비 >= 480px: 풍부한 표시 모드 */
+@container card (min-width: 480px) {
+  .card-title  { font-size: 1.125rem; }
+  .card-layout { flex-direction: row; align-items: center; gap: 1rem; }
 }

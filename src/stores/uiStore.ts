@@ -13,7 +13,7 @@ export function getTimeBasedTheme(): 'light' | 'dark' {
 }
 
 // ─── 알림 타입 ──────────────────────────────────────────────
-export type NotificationType = 'book_added' | 'book_updated' | 'session_saved' | 'note_saved' | 'sync' | 'info';
+export type NotificationType = 'book_added' | 'book_updated' | 'session_saved' | 'note_saved' | 'sync' | 'info' | 'collection_created' | 'collection_deleted' | 'offline_sync';
 
 export interface NotificationItem {
   id: string;
@@ -179,7 +179,7 @@ export const useUiStore = create<UiState>()(
       cycleThemeMode: () =>
         set((s) => {
           const order: ('auto' | 'light' | 'dark')[] = ['auto', 'light', 'dark'];
-          const next = order[(order.indexOf(s.themeMode) + 1) % order.length];
+          const next = order[(order.indexOf(s.themeMode) + 1) % order.length] ?? 'auto';
           localStorage.setItem('themeMode', next);
           return { themeMode: next };
         }, false, 'ui/cycleThemeMode'),

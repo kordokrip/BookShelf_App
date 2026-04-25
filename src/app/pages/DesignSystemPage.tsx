@@ -1,5 +1,8 @@
+/**
+ * 디자인 시스템 패이지 (개발/스키징 전용)
+ * - 작동하는 UI 컴포넌트(Badge, StarRating, Toast 등) 시각적 확인
+ */
 import { useState } from "react";
-import { Trash2, Edit, Heart, Share2, ShieldAlert } from "lucide-react";
 import { GenreBadge } from "../components/ui/GenreBadge";
 import { StarRating } from "../components/ui/StarRating";
 import { ProgressBar } from "../components/ui/ProgressBar";
@@ -10,7 +13,7 @@ import { Modal } from "../components/ui/Modal";
 import { useToast } from "../components/ui/Toast";
 import { DoneBookCard, ReadingBookCard, WishBookCard } from "../components/books/BookCard";
 import { SummaryCard } from "../components/stats/StatsComponents";
-import { BookMarked, Star, Flame, BookOpen } from "lucide-react";
+import { BookMarked, Star, Flame, BookOpen, ShieldAlert, Heart, Edit, Share2, Trash2 } from "lucide-react";
 import { GENRE_CONFIG, type GenreKey, type UIBook } from "../../types/book";
 import { useAuthStore } from "../../stores/authStore";
 

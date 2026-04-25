@@ -1,3 +1,8 @@
+/**
+ * 노트·하이라이트·인용·리뷰 React Query 훅 모음
+ * - useNotes: 노트 목록 조회 (bookId / type / search 필터)
+ * - useAddNote / useUpdateNote / useDeleteNote: CRUD 뮤테이션
+ */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { notesApi, queryKeys } from '../lib/api';
 import { normalizeBookNote } from '../types/book';

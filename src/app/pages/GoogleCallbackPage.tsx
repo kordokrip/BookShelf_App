@@ -1,3 +1,8 @@
+/**
+ * Google OAuth 콜백 페이지
+ * - URL 쿼리 파라미터(code, state)를 백엔드에 전달하여 세션 추론
+ * - 에러 코드별 안내 메시지 표시, 로그인 페이지로 정적 리다이렉트
+ */
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 
