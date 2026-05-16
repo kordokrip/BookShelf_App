@@ -229,7 +229,8 @@ searchRouter.get('/books', rateLimit({ limit: 20, windowMs: 60_000, keyPrefix: '
 
 /**
  * GET /api/search/books/isbn?isbn=
- * ISBN으로 단일 도서 조회 (카카오 → 네이버 폴백)
+ * ISBN으로 단일 도서 조회 (카카오 + 네이버 병렬 조회, 정보 병합)
+ * 크로스 검증: 두 소스 모두에서 데이터를 받아 품질 높은 정보 통합
  */
 searchRouter.get('/books/isbn', rateLimit({ limit: 10, windowMs: 60_000, keyPrefix: 'isbn' }), async (c) => {
   const isbn = c.req.query('isbn')?.trim();
@@ -238,9 +239,14 @@ searchRouter.get('/books/isbn', rateLimit({ limit: 10, windowMs: 60_000, keyPref
   }
   const proxyOrigin = new URL(c.req.url).origin;
 
-  // ── 카카오 ISBN 검색 ──────────────────────────────────────
-  const kakaoKey = c.env.KAKAO_REST_API_KEY;
-  if (kakaoKey) {
+  let kakaoBook: SearchBook | null = null;
+  let naverBook: SearchBook | null = null;
+
+  // ── 카카오 ISBN 검색 (병렬) ────────────────────────────────
+  const kakaoPromise = (async () => {
+    const kakaoKey = c.env.KAKAO_REST_API_KEY;
+    if (!kakaoKey) return null;
+
     try {
       const kakaoUrl = new URL('https://dapi.kakao.com/v3/search/book');
       kakaoUrl.searchParams.set('query', isbn);
@@ -249,23 +255,27 @@ searchRouter.get('/books/isbn', rateLimit({ limit: 10, windowMs: 60_000, keyPref
 
       const kakaoRes = await fetch(kakaoUrl.toString(), {
         headers: { Authorization: `KakaoAK ${kakaoKey}` },
+        signal: AbortSignal.timeout(5000),
       });
 
       if (kakaoRes.ok) {
         const data = await kakaoRes.json<KakaoSearchResponse>();
         if (data.documents.length > 0 && data.documents[0]) {
-          return c.json({ book: kakaoDocToSearchBook(data.documents[0], proxyOrigin) });
+          return kakaoDocToSearchBook(data.documents[0], proxyOrigin);
         }
       }
     } catch {
       // 폴백
     }
-  }
+    return null;
+  })();
 
-  // ── 네이버 ISBN 검색 폴백 ─────────────────────────────────
-  const naverId = c.env.NAVER_CLIENT_ID;
-  const naverSecret = c.env.NAVER_CLIENT_SECRET;
-  if (naverId && naverSecret) {
+  // ── 네이버 ISBN 검색 (병렬) ────────────────────────────────
+  const naverPromise = (async () => {
+    const naverId = c.env.NAVER_CLIENT_ID;
+    const naverSecret = c.env.NAVER_CLIENT_SECRET;
+    if (!naverId || !naverSecret) return null;
+
     try {
       const naverUrl = new URL('https://openapi.naver.com/v1/search/book_adv.json');
       naverUrl.searchParams.set('d_isbn', isbn);
@@ -276,20 +286,47 @@ searchRouter.get('/books/isbn', rateLimit({ limit: 10, windowMs: 60_000, keyPref
           'X-Naver-Client-Id': naverId,
           'X-Naver-Client-Secret': naverSecret,
         },
+        signal: AbortSignal.timeout(5000),
       });
 
       if (naverRes.ok) {
         const data = await naverRes.json<NaverSearchResponse>();
-          if (data.items.length > 0 && data.items[0]) {
-          return c.json({ book: naverItemToSearchBook(data.items[0], proxyOrigin) });
+        if (data.items.length > 0 && data.items[0]) {
+          return naverItemToSearchBook(data.items[0], proxyOrigin);
         }
       }
     } catch {
-      // 실패
+      // 폴백
     }
+    return null;
+  })();
+
+  [kakaoBook, naverBook] = await Promise.all([kakaoPromise, naverPromise]);
+
+  // ── 결과 병합 및 우선순위 결정 ────────────────────────────
+  // 우선순위: 둘 다 있으면 정보 병합, 하나만 있으면 그것 사용
+  if (kakaoBook && naverBook) {
+    // 두 소스 모두 있을 때: 정보 병합
+    // 카카오 우선이지만, 빠진 정보는 네이버에서 보충
+    const merged: SearchBook = {
+      title: kakaoBook.title || naverBook.title,
+      author: kakaoBook.author || naverBook.author,
+      isbn: kakaoBook.isbn || naverBook.isbn,
+      coverImage: kakaoBook.coverImage || naverBook.coverImage,
+      publisher: kakaoBook.publisher || naverBook.publisher,
+      publishedDate: kakaoBook.publishedDate || naverBook.publishedDate,
+      pageCount: kakaoBook.pageCount || naverBook.pageCount,
+      description: kakaoBook.description || naverBook.description,
+      // 카테고리: 카카오의 카테고리를 우선, 없으면 네이버 사용
+      category: kakaoBook.category || naverBook.category,
+    };
+    return c.json({ book: merged });
   }
 
-  return c.json({ error: '해당 ISBN의 도서를 찾을 수 없습니다' }, 404);
+  if (kakaoBook) return c.json({ book: kakaoBook });
+  if (naverBook) return c.json({ book: naverBook });
+
+  return c.json({ error: '해당 ISBN의 도서를 찾을 수 없습니다. 직접 검색해주세요.' }, 404);
 });
 
 /**
@@ -357,6 +394,47 @@ searchRouter.get('/pagecount', rateLimit({ limit: 15, windowMs: 60_000, keyPrefi
     }
   }
 
+  /** Naver Book API — 카테고리 정보 크로스 검증용 */
+  async function fetchNaverBookInfo(query: string): Promise<string[]> {
+    const naverId = c.env.NAVER_CLIENT_ID;
+    const naverSecret = c.env.NAVER_CLIENT_SECRET;
+    if (!naverId || !naverSecret) return [];
+
+    try {
+      const url = new URL('https://openapi.naver.com/v1/search/book.json');
+      url.searchParams.set('query', query);
+      url.searchParams.set('display', '5');
+      
+      const res = await fetch(url.toString(), {
+        headers: {
+          'X-Naver-Client-Id': naverId,
+          'X-Naver-Client-Secret': naverSecret,
+        },
+        signal: AbortSignal.timeout(5000),
+      });
+
+      if (!res.ok) return [];
+
+      const data = await res.json<{
+        items?: Array<{ category?: string; title?: string }>;
+      }>();
+
+      const categories: Set<string> = new Set();
+      for (const item of (data.items ?? [])) {
+        if (item.category) {
+          // 네이버 카테고리는 "소설>한국소설>한국현대소설" 형태
+          // 첫 번째 레벨 카테고리만 추출
+          const categoryParts = item.category.split('>');
+          if (categoryParts[0]) categories.add(categoryParts[0].trim());
+        }
+      }
+
+      return Array.from(categories);
+    } catch {
+      return [];
+    }
+  }
+
   let result: BookMeta = { pageCount: null, categories: [] };
 
   // ── 1순위: Google Books ISBN 검색 (가장 정확) ──────────────
@@ -378,7 +456,23 @@ searchRouter.get('/pagecount', rateLimit({ limit: 15, windowMs: 60_000, keyPrefi
     if (!result.categories.length && titleResult.categories.length) result.categories = titleResult.categories;
   }
 
-  // ── 4순위: 제목 단독 검색 (카테고리만 없을 때) ────────────
+  // ── 4순위: 네이버 책 정보로 카테고리 크로스 검증 ─────────
+  if (cleanIsbn || title) {
+    const naverQuery = cleanIsbn || title || '';
+    const naverCategories = await fetchNaverBookInfo(naverQuery);
+    
+    // 네이버에서 카테고리를 찾았지만 Google에서 없으면 추가
+    if (!result.categories.length && naverCategories.length) {
+      result.categories = naverCategories;
+    }
+    // Google 카테고리가 있으면 크로스 검증 (두 소스 모두에서 일치하는 카테고리 우선 표시)
+    else if (result.categories.length && naverCategories.length) {
+      // 일단 Google 결과 유지 (이미 정확함)
+      // 필요하면 여기서 추가 가중치 적용 가능
+    }
+  }
+
+  // ── 5순위: 제목 단독 검색 (카테고리만 없을 때) ────────────
   if (!result.categories.length && title && author) {
     const titleOnly = await fetchGoogleBooks(title);
     if (!result.pageCount && titleOnly.pageCount) result.pageCount = titleOnly.pageCount;

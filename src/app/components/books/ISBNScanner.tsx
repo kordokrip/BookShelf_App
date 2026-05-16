@@ -10,9 +10,25 @@ interface ISBNScannerProps {
   onClose: () => void;
 }
 
+/** ISBN 13자리 또는 10자리 형식 검증 */
+function isValidIsbn(text: string): boolean {
+  const cleaned = text.replace(/[^0-9X]/gi, '');
+  return cleaned.length === 13 || cleaned.length === 10;
+}
+
+/** 스캔 결과를 ISBN 형식으로 정규화 */
+function normalizeBarcode(rawText: string): string {
+  // 공백, 하이픈, 콤마 제거 후 첫 13자리 또는 10자리 추출
+  const cleaned = rawText.replace(/[^0-9X]/gi, '');
+  if (cleaned.length >= 13) return cleaned.substring(0, 13);
+  if (cleaned.length >= 10) return cleaned.substring(0, 10);
+  return cleaned;
+}
+
 export default function ISBNScanner({ onResult, onClose }: ISBNScannerProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hints, setHints] = useState('EAN-13, UPC-A, CODE128 등 스캔 중...');
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<{ stop: () => void } | null>(null);
   const handledRef = useRef(false);
@@ -31,26 +47,54 @@ export default function ISBNScanner({ onResult, onClose }: ISBNScannerProps) {
     setIsLoading(false);
     handledRef.current = false;
 
-    // EAN-13 (ISBN 형식)만 디코딩
-    const hints = new Map<DecodeHintType, unknown>();
-    hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.EAN_13]);
+    // ISBN 바코드 포맷: EAN-13, UPC-A, CODE128, CODE39 등 다양한 형식 지원
+    const barcodeFormats = [
+      BarcodeFormat.EAN_13,   // ISBN 표준 형식
+      BarcodeFormat.EAN_8,    // EAN 8자리
+      BarcodeFormat.UPC_A,    // UPC-A (미국)
+      BarcodeFormat.UPC_E,    // UPC-E (미국 단축)
+      BarcodeFormat.CODE_128, // CODE 128 (다양한 데이터)
+      BarcodeFormat.CODE_39,  // CODE 39 (숫자+문자)
+    ];
 
-    const codeReader = new BrowserMultiFormatReader(hints);
+    const hintMap = new Map<DecodeHintType, unknown>();
+    hintMap.set(DecodeHintType.POSSIBLE_FORMATS, barcodeFormats);
+    // 바코드 감지 신뢰도 향상
+    hintMap.set(DecodeHintType.ASSUME_CODE_39_CHECK_DIGIT, true);
+
+    const codeReader = new BrowserMultiFormatReader(hintMap);
 
     try {
+      const constraints = {
+        video: {
+          facingMode: 'environment' as const,
+          // 카메라 화질 개선
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+      };
+
       const controls = await codeReader.decodeFromConstraints(
-        { video: { facingMode: 'environment' } },
+        constraints,
         videoRef.current,
         (result, _error) => {
           if (result && !handledRef.current && isMountedRef.current) {
+            const rawText = result.getText();
+            const normalized = normalizeBarcode(rawText);
+
+            // ISBN 포맷 검증
+            if (!isValidIsbn(normalized)) {
+              // 포맷이 맞지 않으면 계속 스캔 (에러 표시 없음)
+              return;
+            }
+
             handledRef.current = true;
             setIsLoading(true);
             controlsRef.current?.stop();
 
-            const isbn = result.getText();
             void (async () => {
               try {
-                const { book } = await searchApi.searchByIsbn(isbn);
+                const { book } = await searchApi.searchByIsbn(normalized);
                 if (isMountedRef.current) {
                   onResult(book);
                 }
@@ -66,6 +110,7 @@ export default function ISBNScanner({ onResult, onClose }: ISBNScannerProps) {
         },
       );
       controlsRef.current = controls;
+      setHints('바코드를 감지 중입니다...');
     } catch (err) {
       if (!isMountedRef.current) return;
       if (err instanceof Error && err.name === 'NotAllowedError') {
@@ -123,8 +168,11 @@ export default function ISBNScanner({ onResult, onClose }: ISBNScannerProps) {
               <span className="absolute -bottom-0.5 -left-0.5 w-6 h-6 border-b-2 border-l-2 border-white rounded-bl-lg" />
               <span className="absolute -bottom-0.5 -right-0.5 w-6 h-6 border-b-2 border-r-2 border-white rounded-br-lg" />
             </div>
-            <p className="mt-4 text-white text-sm text-center drop-shadow-md px-4">
+            <p className="mt-4 text-white text-sm text-center drop-shadow-md px-4 font-medium">
               ISBN 바코드를 박스 안에 맞춰주세요
+            </p>
+            <p className="mt-2 text-white/70 text-xs text-center drop-shadow-md px-4">
+              {hints}
             </p>
           </div>
         )}
