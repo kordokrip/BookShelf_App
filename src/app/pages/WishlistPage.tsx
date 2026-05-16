@@ -93,12 +93,13 @@ function ExternalBookCard({
           <img
             src={book.coverImage}
             alt={book.title}
+            loading="lazy"
             onError={() => setImgErr(true)}
-            className="w-[68px] h-[96px] object-cover rounded-lg shadow-md"
+            className="w-16 sm:w-[68px] aspect-[2/3] object-cover rounded-lg shadow-md"
           />
         ) : (
           <div
-            className="w-[68px] h-[96px] rounded-lg flex items-center justify-center shadow-md"
+            className="w-16 sm:w-[68px] aspect-[2/3] rounded-lg flex items-center justify-center shadow-md"
             style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}
           >
             <span style={{ fontSize: 28 }}>📚</span>
@@ -169,7 +170,7 @@ function ExternalSkeleton() {
     <>
       {[...Array(8)].map((_, i) => (
         <div key={i} className="flex items-start gap-3 px-4 py-4 border-b border-[#F1F5F9] dark:border-[#1E293B]">
-          <div className="w-[68px] h-[96px] bg-[#F1F5F9] dark:bg-[#1E293B] rounded-lg flex-shrink-0 animate-pulse" />
+          <div className="w-16 sm:w-[68px] aspect-[2/3] bg-[#F1F5F9] dark:bg-[#1E293B] rounded-lg flex-shrink-0 animate-pulse" />
           <div className="flex-1 flex flex-col gap-2 pt-1">
             <div className="h-4 bg-[#F1F5F9] dark:bg-[#1E293B] rounded animate-pulse w-3/4" />
             <div className="h-3 bg-[#F1F5F9] dark:bg-[#1E293B] rounded animate-pulse w-1/2" />
@@ -399,10 +400,11 @@ function SearchOverlay({
                   <img
                     src={book.coverImage}
                     alt={book.title}
-                    className="w-10 h-14 object-cover rounded-lg shrink-0 shadow-sm"
+                    loading="lazy"
+                    className="w-10 sm:w-11 aspect-[2/3] object-cover rounded-lg shrink-0 shadow-sm"
                   />
                 ) : (
-                  <div className="w-10 h-14 bg-[#F1F5F9] rounded-lg shrink-0 flex items-center justify-center">
+                  <div className="w-10 sm:w-11 aspect-[2/3] bg-[#F1F5F9] rounded-lg shrink-0 flex items-center justify-center">
                     <span style={{ fontSize: 18 }}>📚</span>
                   </div>
                 )}
@@ -1227,7 +1229,7 @@ export function WishlistPage() {
                   </button>
                 )}
               </div>
-              <div className="hidden lg:grid px-4 grid-cols-2 xl:grid-cols-3 gap-4">
+              <div className="hidden lg:grid px-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {sorted.map((book) => (
                   <div
                     key={book.id}

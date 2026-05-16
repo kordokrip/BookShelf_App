@@ -8,7 +8,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   // checkAuth() 실행 중 — 로딩 표시
   if (status === 'idle' || isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#F8FAFC]">
+      <div className="flex items-center justify-center min-h-[var(--vp-h)] bg-[#F8FAFC]">
         <div className="flex flex-col items-center gap-3">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
           <span className="text-sm text-gray-500">로딩 중...</span>

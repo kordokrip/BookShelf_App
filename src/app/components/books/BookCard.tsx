@@ -8,9 +8,9 @@ export function BookCover({ book, size = "md" }: { book: Book; size?: "sm" | "md
   const [imgError, setImgError] = useState(false);
 
   const dims: Record<string, string> = {
-    sm:  "w-[48px] h-[68px]",
-    md:  "w-[60px] h-[85px]",
-    lg:  "w-[120px] h-[168px]",
+    sm:  "w-12 sm:w-14 aspect-[2/3]",
+    md:  "w-14 sm:w-16 aspect-[2/3]",
+    lg:  "w-24 sm:w-28 lg:w-32 aspect-[2/3]",
   };
 
   // sm/md → rounded-lg (8px), lg → rounded-xl (12px)
@@ -22,6 +22,7 @@ export function BookCover({ book, size = "md" }: { book: Book; size?: "sm" | "md
       <img
         src={book.coverImage}
         alt={book.title}
+        loading="lazy"
         onError={() => setImgError(true)}
         className={`${dims[size]} ${radius} object-cover flex-shrink-0 shadow-md`}
       />

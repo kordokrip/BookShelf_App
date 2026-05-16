@@ -8,7 +8,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate, useParams } from "react-router";
-import { ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, BookMarked, BookOpen, Heart, ScanLine, Clock, Search, Share2, Sparkles, RefreshCw } from "lucide-react";
+import { ChevronLeft, MoreVertical, FileText, AlignLeft, Camera, Pencil, Trash2, BookMarked, BookOpen, Heart, ScanLine, Clock, Search, Share2, Sparkles, RefreshCw } from "lucide-react";
 import type { BookNote } from "../../types/book";
 import type { UIBook } from "../../types/book";
 import { BookCover } from "../components/books/BookCard";
@@ -262,22 +262,6 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
     { value: "memo", label: "📝 메모", count: memos.length },
     { value: "review", label: "✍️ 독후감", count: reviews.length },
   ];
-
-  function SectionHeader({ title, type }: { title: string; type: NoteFormType }) {
-    return (
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-[#1E293B]" style={{ fontSize: 15, fontWeight: 700 }}>{title}</h3>
-        <button
-          onClick={() => openAdd(type)}
-          className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#EEF2FF] text-[#4F46E5] transition-colors hover:bg-[#E0E7FF]"
-          style={{ fontSize: 12, fontWeight: 600 }}
-        >
-          <Plus size={13} />
-          추가
-        </button>
-      </div>
-    );
-  }
 
   function NoteActions({ note }: { note: BookNote }) {
     return (

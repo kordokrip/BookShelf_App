@@ -1,10 +1,14 @@
 # BookShelf App — 전체 시스템 추적 맵 (TRACE MAP)
 
-> 작성 기준: 실제 소스 코드 전수 분석 (2026-04-25 기준)
+> 작성 기준: 실제 소스 코드 전수 분석 (2026-04-28 기준)
 > 목적: 프로덕션 오류 발생 시 UI → Hook → API → DB 레이어를 빠르게 추적하기 위한 기준 문서
 >
-> **최신 변경**: 2026-04-25 — 25차 OCR 리팩토링 (llama-3.2-11b + agree 자동시도 + llava 폴백, 8/8 테스트 PASS)
-> **이전 변경**: 2026-04-13 — 24차 독서모임 대규모 기능 개선 (가입 승인 시스템, 알림, 채팅 삭제, 미팅 전원 등록)
+> **최신 변경**: 2026-04-28 — 테스트/교차검증 및 리팩토링 반영
+> - SideNav 배지 계산 최적화: `useBookCount('reading'|'wish')` 전환
+> - 관리자 API 테스트 스크립트 개선: `ADMIN_TOKEN` 직접 실행 지원, JSON 파싱 공통화
+> - 정적 검증/빌드: `type-check`, `lint`, `build` 통과
+> - E2E API: 27/27 PASS
+> **이전 변경**: 2026-04-25 — 25차 OCR 리팩토링
 
 ---
 
@@ -22,9 +26,11 @@
 | **AI** | Workers AI (`@cf/meta/llama-3.1-8b-instruct`, `@cf/meta/llama-3.2-11b-vision-instruct` + 폴백 `@cf/llava-1.5-7b-hf`) |
 | **Storage** | Cloudflare R2 (`covers/{userId}/{bookId}.{ext}`) |
 | **TypeScript check** | ✅ 0 errors |
-| **Build** | ✅ 성공 ★ (25차) |
+| **Lint** | ✅ 0 errors |
+| **Build** | ✅ 성공 ★ (2026-04-28) |
 | **Production Health** | ✅ `{"status":"ok","env":"production"}` |
-| **E2E 테스트** | ✅ 27/27 PASS ★ (24차) |
+| **E2E 테스트** | ✅ 27/27 PASS ★ (2026-04-28) |
+| **Admin API 스크립트** | ⚠️ 기본 로그인은 환경 의존 / ✅ `ADMIN_TOKEN` 실행 지원 |
 | **GitHub 커밋** | `83ff556` (main) ★ (24차 이후 OCR 수정) |
 | **Cloudflare Workers** | Version ID `52b698a7-aac6-4715-a040-77a40ddd395a` ★ (25차 배포) |
 | **D1 Tables** | users(★role), books, reading_sessions, notes(★type 'review'), notes_fts (FTS5), groups, group_members(★status,last_read_at), group_messages, group_meetings, meeting_feedbacks, shared_reports, notifications ★ (24차), d1_migrations, _cf_KV, sqlite_sequence |
@@ -157,8 +163,8 @@ CSS 변수:
 ### BottomNavBar (`src/app/components/navigation/BottomNavBar.tsx`)
 ```
 [마운트]
-useBooks({ status: 'reading' }) → reading 버지 카운트 (동적)
-useBooks({ status: 'wish' })    → wish 배지 카운트 (동적)
+useBookCount('reading') → reading 배지 카운트 (동적)
+useBookCount('wish')    → wish 배지 카운트 (동적)
   - 99 초과 시 "99+" 표시
 
 [레이아웃]
@@ -220,7 +226,8 @@ LogOut 아이콘 → authStore.logout() → navigate('/login')
 [데이터 소스]
 useAuthStore(s => s.user) → user.name, user.email, user.role
 useUiStore(s => s.sidebarOpen) → 접기/펼치기 상태
-useBooks({ status }) → reading/wish 카운트 배지
+useBooks({ status: 'done' }) → 완독 수/연간 프로필 정보
+useBookCount('reading'|'wish') → 읽는중/위시 배지 카운트
 ```
 
 ---
@@ -1505,7 +1512,7 @@ maxAge: 86400 (24h)
 |---|---|
 | **파일** | [src/app/components/navigation/BottomNavBar.tsx](../src/app/components/navigation/BottomNavBar.tsx) |
 | **문제** | 읽는 중(3), 위시리스트(15) 배지가 하드코딩되어 실제 데이터 미반영 |
-| **수정** | `useBooks({ status: 'reading' })`, `useBooks({ status: 'wish' })` 훅으로 동적 카운트, 99 초과 시 "99+" 처리 |
+| **수정** | `useBookCount('reading')`, `useBookCount('wish')` 훅으로 동적 카운트, 99 초과 시 "99+" 처리 |
 | **상태** | ✅ 수정 완료 (2026-03-28) |
 
 ---

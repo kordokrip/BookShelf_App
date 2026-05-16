@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router";
 import { BookMarked, BookOpen, Star, BarChart2, Settings, Palette, PlusCircle, FileText, ChevronsLeft, ChevronsRight, ShieldCheck, Users, Mail } from "lucide-react";
 import { useAuthStore } from "../../../stores/authStore";
-import { useBooks } from "../../../hooks/useBooks";
+import { useBookCount, useBooks } from "../../../hooks/useBooks";
 import { useShareUnreadCount } from "../../../hooks/useGroups";
 import { useUiStore } from "../../../stores/uiStore";
 import { ProfileAvatar } from "../ui/ProfilePopup";
@@ -24,8 +24,8 @@ export function SideNav() {
   const isAdmin = user?.role === 'admin';
 
   const { data: doneBooks = [] } = useBooks({ status: 'done' });
-  const { data: readingBooks = [] } = useBooks({ status: 'reading' });
-  const { data: wishBooks = [] } = useBooks({ status: 'wish' });
+  const { data: readingCount = 0 } = useBookCount('reading');
+  const { data: wishCount = 0 } = useBookCount('wish');
   const { data: unreadData } = useShareUnreadCount();
   const shareUnread = (unreadData as unknown as { data: { count: number } })?.data?.count || undefined;
 
@@ -40,8 +40,8 @@ export function SideNav() {
 
   const navItems: SideNavItem[] = [
     { path: "/", label: "완독 📚", icon: BookMarked, badge: doneBooks.length || undefined },
-    { path: "/reading", label: "읽는 중 📖", icon: BookOpen, badge: readingBooks.length || undefined },
-    { path: "/wishlist", label: "책 추천 📚", icon: Star, badge: wishBooks.length || undefined },
+    { path: "/reading", label: "읽는 중 📖", icon: BookOpen, badge: readingCount || undefined },
+    { path: "/wishlist", label: "책 추천 📚", icon: Star, badge: wishCount || undefined },
     { path: "/stats", label: "독서 통계 📊", icon: BarChart2 },
     { path: "/register-flow", label: "책 등록 플로우", icon: PlusCircle },
     { path: "/notes-search", label: "노트 & 검색", icon: FileText },
@@ -52,20 +52,21 @@ export function SideNav() {
 
   const visibleNavItems = navItems.filter((item) => !item.adminOnly || isAdmin);
 
-  const width = sidebarOpen ? "w-60" : "w-[68px]";
+  const desktopWidth = sidebarOpen ? "lg:w-60" : "lg:w-[72px]";
+  const showLabelsOnDesktop = sidebarOpen;
 
   return (
     <aside
-      className={`hidden lg:flex flex-col ${width} min-h-svh bg-white dark:bg-[#0F172A] border-r border-[#E2E8F0] dark:border-[#334155] fixed left-0 top-0 bottom-0 z-30 transition-all duration-300 ease-in-out`}
+      className={`hidden md:flex group/sidebar flex-col w-20 md:max-lg:hover:w-60 ${desktopWidth} min-h-[var(--vp-h)] bg-white dark:bg-[#0F172A] border-r border-[#E2E8F0] dark:border-[#334155] fixed left-0 top-0 bottom-0 z-30 transition-all duration-300 ease-in-out overflow-x-hidden`}
     >
       {/* Logo + 토글 버튼 */}
-      <div className={`flex items-center h-16 border-b border-[#E2E8F0] dark:border-[#334155] ${sidebarOpen ? "gap-3 px-4" : "justify-center px-2"}`}>
-        {sidebarOpen ? (
+      <div className={`flex items-center h-16 border-b border-[#E2E8F0] dark:border-[#334155] ${showLabelsOnDesktop ? "lg:gap-3 lg:px-4" : "lg:justify-center lg:px-2"} md:justify-center md:px-2 md:max-lg:group-hover/sidebar:justify-start md:max-lg:group-hover/sidebar:px-4 md:max-lg:group-hover/sidebar:gap-3`}>
+        {showLabelsOnDesktop ? (
           <>
             <div className="w-9 h-9 rounded-xl overflow-hidden shadow-md flex-shrink-0">
               <img src="/icons/icon-192.png" alt="BookShelf" className="w-full h-full object-cover" />
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="hidden lg:block flex-1 min-w-0 md:max-lg:group-hover/sidebar:block">
               <p className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.2 }}>
                 BookShelf
               </p>
@@ -77,7 +78,7 @@ export function SideNav() {
               <TooltipTrigger asChild>
                 <button
                   onClick={toggleSidebar}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-[#94A3B8] hover:text-[#4F46E5] dark:hover:text-[#A5B4FC] hover:bg-[#EEF2FF] dark:hover:bg-[#312E81] transition-colors flex-shrink-0"
+                  className="hidden lg:flex w-8 h-8 rounded-lg items-center justify-center text-[#94A3B8] hover:text-[#4F46E5] dark:hover:text-[#A5B4FC] hover:bg-[#EEF2FF] dark:hover:bg-[#312E81] transition-colors flex-shrink-0"
                 >
                   <ChevronsLeft size={18} />
                 </button>
@@ -90,7 +91,7 @@ export function SideNav() {
             <TooltipTrigger asChild>
               <button
                 onClick={toggleSidebar}
-                className="w-11 h-11 rounded-xl flex items-center justify-center bg-[#EEF2FF] dark:bg-[#312E81] text-[#4F46E5] dark:text-[#A5B4FC] hover:bg-[#E0E7FF] dark:hover:bg-[#3730A3] transition-colors shadow-sm"
+                className="w-11 h-11 rounded-xl flex items-center justify-center bg-[#EEF2FF] dark:bg-[#312E81] text-[#4F46E5] dark:text-[#A5B4FC] hover:bg-[#E0E7FF] dark:hover:bg-[#3730A3] transition-colors shadow-sm md:max-lg:hidden"
               >
                 <ChevronsRight size={20} />
               </button>
@@ -98,6 +99,9 @@ export function SideNav() {
             <TooltipContent side="right" sideOffset={8}>사이드바 펼치기</TooltipContent>
           </Tooltip>
         )}
+        <div className="hidden md:max-lg:flex w-11 h-11 rounded-xl items-center justify-center bg-[#EEF2FF] dark:bg-[#312E81] text-[#4F46E5] dark:text-[#A5B4FC] shadow-sm">
+          <BookMarked size={20} />
+        </div>
       </div>
 
       {/* Nav Items */}
@@ -114,38 +118,34 @@ export function SideNav() {
               key={item.path}
               to={item.path}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all no-underline group ${
-                sidebarOpen ? "" : "justify-center"
+                showLabelsOnDesktop ? "lg:justify-start" : "lg:justify-center"
               } ${
                 isActive
                   ? "bg-[#EEF2FF] dark:bg-[#312E81] text-[#4F46E5] dark:text-[#A5B4FC]"
                   : "text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F8FAFC] dark:hover:bg-[#1E293B] hover:text-[#1E293B] dark:hover:text-[#F8FAFC]"
-              }`}
+              } md:justify-center md:max-lg:group-hover/sidebar:justify-start`}
             >
               <Icon
                 size={20}
                 strokeWidth={isActive ? 2.5 : 1.5}
               />
-              {sidebarOpen && (
-                <>
-                  <span
-                    style={{
-                      fontSize: 14,
-                      fontWeight: isActive ? 600 : 400,
-                      flex: 1,
-                    }}
-                  >
-                    {item.label}
-                  </span>
-                  {item.adminOnly && (
-                    <ShieldCheck size={14} className="text-[#4F46E5] dark:text-[#A5B4FC] opacity-60" />
-                  )}
-                </>
+              <span
+                className={`flex-1 min-w-0 truncate ${showLabelsOnDesktop ? "lg:block" : "lg:hidden"} md:hidden md:max-lg:group-hover/sidebar:block`}
+                style={{
+                  fontSize: 14,
+                  fontWeight: isActive ? 600 : 400,
+                }}
+              >
+                {item.label}
+              </span>
+              {item.adminOnly && (
+                <ShieldCheck size={14} className="text-[#4F46E5] dark:text-[#A5B4FC] opacity-60" />
               )}
-              {sidebarOpen && item.badge != null && (
+              {item.badge != null && (
                 <span
-                  className={`min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center ${
+                  className={`min-w-[20px] h-5 px-1.5 rounded-full items-center justify-center ${
                     isActive ? "bg-[#4F46E5] text-white" : "bg-[#E2E8F0] dark:bg-[#334155] text-[#64748B] dark:text-[#94A3B8]"
-                  }`}
+                  } ${showLabelsOnDesktop ? "lg:flex" : "lg:hidden"} md:hidden md:max-lg:group-hover/sidebar:flex`}
                   style={{ fontSize: 11, fontWeight: 700 }}
                 >
                   {item.badge}
@@ -155,7 +155,7 @@ export function SideNav() {
           );
 
           // 접힌 상태에서는 Tooltip으로 라벨 보여주기
-          if (!sidebarOpen) {
+          if (!showLabelsOnDesktop) {
             return (
               <Tooltip key={item.path}>
                 <TooltipTrigger asChild>{linkEl}</TooltipTrigger>
@@ -172,8 +172,8 @@ export function SideNav() {
 
       {/* User Profile at Bottom */}
       <div className="px-3 py-4 border-t border-[#E2E8F0] dark:border-[#334155]">
-        <div className={`flex items-center gap-3 ${sidebarOpen ? "" : "justify-center"}`}>
-          {sidebarOpen ? (
+        <div className={`flex items-center gap-3 ${showLabelsOnDesktop ? "lg:justify-start" : "lg:justify-center"} md:justify-center md:max-lg:group-hover/sidebar:justify-start`}>
+          {showLabelsOnDesktop ? (
             <>
               {user ? (
                 <ProfileAvatar user={user} size={40} fontSize={14} />
@@ -182,7 +182,7 @@ export function SideNav() {
                   <span className="text-white" style={{ fontSize: 14, fontWeight: 700 }}>{avatarInitial}</span>
                 </div>
               )}
-              <div className="flex-1 min-w-0">
+              <div className="hidden lg:block flex-1 min-w-0 md:max-lg:group-hover/sidebar:block">
                 <div className="flex items-center gap-1.5">
                   <p className="text-[#1E293B] dark:text-[#F8FAFC] truncate" style={{ fontSize: 13, fontWeight: 600 }}>
                     {displayName}

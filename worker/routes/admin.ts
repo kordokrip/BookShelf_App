@@ -223,7 +223,7 @@ adminRouter.get(
     };
     const sortCol = allowedSorts[sort] ?? 'u.created_at';
 
-    let whereClauses = ['1=1'];
+    const whereClauses = ['1=1'];
     const params: unknown[] = [];
 
     if (q) {

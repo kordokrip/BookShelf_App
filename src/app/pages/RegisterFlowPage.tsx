@@ -183,7 +183,7 @@ function StepSearch({
               >
                 <div className="w-10 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-muted flex items-center justify-center">
                   {book.coverImage ? (
-                    <img src={book.coverImage} alt="" className="w-full h-full object-cover" />
+                    <img src={book.coverImage} loading="lazy" alt="" className="w-full h-full object-cover" />
                   ) : (
                     <span className="text-xl">📚</span>
                   )}
@@ -430,7 +430,8 @@ function StepBookInfo({
                 <img
                   src={form.coverImage}
                   alt="책 표지"
-                  className="w-14 h-20 rounded-lg object-cover shadow-sm border border-border"
+                  loading="lazy"
+                  className="w-14 aspect-[2/3] rounded-lg object-cover shadow-sm border border-border"
                   onError={(e) => {
                     (e.currentTarget as HTMLImageElement).style.display = 'none';
                   }}
@@ -500,7 +501,7 @@ function StepStatusCover({
         </div>
 
         {/* 상태 선택 */}
-        <div className="grid grid-cols-3 gap-2 mb-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mb-5">
           {STATUS_OPTIONS.map((opt) => (
             <button
               key={opt.value}
@@ -642,7 +643,8 @@ function StepConfirm({
             <img
               src={form.coverImage}
               alt={form.title}
-              className="w-16 h-20 rounded-xl object-cover flex-shrink-0 shadow-md"
+              loading="lazy"
+              className="w-16 aspect-[2/3] rounded-xl object-cover flex-shrink-0 shadow-md"
               onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
             />
             <div className="flex-1 min-w-0">
@@ -660,7 +662,7 @@ function StepConfirm({
               form.coverColor
             )}
           >
-            <div className="w-16 h-20 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
+            <div className="w-16 aspect-[2/3] rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
               <span className="text-4xl">{form.coverEmoji}</span>
             </div>
             <div className="flex-1 min-w-0">

@@ -1,9 +1,16 @@
 # BookShelf App — UI/UX 완전 명세서
 
-> **문서 버전**: v1.3  
-> **최종 업데이트**: 2026-04-01 (21차 독서 모임 + 통계 공유 반영)  
-> **대상 커밋**: `43c43e4` / Cloudflare `f40fb457`  
+> **문서 버전**: v1.4  
+> **최종 업데이트**: 2026-04-28 (네비게이션/검증/리팩토링 반영)  
+> **대상 기준**: `main` 브랜치 작업본 (2026-04-28)  
 > **목적**: 코드레벨 교차 검증을 통한 완전한 UI/UX 명세. 이 문서만으로 모든 버튼, 이미지, 데이터 바인딩, API 호출을 파악할 수 있도록 작성.
+
+### 최근 동기화 노트 (2026-04-28)
+
+- SideNav 배지 계산 최적화: `useBooks(reading|wish)` → `useBookCount('reading'|'wish')`
+- SideNav 반응형 표시 구간 확장: `lg` 전용에서 `md` 이상 + hover 확장 패턴 반영
+- TopBar 데스크톱 중앙 네비게이션(`DESKTOP_NAV_LINKS`) 및 서버 unread 단일 소스 반영
+- TopBar 알림 버튼 오픈 시 서버 `read-all` 즉시 호출 흐름 반영
 
 ---
 
@@ -219,8 +226,8 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 ### 4.2 SideNav (데스크톱 좌측)
 
 - **파일**: `src/app/components/navigation/SideNav.tsx`
-- **표시 조건**: `hidden lg:flex` (1024px 이상에서만 표시)
-- **너비**: 240px (`w-60`), `min-h-svh`, `fixed left-0 top-0 bottom-0`
+- **표시 조건**: `hidden md:flex` (768px 이상에서 표시)
+- **너비**: 기본 `w-20`, 데스크톱 토글 시 `lg:w-60` ↔ `lg:w-[72px]`
 - **배경**: `bg-white`, `border-r border-[#E2E8F0]`
 
 **상단 로고 영역** (높이 64px):
@@ -228,17 +235,19 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 - "BookShelf" 16px Bold `#1E293B`
 - "북쉘프" 11px Regular `#64748B`
 
-**네비게이션 항목** (7개):
+**네비게이션 항목** (9개):
 
 | 순서 | 아이콘 | 라벨 | 경로 | 배지 |
 |------|--------|------|------|------|
 | 1 | `BookMarked` 20px | 완독 📚 | `/` | `doneBooks.length` |
-| 2 | `BookOpen` 20px | 읽는 중 📖 | `/reading` | `readingBooks.length` |
-| 3 | `Star` 20px | 위시리스트 💫 | `/wishlist` | `wishBooks.length` |
+| 2 | `BookOpen` 20px | 읽는 중 📖 | `/reading` | `readingCount` |
+| 3 | `Star` 20px | 책 추천 📚 | `/wishlist` | `wishCount` |
 | 4 | `BarChart2` 20px | 독서 통계 📊 | `/stats` | — |
 | 5 | `PlusCircle` 20px | 책 등록 플로우 | `/register-flow` | — |
 | 6 | `FileText` 20px | 노트 & 검색 | `/notes-search` | — |
-| 7 | `Palette` 20px | 디자인 시스템 | `/design-system` | — |
+| 7 | `Users` 20px | 독서 모임 👥 | `/groups` | — |
+| 8 | `Mail` 20px | 공유 보고서 📬 | `/share` | `shareUnread` |
+| 9 | `Palette` 20px | 디자인 시스템 (adminOnly) | `/design-system` | — |
 
 **활성 상태**: `bg-[#EEF2FF] text-[#4F46E5]`, strokeWidth 2.5, fontWeight 600
 **비활성**: `text-[#64748B]`, hover → `bg-[#F8FAFC] text-[#1E293B]`
@@ -249,14 +258,14 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 - 표시명: `user.name ?? "게스트"`, 13px SemiBold `#1E293B`
 - 부제: "올해 읽은 책 N권" (올해 완독 수 계산), 11px `#64748B`
 - 설정 버튼: `Settings` 16px `#94A3B8`
-- **데이터 바인딩**: `useAuthStore(user)`, `useBooks({status: 'done'|'reading'|'wish'})`
+- **데이터 바인딩**: `useAuthStore(user)`, `useBooks({status:'done'})`, `useBookCount('reading'|'wish')`, `useShareUnreadCount()`
 
 ### 4.3 TopBar (상단 헤더)
 
 - **파일**: `src/app/components/navigation/TopBar.tsx`
 - **위치**: `sticky top-0 z-40`
 - **높이**: 56px (`h-14`)
-- **배경**: `bg-white/95 backdrop-blur-sm` / `dark:bg-[#0F172A]/95`
+- **배경**: `bg-white/95 glass-surface` / `dark:bg-[#0F172A]/95`
 - **하단 테두리**: `border-b border-[#E2E8F0]`
 - **레이아웃**: `grid grid-cols-[auto_1fr_auto]` — 좌(로고) | 중(타이틀) | 우(액션)
 
@@ -264,14 +273,16 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 - 이미지: `/icons/icon-192.png` 32px × 32px, `rounded-lg shadow-sm`
 - "BookShelf" 텍스트: `hidden sm:block`, Base Bold `#1E293B`
 
-**중앙 — 페이지 제목**:
-- 동적 매핑: `pageTitles[location.pathname]`
+**중앙 — 페이지 제목/데스크톱 네비**:
+
+- 모바일/태블릿(`lg` 미만): 동적 페이지 제목 표시
+- 데스크톱(`lg` 이상): `DESKTOP_NAV_LINKS` 기반 중앙 네비게이션 렌더링
 
 | 경로 | 표시 제목 |
 |------|----------|
 | `/` | 완독 📚 |
 | `/reading` | 읽는 중 📖 |
-| `/wishlist` | 위시리스트 💫 |
+| `/wishlist` | 당신을 위한 책 추천 📚 |
 | `/stats` | 독서 통계 📊 |
 | `/design-system` | 디자인 시스템 |
 | `/notes-search` | 노트 & 검색 |
@@ -286,11 +297,12 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 | 테마 토글 | `Clock`/`Sun`/`Moon` 19px | 40px(xs)/44px(sm+) | `hidden sm:flex` | `cycleThemeMode()` |
 | 책 추가 | `BookPlus` 19px ★ (16차) | 40px(xs)/44px(sm+) | 항상 | `navigate('/register-flow')` |
 | 검색 | `FileSearch` 19px ★ (16차) | 40/44px | 항상 | `navigate('/notes-search')` |
-| 알림 | `Bell` 19px + 배지 | 40/44px | 항상 | `setNotifOpen(toggle)` → NotificationPanel |
-| 아바타 | 이니셜(12px) | 32px 원형 | 항상 | `Link to="/splash"` |
+| 관리자 | `UserCog` 19px | 40/44px | `user.role==='admin'` | `navigate('/admin')` |
+| 알림 | `Bell` 19px + 배지 | 40/44px | 항상 | 패널 오픈 시 서버 `read-all` 호출 후 NotificationPanel 표시 |
+| 아바타 | ProfileAvatar | 32px 원형 | 항상 | `ProfilePopup` 토글 |
 
 **알림 배지**: `unreadCount > 0` → 빨강 원형(`bg-[#EF4444]`), 9초과→"9+", `border-2 border-white`
-**데이터 바인딩**: `useAuthStore(user)`, `useUiStore(themeMode, cycleThemeMode, unreadCount)`
+**데이터 바인딩**: `useAuthStore(user)`, `useUiStore(themeMode, cycleThemeMode)`, `useNotificationUnreadCount()`, `useMarkAllNotificationsRead()`
 
 ---
 

@@ -5,7 +5,7 @@
  * - 읽기 목표(읽는 중 도서 제한) 설정
  */
 import { useState, useEffect, useRef } from "react";
-import { Plus, X, Target, BookOpen, Play, Pause, RotateCcw, Timer, ChevronDown, Download, RefreshCw, CheckCircle2 } from "lucide-react";
+import { Plus, X, Target, BookOpen, Play, Pause, RotateCcw, Timer, ChevronDown, RefreshCw, CheckCircle2 } from "lucide-react";
 import type { UIBook, GenreKey } from "../../types/book";
 import { ALL_GENRES } from "../../types/book";
 import { ReadingBookCard, BookCover } from "../components/books/BookCard";
@@ -723,7 +723,7 @@ function QuickActions({
     { icon: <Timer size={18} />, label: timerLabel, bg: timerRunning ? "#DCFCE7" : "#ECFDF5", color: "#065F46", onClick: onTimer },
   ];
   return (
-    <div className="px-4 mb-4 grid grid-cols-3 gap-2">
+    <div className="px-4 mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
       {actions.map((a) => (
         <button
           key={a.label === timerLabel ? "timer" : a.label}
@@ -1032,28 +1032,15 @@ export function ReadingPage() {
           onCta={() => navigate("/register-flow")}
         />
       ) : (
-        <>
-          {/* Mobile: single col */}
-          <div className="lg:hidden px-4 flex flex-col gap-3">
-            {filtered.map((book) => (
-              <ReadingBookCard
-                key={book.id}
-                book={book}
-                onClick={() => handleBookClick(book)}
-              />
-            ))}
-          </div>
-          {/* Desktop: 2-col */}
-          <div className="hidden lg:grid px-4 grid-cols-2 gap-4">
-            {filtered.map((book) => (
-              <ReadingBookCard
-                key={book.id}
-                book={book}
-                onClick={() => handleBookClick(book)}
-              />
-            ))}
-          </div>
-        </>
+        <div className="px-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
+          {filtered.map((book) => (
+            <ReadingBookCard
+              key={book.id}
+              book={book}
+              onClick={() => handleBookClick(book)}
+            />
+          ))}
+        </div>
       )}
 
       {/* FAB — bottom 80px = above BottomNavBar (60px) + 20px gap */}

@@ -153,7 +153,7 @@ function UserDetailModal({
             {/* 독서 통계 */}
             <div>
               <p className="text-sm font-semibold text-[#64748B] dark:text-[#94A3B8] mb-3">독서 통계</p>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {[
                   { label: "완독", value: detail.stats.done_books ?? 0 },
                   { label: "읽는중", value: detail.stats.reading_books ?? 0 },
@@ -258,7 +258,7 @@ function DashboardTab() {
       {/* 핵심 지표 */}
       <section>
         <h3 className="text-sm font-semibold text-[#64748B] dark:text-[#94A3B8] mb-3">회원</h3>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <StatCard label="전체 회원"      value={stats.users.total}       icon={<Users size={18} className="text-white" />}     color="bg-indigo-500"  />
           <StatCard label="오늘 신규 가입"  value={stats.users.newToday}    icon={<TrendingUp size={18} className="text-white" />} color="bg-violet-500"  sub={`이번 주 +${stats.users.newWeek}`} />
           <StatCard label="오늘 활성"       value={stats.users.activeToday} icon={<Clock size={18} className="text-white" />}     color="bg-sky-500"     sub={`이번 주 ${stats.users.activeWeek}명`} />
@@ -268,7 +268,7 @@ function DashboardTab() {
 
       <section>
         <h3 className="text-sm font-semibold text-[#64748B] dark:text-[#94A3B8] mb-3">도서 & 참여</h3>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <StatCard label="전체 등록 도서"  value={stats.books.total}             icon={<BookOpen  size={18} className="text-white" />} color="bg-emerald-500" sub={`이번달 +${stats.books.thisMonth}`} />
           <StatCard label="완독 도서"        value={stats.books.done}              icon={<ShieldCheck size={18} className="text-white" />} color="bg-green-500" />
           <StatCard label="누적 독서 세션"   value={stats.engagement.totalSessions} icon={<BarChart2 size={18} className="text-white" />} color="bg-orange-500" />
@@ -815,9 +815,9 @@ export function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0F172A]">
+    <div className="min-h-[var(--vp-h)] bg-[#F8FAFC] dark:bg-[#0F172A]">
       {/* 헤더 */}
-      <header className="sticky top-0 z-30 bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-md border-b border-[#E2E8F0] dark:border-[#334155]">
+      <header className="sticky top-0 z-30 bg-white/95 dark:bg-[#0F172A]/95 glass-surface border-b border-[#E2E8F0] dark:border-[#334155]">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
           <button
             onClick={() => navigate("/")}

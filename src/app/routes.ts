@@ -54,7 +54,7 @@ function withSuspense(Component: React.ComponentType, fallbackText = "로딩 중
       {
         fallback: createElement(
           "div",
-          { className: "flex items-center justify-center h-screen" },
+          { className: "flex items-center justify-center min-h-[var(--vp-h)]" },
           createElement("div", { className: "text-muted-foreground text-sm" }, fallbackText),
         ),
       },

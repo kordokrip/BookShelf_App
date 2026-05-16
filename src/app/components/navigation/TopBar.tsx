@@ -10,7 +10,7 @@ import { Bell, BookPlus, Sun, Moon, Clock, FileSearch, UserCog } from 'lucide-re
 import { Link, useLocation, useNavigate } from 'react-router';
 import { useAuthStore } from '../../../stores/authStore';
 import { useUiStore } from '../../../stores/uiStore';
-import { useNotificationUnreadCount } from '../../../hooks/useGroups';
+import { useMarkAllNotificationsRead, useNotificationUnreadCount } from '../../../hooks/useGroups';
 import { NotificationPanel } from '../ui/NotificationPanel';
 import { ProfilePopup, ProfileAvatar } from '../ui/ProfilePopup';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
@@ -26,6 +26,15 @@ const pageTitles: Record<string, string> = {
   '/admin': '관리자 대시보드 🛡️',
 };
 
+const DESKTOP_NAV_LINKS = [
+  { to: '/', label: '완독' },
+  { to: '/reading', label: '읽는 중' },
+  { to: '/wishlist', label: '추천' },
+  { to: '/stats', label: '통계' },
+  { to: '/groups', label: '모임' },
+  { to: '/notes-search', label: '노트' },
+];
+
 const THEME_LABEL = {
   auto:  '자동 (시간 기반) — 클릭하면 라이트 모드',
   light: '라이트 모드 고정 — 클릭하면 다크 모드',
@@ -40,16 +49,16 @@ export function TopBar() {
 
   const themeMode      = useUiStore((s) => s.themeMode);
   const cycleThemeMode = useUiStore((s) => s.cycleThemeMode);
-  const localUnread    = useUiStore((s) => s.unreadCount);
   const { data: serverUnread = 0 } = useNotificationUnreadCount();
-  const unreadCount = localUnread + serverUnread;
+  const unreadCount = serverUnread;
+  const markAllServerRead = useMarkAllNotificationsRead();
 
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const bellRef = useRef<HTMLDivElement>(null);
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-sm border-b border-[#E2E8F0] dark:border-[#334155]">
+    <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#0F172A]/95 glass-surface border-b border-[#E2E8F0] dark:border-[#334155]">
       {/* iOS 노치 / PWA 스탠드얼론 모드에서 상단 안전 영역 여백 */}
       <div aria-hidden style={{ height: 'var(--safe-top)' }} />
 
@@ -76,9 +85,29 @@ export function TopBar() {
         </div>
 
         {/* ── 중앙: 페이지 제목 (truncate로 오버플로우 방지) ── */}
-        <h1 className="text-center truncate text-[#1E293B] dark:text-[#F8FAFC] text-[17px] sm:text-lg font-semibold leading-snug select-none px-1">
+        <h1 className="text-center truncate text-[#1E293B] dark:text-[#F8FAFC] text-[17px] sm:text-lg font-semibold leading-snug select-none px-1 lg:hidden">
           {title}
         </h1>
+        <nav className="hidden lg:flex items-center justify-center gap-2 min-w-0 overflow-x-auto no-scrollbar px-2">
+          {DESKTOP_NAV_LINKS.map((item) => {
+            const isActive = item.to === '/'
+              ? location.pathname === '/'
+              : location.pathname.startsWith(item.to);
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={`px-3 h-9 rounded-lg inline-flex items-center transition-colors whitespace-nowrap touch-manipulation ${
+                  isActive
+                    ? 'bg-[#EEF2FF] dark:bg-[#312E81] text-[#4F46E5] dark:text-[#A5B4FC] font-semibold'
+                    : 'text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B]'
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
 
         {/* ── 우측: 액션 버튼 그룹 ── */}
         <div className="flex items-center gap-0 sm:gap-0.5 flex-shrink-0">
@@ -148,7 +177,16 @@ export function TopBar() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  onClick={() => setNotifOpen((v) => !v)}
+                  onClick={() => {
+                    setNotifOpen((v) => {
+                      const nextOpen = !v;
+                      if (nextOpen && unreadCount > 0) {
+                        // 벨 패널 오픈 시 서버 미읽음 알림을 읽음 처리해 배지를 즉시 갱신한다.
+                        markAllServerRead.mutate();
+                      }
+                      return nextOpen;
+                    });
+                  }}
                   aria-label={`알림${unreadCount > 0 ? ` (${unreadCount}건 미읽음)` : ''}`}
                   aria-expanded={notifOpen}
                   className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center relative text-[#64748B] hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition-colors"

@@ -2,10 +2,10 @@ import { Crown, Trash2, LogOut, UserMinus, ArrowRightLeft, Check, X } from 'luci
 import { useLeaveGroup, useDeleteGroup, useRemoveMember, useTransferLeader, useApproveMember, useRejectMember } from '../../../hooks/useGroups';
 import { useAuthStore } from '../../../stores/authStore';
 
-export function MembersTab({ groupId, members, isLeader, ownerId, onBack }: {
+export function MembersTab({ groupId, members, isLeader, onBack }: {
   groupId: string;
   members: Array<{ user_id: string; name: string; role: string; status: string; profile_emoji?: string | null; joined_at: string }>;
-  isLeader: boolean; ownerId: string; onBack: () => void;
+  isLeader: boolean; onBack: () => void;
 }) {
   const user = useAuthStore((s) => s.user);
   const leaveGroup = useLeaveGroup();

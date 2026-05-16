@@ -26,7 +26,7 @@ export function GroupsPage() {
 
   if (selectedGroupId) {
     return (
-      <Suspense fallback={<div className="flex items-center justify-center h-screen text-muted-foreground text-sm">모임 로딩 중...</div>}>
+      <Suspense fallback={<div className="flex items-center justify-center min-h-[var(--vp-h)] text-muted-foreground text-sm">모임 로딩 중...</div>}>
         <GroupDetailView groupId={selectedGroupId} onBack={() => setSelectedGroupId(null)} />
       </Suspense>
     );
@@ -57,12 +57,12 @@ export function GroupsPage() {
   const emojiOptions = ['📖', '📚', '🎯', '💡', '🌟', '🔥', '🎨', '🌈', '☕', '🏆', '💬', '🧠'];
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-5xl mx-auto px-3 xs:px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
       {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-[#1E293B] dark:text-[#F8FAFC]">독서 모임 📚</h1>
-          <p className="text-sm text-[#64748B] dark:text-[#94A3B8] mt-1">
+      <div className="flex items-start sm:items-center justify-between gap-3 flex-col sm:flex-row">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-[#1E293B] dark:text-[#F8FAFC] leading-tight">독서 모임 📚</h1>
+          <p className="text-xs sm:text-sm text-[#64748B] dark:text-[#94A3B8] mt-1">
             독서 모임을 만들고, 함께 읽고, 이야기를 나눠보세요
           </p>
         </div>
@@ -80,11 +80,11 @@ export function GroupsPage() {
       {/* 내 모임 */}
       {(approvedGroups.length > 0 || pendingGroups.length > 0) ? (
         <section>
-          <h2 className="text-lg font-semibold text-[#1E293B] dark:text-[#F8FAFC] mb-3 flex items-center gap-2">
-            <Users size={18} className="text-[#4F46E5]" />
+          <h2 className="text-base sm:text-lg font-semibold text-[#1E293B] dark:text-[#F8FAFC] mb-3 flex items-center gap-2">
+            <Users size={18} className="text-[#4F46E5] flex-shrink-0" />
             내 모임
           </h2>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {approvedGroups.map((group) => (
               <GroupCard
                 key={group.id}
@@ -99,7 +99,7 @@ export function GroupsPage() {
               <h3 className="text-sm font-medium text-[#94A3B8] mt-4 mb-2 flex items-center gap-1.5">
                 <Clock size={14} /> 승인 대기 중
               </h3>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {pendingGroups.map((group) => (
                   <GroupCard
                     key={group.id}
@@ -133,12 +133,12 @@ export function GroupsPage() {
 
       {/* 공개 모임 탐색 */}
       <section>
-        <h2 className="text-lg font-semibold text-[#1E293B] dark:text-[#F8FAFC] mb-3 flex items-center gap-2">
-          <Search size={18} className="text-[#64748B]" />
+        <h2 className="text-base sm:text-lg font-semibold text-[#1E293B] dark:text-[#F8FAFC] mb-3 flex items-center gap-2">
+          <Search size={18} className="text-[#64748B] flex-shrink-0" />
           공개 모임 탐색
         </h2>
         <div className="relative mb-3">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8] pointer-events-none" />
           <input
             type="text"
             placeholder="모임 이름으로 검색..."
@@ -154,7 +154,7 @@ export function GroupsPage() {
             {searchQuery ? '검색 결과가 없습니다.' : '참여 가능한 공개 모임이 없습니다.'}
           </div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {filteredPublic.map((group) => (
               <GroupCard
                 key={group.id}

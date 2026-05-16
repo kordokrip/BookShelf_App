@@ -13,13 +13,13 @@ export function Root() {
 
   return (
     <ToastProvider>
-      {/* min-h-svh: 100svh — 브라우저 UI를 제사한 안정적인 화면 높이 (iOS Safari 대응) */}
-      <div className="min-h-svh bg-[#F8FAFC] dark:bg-[#0F172A]">
+      {/* --vp-h: useViewport 훅에서 주입하는 동적 뷰포트 높이 */}
+      <div className="min-h-[var(--vp-h)] bg-[#F8FAFC] dark:bg-[#0F172A]" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}>
         {/* Desktop Side Nav */}
         <SideNav />
 
         {/* Main Content Area */}
-        <div className={`${sidebarOpen ? "lg:ml-60" : "lg:ml-[68px]"} transition-all duration-300 ease-in-out`}>
+        <div className={`md:ml-20 ${sidebarOpen ? "lg:ml-60" : "lg:ml-[72px]"} transition-all duration-300 ease-in-out`}>
           {/* Top Bar: sticky top-0 + safe-area-inset-top 여백 */}
           <TopBar />
           {/* Offline Banner: 오프라인 시 TopBar 아래에 표시 */}
@@ -30,9 +30,9 @@ export function Root() {
                pb-[var(--page-pb)]: 하단 BottomNavBar 높이만큼 패딩 → 콘텐츠가 NavBar에 가려지지 않음
                lg:pb-0: 데스크톱에서는 BottomNavBar 없으므로 패딩 불필요 */}
           <main
-            className="min-h-[calc(100svh-var(--topbar-h))] pb-[var(--page-pb)] lg:pb-0"
+            className="min-h-[calc(var(--vp-h)-var(--topbar-h))] pb-[var(--page-pb)] md:pb-6 lg:pb-0 overflow-x-clip"
           >
-            <div className="w-full max-w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl xl:max-w-5xl mx-auto px-0 md:px-4 lg:px-0">
+            <div className="w-full max-w-screen-2xl mx-auto px-3 xs:px-2.5 sm:px-4 md:px-6 lg:px-8">
               <Outlet />
             </div>
           </main>

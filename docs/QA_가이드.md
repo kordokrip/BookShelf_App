@@ -1,8 +1,17 @@
 # BookShelf PWA — QA 통합 가이드
 
-> **최종 업데이트**: 2026-04-25  
+> **최종 업데이트**: 2026-04-28  
 > **테스트 URL**: https://bookshelf-api.kordokrip.workers.dev  
-> **현재 Worker Version**: `52b698a7-aac6-4715-a040-77a40ddd395a` (25차 배포 — OCR 리팩토링)
+> **참고 Worker Version**: `52b698a7-aac6-4715-a040-77a40ddd395a` (25차 배포 — OCR 리팩토링)
+
+### 최신 검증 요약 (2026-04-28)
+
+- `npm run type-check` ✅ 통과
+- `npm run lint` ✅ 통과
+- `npm run build` ✅ 통과
+- `bash scripts/e2e-api-test.sh` ✅ 27/27 PASS
+- `bash scripts/admin-api-test.sh` ⚠️ 기본 관리자 자격증명 없으면 로그인 단계 실패 가능
+  - 개선: `ADMIN_TOKEN` 환경변수 직접 주입 실행 지원
 
 ---
 
@@ -230,6 +239,25 @@ bash scripts/e2e-api-test.sh
 | 최근 실행 | 결과 |
 |-----------|------|
 | 24차 (2026-04-13) | ✅ 27/27 PASS |
+| 2026-04-28 | ✅ 27/27 PASS |
+
+---
+
+## SECTION K — 관리자 API 교차검증
+
+```bash
+# 기본 실행(관리자 계정 필요)
+bash scripts/admin-api-test.sh
+
+# 관리자 JWT 보유 시 로그인 단계 생략
+ADMIN_TOKEN="<admin-jwt>" bash scripts/admin-api-test.sh
+```
+
+검증 포인트:
+
+- `/api/admin/stats`, `/api/admin/users`, `/api/admin/activity`, `/api/admin/messages` 조회
+- 관리자 공지 발송/삭제
+- 비관리자 토큰으로 admin API 접근 차단 확인
 
 ---
 
@@ -257,3 +285,4 @@ bash scripts/e2e-api-test.sh
 | OCR 한국어 인식 | ⚠️ 부분 지원 | CF Dashboard에서 llama-3.2-11b 라이선스 수락 필요 (코드 변경 불필요) |
 | SplashPage 자동 이동 없음 | ⚠️ 설계 결정 | 버튼 클릭 기반 (자동 타이머 없음) |
 | WebSocket 채팅 | ❌ 미구현 | 30초 폴링 방식 사용 중 (Durable Objects 유료) |
+| 관리자 API 스크립트 기본 로그인 | ⚠️ 환경 의존 | 기본 자격증명이 없으면 실패. `ADMIN_TOKEN` 실행 경로 사용 권장 |

@@ -1,6 +1,5 @@
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { groupsApi, shareApi, notificationsApi, queryKeys } from '../lib/api';
-import type { GroupMessage } from '../lib/api';
 
 // ═══════════════════════════════════════════════════════════════
 // Groups Hooks

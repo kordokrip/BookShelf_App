@@ -18,6 +18,13 @@
 
 ---
 
+## 📘 채팅 설계 문서
+
+- [docs/채팅_시스템_상세_디자인.md](docs/채팅_시스템_상세_디자인.md) — 현재 구현 기준의 채팅 아키텍처, 데이터 모델, API 흐름 분석
+- [docs/CHAT_SYSTEM_ANALYSIS_AND_PROMPT.md](docs/CHAT_SYSTEM_ANALYSIS_AND_PROMPT.md) — 외부 시스템 설계 비교, Claude 전달용 프롬프트, 개선 우선순위 정리
+
+---
+
 *PC · iOS · Android 모든 환경에서 작동하는 Progressive Web App*
 
 </div>

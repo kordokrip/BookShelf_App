@@ -45,11 +45,11 @@ export function BottomNavBar() {
        transform: translateZ(0) 는 index.css의 .fixed-nav 클래스에서 적용
        lg:hidden: 데스크톱(1024px+)에서는 SideNav로 대체되므로 숨김 */
     <nav
-      className="fixed-nav fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-md border-t border-[#E2E8F0] dark:border-[#334155] lg:hidden"
+      className="fixed-nav fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#0F172A]/95 glass-surface border-t border-[#E2E8F0] dark:border-[#334155] md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       aria-label="하단 네비게이션"
     >
-      <div className="flex items-stretch min-h-[56px] h-[60px] max-w-screen-sm mx-auto">
+      <div className="flex items-stretch min-h-[60px] h-[64px] max-w-screen-sm mx-auto">
         {navItems.map((item) => {
           const isActive =
             item.path === "/"
@@ -64,7 +64,7 @@ export function BottomNavBar() {
               aria-current={isActive ? "page" : undefined}
               /* touch-action은 index.css의 a 선택자에서 일괄 적용
                  active:scale-[0.92]: 탭 피드백 애니메이션 */
-              className="flex-1 flex flex-col items-center justify-center gap-0.5 relative group active:scale-[0.92] transition-transform duration-100"
+              className="flex-1 flex flex-col items-center justify-center gap-0.5 relative group active:scale-[0.92] transition-transform duration-100 touch-manipulation"
             >
               {/* 상단 활성 표시 바 */}
               <span

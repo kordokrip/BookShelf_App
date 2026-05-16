@@ -34,7 +34,7 @@ export function RouteErrorFallback() {
 
   if (chunkError) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen gap-3 text-center px-6">
+      <div className="flex flex-col items-center justify-center min-h-[var(--vp-h)] gap-3 text-center px-6">
         <p className="text-muted-foreground text-sm">새 버전이 배포되었습니다. 페이지를 새로고침합니다…</p>
       </div>
     );
@@ -44,7 +44,7 @@ export function RouteErrorFallback() {
     error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.";
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen gap-4 text-center px-6">
+    <div className="flex flex-col items-center justify-center min-h-[var(--vp-h)] gap-4 text-center px-6">
       <p className="text-lg font-semibold">오류가 발생했습니다</p>
       <p className="text-muted-foreground text-sm max-w-xs">{message}</p>
       <div className="flex gap-3 mt-2">

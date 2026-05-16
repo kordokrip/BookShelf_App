@@ -115,12 +115,13 @@ function BookshelfView({ books, onBookClick }: { books: UIBook[]; onBookClick: (
                       <img
                         src={book.coverImage}
                         alt={book.title}
-                        className="w-[60px] h-[85px] rounded-lg object-cover shadow-md"
+                        loading="lazy"
+                        className="w-14 sm:w-16 aspect-[2/3] rounded-lg object-cover shadow-md"
                         style={{ boxShadow: "2px 2px 8px rgba(0,0,0,0.15)" }}
                       />
                     ) : (
                       <div
-                        className={`w-[60px] h-[85px] rounded-lg bg-gradient-to-br ${book.coverColor} flex items-center justify-center shadow-md`}
+                        className={`w-14 sm:w-16 aspect-[2/3] rounded-lg bg-gradient-to-br ${book.coverColor} flex items-center justify-center shadow-md`}
                         style={{ boxShadow: "2px 2px 8px rgba(0,0,0,0.15)" }}
                       >
                         <span className="text-2xl">{genreConfig.emoji}</span>
@@ -313,15 +314,15 @@ export function LibraryPage() {
   return (
     <div className="pb-[var(--page-pb)] lg:pb-8">
       {/* ── Header row ── */}
-      <div className="flex items-center justify-between px-4 pt-5 pb-3">
-        <div className="flex items-center gap-2">
+      <div className="flex items-start sm:items-center justify-between gap-3 px-3 xs:px-4 sm:px-6 pt-4 sm:pt-5 pb-3 flex-col sm:flex-row">
+        <div className="flex items-center gap-2 min-w-0">
           {/* Spec: 18px SemiBold #1E293B */}
-          <h1 className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 18, fontWeight: 600 }}>
+          <h1 className="text-lg sm:text-xl text-[#1E293B] dark:text-[#F8FAFC] font-semibold truncate">
             완독한 책
           </h1>
           {/* Count badge */}
           <span
-            className="rounded-full bg-[#EEF2FF] dark:bg-[#312E81]"
+            className="rounded-full bg-[#EEF2FF] dark:bg-[#312E81] flex-shrink-0"
             style={{
               color: "#4F46E5",
               fontSize: 12,
@@ -332,9 +333,9 @@ export function LibraryPage() {
             {books.length}권
           </span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-start sm:justify-end w-full sm:w-auto">
           {/* 뷰 모드 토글 */}
-          <div className="flex items-center gap-0.5 bg-[#F1F5F9] dark:bg-[#334155] rounded-xl p-0.5">
+          <div className="flex items-center gap-0.5 bg-[#F1F5F9] dark:bg-[#334155] rounded-xl p-0.5 flex-shrink-0">
             {([
               { v: "list" as const, icon: <List size={14} />, label: "리스트" },
               { v: "grid" as const, icon: <LayoutGrid size={14} />, label: "그리드" },
@@ -459,7 +460,7 @@ export function LibraryPage() {
                   monthKeys.map((key) => (
                     <div key={key}>
                       <MonthGroupHeader label={key} count={grouped.get(key)!.length} />
-                      <div className="px-4 py-3 grid grid-cols-2 lg:grid-cols-3 gap-3">
+                      <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {grouped.get(key)!.map((book) => (
                           <DoneBookCard
                             key={book.id}
@@ -471,7 +472,7 @@ export function LibraryPage() {
                     </div>
                   ))
                 ) : (
-                  <div className="px-4 py-2 grid grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div className="px-4 py-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {filtered.map((book) => (
                       <DoneBookCard
                         key={book.id}
@@ -490,7 +491,7 @@ export function LibraryPage() {
                     {visibleKeys.map((key) => (
                       <div key={key}>
                         <MonthGroupHeader label={key} count={grouped.get(key)!.length} />
-                        <div className={`px-4 py-3 ${viewMode === "grid" ? "grid grid-cols-2 sm:grid-cols-3 gap-3" : "flex flex-col gap-3"}` }>
+                        <div className={`px-4 py-3 ${viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" : "flex flex-col gap-3"}` }>
                           {grouped.get(key)!.map((book) => (
                             <DoneBookCard
                               key={book.id}
@@ -515,7 +516,7 @@ export function LibraryPage() {
                     )}
                   </>
                 ) : (
-                  <div className={`px-4 py-2 ${viewMode === "grid" ? "grid grid-cols-2 sm:grid-cols-3 gap-3" : "flex flex-col gap-3"}`}>
+                  <div className={`px-4 py-2 ${viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" : "flex flex-col gap-3"}`}>
                     {filtered.map((book) => (
                       <DoneBookCard
                         key={book.id}

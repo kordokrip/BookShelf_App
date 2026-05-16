@@ -7,7 +7,7 @@ import reactHooksPlugin from 'eslint-plugin-react-hooks';
 export default [
   // ─── 무시 패턴 ───────────────────────────────────────────────
   {
-    ignores: ['dist/**', 'node_modules/**', '.wrangler/**', '*.config.js'],
+    ignores: ['dist/**', 'dist-worker/**', 'node_modules/**', '.wrangler/**', '*.config.js'],
   },
 
   // ─── TypeScript + React ──────────────────────────────────────

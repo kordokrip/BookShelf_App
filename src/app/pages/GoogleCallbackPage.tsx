@@ -38,7 +38,7 @@ export function GoogleCallbackPage() {
 
   if (errorMessage) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-8 text-center">
+      <div className="min-h-[var(--vp-h)] flex flex-col items-center justify-center gap-4 p-8 text-center">
         <span className="text-5xl">⚠️</span>
         <h2 className="text-xl font-semibold text-gray-800">로그인 실패</h2>
         <p className="text-gray-600 max-w-sm leading-relaxed">{errorMessage}</p>
@@ -48,7 +48,7 @@ export function GoogleCallbackPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
+    <div className="min-h-[var(--vp-h)] flex items-center justify-center">
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
     </div>
   );

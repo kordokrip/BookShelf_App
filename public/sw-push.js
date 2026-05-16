@@ -3,7 +3,6 @@
  * VitePWA generateSW의 importScripts로 주입됨
  */
 
-/* eslint-disable no-restricted-globals */
 self.addEventListener('push', function (event) {
   const defaultPayload = {
     title: '📖 독서 시간이에요!',

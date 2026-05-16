@@ -40,8 +40,7 @@ body {
 }
 
 #root {
-  /* dvh: 브라우저 UI 포함 실제 높이 (iOS Safari 주소창 반영) */
-  min-height: 100svh;
+  min-height: var(--vp-h);
   display: flex;
   flex-direction: column;
 }
@@ -49,6 +48,12 @@ body {
 /* dvh 지원 브라우저에서 더 정확한 높이 사용 */
 @supports (height: 100dvh) {
   #root { min-height: 100dvh; }
+}
+
+/* Safari + Firefox backdrop-filter 호환 */
+.glass-surface {
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
 }
 
 /* ── 2. 터치 최적화 ──────────────────────────────────────────── */
@@ -241,10 +246,20 @@ svg {
   .tablet-hidden { display: none !important; }
 }
 
+/* 극소형 폰 대응 (< 320px: 구형 기기) */
+@media (max-width: 319px) {
+  html { font-size: 13px; }
+  body { overflow-x: clip; }
+  main { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+  .xs-ultra-compact { padding-left: 0.5rem; padding-right: 0.5rem; }
+}
+
 /* 소형 폰 대응 (320px – 374px: 구형 iPhone SE 등) */
 @media (max-width: 374px) {
   html { font-size: 14px; }
   .xs-compact { padding-left: 0.75rem; padding-right: 0.75rem; }
+  /* 모달 최적화 */
+  .modal-sheet { width: calc(100% - 1.5rem); }
 }
 
 /* 가로 모드 + 소형 높이 대응 (스마트폰 landscape) */
@@ -252,7 +267,14 @@ svg {
   /* 바텀 네비 숨김 → 내용 영역 최대화 */
   .landscape-hide { display: none !important; }
   /* 컨텐츠 패딩 최소화 */
-  main { padding-bottom: 0.5rem !important; }
+  main { padding-bottom: 0.5rem !important; padding-top: 0.25rem !important; }
+  /* 헤더/푸터 높이 감소 */
+  [role="navigation"] { padding: 0.5rem 0 !important; }
+}
+
+/* 태블릿 가로 모드 최적화 */
+@media (min-height: 600px) and (max-height: 900px) and (orientation: landscape) {
+  main { padding-bottom: 1rem !important; }
 }
 
 /* ── 14. content-visibility: 긴 목록 렌더링 최적화 ───────────── */
