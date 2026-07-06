@@ -11,6 +11,235 @@ const sanitizeForPrompt = (s: string) =>
    .replace(/[<>{}[\]]/g, '')
    .slice(0, 500);
 
+type RecommendationSource = 'workers-ai' | 'curated-fallback';
+
+interface ReadingProfileBook {
+  title: string;
+  author: string;
+  genre: string | null;
+  rating: number | null;
+  status: 'done' | 'reading';
+  finished_date: string | null;
+  created_at: string;
+  note: string | null;
+  session_count: number;
+  pages_read: number;
+  note_count: number;
+}
+
+interface BookRecommendation {
+  title: string;
+  author: string;
+  reason: string;
+  genre: string;
+  source?: RecommendationSource;
+}
+
+const CURATED_BOOKS: Record<string, Array<{ title: string; author: string; genre: string }>> = {
+  인문학: [
+    { title: '사피엔스', author: '유발 하라리', genre: '인문학' },
+    { title: '총, 균, 쇠', author: '재레드 다이아몬드', genre: '인문학' },
+    { title: '지적 대화를 위한 넓고 얕은 지식', author: '채사장', genre: '인문학' },
+  ],
+  철학: [
+    { title: '소크라테스 익스프레스', author: '에릭 와이너', genre: '철학' },
+    { title: '니코마코스 윤리학', author: '아리스토텔레스', genre: '철학' },
+    { title: '월든', author: '헨리 데이비드 소로', genre: '철학' },
+  ],
+  심리학: [
+    { title: '생각에 관한 생각', author: '대니얼 카너먼', genre: '심리학' },
+    { title: '클루지', author: '개리 마커스', genre: '심리학' },
+    { title: '몰입', author: '미하이 칙센트미하이', genre: '심리학' },
+  ],
+  현대문학: [
+    { title: '밝은 밤', author: '최은영', genre: '현대문학' },
+    { title: '아버지의 해방일지', author: '정지아', genre: '현대문학' },
+    { title: '작별하지 않는다', author: '한강', genre: '현대문학' },
+  ],
+  한국문학: [
+    { title: '모순', author: '양귀자', genre: '한국문학' },
+    { title: '소년이 온다', author: '한강', genre: '한국문학' },
+    { title: '쇼코의 미소', author: '최은영', genre: '한국문학' },
+  ],
+  해외문학: [
+    { title: '스토너', author: '존 윌리엄스', genre: '해외문학' },
+    { title: '데미안', author: '헤르만 헤세', genre: '해외문학' },
+    { title: '참을 수 없는 존재의 가벼움', author: '밀란 쿤데라', genre: '해외문학' },
+  ],
+  '경제/경영': [
+    { title: '돈의 심리학', author: '모건 하우절', genre: '경제/경영' },
+    { title: '좋은 기업을 넘어 위대한 기업으로', author: '짐 콜린스', genre: '경제/경영' },
+    { title: '원칙', author: '레이 달리오', genre: '경제/경영' },
+  ],
+  '컴퓨터·프로그래밍': [
+    { title: '클린 코드', author: '로버트 C. 마틴', genre: '컴퓨터·프로그래밍' },
+    { title: '실용주의 프로그래머', author: '데이비드 토머스, 앤드류 헌트', genre: '컴퓨터·프로그래밍' },
+    { title: '리팩터링', author: '마틴 파울러', genre: '컴퓨터·프로그래밍' },
+  ],
+  'AI/데이터': [
+    { title: '인공지능: 현대적 접근방식', author: '스튜어트 러셀, 피터 노빅', genre: 'AI/데이터' },
+    { title: '밑바닥부터 시작하는 딥러닝', author: '사이토 고키', genre: 'AI/데이터' },
+    { title: '핸즈온 머신러닝', author: '오렐리앙 제롱', genre: 'AI/데이터' },
+  ],
+  자기계발: [
+    { title: '아토믹 해빗', author: '제임스 클리어', genre: '자기계발' },
+    { title: '데일 카네기 인간관계론', author: '데일 카네기', genre: '자기계발' },
+    { title: '그릿', author: '앤절라 더크워스', genre: '자기계발' },
+  ],
+  과학: [
+    { title: '코스모스', author: '칼 세이건', genre: '과학' },
+    { title: '이기적 유전자', author: '리처드 도킨스', genre: '과학' },
+    { title: '엔드 오브 타임', author: '브라이언 그린', genre: '과학' },
+  ],
+  한국사: [
+    { title: '역사의 쓸모', author: '최태성', genre: '한국사' },
+    { title: '나의 한국현대사', author: '유시민', genre: '한국사' },
+    { title: '한국사 편지', author: '박은봉', genre: '한국사' },
+  ],
+  '정치/법률': [
+    { title: '정의란 무엇인가', author: '마이클 샌델', genre: '정치/법률' },
+    { title: '국가는 왜 실패하는가', author: '대런 애쓰모글루, 제임스 A. 로빈슨', genre: '정치/법률' },
+    { title: '왜 세계의 절반은 굶주리는가', author: '장 지글러', genre: '정치/법률' },
+  ],
+  기타: [
+    { title: '데미안', author: '헤르만 헤세', genre: '해외문학' },
+    { title: '어린 왕자', author: '앙투안 드 생텍쥐페리', genre: '해외문학' },
+    { title: '모순', author: '양귀자', genre: '한국문학' },
+  ],
+};
+
+function hashString(value: string): string {
+  let hash = 5381;
+  for (let i = 0; i < value.length; i++) {
+    hash = ((hash << 5) + hash) ^ value.charCodeAt(i);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+function normalizeTitle(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[《》「」『』"'\s:：,，.。!！?？()[\]{}<>]/g, '');
+}
+
+function isExcludedBook(title: string, author: string, excluded: Set<string>): boolean {
+  const titleKey = normalizeTitle(title);
+  const pairKey = `${titleKey}::${normalizeTitle(author)}`;
+  return excluded.has(titleKey) || excluded.has(pairKey);
+}
+
+function buildExcludedSet(rows: Array<{ title: string; author: string | null }>): Set<string> {
+  const set = new Set<string>();
+  for (const row of rows) {
+    const titleKey = normalizeTitle(row.title);
+    if (!titleKey) continue;
+    set.add(titleKey);
+    if (row.author) set.add(`${titleKey}::${normalizeTitle(row.author)}`);
+  }
+  return set;
+}
+
+function parseFavoriteGenres(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function analyzeTopGenres(books: ReadingProfileBook[], favoriteGenres: string[]): string[] {
+  const score: Record<string, number> = {};
+  for (const genre of favoriteGenres) {
+    score[genre] = (score[genre] ?? 0) + 0.75;
+  }
+  for (const book of books) {
+    const genre = book.genre?.trim() || '기타';
+    const ratingBoost = book.rating ? book.rating * 0.35 : 0;
+    const statusBoost = book.status === 'done' ? 1.4 : 0.9;
+    const activityBoost = Math.min(book.session_count, 10) * 0.12 + Math.min(book.note_count, 8) * 0.18;
+    score[genre] = (score[genre] ?? 0) + 1 + ratingBoost + statusBoost + activityBoost;
+  }
+  return Object.entries(score)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 3)
+    .map(([genre]) => genre);
+}
+
+function extractJsonArray(text: string): unknown[] {
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1];
+  const source = fenced ?? text;
+  const match = source.match(/\[[\s\S]*\]/);
+  if (!match) return [];
+  const parsed = JSON.parse(match[0]);
+  return Array.isArray(parsed) ? parsed : [];
+}
+
+function normalizeRecommendations(
+  input: unknown[],
+  excluded: Set<string>,
+  fallbackGenre: string,
+  source: RecommendationSource,
+  limit: number,
+): BookRecommendation[] {
+  const seen = new Set<string>();
+  const output: BookRecommendation[] = [];
+  for (const item of input) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as Record<string, unknown>;
+    const title = typeof row.title === 'string' ? sanitizeForPrompt(row.title).trim() : '';
+    const author = typeof row.author === 'string' ? sanitizeForPrompt(row.author).trim() : '';
+    const reason = typeof row.reason === 'string' ? sanitizeForPrompt(row.reason).trim() : '';
+    const genre = typeof row.genre === 'string' ? sanitizeForPrompt(row.genre).trim() : fallbackGenre;
+    if (!title || !author) continue;
+    if (isExcludedBook(title, author, excluded)) continue;
+    const key = normalizeTitle(title);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    output.push({
+      title,
+      author,
+      genre: genre || fallbackGenre,
+      reason: reason || `${fallbackGenre} 독서 흐름을 이어가면서 관점을 넓히기 좋은 책입니다.`,
+      source,
+    });
+    if (output.length >= limit) break;
+  }
+  return output;
+}
+
+function buildCuratedRecommendations(
+  books: ReadingProfileBook[],
+  topGenres: string[],
+  excluded: Set<string>,
+  limit: number,
+): BookRecommendation[] {
+  const anchor = books.find((book) => book.rating && book.rating >= 4) ?? books[0];
+  const anchorText = anchor ? `"${anchor.title}"` : '최근 독서 기록';
+  const selectedGenres = topGenres.length > 0 ? topGenres : ['기타'];
+  const candidates = [
+    ...selectedGenres.flatMap((genre) => CURATED_BOOKS[genre] ?? []),
+    ...(CURATED_BOOKS.기타 ?? []),
+  ];
+  const seen = new Set<string>();
+  const output: BookRecommendation[] = [];
+
+  for (const candidate of candidates) {
+    const key = normalizeTitle(candidate.title);
+    if (seen.has(key) || isExcludedBook(candidate.title, candidate.author, excluded)) continue;
+    seen.add(key);
+    output.push({
+      ...candidate,
+      source: 'curated-fallback',
+      reason: `${anchorText}에서 보인 관심사와 ${candidate.genre} 독서 흐름을 이어가기 좋습니다. 이미 읽은 책과 겹치지 않는 방향으로 다음 한 권을 고르도록 추천했습니다.`,
+    });
+    if (output.length >= limit) break;
+  }
+  return output;
+}
+
 // ─── POST /api/ai/summarize — 책 설명 한국어 요약 ────────────
 aiRouter.post('/summarize', rateLimit({ limit: 5, windowMs: 60_000, keyPrefix: 'ai' }), authMiddleware, async (c) => {
   const { description, title, author } = await c.req.json() as {
@@ -70,73 +299,112 @@ aiRouter.post('/summarize', rateLimit({ limit: 5, windowMs: 60_000, keyPrefix: '
 // ─── GET /api/ai/recommend — 사용자 독서 패턴 기반 추천 ──────
 aiRouter.get('/recommend', rateLimit({ limit: 10, windowMs: 60_000, keyPrefix: 'ai' }), authMiddleware, async (c) => {
   const userId = c.get('userId');
-  const limit = Math.min(parseInt(c.req.query('limit') ?? '3', 10), 10);
+  const requestedLimit = parseInt(c.req.query('limit') ?? '5', 10);
+  const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 10) : 5;
   const forceRefresh = c.req.query('refresh') === 'true';
 
-  const readBooks = await c.env.DB.prepare(
-    `SELECT genre, title, author, rating
-     FROM books
-     WHERE user_id = ? AND status IN ('done', 'reading') AND genre IS NOT NULL
-     ORDER BY created_at DESC
-     LIMIT 10`,
-  ).bind(userId).all();
+  const [readBooksResult, allBooksResult, userProfile] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT
+         b.title,
+         b.author,
+         b.genre,
+         b.rating,
+         b.status,
+         b.finished_date,
+         b.created_at,
+         b.note,
+         COALESCE((SELECT COUNT(*) FROM reading_sessions rs WHERE rs.book_id = b.id AND rs.user_id = ?), 0) AS session_count,
+         COALESCE((SELECT SUM(rs.pages_read) FROM reading_sessions rs WHERE rs.book_id = b.id AND rs.user_id = ?), 0) AS pages_read,
+         COALESCE((SELECT COUNT(*) FROM notes n WHERE n.book_id = b.id AND n.user_id = ?), 0) AS note_count
+       FROM books b
+       WHERE b.user_id = ? AND b.status IN ('done', 'reading')
+       ORDER BY
+         CASE b.status WHEN 'done' THEN 0 ELSE 1 END,
+         COALESCE(b.finished_date, b.created_at) DESC
+       LIMIT 30`,
+    ).bind(userId, userId, userId, userId).all<ReadingProfileBook>(),
+    c.env.DB.prepare(
+      `SELECT title, author FROM books WHERE user_id = ?`,
+    ).bind(userId).all<{ title: string; author: string | null }>(),
+    c.env.DB.prepare(
+      `SELECT favorite_genres FROM users WHERE id = ?`,
+    ).bind(userId).first<{ favorite_genres: string | null }>(),
+  ]);
 
-  if (!readBooks.results || readBooks.results.length === 0) {
+  const readBooks = readBooksResult.results ?? [];
+  if (readBooks.length === 0) {
     return c.json({
       message: '읽은 책이 없습니다. 책을 등록하고 나면 맞춤 추천을 받을 수 있습니다.',
       recommendations: [],
       topGenres: [],
+      source: 'none',
+      cached: false,
     });
   }
 
-  // 장르별 빈도 분석
-  const genreCounts: Record<string, number> = {};
-  for (const book of readBooks.results) {
-    const g = book.genre as string;
-    genreCounts[g] = (genreCounts[g] ?? 0) + 1;
-  }
-
-  const topGenres = Object.entries(genreCounts)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 3)
-    .map(([genre]) => genre);
-
-  // 이미 위시리스트에 있는 책 목록 조회 → AI 프롬프트에서 제외
-  const wishResult = await c.env.DB.prepare(
-    `SELECT title FROM books WHERE user_id = ? AND status = 'wish'`,
-  ).bind(userId).all<{ title: string }>();
-  const wishTitles = wishResult.results?.map((b) => b.title as string) ?? [];
+  const favoriteGenres = parseFavoriteGenres(userProfile?.favorite_genres);
+  const topGenres = analyzeTopGenres(readBooks, favoriteGenres);
+  const excluded = buildExcludedSet(allBooksResult.results ?? []);
+  const historyFingerprint = hashString(
+    readBooks
+      .map((b) => `${b.title}|${b.author}|${b.genre ?? ''}|${b.rating ?? ''}|${b.status}|${b.created_at}`)
+      .join('\n'),
+  );
 
   // KV 캐시 확인 (refresh=true 이면 기존 캐시 삭제)
-  const cacheKey = `ai_recommend:${userId}:${topGenres.join(',')}`;
+  const cacheKey = `ai_recommend:v2:${userId}:${limit}:${historyFingerprint}`;
   if (forceRefresh) {
     await c.env.KV.delete(cacheKey);
   } else {
     const cached = await c.env.KV.get(cacheKey);
     if (cached) {
-      return c.json({ recommendations: JSON.parse(cached), cached: true, topGenres });
+      try {
+        const parsed = JSON.parse(cached) as {
+          recommendations?: unknown[];
+          topGenres?: string[];
+          source?: RecommendationSource;
+          analysis?: unknown;
+        } | unknown[];
+        const recommendations = Array.isArray(parsed)
+          ? normalizeRecommendations(parsed, excluded, topGenres[0] ?? '기타', 'workers-ai', limit)
+          : normalizeRecommendations(parsed.recommendations ?? [], excluded, topGenres[0] ?? '기타', parsed.source ?? 'workers-ai', limit);
+        if (recommendations.length > 0) {
+          return c.json({
+            recommendations,
+            cached: true,
+            topGenres,
+            source: Array.isArray(parsed) ? 'workers-ai' : parsed.source ?? 'workers-ai',
+            analysis: Array.isArray(parsed) ? undefined : parsed.analysis,
+          });
+        }
+        await c.env.KV.delete(cacheKey);
+      } catch {
+        await c.env.KV.delete(cacheKey);
+      }
     }
   }
 
-  const booksContext = readBooks.results
-    .slice(0, 5)
+  const booksContext = readBooks
+    .slice(0, 12)
     .map((b) => `"${b.title}" (${b.author}, 장르:${b.genre}, 별점:${b.rating ?? '?'}/5)`)
     .join('\n');
 
-  const wishExclude = wishTitles.length > 0
-    ? `\n이미 위시리스트에 있으므로 추천하지 말 것: ${wishTitles.join(', ')}`
+  const excludedTitles = [...excluded].filter((key) => !key.includes('::')).slice(0, 40);
+  const excludePrompt = excludedTitles.length > 0
+    ? `\n이미 사용자의 서재에 있으므로 추천하지 말 것: ${excludedTitles.join(', ')}`
     : '';
 
   // 대표 책 제목 (개인화 reason 작성에 활용)
-  const topBookTitle = (readBooks.results[0]?.title ?? '') as string;
+  const topBookTitle = readBooks.find((book) => book.rating && book.rating >= 4)?.title ?? readBooks[0]?.title ?? '';
 
   try {
     const model = '@cf/meta/llama-3.1-8b-instruct' as Parameters<Ai['run']>[0];
     const systemPrompt = `당신은 독서 전문가입니다. 사용자의 독서 이력을 분석하여 다음에 읽을 책 ${limit}권을 추천해주세요.
 반드시 아래 JSON 배열 형식으로만 응답하세요(다른 텍스트 금지):
 [{"title":"책제목","author":"저자","reason":"추천 이유(사용자가 읽은 '${topBookTitle}'처럼 구체적인 책 이름을 언급하며 1~2문장으로 개인화하여 작성)","genre":"장르"}]
-${wishExclude}
-추천 책은 실제 존재하는 책이어야 하며, 이미 읽은 책과 위시리스트에 있는 책은 절대 추천하지 마세요.`;
+${excludePrompt}
+추천 책은 실제 존재하는 책이어야 하며, 이미 읽은 책, 읽는 중인 책, 위시리스트에 있는 책은 절대 추천하지 마세요.`;
     const response = await c.env.AI.run(model, {
       messages: [
         { role: 'system', content: systemPrompt },
@@ -149,24 +417,59 @@ ${wishExclude}
     });
 
     const text = (response as { response?: string }).response?.trim() ?? '[]';
-    let recommendations: unknown[] = [];
+    let recommendations: BookRecommendation[] = [];
     try {
-      const jsonMatch = text.match(/\[[\s\S]*\]/);
-      recommendations = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+      recommendations = normalizeRecommendations(
+        extractJsonArray(text),
+        excluded,
+        topGenres[0] ?? '기타',
+        'workers-ai',
+        limit,
+      );
     } catch {
       recommendations = [];
     }
 
-    await c.env.KV.put(cacheKey, JSON.stringify(recommendations), { expirationTtl: 3600 });
+    if (recommendations.length === 0) {
+      recommendations = buildCuratedRecommendations(readBooks, topGenres, excluded, limit);
+    }
 
-    return c.json({ recommendations, cached: false, topGenres });
+    const source: RecommendationSource = recommendations.some((rec) => rec.source === 'workers-ai')
+      ? 'workers-ai'
+      : 'curated-fallback';
+    const payload = {
+      recommendations,
+      cached: false,
+      topGenres,
+      source,
+      analysis: {
+        historyCount: readBooks.length,
+        anchorBook: topBookTitle,
+        favoriteGenres,
+      },
+    };
+
+    if (recommendations.length > 0) {
+      await c.env.KV.put(cacheKey, JSON.stringify(payload), { expirationTtl: 3600 });
+    }
+
+    return c.json(payload);
   } catch (err) {
     console.error('AI 추천 오류:', err);
+    const recommendations = buildCuratedRecommendations(readBooks, topGenres, excluded, limit);
     return c.json({
-      recommendations: [],
-      message: 'AI 추천을 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해주세요.',
+      recommendations,
+      message: recommendations.length > 0
+        ? 'AI 모델 응답이 지연되어 독서 이력 기반 추천을 먼저 보여드립니다.'
+        : '추천 후보를 만들 수 없습니다. 읽은 책을 몇 권 더 등록해 주세요.',
       topGenres,
       cached: false,
+      source: 'curated-fallback',
+      analysis: {
+        historyCount: readBooks.length,
+        anchorBook: topBookTitle,
+        favoriteGenres,
+      },
     });
   }
 });

@@ -6,6 +6,7 @@ export interface AIRecommendation {
   author: string;
   reason: string;
   genre: string;
+  source?: 'workers-ai' | 'curated-fallback';
 }
 
 interface SummarizeResponse {
@@ -18,6 +19,12 @@ interface RecommendResponse {
   topGenres: string[];
   cached?: boolean;
   message?: string;
+  source?: 'workers-ai' | 'curated-fallback' | 'none';
+  analysis?: {
+    historyCount?: number;
+    anchorBook?: string;
+    favoriteGenres?: string[];
+  };
 }
 
 /** 책 설명 요약 */
