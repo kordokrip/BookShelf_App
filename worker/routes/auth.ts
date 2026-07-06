@@ -160,8 +160,11 @@ authRouter.post(
     const cookieMatch = cookie.match(/refreshToken=([^;]+)/);
     let refreshToken = cookieMatch?.[1] ?? '';
     if (!refreshToken) {
-      const body = await c.req.json<{ refreshToken?: string }>().catch(() => ({}));
-      refreshToken = body.refreshToken ?? '';
+      const body = await c.req.json().catch((): unknown => ({}));
+      refreshToken =
+        body && typeof body === 'object' && 'refreshToken' in body && typeof body.refreshToken === 'string'
+          ? body.refreshToken
+          : '';
     }
     if (!refreshToken) {
       return c.json({ error: 'refreshToken이 필요합니다.' }, 400);

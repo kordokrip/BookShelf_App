@@ -59,6 +59,7 @@ export function ChatTab({ groupId, isLeader }: { groupId: string; isLeader?: boo
   const shouldShowTime = (msgs: GroupMessage[], index: number) => {
     const msg = msgs[index];
     const next = msgs[index + 1];
+    if (!msg) return false;
     if (!next) return true;
     if (next.user_id !== msg.user_id) return true;
     // 5분 이상 차이나면 표시

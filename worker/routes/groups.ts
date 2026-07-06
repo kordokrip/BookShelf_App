@@ -101,8 +101,8 @@ groupsRouter.get('/', authMiddleware, async (c) => {
 
   return c.json({
     data: {
-      publicGroups: publicGroups.results,
-      myGroups: myGroups.results,
+      publicGroups: publicGroups?.results ?? [],
+      myGroups: myGroups?.results ?? [],
     },
   });
 });
@@ -162,11 +162,11 @@ groupsRouter.get('/:id', authMiddleware, async (c) => {
     `).bind(groupId),
   ]);
 
-  const group = groupRes.results[0];
+  const group = (groupRes?.results ?? [])[0];
   if (!group) return c.json({ error: '그룹을 찾을 수 없습니다.' }, 404);
 
   return c.json({
-    data: { ...group, members: membersRes.results },
+    data: { ...group, members: membersRes?.results ?? [] },
   });
 });
 

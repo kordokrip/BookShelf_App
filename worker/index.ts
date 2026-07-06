@@ -200,16 +200,16 @@ app.get('/api/initial-data', authMiddleware, async (c) => {
 
   type StatusRow = { status: string; count: number };
   const counts = { done: 0, reading: 0, wish: 0 };
-  for (const row of (statusCounts.results as StatusRow[])) {
+  for (const row of ((statusCounts?.results ?? []) as StatusRow[])) {
     if (row.status in counts) counts[row.status as keyof typeof counts] = row.count;
   }
 
   type ActivityRow = { session_date: string };
-  const lastSession = (recentActivity.results[0] as ActivityRow | undefined)?.session_date ?? null;
+  const lastSession = ((recentActivity?.results ?? [])[0] as ActivityRow | undefined)?.session_date ?? null;
 
   return c.json({
     bookCounts: counts,
-    user: profile.results[0] ?? null,
+    user: (profile?.results ?? [])[0] ?? null,
     lastSessionDate: lastSession,
   });
 });

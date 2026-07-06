@@ -32,6 +32,9 @@ export interface DbUser {
   name: string;
   password_hash: string | null;
   avatar_url: string | null;
+  profile_emoji: string | null;
+  favorite_genres: string;
+  reading_goal: number;
   kakao_id: string | null;
   google_id: string | null;
   auth_provider: string;

@@ -3,7 +3,7 @@
  * 인앱 이벤트(책 추가, 세션 저장, 노트 등록 등)를 시간순으로 표시합니다.
  */
 import { useEffect, useRef } from 'react';
-import { X, BookPlus, BookOpen, PenLine, RefreshCw, Info, CheckCheck, Trash2 } from 'lucide-react';
+import { X, BookPlus, BookOpen, PenLine, RefreshCw, Info, CheckCheck, Trash2, FolderPlus, FolderMinus, Wifi } from 'lucide-react';
 import { useUiStore } from '../../../stores/uiStore';
 import type { NotificationItem, NotificationType } from '../../../stores/uiStore';
 
@@ -12,6 +12,9 @@ const TYPE_ICON: Record<NotificationType, React.ReactNode> = {
   book_updated:  <BookOpen  size={16} className="text-[#7C3AED]" />,
   session_saved: <BookOpen  size={16} className="text-[#059669]" />,
   note_saved:    <PenLine   size={16} className="text-[#D97706]" />,
+  collection_created: <FolderPlus size={16} className="text-[#4F46E5]" />,
+  collection_deleted: <FolderMinus size={16} className="text-[#EF4444]" />,
+  offline_sync:  <Wifi      size={16} className="text-[#0EA5E9]" />,
   sync:          <RefreshCw size={16} className="text-[#0EA5E9]" />,
   info:          <Info      size={16} className="text-[#64748B]" />,
 };
@@ -21,6 +24,9 @@ const TYPE_BG: Record<NotificationType, string> = {
   book_updated:  'bg-[#F5F3FF]',
   session_saved: 'bg-[#ECFDF5]',
   note_saved:    'bg-[#FFFBEB]',
+  collection_created: 'bg-[#EEF2FF]',
+  collection_deleted: 'bg-[#FEF2F2]',
+  offline_sync:  'bg-[#F0F9FF]',
   sync:          'bg-[#F0F9FF]',
   info:          'bg-[#F1F5F9]',
 };

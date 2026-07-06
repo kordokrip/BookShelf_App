@@ -31,19 +31,22 @@ export function FeedbackSection({ groupId, meetingId }: { groupId: string; meeti
         <p className="text-xs text-[#94A3B8]">아직 피드백이 없습니다.</p>
       ) : (
         <div className="space-y-2">
-          {feedbacks.map((fb: MeetingFeedback) => (
-            <div key={fb.id} className="bg-[#F8FAFC] dark:bg-[#0F172A] rounded-lg p-3">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-medium text-[#1E293B] dark:text-[#F8FAFC]">{fb.user_name ?? '익명'}</span>
-                <div className="flex gap-0.5">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star key={i} size={10} className={i < fb.rating ? 'text-amber-400 fill-amber-400' : 'text-[#CBD5E1]'} />
-                  ))}
+          {feedbacks.map((fb: MeetingFeedback) => {
+            const ratingValue = fb.rating ?? 0;
+            return (
+              <div key={fb.id} className="bg-[#F8FAFC] dark:bg-[#0F172A] rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-medium text-[#1E293B] dark:text-[#F8FAFC]">{fb.user_name ?? '익명'}</span>
+                  <div className="flex gap-0.5">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star key={i} size={10} className={i < ratingValue ? 'text-amber-400 fill-amber-400' : 'text-[#CBD5E1]'} />
+                    ))}
+                  </div>
                 </div>
+                <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">{fb.content}</p>
               </div>
-              <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">{fb.content}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
       {!alreadyFeedbacked && (

@@ -7,7 +7,8 @@ export function MeetingCard({ meeting, groupId, isLeader, expanded, onToggle, on
   meeting: GroupMeeting; groupId: string; isLeader: boolean; expanded: boolean;
   onToggle: () => void; onDelete: () => void;
 }) {
-  const isPast = meeting.meeting_date < new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().slice(0, 10);
+  const isPast = meeting.meeting_date < today;
 
   return (
     <div className="bg-white dark:bg-[#1E293B] rounded-xl border border-[#E2E8F0] dark:border-[#334155] overflow-hidden">

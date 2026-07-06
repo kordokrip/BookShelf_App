@@ -181,7 +181,7 @@ export function TopBar() {
             </Tooltip>
 
             {profileOpen && user && (
-              <ProfilePopup user={user} onClose={() => setProfileOpen(false)} />
+              <ProfilePopup onClose={() => setProfileOpen(false)} />
             )}
           </div>
         </div>
