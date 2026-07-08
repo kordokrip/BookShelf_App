@@ -141,4 +141,6 @@ export interface Bindings {
   VAPID_PUBLIC_KEY?: string;   // base64url 인코딩된 공개키
   VAPID_PRIVATE_KEY?: string;  // JWK JSON 문자열
   VAPID_SUBJECT?: string;      // 'mailto:admin@example.com'
+  // 알라딘 오픈API (선택 - wrangler secret put ALADIN_TTB_KEY)
+  ALADIN_TTB_KEY?: string;     // 알라딘 TTB API 키 (실제 베스트셀러 순위 조회용)
 }

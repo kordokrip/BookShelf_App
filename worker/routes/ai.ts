@@ -11,8 +11,20 @@ const sanitizeForPrompt = (s: string) =>
    .replace(/[<>{}[\]]/g, '')
    .slice(0, 500);
 
+/** LLM 텍스트 응답에서 첫 번째 JSON 객체를 추출해 파싱한다 */
+function extractJsonObject<T>(text: string): T | null {
+  const match = text.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '').match(/\{[\s\S]*\}/);
+  if (!match) return null;
+  try { return JSON.parse(match[0]) as T; } catch { return null; }
+}
+
+/** LLM이 따옴표/공백을 다르게 echo해도 매칭되도록 책 제목을 정규화한다 */
+function normalizeTitle(title: string): string {
+  return title.trim().replace(/^["'“”‘’]+|["'“”‘’]+$/g, '').replace(/\s+/g, ' ').toLowerCase();
+}
+
 // ─── POST /api/ai/summarize — 책 설명 한국어 요약 ────────────
-aiRouter.post('/summarize', rateLimit({ limit: 5, windowMs: 60_000, keyPrefix: 'ai' }), authMiddleware, async (c) => {
+aiRouter.post('/summarize', rateLimit({ limit: 5, windowMs: 60_000, keyPrefix: 'ai_sum' }), authMiddleware, async (c) => {
   const { description, title, author } = await c.req.json() as {
     description?: string;
     title: string;
@@ -68,9 +80,9 @@ aiRouter.post('/summarize', rateLimit({ limit: 5, windowMs: 60_000, keyPrefix: '
 });
 
 // ─── GET /api/ai/recommend — 사용자 독서 패턴 기반 추천 ──────
-aiRouter.get('/recommend', rateLimit({ limit: 10, windowMs: 60_000, keyPrefix: 'ai' }), authMiddleware, async (c) => {
+aiRouter.get('/recommend', rateLimit({ limit: 10, windowMs: 60_000, keyPrefix: 'ai_rec' }), authMiddleware, async (c) => {
   const userId = c.get('userId');
-  const limit = Math.min(parseInt(c.req.query('limit') ?? '3', 10), 10);
+  const limit = Math.min(parseInt(c.req.query('limit') ?? '3', 10), 5);
   const forceRefresh = c.req.query('refresh') === 'true';
 
   const readBooks = await c.env.DB.prepare(
@@ -101,11 +113,13 @@ aiRouter.get('/recommend', rateLimit({ limit: 10, windowMs: 60_000, keyPrefix: '
     .slice(0, 3)
     .map(([genre]) => genre);
 
-  // 이미 위시리스트에 있는 책 목록 조회 → AI 프롬프트에서 제외
+  // 이미 읽었거나 위시리스트에 있는 책 → AI 프롬프트에서 제외
   const wishResult = await c.env.DB.prepare(
     `SELECT title FROM books WHERE user_id = ? AND status = 'wish'`,
   ).bind(userId).all<{ title: string }>();
-  const wishTitles = wishResult.results?.map((b) => b.title as string) ?? [];
+  const wishTitles = (wishResult.results ?? []).map((b) => b.title as string);
+  const readTitles = readBooks.results.map((b) => b.title as string);
+  const excludeTitles = [...new Set([...wishTitles, ...readTitles])];
 
   // KV 캐시 확인 (refresh=true 이면 기존 캐시 삭제)
   const cacheKey = `ai_recommend:${userId}:${topGenres.join(',')}`;
@@ -114,61 +128,148 @@ aiRouter.get('/recommend', rateLimit({ limit: 10, windowMs: 60_000, keyPrefix: '
   } else {
     const cached = await c.env.KV.get(cacheKey);
     if (cached) {
-      return c.json({ recommendations: JSON.parse(cached), cached: true, topGenres });
+      try {
+        const parsed = JSON.parse(cached) as unknown[];
+        if (parsed.length > 0) {
+          return c.json({ recommendations: parsed, cached: true, topGenres });
+        }
+      } catch { /* 파싱 실패 시 캐시 무시 */ }
     }
   }
 
-  const booksContext = readBooks.results
-    .slice(0, 5)
-    .map((b) => `"${b.title}" (${b.author}, 장르:${b.genre}, 별점:${b.rating ?? '?'}/5)`)
-    .join('\n');
+  // ── 장르 → Kakao 검색어 매핑 ──────────────────────────────────
+  const GENRE_QUERIES: Record<string, string> = {
+    소설: '한국소설 추천 베스트',
+    현대문학: '한국 현대문학 추천',
+    외국문학: '외국소설 추천',
+    철학: '철학 교양서 추천',
+    자기계발: '자기계발 베스트셀러',
+    역사: '역사 교양서 추천',
+    과학: '과학 교양서 베스트',
+    경제경영: '경영 경제 베스트셀러',
+    에세이: '에세이 베스트셀러',
+    시: '한국 현대시 추천',
+    심리학: '심리학 추천 도서',
+    인문학: '인문학 베스트셀러',
+    기타: '교양도서 베스트셀러',
+  };
 
-  const wishExclude = wishTitles.length > 0
-    ? `\n이미 위시리스트에 있으므로 추천하지 말 것: ${wishTitles.join(', ')}`
-    : '';
+  type KakaoDoc = { title: string; authors: string[]; isbn: string; thumbnail: string };
 
-  // 대표 책 제목 (개인화 reason 작성에 활용)
-  const topBookTitle = (readBooks.results[0]?.title ?? '') as string;
-
-  try {
-    const model = '@cf/meta/llama-3.1-8b-instruct' as Parameters<Ai['run']>[0];
-    const systemPrompt = `당신은 독서 전문가입니다. 사용자의 독서 이력을 분석하여 다음에 읽을 책 ${limit}권을 추천해주세요.
-반드시 아래 JSON 배열 형식으로만 응답하세요(다른 텍스트 금지):
-[{"title":"책제목","author":"저자","reason":"추천 이유(사용자가 읽은 '${topBookTitle}'처럼 구체적인 책 이름을 언급하며 1~2문장으로 개인화하여 작성)","genre":"장르"}]
-${wishExclude}
-추천 책은 실제 존재하는 책이어야 하며, 이미 읽은 책과 위시리스트에 있는 책은 절대 추천하지 마세요.`;
-    const response = await c.env.AI.run(model, {
-      messages: [
-        { role: 'system', content: systemPrompt },
-        {
-          role: 'user',
-          content: `최근 읽은 책들:\n${booksContext}\n\n선호 장르: ${topGenres.join(', ')}\n\n위 내용을 바탕으로 다음에 읽을 책 ${limit}권을 추천해주세요.`,
-        },
-      ],
-      max_tokens: 800,
-    });
-
-    const text = (response as { response?: string }).response?.trim() ?? '[]';
-    let recommendations: unknown[] = [];
+  async function searchKakao(query: string, size: number): Promise<KakaoDoc[]> {
+    const kakaoKey = c.env.KAKAO_REST_API_KEY;
+    if (!kakaoKey) return [];
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
     try {
-      const jsonMatch = text.match(/\[[\s\S]*\]/);
-      recommendations = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+      const url = `https://dapi.kakao.com/v3/search/book?query=${encodeURIComponent(query)}&sort=accuracy&size=${size}`;
+      const res = await fetch(url, { headers: { Authorization: `KakaoAK ${kakaoKey}` }, signal: controller.signal });
+      clearTimeout(timer);
+      if (!res.ok) return [];
+      const data = await res.json() as { documents: KakaoDoc[] };
+      return data.documents;
     } catch {
-      recommendations = [];
+      clearTimeout(timer);
+      return [];
     }
-
-    await c.env.KV.put(cacheKey, JSON.stringify(recommendations), { expirationTtl: 3600 });
-
-    return c.json({ recommendations, cached: false, topGenres });
-  } catch (err) {
-    console.error('AI 추천 오류:', err);
-    return c.json({
-      recommendations: [],
-      message: 'AI 추천을 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해주세요.',
-      topGenres,
-      cached: false,
-    });
   }
+
+  // ── 1단계: Kakao로 장르별 후보 도서 수집 ─────────────────────
+  const excludeSet = new Set(excludeTitles.map((t) => t.toLowerCase()));
+  const seen = new Set<string>();
+
+  const genresToSearch = topGenres.slice(0, 3);
+  const docSets = await Promise.all(
+    genresToSearch.map((genre) => searchKakao(GENRE_QUERIES[genre] ?? `${genre} 추천`, 8)),
+  );
+
+  const fallbackGenre = topGenres[0] ?? '기타';
+  const candidates: (KakaoDoc & { matchedGenre: string })[] = [];
+  for (let i = 0; i < docSets.length; i++) {
+    const genre = genresToSearch[i] ?? fallbackGenre;
+    const docs = docSets[i] ?? [];
+    for (const d of docs) {
+      const titleLower = d.title.toLowerCase();
+      const isExcluded = excludeSet.has(titleLower)
+        || excludeTitles.some((et) => titleLower.includes(et.toLowerCase()));
+      if (isExcluded || seen.has(titleLower) || !d.thumbnail) continue;
+      seen.add(titleLower);
+      candidates.push({ ...d, matchedGenre: genre });
+      if (candidates.length >= limit * 3) break;
+    }
+  }
+
+  // 충분하지 않으면 "교양 베스트" 보충
+  if (candidates.length < limit) {
+    const extra = await searchKakao('베스트셀러 교양도서', 10);
+    for (const d of extra) {
+      const titleLower = d.title.toLowerCase();
+      const isExcluded = excludeSet.has(titleLower)
+        || excludeTitles.some((et) => titleLower.includes(et.toLowerCase()));
+      if (isExcluded || seen.has(titleLower) || !d.thumbnail) continue;
+      seen.add(titleLower);
+      candidates.push({ ...d, matchedGenre: fallbackGenre });
+      if (candidates.length >= limit) break;
+    }
+  }
+
+  const selected = candidates.slice(0, limit);
+
+  // ── 2단계: LLM으로 reason 생성 (실패해도 template fallback) ──
+  const reasonMap: Record<string, string> = {};
+  if (selected.length > 0) {
+    try {
+      const model = '@cf/meta/llama-3.1-8b-instruct' as Parameters<Ai['run']>[0];
+      const bookListForLLM = selected
+        .map((d, i) => `${i + 1}. "${d.title}" (${d.authors.join(', ')})`)
+        .join('\n');
+      const llmResponse = await c.env.AI.run(model, {
+        messages: [
+          {
+            role: 'system',
+            content: `You output ONLY a JSON object mapping book titles to Korean one-sentence reasons. No extra text.
+Example: {"책제목":"이유"}
+Genres the user likes: ${topGenres.join(', ')}`,
+          },
+          {
+            role: 'user',
+            content: `Books:\n${bookListForLLM}\n\nOutput JSON reasons:`,
+          },
+        ],
+        max_tokens: 400,
+      });
+      const llmText = (llmResponse as { response?: string }).response ?? '';
+      const parsed = extractJsonObject<Record<string, string>>(llmText);
+      if (parsed) {
+        // LLM이 따옴표/공백을 살짝 다르게 echo하는 경우가 있어 정규화된 키로 매칭
+        for (const [title, reason] of Object.entries(parsed)) {
+          reasonMap[normalizeTitle(title)] = reason;
+        }
+      }
+    } catch { /* reason 생성 실패는 무시 */ }
+  }
+
+  // ── 3단계: 최종 추천 목록 조합 ───────────────────────────────
+  const recommendations = selected.map((d) => {
+    const parts = d.isbn.trim().split(/\s+/);
+    const isbn = (parts.length >= 2 ? parts[1] : parts[0]) ?? '';
+    const reason = reasonMap[normalizeTitle(d.title)]
+      ?? `${d.matchedGenre} 장르를 즐기신다면 꼭 읽어보실 만한 책입니다.`;
+    return {
+      title: d.title,
+      author: d.authors.join(', '),
+      genre: d.matchedGenre,
+      reason,
+      coverImage: d.thumbnail || null,
+      isbn,
+    };
+  });
+
+  if (recommendations.length > 0) {
+    await c.env.KV.put(cacheKey, JSON.stringify(recommendations), { expirationTtl: 3600 });
+  }
+
+  return c.json({ recommendations, cached: false, topGenres });
 });
 
 // ─── POST /ocr ────────────────────────────────────────────────

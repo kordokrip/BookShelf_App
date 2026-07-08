@@ -46,9 +46,9 @@ export function InstallBanner() {
 
   return (
     <div
-      className="fixed bottom-[60px] left-0 right-0 z-40 flex justify-center px-4"
+      className="fixed left-0 right-0 z-40 flex justify-center px-4"
       style={{
-        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        bottom: "var(--install-banner-bottom)",
         transform: visible ? "translateY(0)" : "translateY(100%)",
         opacity: visible ? 1 : 0,
         transition: "transform 0.3s ease, opacity 0.3s ease",

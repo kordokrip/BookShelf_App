@@ -123,7 +123,7 @@ export function YearlyReviewPage() {
   };
 
   return (
-    <div className="min-h-svh bg-[#F8FAFC] pb-12">
+    <div className="min-h-svh bg-[#F8FAFC] pb-[var(--page-pb)] lg:pb-8">
       {/* 헤더 */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <button

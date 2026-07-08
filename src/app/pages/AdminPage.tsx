@@ -89,7 +89,6 @@ function UserDetailModal({
   const { data, isLoading } = useQuery({
     queryKey: ["admin", "user-detail", userId],
     queryFn:  () => adminApi.getUserDetail(userId),
-    staleTime: 60_000,
   });
 
   const detail: AdminUserDetail | undefined = data?.data;
@@ -233,7 +232,6 @@ function DashboardTab() {
   const { data, isLoading, error } = useQuery({
     queryKey: ADMIN_KEYS.stats,
     queryFn:  adminApi.getStats,
-    staleTime: 60_000,
   });
   const stats = data?.data;
 

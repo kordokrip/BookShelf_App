@@ -1,6 +1,6 @@
  # BookShelf App — 프로젝트 상태 보고서
 
-> **최종 업데이트:** 2026-04-25 (27차 업데이트 — activity_logs 실활동 로깅 구현)
+> **최종 업데이트:** 2026-05-31 (28차 업데이트 — 전 폴더 커버리지 정합성 보강)
 > - **4차**: SideNav/TopBar 하드코딩 데이터 → 실시간 바인딩, ViteWorkbox SW 청크 에러 수정 (commit: `1c280d1`)
 > - **5차**: 카카오 SDK 무결성 해시 수정, `mobile-web-app-capable` 메타태그 추가, 소셜 로그인 401 에러 메시지 분기 (commit: `8c18d60`)
 > - **6차**: D1 테이블 정상 동작 확인, Kakao OAuth dead code 제거(`loginWithKakao`), Google 버튼 "준비 중" UI로 대체 (commit: `7cddee7`)
@@ -74,12 +74,37 @@
 >   - `notes.ts`: 노트 생성 시 `note:create` 로그 기록
 >   - `auth.ts`: Google OAuth 로그인 시 `user:login_oauth` 로그 기록
 >   - E2E 27/27 PASS, 배포: CF `267e7868-66b0-44c9-bddf-595981dd8223`
+> - **28차 (문서 정합성 보강)**: 기능/코드/DB/문서 커버리지 공백 항목 통합 반영 ★
+>   - **라우트 보강**: `collections`, `discover`, `push`, `share`, `admin` 라우트 문서화 정렬
+>   - **페이지 보강**: `CollectionsPage`, `SharePage` 문서 반영
+>   - **훅 보강**: `useCollections`, `useDiscover`, `useOfflineQueue`, `usePushNotification`, `useViewport` 반영
+>   - **DB 보강**: 마이그레이션 `0005`, `0006`, `0009` 포함 0001~0011 전체 추적표 반영
+>   - **인프라 보강**: `wrangler.toml`(cron/staging), `sw-push.js`, `ios-push-checklist.sh` 문서 반영 정합화
+>   - 배포 기준 버전 동기화: CF `df732bc7-8a69-461b-97a3-6a646259c35c`
 >
 > **Git 브랜치:** `main` (kordokrip/BookShelf_App)
-> **Cloudflare Workers Version:** `267e7868-66b0-44c9-bddf-595981dd8223` ★ (27차 배포)
+> **Cloudflare Workers Version:** `df732bc7-8a69-461b-97a3-6a646259c35c` ★ (반응형/뷰포트 리팩토링 배포)
 > **분석 방법:** 전체 소스 파일 직접 확인 (추측 없음)
 > **빌드:** `npm run build` → ✅ ★ (26차)
 > **E2E 테스트:** `bash scripts/e2e-api-test.sh` → **27/27 PASS** ✅ ★ (24차)
+
+### 검증 기반 자동 점검 (누락 방지 기준)
+
+문서/코드 정합성 점검 시 아래 4축을 자동 확인한다.
+
+- `라우트 축`: `src/app/routes.ts` 경로가 `docs/TRACE_MAP.md`, `docs/BookShelf_UI_UX.md`에 모두 반영되었는지 확인
+- `API 축`: `worker/routes/*.ts` 라우터가 `docs/TRACE_MAP.md` API 맵과 1:1 매칭되는지 확인
+- `훅 축`: `src/hooks/*.ts` 신규 훅이 `PROJECT_STATUS.md`, `docs/BookShelf_UI_UX.md`에 반영되었는지 확인
+- `DB 축`: `worker/db/migrations/*.sql` 신규 마이그레이션이 `PROJECT_STATUS.md`, `docs/TRACE_MAP.md`에 반영되었는지 확인
+
+권장 자동 점검 명령:
+
+```bash
+# 문서 커버리지 핵심 키워드 스모크 체크
+for x in collections discover push share admin useCollections useDiscover useOfflineQueue usePushNotification useViewport 0005_collections 0006_push_subscriptions 0009_indexes_and_session_unique /collections /api/collections /api/discover /api/push /share /api/admin; do
+  rg -n "$x" PROJECT_STATUS.md docs/TRACE_MAP.md docs/BookShelf_UI_UX.md >/dev/null && echo "OK $x" || echo "MISS $x"
+done
+```
 
 ---
 
@@ -190,7 +215,7 @@ BookShelf_App/
 │   │                              #   라우트: users, books, sessions, notes, search
 │   │                              #   SPA 폴백: ASSETS 바인딩으로 dist/ 서빙
 │   ├── auth.ts                    # ★ JWT 생성/검증, PBKDF2 비밀번호 해싱/검증 ★ (2026-03-28)
-│   │                              #   PBKDF2 600,000 iterations + 레거시 SHA-256 폴백 + 자동 업그레이드
+│   │                              #   PBKDF2 10,000 iterations (CF Workers CPU 10-50ms 제약, OWASP 600K는 ~300ms로 Workers 500 초과) + 레거시 SHA-256 폴백 + 자동 업그레이드
 │   │                              #   authMiddleware (필수 인증)
 │   │                              #   optionalAuth (토큰 없으면 demo-user 폴백)
 │   ├── types.ts                   # Bindings 인터페이스, DbBook, DbUser, DbNote 등
@@ -393,11 +418,11 @@ Hono<{ Bindings: Bindings }>
 ### `worker/auth.ts` — 인증 유틸리티
 
 ```typescript
-// JWT (Hono 내장 Jwt.sign/verify, HS256, 24시간 만료)
+// JWT Access Token (Hono 내장 Jwt.sign/verify, HS256, 2시간 만료 — exp: now + 7200)
 createToken(payload: { sub: string; email: string }, secret: string) → string
 
 // PBKDF2 비밀번호 해싱 ★ (2026-03-28)
-hashPassword(password: string) → "pbkdf2:{saltHex}:{hashHex}"  // 600,000 iterations, 16B salt
+hashPassword(password: string) → "pbkdf2:{saltHex}:{hashHex}"  // 10,000 iterations, 16B salt (CF Workers CPU 제약)
 verifyPassword(password: string, stored: string) → Promise<boolean>
   // stored.startsWith('pbkdf2:') → PBKDF2 constant-time 비교
   // else → SHA-256 레거시 폴백 (하위 호환, 자동 업그레이드 트리거)
@@ -457,7 +482,7 @@ rateLimit(options: {
 | POST | /api/users | 소셜 로그인 upsert (id+email+name+avatar_url) | 없음 | zod: id, email, name |
 
 - 회원가입: 이메일 중복 체크 → `hashPassword()` (PBKDF2 ★) → D1 INSERT → 자동 로그인 (토큰 발급)
-- 로그인: D1에서 사용자 조회 → `verifyPassword()` → `createToken()` (24h)
+- 로그인: D1에서 사용자 조회 → `verifyPassword()` → `createToken()` (2h, exp: now + 7200)
 - **로그인 성공 + 레거시 SHA-256 해시 감지**: 자동으로 PBKDF2로 업그레이드 → DB UPDATE ★ (2026-03-28)
 - 프로필 수정: 전달된 필드만 UPDATE (빈 body → 400)
 - 응답에서 `password_hash` 필드 자동 제거 (`safeUser()` 함수)
@@ -949,7 +974,7 @@ COVER_GRADIENTS (8가지 표지 그라데이션)
 BookStatus = 'done' | 'reading' | 'wish'
 ```
 
-### `src/hooks/` — TanStack Query 훅 5개 파일
+### `src/hooks/` — TanStack Query/도메인 훅 11개 파일
 
 ```typescript
 // useBooks.ts
@@ -998,6 +1023,21 @@ useRecentSearches(key, maxItems?)  → { searches: string[], addSearch(q), remov
 useBookSummary()                  → useMutation  (POST /api/ai/summarize, staleTime 불필요)
 useAIRecommendations()            → 책 추천 목록 (GET /api/ai/recommend?limit=5, staleTime 1h, retry: false)
 useRefreshAIRecommendations()     → useMutation  (GET /api/ai/recommend?limit=5&refresh=true → setQueryData) ★ (11차)
+
+// useCollections.ts ★ (0005_collections)
+useCollections()                  → 컬렉션 목록 조회/생성/수정/삭제 + 책 매핑
+
+// useDiscover.ts ★
+useDiscover()                     → 발견(Discover) 피드 목록/추천 데이터 조회
+
+// useOfflineQueue.ts ★
+useOfflineQueue()                 → 오프라인 상태의 쓰기 요청 큐잉/재전송
+
+// usePushNotification.ts ★ (0006_push_subscriptions)
+usePushNotification()             → 구독 등록/해지, 권한 상태, 푸시 토글
+
+// useViewport.ts ★ (2026-05-31)
+useViewport()                     → visualViewport 기반 CSS 변수(--vp-h/--vp-w) 동기화
 ```
 
 ### `src/app/components/auth/ProtectedRoute.tsx`
@@ -1021,7 +1061,6 @@ function ProtectedRoute({ children }) {
 | /onboarding | OnboardingPage | 공개 | |
 | /login | LoginPage | 공개 | |
 | /signup | SignUpPage | 공개 | |
-| /auth/kakao | KakaoCallbackPage | 공개 | |
 | /auth/google/callback | GoogleCallbackPage | 공개 | |
 | /register-flow | RegisterFlowPage | **보호** | |
 | /notes-search | NotesSearchPage | **보호** | |
@@ -1030,6 +1069,8 @@ function ProtectedRoute({ children }) {
 | /wishlist | WishlistPage | **보호** | |
 | /stats | StatsPage (lazy) | **보호** | |
 | /yearly-review | YearlyReviewPage (lazy) | **보호** | ★ 신규 (FEAT-104) |
+| /collections | CollectionsPage (lazy) | **보호** | 컬렉션 관리 |
+| /share | SharePage (lazy) | **보호** | 공유 리포트 inbox/outbox |
 | /book/:id | BookDetailPage | **보호** | |
 | /design-system | DesignSystemPage | **보호** | protected + admin gate ★ (16차) |
 | /entry | EntryGate | 공개 | 진입 게이트 ★ (16차) |
@@ -1063,20 +1104,28 @@ function ProtectedRoute({ children }) {
 
 ### D1 마이그레이션 상태
 
-```bash
-# worker/db/migrations/0001_initial.sql 파일 생성됨 ✅
-# worker/db/migrations/0002_fts5_notes.sql 파일 생성됨 ✅ (신규 2026-03-28)
-# wrangler.toml: migrations_dir = "worker/db/migrations" 설정됨 ✅
+| 파일 | 목적 | 상태 |
+|---|---|---|
+| `0001_initial.sql` | 초기 users/books/sessions/notes 스키마 | ✅ 추적됨 |
+| `0002_fts5_notes.sql` | 노트 전문검색 FTS5 | ✅ 추적됨 |
+| `0003_notes_review_type.sql` | notes type 확장(review) | ✅ 추적됨 |
+| `0004_user_role.sql` | users.role(admin/user) | ✅ 추적됨 |
+| `0005_collections.sql` | 컬렉션 도메인 스키마 | ✅ 추적됨 (28차 보강) |
+| `0006_push_subscriptions.sql` | 웹 푸시 구독 스키마 | ✅ 추적됨 (28차 보강) |
+| `0007_profile_emoji.sql` | 프로필 이모지 | ✅ 추적됨 |
+| `0008_groups_and_sharing.sql` | 모임/공유 도메인 | ✅ 추적됨 |
+| `0009_indexes_and_session_unique.sql` | 인덱스 및 세션 유니크 보강 | ✅ 추적됨 (28차 보강) |
+| `0010_group_approval_notifications.sql` | 모임 승인/알림 | ✅ 추적됨 |
+| `0011_admin_notifications.sql` | 관리자 알림/활동로그 | ✅ 추적됨 |
 
-# 프로덕션 배포 시 아래 명령으로 마이그레이션 적용:
+```bash
+# 마이그레이션 적용 기준 명령
 wrangler d1 migrations apply bookshelf-db --remote
 
-# 또는 개별 SQL 파일 직접 실행:
-wrangler d1 execute bookshelf-db --file=worker/db/migrations/0001_initial.sql --remote
-wrangler d1 execute bookshelf-db --file=worker/db/migrations/0002_fts5_notes.sql --remote  ← ★ 적용 필요
-
-# ⚠️ CREATE TABLE IF NOT EXISTS 사용 중 → 재실행 시 안전
-# ⚠️ 0002 미적용 시: FTS5 검색 오류 → LIKE '%keyword%' 폴백 자동 처리 (서비스 중단 없음)
+# 필요 시 개별 실행
+wrangler d1 execute bookshelf-db --file=worker/db/migrations/0005_collections.sql --remote
+wrangler d1 execute bookshelf-db --file=worker/db/migrations/0006_push_subscriptions.sql --remote
+wrangler d1 execute bookshelf-db --file=worker/db/migrations/0009_indexes_and_session_unique.sql --remote
 ```
 
 ---
@@ -1236,8 +1285,8 @@ $ npm run lint
 | `worker/routes/users.ts` | `rateLimit({limit:5, windowMs:60s})` 적용 (login), 레거시 → PBKDF2 자동 업그레이드 추가 |
 | `worker/routes/search.ts` | `rateLimit({limit:20, windowMs:60s})` 적용 |
 | `worker/routes/ai.ts` | `rateLimit({limit:10, windowMs:60s})` 적용 |
-| `worker/auth.ts` | PBKDF2 600,000 iterations `hashPassword()`, `verifyPassword()` 레거시 폴백 |
-| `worker/routes/stats.ts` | GET /api/stats, D1.batch 5쿼리, `batchResults[0]!` 인덱스 접근 (TypeScript strict 호환) |
+| `worker/auth.ts` | PBKDF2 10,000 iterations `hashPassword()` (CF Workers CPU 제약), `verifyPassword()` 레거시 폴백 |
+| `worker/routes/stats.ts` | GET /api/stats, D1.batch 6쿼리 (월별완독/장르분포/상태별/세션날짜/누적통계/주간페이지), `batchResults[0]!` 인덱스 접근 (TypeScript strict 호환) |
 | `worker/routes/notes.ts` | FTS5 MATCH 검색 + LIKE 폴백 추가 |
 | `worker/index.ts` | `statsRouter` 마운트 추가 |
 | `worker/db/migrations/0002_fts5_notes.sql` | `notes_fts` FTS5 virtual table + 트리거 3개 + 초기 데이터 populate |
@@ -1414,7 +1463,7 @@ $ npm run lint
 |--------|--------|------|
 | Worker 백엔드 (API) | **100%** | 27개 엔드포인트 구현 완료, Google OAuth 완료 ★ (14차), Rate Limiting + OCR confidence ★ (13차) |
 | D1 스키마 + 마이그레이션 파일 | **100%** | 4개 테이블 + FTS5 virtual table ★ + 트리거 6개, 정상 동작 확인 ✅ |
-| 로컬 인증 (이메일+JWT) | **100%** | PBKDF2 600,000 iterations ★, 자동 업그레이드, 24h JWT |
+| 로컬 인증 (이메일+JWT) | **100%** | PBKDF2 10,000 iterations ★ (CF Workers CPU 제약), 자동 업그레이드, 2h JWT |
 | 카카오 OAuth | **100%** | Worker 서버사이드 플로우 + App.tsx token 수신, dead code 정리 완료 |
 | Google OAuth | **100%** | Worker + LoginPage + GoogleCallbackPage 구현 완료 ★ (14차 A-1) |
 | Workers AI (요약/추천) | **100%** | llama-3.1-8b, KV 캐시, reading+done 통합, refresh=true 지원, 위시 제외, 개인화 reason ★ (11차) |
@@ -1427,8 +1476,8 @@ $ npm run lint
 | 빌드 | **100%** | EXIT:0 ✅ (3.31s, PWA precache 39 entries, 1944.57 KiB) ★ (17차) |
 | Worker 보안 (authMiddleware 분리) | **100%** | GET→optionalAuth / 쓰기→authMiddleware 완전 분리 ✅ |
 | Rate Limiting | **100%** | KV 기반 고정 창 미들웨어, login/search/ai 적용 ★ |
-| 비밀번호 보안 (PBKDF2) | **100%** | PBKDF2 600,000 iterations + 레거시 SHA-256 폴백 + 자동 업그레이드 ★ |
-| 전문 검색 (FTS5) | **95%** | FTS5 MATCH + LIKE 폴백 구현 완료, D1 원격 마이그레이션 적용 필요 ★ |
+| 비밀번호 보안 (PBKDF2) | **100%** | PBKDF2 10,000 iterations (CF Workers CPU 10-50ms 제약) + 레거시 SHA-256 폴백 + 자동 업그레이드 ★ |
+| 전문 검색 (FTS5) | **95%** | FTS5 MATCH + LIKE 폴백 구현 완료, D1 원격 마이그레이션 적용 필요 (`wrangler d1 migrations apply bookshelf-db --remote`) ★ |
 | 독서 타이머 | **100%** | useReadingTimer + ReadingPage 위젯 (start/pause/reset) ★ |
 | 독서 스트릭 | **100%** | calcReadingStreak + StreakCard (Flame 아이콘) ★ |
 | Stats API | **100%** | GET /api/stats, D1.batch 5쿼리, useStats() (staleTime 5분) ★ |
@@ -1506,7 +1555,7 @@ $ npm run lint
 | **[9차] BUG-015: BottomNavBar 배지 하드코딩** | 3/15 고정값 | ✅ useBooks 동적 카운트 |
 | **[9차] UX-001: OnboardingPage UX** | 32px 칩, 숫자 입력 스테퍼 | ✅ 44px 칩 + 스와이프 + range 슬라이더 + ProgressBar |
 | **[10차] Rate Limiting 미들웨어** | KV 기반 보호 없음 | ✅ `rateLimit()` login/search/ai 적용 |
-| **[10차] PBKDF2 비밀번호 보안 강화** | SHA-256 단일 해시 | ✅ 600,000 iterations + 레거시 폴백 + 자동 업그레이드 |
+| **[10차] PBKDF2 비밀번호 보안 강화** | SHA-256 단일 해시 | ✅ 10,000 iterations (CF Workers CPU 제약) + 레거시 폴백 + 자동 업그레이드 |
 | **[10차] FTS5 전문 검색** | LIKE 단순 검색 | ✅ `notes_fts` virtual table + 트리거 3개 + LIKE 폴백 |
 | **[10차] Stats API** | 4개 별도 쿼리 | ✅ GET /api/stats, D1.batch 5쿼리, `useStats()` 단일 훅 |
 | **[10차] 독서 타이머** | 없음 | ✅ `useReadingTimer` + ReadingPage 위젯 |

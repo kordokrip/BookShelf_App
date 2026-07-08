@@ -4,6 +4,7 @@ import { BottomNavBar } from "./components/navigation/BottomNavBar";
 import { SideNav } from "./components/navigation/SideNav";
 import { ToastProvider } from "./components/ui/Toast";
 import { OfflineBanner } from "./components/ui/OfflineBanner";
+import { LayoutDebugPanel } from "./components/ui/LayoutDebugPanel";
 import { useUiStore } from "../stores/uiStore";
 import { useOfflineQueue } from "../hooks/useOfflineQueue";
 
@@ -13,8 +14,10 @@ export function Root() {
 
   return (
     <ToastProvider>
-      {/* --vp-h: useViewport 훅에서 주입하는 동적 뷰포트 높이 */}
-      <div className="min-h-[var(--vp-h)] bg-[#F8FAFC] dark:bg-[#0F172A]" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}>
+      {/* --vp-h: useViewport 훅에서 주입하는 동적 뷰포트 높이
+           safe-area: TopBar(top)·BottomNavBar(bottom)가 각자 처리하므로 여기서는 제외
+           left/right는 각 페이지 패딩(px-3~lg:px-8)이 충분히 흡수 */}
+      <div className="min-h-[var(--vp-h)] bg-[#F8FAFC] dark:bg-[#0F172A]">
         {/* Desktop Side Nav */}
         <SideNav />
 
@@ -40,6 +43,9 @@ export function Root() {
 
         {/* Mobile Bottom Nav */}
         <BottomNavBar />
+
+        {/* DEV only: layout 계산값 실시간 패널 */}
+        <LayoutDebugPanel />
       </div>
     </ToastProvider>
   );

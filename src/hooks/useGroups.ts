@@ -38,8 +38,9 @@ export function useGroupMessages(groupId: string | undefined) {
     },
     select: (data) => data.pages.flatMap((p) => p.data).reverse(),
     enabled: !!groupId,
-    refetchInterval: 10_000,
-    refetchIntervalInBackground: false, // PERF-01: 탭 비활성 시 폴링 중단
+    refetchInterval: 3_000,            // 채팅 활성 탭 기준 3초 폴링 (기존 10초 → 지연 단축)
+    refetchIntervalInBackground: false, // 탭 비활성 시 폴링 자동 중단
+    refetchOnWindowFocus: true,         // 탭 복귀 즉시 1회 refetch → 누락 메시지 보완
   });
 }
 
@@ -102,6 +103,7 @@ export function useSendMessage(groupId: string) {
   return useMutation({
     mutationFn: (content: string) => groupsApi.sendMessage(groupId, content),
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.groups.messages(groupId) }); },
+    onError: (error) => { console.error('[chat] 메시지 전송 실패:', error); },
   });
 }
 

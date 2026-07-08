@@ -2,8 +2,10 @@
   "name": "BookShelf — 나의 독서 기록",
   "short_name": "BookShelf",
   "description": "독서 기록, 읽는 중, 위시리스트를 한 곳에서 관리하는 개인 독서 트래커",
+  "id": "/",
   "start_url": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait-primary",
   "background_color": "#F8FAFC",
   "theme_color": "#4F46E5",
@@ -16,7 +18,7 @@
       "src": "/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
       "src": "/icons/icon-512.png",

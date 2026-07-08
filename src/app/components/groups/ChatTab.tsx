@@ -1,8 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Loader2, Trash2 } from 'lucide-react';
+import { Send, Loader2, Trash2, AlertCircle, RotateCcw } from 'lucide-react';
 import { useGroupMessages, useSendMessage, useDeleteMessage, useMarkGroupRead } from '../../../hooks/useGroups';
 import { useAuthStore } from '../../../stores/authStore';
 import type { GroupMessage } from '../../../lib/api';
+
+type PendingMsg = { tempId: string; content: string; status: 'sending' | 'failed' };
+
+const MAX_RETRIES = 3;
+const RETRY_DELAYS = [1000, 2000, 4000];
 
 export function ChatTab({ groupId, isLeader }: { groupId: string; isLeader?: boolean }) {
   const user = useAuthStore((s) => s.user);
@@ -11,6 +16,7 @@ export function ChatTab({ groupId, isLeader }: { groupId: string; isLeader?: boo
   const deleteMessage = useDeleteMessage(groupId);
   const markRead = useMarkGroupRead(groupId);
   const [text, setText] = useState('');
+  const [pendingMsgs, setPendingMsgs] = useState<PendingMsg[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevLenRef = useRef(0);
@@ -42,11 +48,29 @@ export function ChatTab({ groupId, isLeader }: { groupId: string; isLeader?: boo
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+  const sendWithRetry = useCallback(async (content: string, tempId: string) => {
+    setPendingMsgs((prev) => prev.map((m) => m.tempId === tempId ? { ...m, status: 'sending' } : m));
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        await sendMessage.mutateAsync(content);
+        setPendingMsgs((prev) => prev.filter((m) => m.tempId !== tempId));
+        return;
+      } catch {
+        if (attempt < MAX_RETRIES - 1) {
+          await new Promise((r) => setTimeout(r, RETRY_DELAYS[attempt]));
+        }
+      }
+    }
+    setPendingMsgs((prev) => prev.map((m) => m.tempId === tempId ? { ...m, status: 'failed' } : m));
+  }, [sendMessage]);
+
   const handleSend = () => {
     const content = text.trim();
-    if (!content) return;
-    sendMessage.mutate(content);
+    if (!content || sendMessage.isPending) return;
+    const tempId = crypto.randomUUID();
     setText('');
+    setPendingMsgs((prev) => [...prev, { tempId, content, status: 'sending' }]);
+    sendWithRetry(content, tempId);
   };
 
   /** 날짜 구분선을 위한 헬퍼 */
@@ -105,11 +129,13 @@ export function ChatTab({ groupId, isLeader }: { groupId: string; isLeader?: boo
                     <p className="text-xs text-[#94A3B8] mb-0.5 ml-1">{msg.user_name ?? '알 수 없음'}</p>
                   )}
                   <div className={`px-3.5 py-2 rounded-2xl text-sm break-words ${
-                    isMine
-                      ? 'bg-[#4F46E5] text-white rounded-br-md'
-                      : 'bg-[#F1F5F9] dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F8FAFC] rounded-bl-md'
+                    msg.deleted_at
+                      ? 'bg-[#F1F5F9] dark:bg-[#1E293B] text-[#94A3B8] dark:text-[#64748B] italic'
+                      : isMine
+                        ? 'bg-[#4F46E5] text-white rounded-br-md'
+                        : 'bg-[#F1F5F9] dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F8FAFC] rounded-bl-md'
                   }`}>
-                    {msg.content}
+                    {msg.deleted_at ? '삭제된 메시지입니다.' : msg.content}
                   </div>
                   <div className={`flex items-center gap-1 ${isMine ? 'justify-end' : ''}`}>
                     {showTime && (
@@ -117,7 +143,7 @@ export function ChatTab({ groupId, isLeader }: { groupId: string; isLeader?: boo
                         {new Date(msg.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     )}
-                    {isLeader && (
+                    {isLeader && !msg.deleted_at && (
                       <button
                         onClick={() => { if (confirm('이 메시지를 삭제하시겠습니까?')) deleteMessage.mutate(msg.id); }}
                         className="text-[10px] text-red-400 hover:text-red-500 mt-0.5 ml-1 opacity-0 group-hover/msg:opacity-100 transition-opacity"
@@ -132,10 +158,38 @@ export function ChatTab({ groupId, isLeader }: { groupId: string; isLeader?: boo
             </div>
           );
         })}
+        {pendingMsgs.map((pm) => (
+          <div key={pm.tempId} className="flex justify-end px-4 py-1">
+            <div className="max-w-[75%]">
+              <div className="px-3.5 py-2 rounded-2xl rounded-br-md text-sm bg-[#4F46E5]/60 text-white opacity-70">
+                {pm.content}
+              </div>
+              <div className="flex items-center justify-end gap-1 mt-0.5">
+                {pm.status === 'sending' && <Loader2 size={10} className="animate-spin text-[#94A3B8]" />}
+                {pm.status === 'failed' && (
+                  <>
+                    <AlertCircle size={10} className="text-red-400" />
+                    <span className="text-[10px] text-red-400">전송 실패</span>
+                    <button
+                      type="button"
+                      onClick={() => sendWithRetry(pm.content, pm.tempId)}
+                      className="flex items-center gap-0.5 text-[10px] text-[#4F46E5] hover:underline ml-1"
+                    >
+                      <RotateCcw size={9} /> 재전송
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
         <div ref={bottomRef} />
       </div>
       {/* 입력 */}
       <div className="flex-shrink-0 px-4 py-3 border-t border-[#E2E8F0] dark:border-[#334155]">
+        {pendingMsgs.length === 0 && sendMessage.isError && (
+          <p className="text-xs text-red-400 text-center mb-2">메시지 전송에 실패했습니다. 다시 시도해주세요.</p>
+        )}
         <div className="flex items-center gap-2">
           <input
             type="text"

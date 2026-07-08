@@ -164,7 +164,7 @@ export function DesignSystemPage() {
   }
 
   return (
-    <div className="pb-24">
+    <div className="pb-[var(--page-pb)] lg:pb-8">
       {/* Hero */}
       <div className="bg-gradient-to-br from-[#4F46E5] via-[#7C3AED] to-[#6D28D9] px-6 py-8 text-white mb-6">
         <p className="opacity-75 mb-1" style={{ fontSize: 13 }}>BookShelf Design System</p>

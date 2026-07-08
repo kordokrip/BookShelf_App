@@ -189,48 +189,122 @@ function AIRecommendCard({
   onAdd,
   isAdding,
 }: {
-  rec: { title: string; author: string; genre: string; reason: string };
+  rec: { title: string; author: string; genre: string; reason: string; coverImage?: string | null; isbn?: string };
   onAdd: () => void;
   isAdding: boolean;
 }) {
+  const [imgErr, setImgErr] = useState(false);
+  const [memo, setMemo] = useState("");
+  const [showMemo, setShowMemo] = useState(false);
+
   return (
     <div
-      className="rounded-2xl p-4 mb-3"
+      className="rounded-2xl mb-3 overflow-hidden"
       style={{
         background: "linear-gradient(135deg, #F5F3FF 0%, #FAFAFA 100%)",
         boxShadow: "0 0 0 1px rgba(79,70,229,0.18)",
       }}
     >
-      <p
-        className="text-[#1E293B] dark:text-[#F8FAFC]"
-        style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.35 }}
+      {/* 상단: 커버 + 제목/저자/장르 */}
+      <div className="flex items-start gap-3 p-4">
+        {/* 북커버 */}
+        <div className="flex-shrink-0">
+          {rec.coverImage && !imgErr ? (
+            <img
+              src={rec.coverImage}
+              alt={rec.title}
+              loading="lazy"
+              onError={() => setImgErr(true)}
+              className="w-16 aspect-[2/3] object-cover rounded-xl shadow-md"
+            />
+          ) : (
+            <div
+              className="w-16 aspect-[2/3] rounded-xl flex items-center justify-center shadow-md"
+              style={{ background: "linear-gradient(135deg, #7C3AED 0%, #4F46E5 100%)" }}
+            >
+              <span style={{ fontSize: 26 }}>📚</span>
+            </div>
+          )}
+        </div>
+
+        {/* 텍스트 영역 */}
+        <div className="flex-1 min-w-0">
+          {/* AI 추천 배지 */}
+          <span
+            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 mb-1.5"
+            style={{ fontSize: 10, fontWeight: 700, background: "linear-gradient(135deg, #7C3AED, #4F46E5)", color: "white" }}
+          >
+            ✨ AI 추천
+          </span>
+          <p
+            className="text-[#1E293B] dark:text-[#F8FAFC] line-clamp-2 leading-snug"
+            style={{ fontSize: 15, fontWeight: 700 }}
+          >
+            {rec.title}
+          </p>
+          <p className="text-[#64748B] dark:text-[#94A3B8] truncate mt-0.5" style={{ fontSize: 12 }}>
+            {rec.author} · {rec.genre}
+          </p>
+
+          {/* 추천 사유 */}
+          <p
+            className="mt-2"
+            style={{
+              fontSize: 12,
+              color: "#475569",
+              fontStyle: "italic",
+              lineHeight: 1.6,
+              borderLeft: "2px solid #7C3AED",
+              paddingLeft: 8,
+            }}
+          >
+            {rec.reason}
+          </p>
+        </div>
+      </div>
+
+      {/* 메모 입력 영역 (토글) */}
+      {showMemo && (
+        <div className="px-4 pb-3">
+          <textarea
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+            placeholder="이 추천에 대한 메모를 남겨보세요..."
+            rows={2}
+            className="w-full rounded-xl border border-[#DDD6FE] bg-white dark:bg-[#1E293B] dark:border-[#4338CA] px-3 py-2 text-[#1E293B] dark:text-[#F8FAFC] resize-none"
+            style={{ fontSize: 13, outline: "none" }}
+          />
+        </div>
+      )}
+
+      {/* 하단 액션 버튼 */}
+      <div
+        className="flex items-center justify-between px-4 pb-3"
+        style={{ gap: 8 }}
       >
-        {rec.title}
-      </p>
-      <p className="mt-0.5 text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 13 }}>
-        {rec.author} · {rec.genre}
-      </p>
-      <p
-        className="mt-3"
-        style={{
-          fontSize: 13,
-          color: "#475569",
-          fontStyle: "italic",
-          lineHeight: 1.6,
-          borderLeft: "3px solid #7C3AED",
-          paddingLeft: 12,
-        }}
-      >
-        {rec.reason}
-      </p>
-      <button
-        onClick={onAdd}
-        disabled={isAdding}
-        className="mt-3 disabled:opacity-50 hover:underline"
-        style={{ fontSize: 13, fontWeight: 700, color: "#7C3AED" }}
-      >
-        + 위시리스트에 추가
-      </button>
+        <button
+          type="button"
+          onClick={() => setShowMemo((v) => !v)}
+          className="flex items-center gap-1"
+          style={{ fontSize: 12, fontWeight: 600, color: showMemo ? "#7C3AED" : "#94A3B8" }}
+        >
+          {showMemo ? "✏️ 메모 닫기" : "✏️ 메모 추가"}
+        </button>
+        <button
+          type="button"
+          onClick={onAdd}
+          disabled={isAdding}
+          className="rounded-full text-white disabled:opacity-50 transition-opacity hover:opacity-90"
+          style={{
+            fontSize: 12,
+            fontWeight: 700,
+            background: "linear-gradient(135deg, #7C3AED, #4F46E5)",
+            padding: "6px 14px",
+          }}
+        >
+          {isAdding ? "…" : "+ 위시리스트"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -717,7 +791,7 @@ export function WishlistPage() {
   }
 
   async function handleAddAIRec(
-    rec: { title: string; author: string; genre: string; reason: string },
+    rec: { title: string; author: string; genre: string; reason: string; coverImage?: string | null; isbn?: string },
   ) {
     const doAdd = (payload: Parameters<typeof addBook.mutate>[0]) => {
       addBook.mutate(payload, {
@@ -749,8 +823,8 @@ export function WishlistPage() {
           title: matched.title,
           author: matched.author || rec.author,
           genre: (rec.genre as GenreKey) ?? "기타",
-          isbn: matched.isbn || undefined,
-          coverImage: matched.coverImage || undefined,
+          isbn: matched.isbn || rec.isbn || undefined,
+          coverImage: matched.coverImage || rec.coverImage || undefined,
           publisher: matched.publisher || undefined,
           status: "wish",
         });
@@ -759,7 +833,15 @@ export function WishlistPage() {
     } catch {
       /* 폴백 */
     }
-    doAdd({ title: rec.title, author: rec.author, genre: rec.genre as GenreKey, status: "wish" });
+    // Kakao API에서 받은 coverImage/isbn을 폴백으로 사용
+    doAdd({
+      title: rec.title,
+      author: rec.author,
+      genre: rec.genre as GenreKey,
+      isbn: rec.isbn || undefined,
+      coverImage: rec.coverImage || undefined,
+      status: "wish",
+    });
   }
 
   function handleDelete(id: string) {
@@ -1036,7 +1118,13 @@ export function WishlistPage() {
               )}
             </div>
             <button
-              onClick={() => refreshRecs.mutate()}
+              type="button"
+              onClick={() =>
+                refreshRecs.mutate(undefined, {
+                  onError: () =>
+                    showToast("AI 추천을 갱신하지 못했어요. 잠시 후 다시 시도해주세요.", "error"),
+                })
+              }
               disabled={refreshRecs.isPending}
               className="flex items-center gap-1.5 disabled:opacity-50 rounded-full px-3 py-1.5 text-white"
               style={{
@@ -1053,7 +1141,10 @@ export function WishlistPage() {
             </button>
           </div>
 
-          {!isLoadingAI && aiData?.message && visibleRecs.length === 0 && (
+          {/* 케이스 1: 읽은 책 없음 — topGenres도 비어있을 때만 표시 */}
+          {!isLoadingAI && !refreshRecs.isPending
+            && (aiData?.topGenres ?? []).length === 0
+            && visibleRecs.length === 0 && (
             <div
               className="rounded-2xl p-5 text-center mb-4"
               style={{
@@ -1062,29 +1153,56 @@ export function WishlistPage() {
               }}
             >
               <p style={{ fontSize: 32 }}>🤖</p>
-              <p
-                className="text-[#6D28D9] mt-3"
-                style={{ fontSize: 15, fontWeight: 700 }}
-              >
+              <p className="text-[#6D28D9] mt-3" style={{ fontSize: 15, fontWeight: 700 }}>
                 아직 읽은 책이 없어요
               </p>
-              <p
-                className="text-[#7C3AED] mt-1"
-                style={{ fontSize: 13, opacity: 0.8 }}
-              >
+              <p className="text-[#7C3AED] mt-1" style={{ fontSize: 13, opacity: 0.8 }}>
                 책을 읽으면 취향에 맞는 책을 추천해드릴게요
               </p>
               <button
+                type="button"
                 onClick={() => navigate("/register-flow")}
                 className="mt-4 px-5 py-2 rounded-full text-white"
-                style={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  background: "linear-gradient(135deg, #4F46E5, #7C3AED)",
-                }}
+                style={{ fontSize: 13, fontWeight: 600, background: "linear-gradient(135deg, #4F46E5, #7C3AED)" }}
               >
                 책 추가하러 가기
               </button>
+            </div>
+          )}
+
+          {/* 케이스 2: 읽은 책은 있지만 추천 결과 없음 (로딩 직후 또는 재시도 필요) */}
+          {!isLoadingAI && !refreshRecs.isPending
+            && (aiData?.topGenres ?? []).length > 0
+            && (aiData?.recommendations ?? []).length === 0
+            && visibleRecs.length === 0 && (
+            <div
+              className="rounded-2xl p-5 text-center mb-4"
+              style={{ background: "#F8FAFC", border: "1px solid #E2E8F0" }}
+            >
+              <p style={{ fontSize: 28 }}>🔄</p>
+              <p className="text-[#64748B] mt-3" style={{ fontSize: 14, fontWeight: 600 }}>
+                추천을 불러오는 중이에요
+              </p>
+              <p className="text-[#94A3B8] mt-1" style={{ fontSize: 12 }}>
+                새로운 추천 버튼을 눌러 다시 시도해보세요
+              </p>
+            </div>
+          )}
+
+          {/* 케이스 3: 추천이 있지만 모두 위시리스트에 담긴 상태 */}
+          {!isLoadingAI && !refreshRecs.isPending && visibleRecs.length === 0
+            && (aiData?.recommendations ?? []).length > 0 && (
+            <div
+              className="rounded-2xl p-5 text-center mb-4"
+              style={{ background: "#F5F3FF", border: "1px solid #DDD6FE" }}
+            >
+              <p style={{ fontSize: 28 }}>✅</p>
+              <p className="text-[#6D28D9] mt-3" style={{ fontSize: 14, fontWeight: 600 }}>
+                추천 도서를 모두 담았어요!
+              </p>
+              <p className="text-[#7C3AED] mt-1" style={{ fontSize: 12, opacity: 0.8 }}>
+                새로운 추천을 받아보세요
+              </p>
             </div>
           )}
 
@@ -1188,6 +1306,7 @@ export function WishlistPage() {
                 위시리스트를 불러오지 못했어요.
               </p>
               <button
+                type="button"
                 onClick={() => refetch()}
                 className="mt-3 text-[#4F46E5]"
                 style={{ fontSize: 13, fontWeight: 600 }}
@@ -1221,6 +1340,7 @@ export function WishlistPage() {
                 ))}
                 {!showAll && hiddenCount > 0 && (
                   <button
+                    type="button"
                     onClick={() => setShowAll(true)}
                     className="w-full py-3.5 rounded-2xl border border-dashed border-[#FCD34D] flex items-center justify-center gap-2 hover:bg-[#FFFBEB] transition-colors"
                     style={{ color: "#92400E", fontSize: 14, fontWeight: 600 }}
@@ -1251,10 +1371,15 @@ export function WishlistPage() {
 
       {/* ── FAB */}
       <button
+        type="button"
         onClick={() => setShowSearch(true)}
         aria-label="책 검색하여 담기"
-        className="fixed bottom-20 right-5 lg:bottom-8 lg:right-8 w-14 h-14 rounded-full text-white shadow-xl flex items-center justify-center transition-transform hover:scale-105 active:scale-95 z-40"
-        style={{ background: "linear-gradient(135deg, #4F46E5, #7C3AED)" }}
+        className="fixed w-14 h-14 rounded-full text-white shadow-xl flex items-center justify-center transition-transform hover:scale-105 active:scale-95 z-40"
+        style={{
+          bottom: "var(--floating-bottom)",
+          right: "var(--floating-right)",
+          background: "linear-gradient(135deg, #4F46E5, #7C3AED)",
+        }}
       >
         <Plus size={24} />
       </button>

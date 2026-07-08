@@ -12,6 +12,7 @@ import { LogOut, X, Camera } from "lucide-react";
 import { useAuthStore, type AuthUser } from "../../../stores/authStore";
 import { usersApi } from "../../../lib/api";
 import { useQueryClient } from "@tanstack/react-query";
+import { PushNotificationToggle } from "./PushNotificationToggle";
 
 /* ─── 인사말 생성 ─────────────────────────────────── */
 function getGreeting(name: string): string {
@@ -271,8 +272,11 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
       {/* 구분선 */}
       <div className="border-t border-[#E2E8F0] dark:border-[#334155]" />
 
-      {/* 하단: 로그아웃 */}
-      <div className="p-3">
+      {/* 하단: 알림 토글 + 로그아웃 */}
+      <div className="p-3 space-y-2">
+        {/* 푸시 알림 토글 */}
+        <PushNotificationToggle />
+
         <button
           onClick={handleLogout}
           className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-[#475569] text-[#64748B] dark:text-[#94A3B8] hover:bg-[#FEF2F2] hover:text-[#EF4444] dark:hover:bg-[#450A0A] dark:hover:text-[#FCA5A5] transition-colors"

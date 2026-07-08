@@ -87,7 +87,11 @@ export function FAB({ onClick, label = "책 추가" }: FABProps) {
     <button
       onClick={onClick}
       aria-label={label}
-      className="fixed bottom-20 right-4 lg:bottom-6 lg:right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] text-white shadow-lg hover:shadow-xl flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+      className="fixed z-50 w-14 h-14 rounded-full bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] text-white shadow-lg hover:shadow-xl flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+      style={{
+        bottom: "var(--floating-bottom)",
+        right: "var(--floating-right)",
+      }}
     >
       <Plus size={26} strokeWidth={2.5} />
     </button>

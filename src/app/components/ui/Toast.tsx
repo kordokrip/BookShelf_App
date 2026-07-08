@@ -36,7 +36,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div className="fixed bottom-20 lg:bottom-6 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 items-center pointer-events-none w-full px-4 max-w-sm">
+      <div
+        className="fixed left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 items-center pointer-events-none w-full px-4 max-w-sm"
+        style={{ bottom: "var(--toast-bottom)" }}
+      >
         {toasts.map((t) => (
           <ToastItem key={t.id} toast={t} onDismiss={() => dismiss(t.id)} />
         ))}

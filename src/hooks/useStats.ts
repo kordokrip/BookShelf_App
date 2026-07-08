@@ -11,6 +11,6 @@ export function useStats() {
   return useQuery({
     queryKey: queryKeys.stats.user(),
     queryFn: () => statsApi.getStats(),
-    staleTime: 5 * 60_000, // 5분 캐시
+    staleTime: 30_000, // 30초 — book 뮤테이션 후 invalidate로 즉시 갱신
   });
 }

@@ -85,7 +85,7 @@ export function TopBar() {
         </div>
 
         {/* ── 중앙: 페이지 제목 (truncate로 오버플로우 방지) ── */}
-        <h1 className="text-center truncate text-[#1E293B] dark:text-[#F8FAFC] text-[17px] sm:text-lg font-semibold leading-snug select-none px-1 lg:hidden">
+        <h1 className="text-center truncate text-[#1E293B] dark:text-[#F8FAFC] text-[17px] sm:text-lg font-semibold leading-snug select-none px-1 lg:hidden min-w-0">
           {title}
         </h1>
         <nav className="hidden lg:flex items-center justify-center gap-2 min-w-0 overflow-x-auto no-scrollbar px-2">
@@ -110,7 +110,7 @@ export function TopBar() {
         </nav>
 
         {/* ── 우측: 액션 버튼 그룹 ── */}
-        <div className="flex items-center gap-0 sm:gap-0.5 flex-shrink-0">
+        <div className="flex items-center gap-0 sm:gap-0.5 flex-shrink-0" style={{ minWidth: 0 }}>
 
           {/* 테마 토글: sm 이상에서만 표시 (모바일은 화면이 좁으므로 숨김) */}
           <Tooltip>
@@ -118,7 +118,7 @@ export function TopBar() {
               <button
                 onClick={cycleThemeMode}
                 aria-label={THEME_LABEL[themeMode]}
-                className="hidden sm:flex w-10 h-10 sm:w-11 sm:h-11 rounded-full items-center justify-center text-[#64748B] hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition-colors"
+                className="hidden sm:flex w-9 h-9 sm:w-11 sm:h-11 rounded-full items-center justify-center text-[#64748B] hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition-colors"
               >
                 {themeMode === 'auto'  ? <Clock size={19} /> :
                  themeMode === 'light' ? <Sun   size={19} /> :
@@ -134,7 +134,7 @@ export function TopBar() {
               <button
                 onClick={() => navigate('/register-flow')}
                 aria-label="책 등록"
-                className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-[#4F46E5] hover:bg-[#EEF2FF] dark:hover:bg-[#312E81] transition-colors"
+                className="w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-[#4F46E5] hover:bg-[#EEF2FF] dark:hover:bg-[#312E81] transition-colors"
               >
                 <BookPlus size={19} />
               </button>
@@ -148,7 +148,7 @@ export function TopBar() {
               <button
                 onClick={() => navigate('/notes-search')}
                 aria-label="노트 & 검색"
-                className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-[#64748B] hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition-colors"
+                className="w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-[#64748B] hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition-colors"
               >
                 <FileSearch size={19} />
               </button>
@@ -163,7 +163,7 @@ export function TopBar() {
                 <button
                   onClick={() => navigate('/admin')}
                   aria-label="관리자 대시보드"
-                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                  className="w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
                 >
                   <UserCog size={19} />
                 </button>
@@ -189,7 +189,7 @@ export function TopBar() {
                   }}
                   aria-label={`알림${unreadCount > 0 ? ` (${unreadCount}건 미읽음)` : ''}`}
                   aria-expanded={notifOpen}
-                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center relative text-[#64748B] hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition-colors"
+                  className="w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center relative text-[#64748B] hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition-colors"
                 >
                   <Bell size={19} />
                   {unreadCount > 0 && (

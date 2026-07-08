@@ -224,6 +224,16 @@ export function StatsPage() {
     [stats?.genres],
   );
 
+  const genreDataDone = useMemo(
+    () => buildGenreFromStats(stats?.genresDone ?? []),
+    [stats?.genresDone],
+  );
+
+  const genreDataReading = useMemo(
+    () => buildGenreFromStats(stats?.genresReading ?? []),
+    [stats?.genresReading],
+  );
+
   const syntheticSessions = useMemo(
     () => buildSyntheticSessions(stats?.sessionDates ?? []),
     [stats?.sessionDates],
@@ -412,7 +422,7 @@ export function StatsPage() {
             {/* Mobile stacked */}
             <div className="md:hidden flex flex-col gap-3">
               <MonthlyBarChart data={monthlyData} />
-              <GenreDonutChart allData={genreDataAll} doneData={[]} readingData={[]} />
+              <GenreDonutChart allData={genreDataAll} doneData={genreDataDone} readingData={genreDataReading} />
               <ReadingHeatmap sessions={syntheticSessions} />
             </div>
 
@@ -422,7 +432,7 @@ export function StatsPage() {
                 <MonthlyBarChart data={monthlyData} />
               </div>
               <div className="flex flex-col gap-4">
-                <GenreDonutChart allData={genreDataAll} doneData={[]} readingData={[]} />
+                <GenreDonutChart allData={genreDataAll} doneData={genreDataDone} readingData={genreDataReading} />
               </div>
               <div className="col-span-2">
                 <ReadingHeatmap sessions={syntheticSessions} />
@@ -436,7 +446,7 @@ export function StatsPage() {
                 <ReadingHeatmap sessions={syntheticSessions} />
               </div>
               <div className="flex flex-col gap-5">
-                <GenreDonutChart allData={genreDataAll} doneData={[]} readingData={[]} />
+                <GenreDonutChart allData={genreDataAll} doneData={genreDataDone} readingData={genreDataReading} />
               </div>
             </div>
           </div>

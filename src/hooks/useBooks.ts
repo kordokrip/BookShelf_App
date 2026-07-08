@@ -60,6 +60,7 @@ export function useAddBook() {
       booksApi.create(denormalizeBook(book) as CreateBookInput),
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: queryKeys.books.all });
+      qc.invalidateQueries({ queryKey: queryKeys.stats.all });
       addNotification('book_added', '새 책을 서재에 추가했습니다', variables.title ?? '');
     },
   });
@@ -75,6 +76,7 @@ export function useUpdateBook() {
     onSuccess: (_, { id, data }) => {
       qc.invalidateQueries({ queryKey: queryKeys.books.all });
       qc.invalidateQueries({ queryKey: queryKeys.books.detail(id) });
+      qc.invalidateQueries({ queryKey: queryKeys.stats.all });
       const statusMap: Record<string, string> = {
         done: '완독으로 이동했습니다 🎉',
         reading: '읽는 중으로 이동했습니다 📖',
@@ -93,7 +95,10 @@ export function useDeleteBook() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => booksApi.delete(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.books.all }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.books.all });
+      qc.invalidateQueries({ queryKey: queryKeys.stats.all });
+    },
   });
 }
 

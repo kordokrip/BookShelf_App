@@ -1,11 +1,20 @@
 # BookShelf App — UI/UX 완전 명세서
 
-> **문서 버전**: v1.4  
-> **최종 업데이트**: 2026-04-28 (네비게이션/검증/리팩토링 반영)  
-> **대상 기준**: `main` 브랜치 작업본 (2026-04-28)  
+> **문서 버전**: v1.5  
+> **최종 업데이트**: 2026-05-31 (ISBN 스캐너 확장 + 반응형/뷰포트 리팩토링 반영)  
+> **대상 기준**: `main` 브랜치 작업본 (2026-05-31)  
 > **목적**: 코드레벨 교차 검증을 통한 완전한 UI/UX 명세. 이 문서만으로 모든 버튼, 이미지, 데이터 바인딩, API 호출을 파악할 수 있도록 작성.
 
-### 최근 동기화 노트 (2026-04-28)
+### 최근 동기화 노트 (2026-05-31)
+
+- `useViewport` 훅 신규: `visualViewport` 기반 실측 viewport(`--vp-h`, `--vp-w`) 반영
+- Safe-area 변수 체계 정비: `--safe-top`, `--safe-bottom`, `--topbar-h`, `--bottomnav-h`, `--page-pb`
+- 주요 페이지 `min-h-screen/h-screen` → `min-h-svh/h-svh` 전환 (iOS Safari 주소창/노치 대응)
+- `WishlistPage` 검색 패널에 ISBN 바코드 스캔 진입 버튼 추가 (`ISBNScanner` 재사용)
+- `BookDetailPage` 탭 sticky 오프셋 `top-14` → `var(--topbar-h)`로 변경
+- 문서 커버리지 보강: `CollectionsPage`, `SharePage`, `useCollections`, `useDiscover`, `useOfflineQueue`, `usePushNotification` 연결 정보 반영
+
+### 이전 동기화 노트 (2026-04-28)
 
 - SideNav 배지 계산 최적화: `useBooks(reading|wish)` → `useBookCount('reading'|'wish')`
 - SideNav 반응형 표시 구간 확장: `lg` 전용에서 `md` 이상 + hover 확장 패턴 반영
@@ -25,7 +34,7 @@
 - [6. 알림 시스템](#6-알림-시스템)
 - [7. 토스트 시스템](#7-토스트-시스템)
 - [8. 인증 플로우](#8-인증-플로우)
-- [9. 페이지별 상세 UI/UX (18개)](#9-페이지별-상세-uiux-18개)
+- [9. 페이지별 상세 UI/UX (20개)](#9-페이지별-상세-uiux-20개)
   - [9.0 EntryGate (진입 분기)](#90-entrygate-진입-분기)
   - [9.1 SplashPage](#91-splashpage)
   - [9.2 OnboardingPage](#92-onboardingpage)
@@ -42,12 +51,15 @@
   - [9.13 NotesSearchPage (노트 검색)](#913-notessearchpage-노트-검색)
   - [9.14 DesignSystemPage (디자인 시스템)](#914-designsystempage-디자인-시스템)
   - [9.15 NotFoundPage (404)](#915-notfoundpage-404)
+  - [9.18 CollectionsPage (컬렉션)](#918-collectionspage-컬렉션)
+  - [9.19 SharePage (공유 리포트)](#919-sharepage-공유-리포트)
 - [10. 공유 컴포넌트 라이브러리](#10-공유-컴포넌트-라이브러리)
 - [11. API 엔드포인트 ↔ UI 매핑](#11-api-엔드포인트--ui-매핑)
 - [12. 상태 관리 데이터 흐름](#12-상태-관리-데이터-흐름)
 - [13. 모바일 최적화 & PWA](#13-모바일-최적화--pwa)
 - [14. 반응형 브레이크포인트](#14-반응형-브레이크포인트)
 - [15. 타입 시스템 & 데이터 모델](#15-타입-시스템--데이터-모델)
+- [16. 검증 기반 자동 점검 기준](#16-검증-기반-자동-점검-기준)
 
 ---
 
@@ -119,8 +131,9 @@ background: linear-gradient(135deg, #94A3B8 0%, #CBD5E1 100%)
 | `--safe-top` | `env(safe-area-inset-top, 0px)` | — | iOS 노치 대응 |
 | `--topbar-content-h` | `56px` | — | TopBar 콘텐츠 높이 |
 | `--bottomnav-content-h` | `60px` | — | BottomNav 콘텐츠 높이 |
-| `--topbar-h` | `calc(var(--safe-top) + var(--topbar-content-h))` | — | TopBar 전체 높이 (safe-area 포함) |
-| `--page-pb` | `calc(var(--bottomnav-content-h) + env(safe-area-inset-bottom, 8px))` | — | 페이지 하단 패딩 |
+| `--topbar-h` | `calc(var(--topbar-content-h) + var(--safe-top))` | — | TopBar 전체 높이 (safe-area 포함) |
+| `--bottomnav-h` | `calc(var(--bottomnav-content-h) + var(--safe-bottom))` | — | BottomNav 전체 높이 (safe-area 포함) |
+| `--page-pb` | `calc(var(--bottomnav-h) + 1rem)` | — | 페이지 하단 패딩 (탭바 + 여유) |
 | `--font-pretendard` | `"Pretendard Variable", sans-serif` | — | 한국어 본문 폰트 |
 
 ### 1.5 Cover Gradients (8종)
@@ -169,7 +182,7 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
     <div :class="sidebarOpen ? 'lg:ml-60' : 'lg:ml-[68px]'">  ← ★ 16차: 동적 마진
       <TopBar />                   ← sticky top-0, 56px 높이
       <OfflineBanner />            ← 오프라인 시만 표시
-      <main class="min-h-[calc(100svh-var(--topbar-h))] pb-[var(--page-pb)] lg:pb-0">
+      <main class="min-h-[calc(100svh-var(--topbar-h))]">
         <div class="max-w-2xl mx-auto lg:max-w-3xl">
           <Outlet />               ← 라우트 페이지 렌더링
         </div>
@@ -190,7 +203,7 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 | **TopBar** | 로고(32px) + 타이틀 + 액션버튼 | SideNav 옆 (동적 마진) |
 | **BottomNavBar** | 하단 60px 고정 | 숨김 (`lg:hidden`) |
 | **Main 최대 너비** | `max-w-2xl` (672px) | `max-w-3xl` (768px) |
-| **하단 패딩** | `var(--page-pb)` (~68px) | 0 |
+| **하단 패딩** | 페이지 컨테이너별 `pb-[var(--page-pb)]` | 0 |
 
 ---
 
@@ -427,7 +440,7 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 
 ---
 
-## 9. 페이지별 상세 UI/UX (18개)
+## 9. 페이지별 상세 UI/UX (20개)
 
 ---
 
@@ -1440,6 +1453,56 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 
 ---
 
+### 9.18 CollectionsPage (컬렉션)
+
+- **파일**: `src/app/pages/CollectionsPage.tsx`
+- **경로**: `/collections` (Lazy loaded, 인증 필수)
+
+#### 역할
+
+- 사용자 컬렉션(커스텀 책 모음) 생성/수정/삭제
+- 컬렉션별 책 추가/제거 및 목록 조회
+
+#### 데이터 연결
+
+- **훅**: `useCollections()`
+- **API**: `collectionsApi.*` → `/api/collections/*`
+- **백엔드**: `worker/routes/collections.ts`
+- **DB**: `0005_collections.sql` (collections, collection_books)
+
+#### UX 포인트
+
+- 빈 상태(컬렉션 없음): EmptyState + 생성 CTA
+- 컬렉션 카드/목록 전환 및 정렬
+- 컬렉션 상세에서 책 연결 상태를 즉시 반영(쿼리 무효화)
+
+---
+
+### 9.19 SharePage (공유 리포트)
+
+- **파일**: `src/app/pages/SharePage.tsx`
+- **경로**: `/share` (Lazy loaded, 인증 필수)
+
+#### 역할
+
+- 통계 보고서 공유 inbox/outbox 확인
+- 읽음 처리 및 공유 상세 보기
+
+#### 데이터 연결
+
+- **훅**: `useGroups`의 share 관련 query/mutation + `useOfflineQueue()` 보조
+- **API**: `shareApi.*` → `/api/share/*`
+- **백엔드**: `worker/routes/share.ts`
+- **DB**: `0008_groups_and_sharing.sql` (shared_reports)
+
+#### UX 포인트
+
+- 읽지 않은 공유 항목 강조 표시
+- 읽음 처리 즉시 카운트 동기화(SideNav/TopBar 배지)
+- 네트워크 불안정 시 오프라인 큐 기반 재시도 UX (`useOfflineQueue`)
+
+---
+
 ## 10. 공유 컴포넌트 라이브러리
 
 ### 10.1 커스텀 UI 컴포넌트 (12개)
@@ -1848,6 +1911,25 @@ interface UISession {
 - `denormalizeBook(ui → api)`: 프론트 → API (등록/수정 시)
 - `normalizeSession(api → ui)`: 세션 정규화
 - `normalizeBookNote(api → ui)`: 노트 정규화
+
+---
+
+## 16. 검증 기반 자동 점검 기준
+
+UI/UX 문서 누락을 방지하기 위해 아래 기준으로 자동 점검한다.
+
+- `페이지 기준`: `src/app/pages/*.tsx` 신규 페이지가 9장(페이지별 상세)과 목차에 모두 반영되어야 함
+- `라우트 기준`: `src/app/routes.ts` 경로가 9장 각 페이지 설명과 일치해야 함
+- `데이터 기준`: 신규 페이지의 Hook/API/Worker/DB 연결이 본문에 포함되어야 함
+- `반응형 기준`: 뷰포트 관련 변경(`svh`, safe-area, `useViewport`) 시 13/14장에 반영되어야 함
+
+권장 스모크 명령:
+
+```bash
+for x in CollectionsPage SharePage /collections /share useCollections useDiscover useOfflineQueue usePushNotification useViewport; do
+  rg -n "$x" docs/BookShelf_UI_UX.md docs/TRACE_MAP.md PROJECT_STATUS.md >/dev/null && echo "OK $x" || echo "MISS $x"
+done
+```
 
 ---
 

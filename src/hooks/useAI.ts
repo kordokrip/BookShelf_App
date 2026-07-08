@@ -13,6 +13,8 @@ export interface AIRecommendation {
   author: string;
   reason: string;
   genre: string;
+  coverImage: string | null;
+  isbn: string;
 }
 
 interface SummarizeResponse {
@@ -58,7 +60,7 @@ export function useAIRecommendations() {
   return useQuery({
     queryKey: queryKeys.ai.recommendations(),
     queryFn: () =>
-      apiFetch<RecommendResponse>('/api/ai/recommend?limit=5'),
+      apiFetch<RecommendResponse>('/api/ai/recommend?limit=3'),
     staleTime: 60 * 60 * 1000, // 1시간
     retry: false,
   });
@@ -73,7 +75,7 @@ export function useRefreshAIRecommendations() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () =>
-      apiFetch<RecommendResponse>('/api/ai/recommend?limit=5&refresh=true'),
+      apiFetch<RecommendResponse>('/api/ai/recommend?limit=3&refresh=true'),
     onSuccess: (data) => {
       queryClient.setQueryData(queryKeys.ai.recommendations(), data);
     },

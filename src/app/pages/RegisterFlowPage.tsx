@@ -774,10 +774,14 @@ export function RegisterFlowPage() {
   };
 
   return (
-    <div className="flex flex-col h-svh bg-background">
+    <div className="flex flex-col min-h-[var(--vp-h)] bg-background">
+      {/* iOS 노치 / Dynamic Island / PWA standalone 상단 안전 영역 */}
+      <div aria-hidden style={{ height: 'var(--safe-top)', flexShrink: 0 }} />
+
       {/* 헤더 */}
       <div className="flex items-center gap-3 px-4 h-14 border-b border-border flex-shrink-0">
         <button
+          type="button"
           onClick={prev}
           className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
         >

@@ -49,7 +49,7 @@ export function BottomNavBar() {
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       aria-label="하단 네비게이션"
     >
-      <div className="flex items-stretch min-h-[60px] h-[64px] max-w-screen-sm mx-auto">
+      <div className="flex items-stretch min-h-[var(--bottomnav-content-h)] h-[var(--bottomnav-content-h)] max-w-screen-sm mx-auto">
         {navItems.map((item) => {
           const isActive =
             item.path === "/"

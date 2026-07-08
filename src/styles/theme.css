@@ -40,10 +40,17 @@
    * --page-pb: 페이지 하단 패딩 = BottomNav 전체 높이 + 여유 16px
    */
   --topbar-content-h:   56px;
-  --bottomnav-content-h: 60px;
+  --bottomnav-content-h: 64px;
   --topbar-h:    calc(var(--topbar-content-h)    + var(--safe-top));
   --bottomnav-h: calc(var(--bottomnav-content-h) + var(--safe-bottom));
   --page-pb:     calc(var(--bottomnav-h) + 1rem);
+  --kb-offset: 0px;
+  --floating-bottom: calc(var(--bottomnav-h) + 1rem + var(--kb-offset));
+  --floating-right: max(1rem, calc(var(--safe-right) + 0.75rem));
+  --toast-bottom: calc(var(--bottomnav-h) + 1rem + var(--kb-offset));
+  --install-banner-bottom: calc(var(--bottomnav-h) + 0.5rem + var(--kb-offset));
+  --auth-preview-bottom: calc(var(--safe-bottom) + 1rem + var(--kb-offset));
+  --touch-target-min: 44px;
 
   /* ── 브레이크포인트 참조 변수 ───────────────────────────────────
    * JS(useViewport)에서 읽어 조건 분기에 활용 가능
@@ -120,6 +127,16 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+}
+
+@media (min-width: 768px) {
+  :root {
+    --floating-bottom: calc(var(--safe-bottom) + 1.25rem + var(--kb-offset));
+    --floating-right: 1.5rem;
+    --toast-bottom: calc(var(--safe-bottom) + 1rem + var(--kb-offset));
+    --install-banner-bottom: calc(var(--safe-bottom) + 0.75rem + var(--kb-offset));
+    --auth-preview-bottom: calc(var(--safe-bottom) + 1.25rem + var(--kb-offset));
+  }
 }
 
 /* ── Range Slider 크로스 브라우저 커스텀 스타일 ─────────────── */

@@ -91,7 +91,11 @@ export default defineConfig({
           if (id.includes('@tanstack/react-query')) {
             return 'vendor-query';
           }
-          if (id.includes('react-dom') || id.includes('react/') || (id.includes('react') && !id.includes('@'))) {
+          // react-router를 vendor-react에서 분리 — 독립 캐시 무효화 + 초기 청크 크기 축소
+          if (id.includes('react-router')) {
+            return 'vendor-router';
+          }
+          if (id.includes('react-dom') || id.includes('/node_modules/react/')) {
             return 'vendor-react';
           }
           if (id.includes('@radix-ui') || id.includes('lucide-react')) {

@@ -1,9 +1,15 @@
 # BookShelf App — 전체 시스템 추적 맵 (TRACE MAP)
 
-> 작성 기준: 실제 소스 코드 전수 분석 (2026-04-28 기준)
+> 작성 기준: 실제 소스 코드 전수 분석 (2026-05-31 기준)
 > 목적: 프로덕션 오류 발생 시 UI → Hook → API → DB 레이어를 빠르게 추적하기 위한 기준 문서
 >
-> **최신 변경**: 2026-04-28 — 테스트/교차검증 및 리팩토링 반영
+> **최신 변경**: 2026-05-31 — 반응형/뷰포트 리팩토링 + ISBN 스캐너 확장 반영
+> - `useViewport` 신규 도입, `visualViewport` 기반 CSS 변수 주입
+> - `min-h-screen/h-screen` → `min-h-svh/h-svh` 전환
+> - `WishlistPage` ISBN 스캐너 버튼 및 오버레이 연동
+> - `BookDetailPage` sticky 탭 top 오프셋 변수화(`var(--topbar-h)`)
+> - 배포: CF Worker Version `df732bc7-8a69-461b-97a3-6a646259c35c`
+> **이전 변경**: 2026-04-28 — 테스트/교차검증 및 리팩토링 반영
 > - SideNav 배지 계산 최적화: `useBookCount('reading'|'wish')` 전환
 > - 관리자 API 테스트 스크립트 개선: `ADMIN_TOKEN` 직접 실행 지원, JSON 파싱 공통화
 > - 정적 검증/빌드: `type-check`, `lint`, `build` 통과
@@ -27,13 +33,13 @@
 | **Storage** | Cloudflare R2 (`covers/{userId}/{bookId}.{ext}`) |
 | **TypeScript check** | ✅ 0 errors |
 | **Lint** | ✅ 0 errors |
-| **Build** | ✅ 성공 ★ (2026-04-28) |
+| **Build** | ✅ 성공 ★ (2026-05-31) |
 | **Production Health** | ✅ `{"status":"ok","env":"production"}` |
 | **E2E 테스트** | ✅ 27/27 PASS ★ (2026-04-28) |
 | **Admin API 스크립트** | ⚠️ 기본 로그인은 환경 의존 / ✅ `ADMIN_TOKEN` 실행 지원 |
 | **GitHub 커밋** | `83ff556` (main) ★ (24차 이후 OCR 수정) |
-| **Cloudflare Workers** | Version ID `52b698a7-aac6-4715-a040-77a40ddd395a` ★ (25차 배포) |
-| **D1 Tables** | users(★role), books, reading_sessions, notes(★type 'review'), notes_fts (FTS5), groups, group_members(★status,last_read_at), group_messages, group_meetings, meeting_feedbacks, shared_reports, notifications ★ (24차), d1_migrations, _cf_KV, sqlite_sequence |
+| **Cloudflare Workers** | Version ID `df732bc7-8a69-461b-97a3-6a646259c35c` ★ (2026-03-14 배포) |
+| **D1 Tables** | users(★role), books, reading_sessions, notes(★type 'review'), notes_fts (FTS5), collections, collection_books, push_subscriptions, groups, group_members(★status,last_read_at), group_messages, group_meetings, meeting_feedbacks, shared_reports, notifications, admin_messages, activity_logs, d1_migrations, _cf_KV, sqlite_sequence |
 
 ---
 
@@ -56,10 +62,13 @@
 | `/wishlist` | `Root` > `WishlistPage` | **보호** | |
 | `/stats` | `StatsPage` (lazy) | **보호** | lazy import + `.catch()` 청크 에러 자동 복구 |
 | `/yearly-review` | `YearlyReviewPage` (lazy) | **보호** | ★ 신규 (FEAT-104) — lazy import, 연간 독서 결산 |
-| `/books/:id` | `Root` > `BookDetailPage` | **보호** | |
+| `/collections` | `CollectionsPage` (lazy) | **보호** | 컬렉션 목록/상세 관리 |
+| `/book/:id` | `Root` > `BookDetailPage` | **보호** | |
 | `/design-system` | `DesignSystemPage` (lazy) | **보호** ★ (16차) | `protected_(withSuspense(Lazy))` + 컴포넌트 내부 admin gate (`role==='admin'`) |
 | `/entry` | `EntryGate` | 공개 ★ (16차) | 인증→`/`, 비인증→`/splash` 분기 |
 | `/groups` | `GroupsPage` (lazy) | **보호** ★ (21차) | 독서 모임 목록/생성/가입 + GroupDetailView(채팅/일정/피드백/멤버 탭) |
+| `/share` | `SharePage` (lazy) | **보호** | 공유 리포트 inbox/outbox |
+| `/admin` | `AdminPage` (lazy) | **보호** | 관리자 대시보드 |
 | `*` | `NotFoundPage` | 공개 | 404 fallback 라우트 ✅ |
 
 > **공통**: 모든 라우트에 `errorElement={RouteErrorFallback}` 적용 — 청크 로드 오류 시 1회 자동 새로고침
@@ -77,10 +86,42 @@
 | `/api/search/*` | `worker/routes/search.ts` | 없음 (공개) |
 | `/api/ai/*` | `worker/routes/ai.ts` | `optionalAuth` 각 핸들러 |
 | `/api/stats/*` | `worker/routes/stats.ts` | `authMiddleware` (전체) ✅ |
+| `/api/collections/*` | `worker/routes/collections.ts` | `authMiddleware` (전체) |
 | `/api/groups/*` | `worker/routes/groups.ts` | `authMiddleware` (전체) ★ (24차) — 그룹/멤버 승인/채팅 삭제/일정(전원,2개/일)/피드백 |
 | `/api/notifications/*` | `worker/routes/notifications.ts` | `authMiddleware` (전체) ★ (24차) — 알림 목록/미읽음/읽음 처리 |
+| `/api/push/*` | `worker/routes/push.ts` | 엔드포인트별(대부분 auth 필요) |
 | `/api/share/*` | `worker/routes/share.ts` | `authMiddleware` (전체) ★ (21차) — 통계 보고서 공유 |
+| `/api/discover/*` | `worker/routes/discover.ts` | `authMiddleware` (전체) |
+| `/api/admin/*` | `worker/routes/admin.ts` | `authMiddleware` + 관리자 권한 |
 | `GET *` | SPA 폴백 | 없음 (ASSETS 서빙) |
+
+### 1-C. 2026-05-31 커버리지 보강 체크
+
+| 보강 대상 | 반영 내용 | 상태 |
+|---|---|---|
+| 페이지 | `CollectionsPage`, `SharePage` 경로 및 데이터 흐름 추적 추가 | ✅ |
+| API 라우트 | `collections`, `discover`, `push`, `admin` 라우트 매핑 추가 | ✅ |
+| 훅 | `useCollections`, `useDiscover`, `useOfflineQueue`, `usePushNotification`, `useViewport` 추적 반영 | ✅ |
+| DB | 마이그레이션 `0005`, `0006`, `0009` 및 관련 테이블 추적 반영 | ✅ |
+
+### 1-D. 검증 기반 자동 점검 (누락 방지)
+
+문서 업데이트 시 아래 자동 점검 결과를 함께 확인한다.
+
+| 점검 축 | 자동 점검 기준 | 실패 조건 |
+|---|---|---|
+| Front Routes | `src/app/routes.ts`의 보호/공개 라우트가 1-A 표에 모두 존재 | 신규 페이지 경로 미기재 |
+| Worker Routes | `worker/index.ts` mount 경로가 1-B 표에 모두 존재 | 신규 API prefix 미기재 |
+| Hooks | `src/hooks/*.ts` 신규 훅이 문서(TRACE_MAP/PROJECT_STATUS/UI_UX)에 반영 | 신규 훅 설명 누락 |
+| Migrations | `worker/db/migrations/*.sql` 신규 파일이 D1 추적표에 반영 | 신규 migration 누락 |
+
+권장 스모크 명령:
+
+```bash
+for x in /collections /api/collections /api/discover /api/push /share /api/admin useCollections useDiscover useOfflineQueue usePushNotification 0005_collections 0006_push_subscriptions 0009_indexes_and_session_unique; do
+  rg -n "$x" PROJECT_STATUS.md docs/TRACE_MAP.md docs/BookShelf_UI_UX.md >/dev/null && echo "OK $x" || echo "MISS $x"
+done
+```
 
 ---
 
@@ -355,7 +396,7 @@ UI(email+password submit) → authStore.login(email, password)
     → POST /api/users/login
       → D1: SELECT * FROM users WHERE email = ?
       → verifyPassword(password, hash)  [SHA-256]
-      → createToken()  [JWT, 24h]
+      → createToken()  [JWT, 2h (exp: now + 7200)]
     → localStorage.setItem('auth_token', token)
     → authStore.user = 파싱된 사용자
 
@@ -1116,11 +1157,11 @@ totals:       { totalPages: number; totalMinutes: number }
 [회원가입]
 SignUpPage → authStore.register(name, email, password)
   → POST /api/users/register
-  → hashPassword(password) [PBKDF2 600,000 iterations + 16B random salt] ★ (2026-03-28)
+  → hashPassword(password) [PBKDF2 10,000 iterations + 16B random salt, CF Workers CPU 제약으로 10K 선택] ★ (2026-03-28)
     저장 형식: "pbkdf2:{saltHex}:{hashHex}"
     (구형: SHA-256 "{salt}:{hex}" — 레거시 계정 로그인 시 자동 업그레이드)
   → INSERT users
-  → createToken({sub, email}, JWT_SECRET) [HS256, 24h]
+  → createToken({sub, email}, JWT_SECRET) [HS256, 2h (exp: now + 7200)]
   → 자동으로 authStore.login() 호출
   → localStorage.setItem('auth_token', token)
 

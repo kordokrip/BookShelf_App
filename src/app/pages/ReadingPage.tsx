@@ -34,11 +34,12 @@ function PageUpdateModal({
 }: {
   book: UIBook;
   onClose: () => void;
-  onSave: (page: number, newTotalPages?: number) => void;
+  onSave: (page: number, newTotalPages?: number, goalDate?: string) => void;
   onComplete: (page: number, newTotalPages?: number) => void;
 }) {
   const [page, setPage] = useState(book.currentPage ?? 0);
   const [localTotalPages, setLocalTotalPages] = useState(book.totalPages ?? 0);
+  const [localGoalDate, setLocalGoalDate] = useState(book.goalDate ?? '');
   const [isFetchingPages, setIsFetchingPages] = useState(false);
   const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
   const { showToast } = useToast();
@@ -166,6 +167,34 @@ function PageUpdateModal({
             />
           </div>
 
+          {/* ── 완독 목표일 */}
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 12, fontWeight: 600 }}>
+                완독 목표일 (선택)
+              </p>
+              {localGoalDate && (
+                <button
+                  type="button"
+                  onClick={() => setLocalGoalDate('')}
+                  title="완독 목표일 삭제"
+                  className="text-xs text-[#94A3B8] hover:text-[#EF4444] transition-colors"
+                >
+                  삭제
+                </button>
+              )}
+            </div>
+            <input
+              type="date"
+              value={localGoalDate}
+              min={new Date().toISOString().split('T')[0]}
+              onChange={(e) => setLocalGoalDate(e.target.value)}
+              aria-label="완독 목표일 입력"
+              title="완독 목표일"
+              className="w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-[#334155] bg-[#F8FAFC] dark:bg-[#0F172A] text-sm text-[#1E293B] dark:text-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/30"
+            />
+          </div>
+
           {/* Live progress bar */}
           <div className="w-full rounded-full overflow-hidden mb-4" style={{ height: 8, backgroundColor: "#E2E8F0" }}>
             <div
@@ -264,7 +293,7 @@ function PageUpdateModal({
                 완독 완료!
               </button>
               <button
-                onClick={() => onSave(page, localTotalPages > 0 ? localTotalPages : undefined)}
+                onClick={() => onSave(page, localTotalPages > 0 ? localTotalPages : undefined, localGoalDate || undefined)}
                 className="w-full rounded-2xl text-white transition-opacity hover:opacity-90 active:scale-[0.98]"
                 style={{
                   height: 48,
@@ -852,7 +881,7 @@ export function ReadingPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function handleSave(page: number, newTotalPages?: number) {
+  function handleSave(page: number, newTotalPages?: number, goalDate?: string) {
     if (!selectedBook) return;
     const startPage = selectedBook.currentPage ?? 0;
 
@@ -876,6 +905,9 @@ export function ReadingPage() {
     const updateData: Partial<UIBook> = { currentPage: page };
     if (newTotalPages != null && newTotalPages > 0) {
       updateData.totalPages = newTotalPages;
+    }
+    if (goalDate !== undefined) {
+      updateData.goalDate = goalDate || undefined;
     }
 
     updateBook.mutate(
@@ -1047,8 +1079,12 @@ export function ReadingPage() {
       <button
         onClick={() => navigate("/register-flow")}
         aria-label="책 추가"
-        className="fixed bottom-20 right-5 lg:bottom-8 lg:right-8 w-14 h-14 rounded-full text-white shadow-xl flex items-center justify-center transition-transform hover:scale-105 active:scale-95 z-40"
-        style={{ background: "linear-gradient(135deg, #4F46E5, #7C3AED)" }}
+        className="fixed w-14 h-14 rounded-full text-white shadow-xl flex items-center justify-center transition-transform hover:scale-105 active:scale-95 z-40"
+        style={{
+          bottom: "var(--floating-bottom)",
+          right: "var(--floating-right)",
+          background: "linear-gradient(135deg, #4F46E5, #7C3AED)",
+        }}
       >
         <Plus size={24} />
       </button>

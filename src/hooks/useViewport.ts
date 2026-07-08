@@ -21,27 +21,56 @@ export function useViewport(): void {
       const vp = window.visualViewport;
       const w = vp ? vp.width : window.innerWidth;
       const h = vp ? vp.height : window.innerHeight;
+      const offsetTop = vp ? vp.offsetTop : 0;
+      const keyboardOffset = Math.max(0, window.innerHeight - (h + offsetTop));
+      const shortest = Math.min(w, h);
+      const isPortrait = h >= w;
+
+      let deviceType: 'compact-phone' | 'phone' | 'tablet' | 'desktop' = 'desktop';
+      if (shortest < 360) {
+        deviceType = 'compact-phone';
+      } else if (shortest < 768) {
+        deviceType = 'phone';
+      } else if (shortest < 1024) {
+        deviceType = 'tablet';
+      }
+
+      const touchTargetMin =
+        deviceType === 'compact-phone' ? 44 :
+        deviceType === 'phone' ? 46 :
+        deviceType === 'tablet' ? 48 : 44;
 
       const root = document.documentElement;
       root.style.setProperty("--vp-h", `${h}px`);
       root.style.setProperty("--vp-w", `${w}px`);
+      root.style.setProperty("--kb-offset", `${keyboardOffset}px`);
+      root.style.setProperty("--touch-target-min", `${touchTargetMin}px`);
+      root.dataset.device = deviceType;
+      root.dataset.orientation = isPortrait ? 'portrait' : 'landscape';
     }
 
     // 초기 실행
     update();
 
-    // visualViewport 이벤트: 키보드 열림/닫힘, 핀치 줌
-    window.visualViewport?.addEventListener("resize", update);
-    window.visualViewport?.addEventListener("scroll", update);
-
-    // fallback: window resize (PC/tablet 포함)
-    window.addEventListener("resize", update);
+    const vp = window.visualViewport;
+    if (vp) {
+      // visualViewport 지원 시: 키보드 열림/닫힘, 핀치 줌, PC 리사이즈 모두 커버
+      vp.addEventListener("resize", update);
+      vp.addEventListener("scroll", update);
+    } else {
+      // fallback: visualViewport 미지원 브라우저 (구형 Android WebView 등)
+      window.addEventListener("resize", update);
+    }
+    // orientationchange는 visualViewport.resize가 항상 커버하지 않으므로 별도 유지
     window.addEventListener("orientationchange", update);
 
     return () => {
-      window.visualViewport?.removeEventListener("resize", update);
-      window.visualViewport?.removeEventListener("scroll", update);
-      window.removeEventListener("resize", update);
+      if (vp) {
+        vp.removeEventListener("resize", update);
+        vp.removeEventListener("scroll", update);
+      } else {
+        window.removeEventListener("resize", update);
+      }
       window.removeEventListener("orientationchange", update);
     };
   }, []);

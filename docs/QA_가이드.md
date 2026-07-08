@@ -1,8 +1,8 @@
 # BookShelf PWA — QA 통합 가이드
 
-> **최종 업데이트**: 2026-04-28  
+> **최종 업데이트**: 2026-05-31  
 > **테스트 URL**: https://bookshelf-api.kordokrip.workers.dev  
-> **참고 Worker Version**: `52b698a7-aac6-4715-a040-77a40ddd395a` (25차 배포 — OCR 리팩토링)
+> **참고 Worker Version**: `df732bc7-8a69-461b-97a3-6a646259c35c` (반응형/뷰포트 리팩토링 배포)
 
 ### 최신 검증 요약 (2026-04-28)
 
@@ -12,6 +12,12 @@
 - `bash scripts/e2e-api-test.sh` ✅ 27/27 PASS
 - `bash scripts/admin-api-test.sh` ⚠️ 기본 관리자 자격증명 없으면 로그인 단계 실패 가능
   - 개선: `ADMIN_TOKEN` 환경변수 직접 주입 실행 지원
+
+### 최신 변경 반영 메모 (2026-05-31)
+
+- `WishlistPage` ISBN 카메라 검색 진입 버튼 추가 여부를 수동 회귀 테스트 항목으로 추가
+- 뷰포트 리팩토링으로 `min-h-svh/h-svh` 전환: iOS Safari 주소창/노치 환경에서 레이아웃 확인 필요
+- Safe-area 기반 하단 패딩(`--page-pb`) 적용으로 iPhone 홈 인디케이터 겹침 회귀 확인 필요
 
 ---
 

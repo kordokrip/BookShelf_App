@@ -62,6 +62,8 @@ export interface ApiResponse<T> {
 export interface StatsResponse {
   monthly: Array<{ month: string; count: number }>;
   genres: Array<{ genre: string; count: number }>;
+  genresDone: Array<{ genre: string; count: number }>;
+  genresReading: Array<{ genre: string; count: number }>;
   statusCounts: { done: number; reading: number; wish: number };
   sessionDates: string[];
   totals: { totalPages: number; totalMinutes: number };
@@ -587,6 +589,15 @@ export const pushApi = {
 
   status: () =>
     apiFetch<{ subscriptions: { id: string; endpoint: string; created_at: string }[]; count: number }>('/api/push/status'),
+
+  test: () =>
+    apiFetch<{ success: boolean; sent: number; total: number }>('/api/push/test', { method: 'POST' }),
+
+  debug: () =>
+    apiFetch<{
+      vapid: { publicKeyConfigured: boolean; privateKeyConfigured: boolean; subjectConfigured: boolean; publicKeyPrefix: string | null };
+      subscriptions: { count: number; list: { id: string; endpointService: string; createdAt: string }[] };
+    }>('/api/push/debug'),
 };
 
 // ─── OCR API ──────────────────────────────────────────────────
@@ -670,6 +681,8 @@ export interface GroupMessage {
   profile_emoji: string | null;
   content: string;
   created_at: string;
+  deleted_at: string | null;
+  deleted_by: string | null;
 }
 
 export interface GroupMeeting {

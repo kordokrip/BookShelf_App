@@ -37,6 +37,11 @@ body {
   overscroll-behavior-y: contain;
   /* 하드웨어 가속으로 스크롤 성능 향상 */
   -webkit-overflow-scrolling: touch;
+  /* iOS standalone에서 노치/홈 인디케이터 가로 안전영역 확보 */
+  padding-left: var(--safe-left, 0px);
+  padding-right: var(--safe-right, 0px);
+  /* 롱탭 링크 미리보기/콜아웃 억제 (네이티브 앱 터치감) */
+  -webkit-touch-callout: none;
 }
 
 #root {
@@ -68,7 +73,7 @@ label {
   -webkit-user-select: none;
   user-select: none;
   /* 최소 터치 영역: Apple HIG 44pt / Google Material 48dp */
-  min-height: 44px;
+  min-height: var(--touch-target-min, 44px);
 }
 
 /* 인라인 요소(a, label)는 min-height 제외 — 레이아웃 왜곡 방지 */
@@ -96,6 +101,21 @@ textarea {
 /* select는 appearance:none이 Firefox에서 화살표 제거하므로 별도 처리 */
 select {
   background-image: none;
+}
+
+/* 텍스트 입력 영역은 선택/콜아웃 허용 (편집 UX 보호) */
+input,
+textarea,
+[contenteditable="true"],
+.allow-select {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
+/* iOS 홈 화면 앱 모드에서 스크롤 체인/튀는 스크롤 억제 */
+html[data-ios-standalone="true"] body {
+  overscroll-behavior: none;
 }
 
 /* ── 4. 포커스 — 키보드 접근성 유지, 터치 시 제거 ────────────── */

@@ -62,10 +62,12 @@ function StarDisplay({ value }: { value: number }) {
 /* ─── D-Day Badge ───────────────────────────────────────────── */
 export function DDayBadge({ goalDate, isOverdue }: { goalDate: string; isOverdue?: boolean }) {
   const today = new Date();
+  today.setHours(0, 0, 0, 0);
   const goal = new Date(goalDate);
-  const diff = Math.ceil((goal.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  goal.setHours(0, 0, 0, 0);
+  const diff = Math.round((goal.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
   const overdue = isOverdue || diff < 0;
-  const daysLate = isOverdue ? 3 : Math.abs(diff);
+  const daysLate = Math.abs(diff);
   const urgent = !overdue && diff <= 3;
 
   if (overdue) {
@@ -190,6 +192,9 @@ export function ReadingBookCard({
       : 0;
 
   const isOverdue = book.isOverdue === true;
+  const daysOverdue = isOverdue && book.goalDate
+    ? Math.abs(Math.round((new Date(book.goalDate).setHours(0,0,0,0) - new Date().setHours(0,0,0,0)) / (1000 * 60 * 60 * 24)))
+    : 0;
 
   return (
     <div
@@ -314,7 +319,7 @@ export function ReadingBookCard({
         >
           <span style={{ fontSize: 13 }}>⚠️</span>
           <span style={{ fontSize: 12, color: "#EF4444", fontWeight: 500 }}>
-            3일 지연 중입니다
+            {daysOverdue > 0 ? `${daysOverdue}일 지연 중입니다` : '목표일이 지났습니다'}
           </span>
         </div>
       )}

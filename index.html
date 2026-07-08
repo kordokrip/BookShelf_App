@@ -9,7 +9,11 @@
         → iOS Safari/Android Chrome 일관적인 동작 보장
       -->
       <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
+      <meta name="application-name" content="BookShelf" />
+      <meta name="apple-mobile-web-app-title" content="BookShelf" />
+      <meta name="color-scheme" content="light dark" />
       <!-- 다크/라이트 모드 theme-color 분기 -->
+      <meta name="theme-color" content="#4F46E5" />
       <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
       <meta name="theme-color" content="#0F172A" media="(prefers-color-scheme: dark)" />
       <meta name="description" content="독서 기록, 읽는 중, 위시리스트를 한 곳에서 관리하는 개인 독서 트래커" />
@@ -18,11 +22,48 @@
       <link rel="manifest" href="/manifest.json" />
       <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
       <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+      <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+      <link rel="apple-touch-icon" sizes="167x167" href="/icons/apple-touch-icon.png" />
+      <link rel="apple-touch-icon" sizes="152x152" href="/icons/apple-touch-icon.png" />
       <meta name="mobile-web-app-capable" content="yes" />
       <meta name="apple-mobile-web-app-capable" content="yes" />
+      <meta name="apple-touch-fullscreen" content="yes" />
+      <!-- IOS_STARTUP_IMAGES:START -->
+      <link rel="apple-touch-startup-image" href="/ios-startup/iphone-se-1-portrait.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/iphone-se-1-landscape.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/iphone-se-2-8-portrait.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/iphone-se-2-8-landscape.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/iphone-8-plus-portrait.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/iphone-8-plus-landscape.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/iphone-x-xs-11pro-portrait.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/iphone-x-xs-11pro-landscape.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/iphone-12-13-mini-portrait.png" media="(device-width: 360px) and (device-height: 780px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/iphone-12-13-mini-landscape.png" media="(device-width: 360px) and (device-height: 780px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/iphone-11-xr-portrait.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/iphone-11-xr-landscape.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/iphone-11pro-max-portrait.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/iphone-11pro-max-landscape.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/iphone-12-13-14-portrait.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/iphone-12-13-14-landscape.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/iphone-12-13-14-pro-max-portrait.png" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/iphone-12-13-14-pro-max-landscape.png" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/iphone-15-15pro-portrait.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/iphone-15-15pro-landscape.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/iphone-15-plus-15pro-max-portrait.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/iphone-15-plus-15pro-max-landscape.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/ipad-mini-portrait.png" media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/ipad-mini-landscape.png" media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/ipad-10-2-portrait.png" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/ipad-10-2-landscape.png" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/ipad-10th-portrait.png" media="(device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/ipad-10th-landscape.png" media="(device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/ipad-air-pro-11-portrait.png" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/ipad-air-pro-11-landscape.png" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/ipad-pro-12-9-portrait.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+      <link rel="apple-touch-startup-image" href="/ios-startup/ipad-pro-12-9-landscape.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" />
+      <!-- IOS_STARTUP_IMAGES:END -->
       <!-- black-translucent: 노치/Dynamic Island 아래까지 콘텐츠 확장 -->
       <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-      <meta name="apple-mobile-web-app-title" content="BookShelf" />
       <!-- iOS/Android 자동 포맷 감지 비활성화 (레이아웃 깨짐 방지) -->
       <meta name="format-detection" content="telephone=no, date=no, email=no, address=no" />
       <!-- 카메라 접근을 위한 Permissions Policy -->
@@ -39,6 +80,14 @@
 
     <body>
       <div id="root"></div>
+      <script>
+        (function () {
+          var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+          var standalone = navigator.standalone === true;
+          document.documentElement.setAttribute('data-ios', isIOS ? 'true' : 'false');
+          document.documentElement.setAttribute('data-ios-standalone', standalone ? 'true' : 'false');
+        })();
+      </script>
       <!--
         청크 로드 오류 안전망 — 구 SW 코드에서도 동작 (Swift to new version)
         React가 마운트되기 전 unhandledrejection 이벤트를 잡아 1회 reload

@@ -1,13 +1,15 @@
 /**
  * stats 라우터 — 독서 통계 집계 API
  *
- * GET /api/stats — 6개 쿼리를 D1.batch로 원자적 실행
+ * GET /api/stats — 8개 쿼리를 D1.batch로 원자적 실행
  *   1. 월별 완독 집계 (최근 12개월)
  *   2. 장르 분포 (전체 상태)
- *   3. 요일별 독서 설룬 (독서 세션 통계)
- *   4. 상태별 책 수
- *   5. 유효 평점 있는 상위 5권 제목
- *   6. 타이머 개요 (전체 독서 시간, 세션 수, 평균 수)
+ *   3. 상태별 책 수 (reading / done / wish 등)
+ *   4. 독서 세션 날짜 목록 (최근 365일, 스트릭 계산용)
+ *   5. 전체 누적 통계 (총 페이지, 총 분)
+ *   6. 주간 읽은 페이지 집계 (최근 8주)
+ *   7. 장르 분포 (완독 status='done')
+ *   8. 장르 분포 (읽는 중 status='reading')
  */
 import { Hono } from 'hono';
 import type { Bindings } from '../types';
@@ -74,6 +76,24 @@ statsRouter.get('/', authMiddleware, async (c) => {
        GROUP BY week
        ORDER BY week ASC`,
     ).bind(userId),
+
+    // 7. 장르 분포 (완독)
+    db.prepare(
+      `SELECT genre, COUNT(*) AS count
+       FROM books
+       WHERE user_id = ? AND status = 'done'
+       GROUP BY genre
+       ORDER BY count DESC`,
+    ).bind(userId),
+
+    // 8. 장르 분포 (읽는 중)
+    db.prepare(
+      `SELECT genre, COUNT(*) AS count
+       FROM books
+       WHERE user_id = ? AND status = 'reading'
+       GROUP BY genre
+       ORDER BY count DESC`,
+    ).bind(userId),
   ]);
 
   const monthly = batchResults[0]!;
@@ -82,6 +102,8 @@ statsRouter.get('/', authMiddleware, async (c) => {
   const sessionDates = batchResults[3]!;
   const totals = batchResults[4]!;
   const weekly = batchResults[5]!;
+  const genresDone = batchResults[6]!;
+  const genresReading = batchResults[7]!;
 
   // statusCounts 배열 → 오브젝트 변환
   type StatusRow = { status: string; count: number };
@@ -98,6 +120,8 @@ statsRouter.get('/', authMiddleware, async (c) => {
   return c.json({
     monthly: monthly.results as { month: string; count: number }[],
     genres: genres.results as { genre: string; count: number }[],
+    genresDone: genresDone.results as { genre: string; count: number }[],
+    genresReading: genresReading.results as { genre: string; count: number }[],
     statusCounts: statusObj,
     sessionDates: (sessionDates.results as { session_date: string }[]).map(r => r.session_date),
     totals: {

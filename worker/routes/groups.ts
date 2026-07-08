@@ -155,7 +155,7 @@ groupsRouter.post('/', authMiddleware, zValidator('json', createGroupSchema), as
       body.is_public !== false ? 1 : 0,
     ),
     db.prepare(`
-      INSERT INTO group_members (id, group_id, user_id, role) VALUES (?, ?, ?, 'leader')
+      INSERT INTO group_members (id, group_id, user_id, role, status) VALUES (?, ?, ?, 'leader', 'approved')
     `).bind(memberId, groupId, userId),
   ]);
 
@@ -483,8 +483,8 @@ groupsRouter.delete('/:id/messages/:messageId', authMiddleware, async (c) => {
   }
 
   await db.prepare(
-    'DELETE FROM group_messages WHERE id = ? AND group_id = ?',
-  ).bind(messageId, groupId).run();
+    `UPDATE group_messages SET deleted_at = datetime('now'), deleted_by = ? WHERE id = ? AND group_id = ?`,
+  ).bind(userId, messageId, groupId).run();
 
   return c.json({ data: { deleted: true } });
 });
