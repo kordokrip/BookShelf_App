@@ -6,6 +6,7 @@
  */
 import { useMemo } from "react";
 import { useNavigate } from "react-router";
+import { useBack } from "../../hooks/useBack";
 import { ChevronLeft, Share2, BookMarked, FileText, Clock, Flame } from "lucide-react";
 import { useStats } from "../../hooks/useStats";
 import { useBooks } from "../../hooks/useBooks";
@@ -80,6 +81,7 @@ function GenreSummary({ genres }: { genres: { genre: string; count: number }[] }
 /* ─── Main Page ─────────────────────────────────────────────── */
 export function YearlyReviewPage() {
   const navigate = useNavigate();
+  const back = useBack('/stats');
   const { data: stats, isLoading } = useStats();
   const { data: allBooks = [] } = useBooks({});
   const user = useAuthStore((s) => s.user);
@@ -127,7 +129,7 @@ export function YearlyReviewPage() {
       {/* 헤더 */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <button
-          onClick={() => navigate(-1)}
+          onClick={back}
           className="flex items-center gap-1.5 hover:opacity-70 transition-opacity"
           style={{ color: "#1E293B", fontSize: 14, fontWeight: 600 }}
         >

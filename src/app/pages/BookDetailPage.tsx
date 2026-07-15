@@ -7,7 +7,8 @@
  */
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useNavigate, useParams } from "react-router";
+import { useParams } from "react-router";
+import { useBack } from "../../hooks/useBack";
 import { ChevronLeft, MoreVertical, FileText, AlignLeft, Camera, Pencil, Trash2, BookMarked, BookOpen, Heart, ScanLine, Clock, Search, Share2, Sparkles, RefreshCw } from "lucide-react";
 import type { BookNote } from "../../types/book";
 import type { UIBook } from "../../types/book";
@@ -791,7 +792,7 @@ function BookInfoTab({ book }: { book: UIBook }) {
 /* ─── Page ─────────────────────────────────────────────────── */
 export function BookDetailPage() {
   const { id } = useParams();
-  const navigate = useNavigate();
+  const back = useBack();
   const [activeTab, setActiveTab] = useState<"notes" | "info">("notes");
   const { showToast } = useToast();
   const qc = useQueryClient();
@@ -808,7 +809,7 @@ export function BookDetailPage() {
     if (!book) return;
     if (!confirm(`"${book.title}"을(를) 삭제할까요? 노트와 독서 세션도 함께 삭제됩니다.`)) return;
     await deleteBook.mutateAsync(book.id);
-    navigate(-1);
+    back();
     showToast('책이 삭제됐어요', 'success');
   };
 
@@ -892,7 +893,7 @@ export function BookDetailPage() {
       {/* ── Top nav: ChevronLeft #1E293B + MoreVertical ── */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <button
-          onClick={() => navigate(-1)}
+          onClick={back}
           className="flex items-center gap-1.5 hover:opacity-70 transition-opacity"
           style={{ color: "#1E293B", fontSize: 14, fontWeight: 600 }}
         >

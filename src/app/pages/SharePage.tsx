@@ -5,7 +5,8 @@
  */
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Inbox, Send, Mail, Clock, CheckCircle2, User } from 'lucide-react';
+import { Inbox, Send, Mail, Clock, CheckCircle2, User, ChevronLeft } from 'lucide-react';
+import { useBack } from '../../hooks/useBack';
 import {
   useShareInbox,
   useShareSent,
@@ -18,6 +19,7 @@ import type { SharedReport } from '../../lib/api';
 type Tab = 'inbox' | 'sent';
 
 export function SharePage() {
+  const back = useBack();
   const [tab, setTab] = useState<Tab>('inbox');
   const [showCompose, setShowCompose] = useState(false);
 
@@ -27,7 +29,15 @@ export function SharePage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-foreground">공유 보고서 📬</h1>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={back}
+            className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <h1 className="text-xl font-bold text-foreground">공유 보고서 📬</h1>
+        </div>
         <button
           onClick={() => setShowCompose(true)}
           className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition"

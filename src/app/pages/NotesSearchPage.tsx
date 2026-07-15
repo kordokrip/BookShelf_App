@@ -5,8 +5,8 @@
  * - 검색결과 노트 수정·삭제
  */
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
 import { ArrowLeft, Search, X, Clock, Pencil, Trash2 } from "lucide-react";
+import { useBack } from "../../hooks/useBack";
 import { useNotes, useUpdateNote, useDeleteNote } from "../../hooks/useNotes";
 import { useRecentSearches } from "../../hooks/useRecentSearches";
 
@@ -64,7 +64,7 @@ const TYPE_LABELS: Record<string, string> = {
 
 /* ─── 메인 페이지 ─────────────────────────────────────────── */
 export function NotesSearchPage() {
-  const navigate = useNavigate();
+  const back = useBack();
 
   const [searchQuery, setSearchQuery]               = useState("");
   const [debouncedQuery, setDebouncedQuery]         = useState("");
@@ -105,7 +105,7 @@ export function NotesSearchPage() {
       <div className="flex items-center gap-3 px-4 h-14 border-b border-border flex-shrink-0">
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={back}
           className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-5 w-5" />
