@@ -21,6 +21,8 @@
     "pwa:ios-startup": "node scripts/generate-ios-startup-images.mjs",
     "pwa:assets": "node scripts/generate-icons.mjs && npm run pwa:ios-startup",
     "docs:coverage-check": "for x in collections discover push share admin useCollections useDiscover useOfflineQueue usePushNotification useViewport 0005_collections 0006_push_subscriptions 0009_indexes_and_session_unique /collections /api/collections /api/discover /api/push /share /api/admin; do rg -n \"$x\" PROJECT_STATUS.md docs/TRACE_MAP.md docs/BookShelf_UI_UX.md >/dev/null && echo \"OK $x\" || { echo \"MISS $x\"; exit 1; }; done",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"worker/**/*.ts\""
@@ -51,6 +53,8 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.1.12",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^25.3.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -61,12 +65,14 @@
     "eslint": "^9.39.3",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.0.1",
+    "happy-dom": "^20.10.6",
     "prettier": "^3.8.1",
     "sharp": "^0.34.5",
     "tailwindcss": "4.1.12",
     "typescript": "^5.9.3",
     "vite": "6.3.5",
     "vite-plugin-pwa": "^1.2.0",
+    "vitest": "^4.1.10",
     "workbox-window": "^7.4.0",
     "wrangler": "^4.70.0"
   },
