@@ -15,6 +15,9 @@ function makeLazy<T extends { [K in E]: React.ComponentType }, E extends string>
     factory()
       .then((m) => ({ default: m[exportName] as React.ComponentType }))
       .catch((e: Error) => {
+        // SW 전환기 안전망: prompt 방식으로 변경했어도 유저가 업데이트를 미룬 채
+        // 구 청크 URL을 요청하면 여전히 404가 발생할 수 있다.
+        // 한 번만 reload를 시도해 새 SW 활성화 후 최신 청크를 받아오게 한다.
         if (/failed to fetch dynamically imported module/i.test(e.message)) {
           const KEY = "chunk_reload_attempted";
           if (!sessionStorage.getItem(KEY)) {

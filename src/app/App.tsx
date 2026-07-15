@@ -8,6 +8,7 @@ import { useViewport } from "../hooks/useViewport";
 import { router } from "./routes";
 import { ToastProvider, useToast } from "./components/ui/Toast";
 import { InstallBanner } from "./components/ui/InstallBanner";
+import { UpdatePrompt } from "./components/ui/UpdatePrompt";
 import { TooltipProvider } from "./components/ui/tooltip";
 
 export default function App() {
@@ -101,6 +102,7 @@ function AppInner() {
     <>
       <RouterProvider router={router} />
       <InstallBanner />
+      <UpdatePrompt />
     </>
   );
 }

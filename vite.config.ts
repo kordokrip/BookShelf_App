@@ -13,10 +13,10 @@ export default defineConfig({
 
     // PWA support — generates service worker & precaches all build assets
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       injectRegister: 'auto',
       workbox: {
-        skipWaiting: true,
+        skipWaiting: false,
         clientsClaim: true,
         cleanupOutdatedCaches: true,
         // PWA precache 최적화: HTML·아이콘·폰트만 precache, JS/CSS는 runtime caching으로
