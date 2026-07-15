@@ -111,6 +111,7 @@ export function ProfileAvatar({
         <img
           src={avatarUrl}
           alt="프로필"
+          loading="lazy"
           className="w-full h-full object-cover"
           onError={(e) => {
             // fallback to gradient

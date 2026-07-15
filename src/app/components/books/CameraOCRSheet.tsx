@@ -333,6 +333,7 @@ export function CameraOCRSheet({ bookId, onClose }: Props) {
             <img
               src={previewUrl}
               alt="촬영 이미지"
+              loading="lazy"
               className="w-full max-h-44 object-contain bg-black shrink-0"
             />
           )}

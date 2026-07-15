@@ -122,7 +122,7 @@ function UserDetailModal({
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-400 to-violet-600 flex items-center justify-center overflow-hidden shrink-0">
                 {detail.user.avatar_url
-                  ? <img src={detail.user.avatar_url} alt="" className="w-full h-full object-cover" />
+                  ? <img src={detail.user.avatar_url} alt="" loading="lazy" className="w-full h-full object-cover" />
                   : <span className="text-white font-bold text-xl">{detail.user.name.slice(0, 1)}</span>
                 }
               </div>
@@ -178,7 +178,7 @@ function UserDetailModal({
                     <div key={b.id} className="flex items-center gap-3 p-2.5 bg-[#F8FAFC] dark:bg-[#0F172A] rounded-xl">
                       <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-400 to-violet-600 flex items-center justify-center shrink-0 overflow-hidden">
                         {b.cover_image
-                          ? <img src={b.cover_image} alt="" className="w-full h-full object-cover" />
+                          ? <img src={b.cover_image} alt="" loading="lazy" className="w-full h-full object-cover" />
                           : <BookOpen size={14} className="text-white" />
                         }
                       </div>
@@ -310,7 +310,7 @@ function DashboardTab() {
                 <span className="w-6 text-center text-sm font-bold text-[#94A3B8]">{idx + 1}</span>
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-violet-600 flex items-center justify-center overflow-hidden shrink-0">
                   {u.avatar_url
-                    ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ? <img src={u.avatar_url} alt="" loading="lazy" className="w-full h-full object-cover" />
                     : <span className="text-white text-xs font-bold">{u.name.slice(0, 1)}</span>
                   }
                 </div>
@@ -441,7 +441,7 @@ function UsersTab() {
                 {/* 아바타 */}
                 <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-400 to-violet-600 flex items-center justify-center overflow-hidden shrink-0">
                   {u.avatar_url
-                    ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ? <img src={u.avatar_url} alt="" loading="lazy" className="w-full h-full object-cover" />
                     : <span className="text-white text-sm font-bold">{u.name.slice(0, 1)}</span>
                   }
                 </div>
@@ -585,7 +585,7 @@ function SendNotifTab() {
                 >
                   <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-400 to-violet-600 flex items-center justify-center overflow-hidden shrink-0">
                     {u.avatar_url
-                      ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ? <img src={u.avatar_url} alt="" loading="lazy" className="w-full h-full object-cover" />
                       : <span className="text-white text-xs font-bold">{u.name.slice(0, 1)}</span>
                     }
                   </div>

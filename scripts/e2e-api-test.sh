@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ================================================================
-# BookShelf App — E2E API 테스트 스크립트 (44개 | readonly 3개)
+# BookShelf App — E2E API 테스트 스크립트 (45개 | readonly 3개)
 # 실행: bash scripts/e2e-api-test.sh [--url <BASE_URL>] [--readonly]
 #   --url <URL>  : 대상 URL (기본: https://bookshelf-api.kordokrip.workers.dev)
 #   --readonly   : 쓰기 없는 읽기 전용 3케이스만 실행 (프로덕션 안전 검증)
@@ -46,7 +46,7 @@ FAILED_TESTS=()
 if [[ "$READONLY" == true ]]; then
   TOTAL=3
 else
-  TOTAL=44
+  TOTAL=45
 fi
 
 # ── 시작 시각 ────────────────────────────────────────────────────
@@ -981,6 +981,24 @@ if [[ "$HTTP_CODE" == "200" || "$HTTP_CODE" == "204" ]]; then
   pass_test $T "$NAME" $ELAPSED
 else
   fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE} (기대: 200 또는 204)"
+fi
+
+# ── Group 14: Web Vitals ────────────────────────────────────────
+printf "\n%s── Group 14: Web Vitals%s\n" "$CYAN" "$NC"
+
+T=45; NAME="POST /api/vitals (LCP 계측값 전송)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" -X POST \
+  "${BASE_URL}/api/vitals" \
+  -H "Content-Type: application/json" \
+  -d '{"metric":"LCP","value":1250,"page":"/","ua_mobile":false}')
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+OK=$(echo "$BODY" | python3 -c "import sys,json; d=json.load(sys.stdin); print('yes' if d.get('ok') is True else 'no')" 2>/dev/null || echo "no")
+if [[ "$HTTP_CODE" == "200" && "$OK" == "yes" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE}, ok=${OK} (기대: 200, ok:true)"
 fi
 
 # ================================================================

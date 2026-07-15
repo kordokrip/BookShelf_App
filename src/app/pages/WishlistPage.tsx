@@ -521,6 +521,7 @@ export function WishlistPage() {
                       <img
                         src={book.coverImage}
                         alt={book.title}
+                        loading="lazy"
                         className="w-10 h-14 object-cover rounded-lg shrink-0 shadow-sm"
                       />
                     ) : (

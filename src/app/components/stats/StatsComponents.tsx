@@ -904,6 +904,7 @@ export function ReadingCalendar({ doneBooks, sessionDates = [] }: ReadingCalenda
                             <img
                               src={b.coverImage}
                               alt={b.title}
+                              loading="lazy"
                               style={{ width: "100%", height: "100%", objectFit: "cover" }}
                             />
                           ) : (
@@ -996,7 +997,7 @@ export function ReadingCalendar({ doneBooks, sessionDates = [] }: ReadingCalenda
                         }}
                       >
                         {b.coverImage ? (
-                          <img src={b.coverImage} alt={b.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          <img src={b.coverImage} alt={b.title} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                         ) : (
                           <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>
                             {b.coverEmoji}
