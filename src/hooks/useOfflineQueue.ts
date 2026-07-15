@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { sessionsApi, notesApi } from '../lib/api';
 import { useUiStore } from '../stores/uiStore';
+import { queryClient } from '../lib/queryClient';
 
 /**
- * 앱 레벨 오프라인 큐: 네트워크 끊김 시 mutation을 localStorage에 저장하고
- * 온라인 복귀 시 자동으로 재전송 (Background Sync 대체)
+ * @deprecated TanStack Query v5 PersistQueryClientProvider + setMutationDefaults 방식으로 대체됨.
+ * - 신규 오프라인 mutation → queryClient의 paused mutation으로 자동 관리
+ * - 온라인 복귀 시 → resumePausedMutations() + onlineManager가 자동 재전송
+ * 레거시 큐(localStorage 'bookshelf_offline_queue')는 2릴리스 후 완전 제거 예정.
  */
 
 const QUEUE_KEY = 'bookshelf_offline_queue';
@@ -30,7 +33,27 @@ function saveQueue(queue: QueuedMutation[]) {
   localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
 }
 
+/**
+ * @deprecated enqueueOfflineMutation은 더 이상 사용하지 마세요.
+ * useMutation의 오프라인 pause 동작(networkMode: 'online' 기본값)이 이를 대체합니다.
+ */
 export function enqueueOfflineMutation(mutation: Omit<QueuedMutation, 'id' | 'createdAt'>) {
+  // 가드: TQ mutation cache에 동일 타입의 paused mutation이 있으면 중복 방지
+  const hasPausedTQMutation = queryClient
+    .getMutationCache()
+    .getAll()
+    .some(
+      (m) =>
+        m.state.isPaused === true &&
+        m.options.mutationKey != null &&
+        (
+          (mutation.type === 'session' && (m.options.mutationKey as string[])[0] === 'addSession') ||
+          (mutation.type === 'note'    && (m.options.mutationKey as string[])[0] === 'addNote')
+        ),
+    );
+
+  if (hasPausedTQMutation) return; // TQ가 관리 중 — 레거시 큐에 중복 추가 안 함
+
   const queue = getQueue();
   queue.push({
     ...mutation,
@@ -58,7 +81,9 @@ async function replayMutation(m: QueuedMutation): Promise<boolean> {
 }
 
 /**
- * 앱 루트에서 한 번 호출: 온라인 복귀 시 큐에 쌓인 mutation을 리플레이
+ * @deprecated useOfflineQueue는 더 이상 사용하지 마세요.
+ * PersistQueryClientProvider + onSuccess: resumePausedMutations()가 이를 대체합니다.
+ * Root.tsx에서 호출 중이며, 레거시 큐 잔여분만 처리 후 2릴리스 후 제거 예정.
  */
 export function useOfflineQueue() {
   const addNotification = useUiStore((s) => s.addNotification);
@@ -68,6 +93,13 @@ export function useOfflineQueue() {
     if (processingRef.current) return;
     const queue = getQueue();
     if (queue.length === 0) return;
+
+    // 가드: TQ paused mutation이 있으면 레거시 큐 처리 보류 (TQ가 먼저 재전송)
+    const hasPaused = queryClient
+      .getMutationCache()
+      .getAll()
+      .some((m) => m.state.isPaused === true && m.options.mutationKey != null);
+    if (hasPaused) return;
 
     processingRef.current = true;
     let synced = 0;
@@ -92,12 +124,10 @@ export function useOfflineQueue() {
   }, [addNotification]);
 
   useEffect(() => {
-    // 앱 시작 시 큐 처리
     if (navigator.onLine) {
       processQueue();
     }
 
-    // 온라인 복귀 이벤트
     const handleOnline = () => { processQueue(); };
     window.addEventListener('online', handleOnline);
     return () => window.removeEventListener('online', handleOnline);
