@@ -106,6 +106,12 @@ export default defineConfig({
     },
   },
 
+  define: {
+    // 배포마다 고유한 빌드 타임스탬프 → PersistQueryClientProvider buster로 사용
+    // 새 배포 시 localStorage 캐시 자동 무효화
+    __APP_BUILD__: JSON.stringify(new Date().toISOString()),
+  },
+
   server: {
     proxy: {
       // 로컬 개발 시 /api 요청을 wrangler dev 포트(8787)로 프록시
