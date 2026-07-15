@@ -88,7 +88,7 @@ aiRouter.get('/recommend', rateLimit({ limit: 10, windowMs: 60_000, keyPrefix: '
   const readBooks = await c.env.DB.prepare(
     `SELECT genre, title, author, rating
      FROM books
-     WHERE user_id = ? AND status IN ('done', 'reading') AND genre IS NOT NULL
+     WHERE user_id = ? AND status IN ('done', 'reading')
      ORDER BY created_at DESC
      LIMIT 10`,
   ).bind(userId).all();
@@ -101,10 +101,10 @@ aiRouter.get('/recommend', rateLimit({ limit: 10, windowMs: 60_000, keyPrefix: '
     });
   }
 
-  // 장르별 빈도 분석
+  // 장르별 빈도 분석 (NULL 장르는 '기타'로 처리)
   const genreCounts: Record<string, number> = {};
   for (const book of readBooks.results) {
-    const g = book.genre as string;
+    const g = (book.genre as string | null) ?? '기타';
     genreCounts[g] = (genreCounts[g] ?? 0) + 1;
   }
 
