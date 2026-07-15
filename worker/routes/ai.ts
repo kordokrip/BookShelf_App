@@ -11,20 +11,237 @@ const sanitizeForPrompt = (s: string) =>
    .replace(/[<>{}[\]]/g, '')
    .slice(0, 500);
 
-/** LLM 텍스트 응답에서 첫 번째 JSON 객체를 추출해 파싱한다 */
-function extractJsonObject<T>(text: string): T | null {
-  const match = text.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '').match(/\{[\s\S]*\}/);
-  if (!match) return null;
-  try { return JSON.parse(match[0]) as T; } catch { return null; }
+type RecommendationSource = 'workers-ai' | 'curated-fallback';
+
+interface ReadingProfileBook {
+  title: string;
+  author: string;
+  genre: string | null;
+  rating: number | null;
+  status: 'done' | 'reading';
+  finished_date: string | null;
+  created_at: string;
+  note: string | null;
+  session_count: number;
+  pages_read: number;
+  note_count: number;
 }
 
-/** LLM이 따옴표/공백을 다르게 echo해도 매칭되도록 책 제목을 정규화한다 */
-function normalizeTitle(title: string): string {
-  return title.trim().replace(/^["'“”‘’]+|["'“”‘’]+$/g, '').replace(/\s+/g, ' ').toLowerCase();
+interface BookRecommendation {
+  title: string;
+  author: string;
+  reason: string;
+  genre: string;
+  source?: RecommendationSource;
+}
+
+const CURATED_BOOKS: Record<string, Array<{ title: string; author: string; genre: string }>> = {
+  인문학: [
+    { title: '사피엔스', author: '유발 하라리', genre: '인문학' },
+    { title: '총, 균, 쇠', author: '재레드 다이아몬드', genre: '인문학' },
+    { title: '지적 대화를 위한 넓고 얕은 지식', author: '채사장', genre: '인문학' },
+  ],
+  철학: [
+    { title: '소크라테스 익스프레스', author: '에릭 와이너', genre: '철학' },
+    { title: '니코마코스 윤리학', author: '아리스토텔레스', genre: '철학' },
+    { title: '월든', author: '헨리 데이비드 소로', genre: '철학' },
+  ],
+  심리학: [
+    { title: '생각에 관한 생각', author: '대니얼 카너먼', genre: '심리학' },
+    { title: '클루지', author: '개리 마커스', genre: '심리학' },
+    { title: '몰입', author: '미하이 칙센트미하이', genre: '심리학' },
+  ],
+  현대문학: [
+    { title: '밝은 밤', author: '최은영', genre: '현대문학' },
+    { title: '아버지의 해방일지', author: '정지아', genre: '현대문학' },
+    { title: '작별하지 않는다', author: '한강', genre: '현대문학' },
+  ],
+  한국문학: [
+    { title: '모순', author: '양귀자', genre: '한국문학' },
+    { title: '소년이 온다', author: '한강', genre: '한국문학' },
+    { title: '쇼코의 미소', author: '최은영', genre: '한국문학' },
+  ],
+  해외문학: [
+    { title: '스토너', author: '존 윌리엄스', genre: '해외문학' },
+    { title: '데미안', author: '헤르만 헤세', genre: '해외문학' },
+    { title: '참을 수 없는 존재의 가벼움', author: '밀란 쿤데라', genre: '해외문학' },
+  ],
+  '경제/경영': [
+    { title: '돈의 심리학', author: '모건 하우절', genre: '경제/경영' },
+    { title: '좋은 기업을 넘어 위대한 기업으로', author: '짐 콜린스', genre: '경제/경영' },
+    { title: '원칙', author: '레이 달리오', genre: '경제/경영' },
+  ],
+  '컴퓨터·프로그래밍': [
+    { title: '클린 코드', author: '로버트 C. 마틴', genre: '컴퓨터·프로그래밍' },
+    { title: '실용주의 프로그래머', author: '데이비드 토머스, 앤드류 헌트', genre: '컴퓨터·프로그래밍' },
+    { title: '리팩터링', author: '마틴 파울러', genre: '컴퓨터·프로그래밍' },
+  ],
+  'AI/데이터': [
+    { title: '인공지능: 현대적 접근방식', author: '스튜어트 러셀, 피터 노빅', genre: 'AI/데이터' },
+    { title: '밑바닥부터 시작하는 딥러닝', author: '사이토 고키', genre: 'AI/데이터' },
+    { title: '핸즈온 머신러닝', author: '오렐리앙 제롱', genre: 'AI/데이터' },
+  ],
+  자기계발: [
+    { title: '아토믹 해빗', author: '제임스 클리어', genre: '자기계발' },
+    { title: '데일 카네기 인간관계론', author: '데일 카네기', genre: '자기계발' },
+    { title: '그릿', author: '앤절라 더크워스', genre: '자기계발' },
+  ],
+  과학: [
+    { title: '코스모스', author: '칼 세이건', genre: '과학' },
+    { title: '이기적 유전자', author: '리처드 도킨스', genre: '과학' },
+    { title: '엔드 오브 타임', author: '브라이언 그린', genre: '과학' },
+  ],
+  한국사: [
+    { title: '역사의 쓸모', author: '최태성', genre: '한국사' },
+    { title: '나의 한국현대사', author: '유시민', genre: '한국사' },
+    { title: '한국사 편지', author: '박은봉', genre: '한국사' },
+  ],
+  '정치/법률': [
+    { title: '정의란 무엇인가', author: '마이클 샌델', genre: '정치/법률' },
+    { title: '국가는 왜 실패하는가', author: '대런 애쓰모글루, 제임스 A. 로빈슨', genre: '정치/법률' },
+    { title: '왜 세계의 절반은 굶주리는가', author: '장 지글러', genre: '정치/법률' },
+  ],
+  기타: [
+    { title: '데미안', author: '헤르만 헤세', genre: '해외문학' },
+    { title: '어린 왕자', author: '앙투안 드 생텍쥐페리', genre: '해외문학' },
+    { title: '모순', author: '양귀자', genre: '한국문학' },
+  ],
+};
+
+function hashString(value: string): string {
+  let hash = 5381;
+  for (let i = 0; i < value.length; i++) {
+    hash = ((hash << 5) + hash) ^ value.charCodeAt(i);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+function normalizeTitle(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[《》「」『』"'\s:：,，.。!！?？()[\]{}<>]/g, '');
+}
+
+function isExcludedBook(title: string, author: string, excluded: Set<string>): boolean {
+  const titleKey = normalizeTitle(title);
+  const pairKey = `${titleKey}::${normalizeTitle(author)}`;
+  return excluded.has(titleKey) || excluded.has(pairKey);
+}
+
+function buildExcludedSet(rows: Array<{ title: string; author: string | null }>): Set<string> {
+  const set = new Set<string>();
+  for (const row of rows) {
+    const titleKey = normalizeTitle(row.title);
+    if (!titleKey) continue;
+    set.add(titleKey);
+    if (row.author) set.add(`${titleKey}::${normalizeTitle(row.author)}`);
+  }
+  return set;
+}
+
+function parseFavoriteGenres(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function analyzeTopGenres(books: ReadingProfileBook[], favoriteGenres: string[]): string[] {
+  const score: Record<string, number> = {};
+  for (const genre of favoriteGenres) {
+    score[genre] = (score[genre] ?? 0) + 0.75;
+  }
+  for (const book of books) {
+    const genre = book.genre?.trim() || '기타';
+    const ratingBoost = book.rating ? book.rating * 0.35 : 0;
+    const statusBoost = book.status === 'done' ? 1.4 : 0.9;
+    const activityBoost = Math.min(book.session_count, 10) * 0.12 + Math.min(book.note_count, 8) * 0.18;
+    score[genre] = (score[genre] ?? 0) + 1 + ratingBoost + statusBoost + activityBoost;
+  }
+  return Object.entries(score)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 3)
+    .map(([genre]) => genre);
+}
+
+function extractJsonArray(text: string): unknown[] {
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1];
+  const source = fenced ?? text;
+  const match = source.match(/\[[\s\S]*\]/);
+  if (!match) return [];
+  const parsed = JSON.parse(match[0]);
+  return Array.isArray(parsed) ? parsed : [];
+}
+
+function normalizeRecommendations(
+  input: unknown[],
+  excluded: Set<string>,
+  fallbackGenre: string,
+  source: RecommendationSource,
+  limit: number,
+): BookRecommendation[] {
+  const seen = new Set<string>();
+  const output: BookRecommendation[] = [];
+  for (const item of input) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as Record<string, unknown>;
+    const title = typeof row.title === 'string' ? sanitizeForPrompt(row.title).trim() : '';
+    const author = typeof row.author === 'string' ? sanitizeForPrompt(row.author).trim() : '';
+    const reason = typeof row.reason === 'string' ? sanitizeForPrompt(row.reason).trim() : '';
+    const genre = typeof row.genre === 'string' ? sanitizeForPrompt(row.genre).trim() : fallbackGenre;
+    if (!title || !author) continue;
+    if (isExcludedBook(title, author, excluded)) continue;
+    const key = normalizeTitle(title);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    output.push({
+      title,
+      author,
+      genre: genre || fallbackGenre,
+      reason: reason || `${fallbackGenre} 독서 흐름을 이어가면서 관점을 넓히기 좋은 책입니다.`,
+      source,
+    });
+    if (output.length >= limit) break;
+  }
+  return output;
+}
+
+function buildCuratedRecommendations(
+  books: ReadingProfileBook[],
+  topGenres: string[],
+  excluded: Set<string>,
+  limit: number,
+): BookRecommendation[] {
+  const anchor = books.find((book) => book.rating && book.rating >= 4) ?? books[0];
+  const anchorText = anchor ? `"${anchor.title}"` : '최근 독서 기록';
+  const selectedGenres = topGenres.length > 0 ? topGenres : ['기타'];
+  const candidates = [
+    ...selectedGenres.flatMap((genre) => CURATED_BOOKS[genre] ?? []),
+    ...(CURATED_BOOKS.기타 ?? []),
+  ];
+  const seen = new Set<string>();
+  const output: BookRecommendation[] = [];
+
+  for (const candidate of candidates) {
+    const key = normalizeTitle(candidate.title);
+    if (seen.has(key) || isExcludedBook(candidate.title, candidate.author, excluded)) continue;
+    seen.add(key);
+    output.push({
+      ...candidate,
+      source: 'curated-fallback',
+      reason: `${anchorText}에서 보인 관심사와 ${candidate.genre} 독서 흐름을 이어가기 좋습니다. 이미 읽은 책과 겹치지 않는 방향으로 다음 한 권을 고르도록 추천했습니다.`,
+    });
+    if (output.length >= limit) break;
+  }
+  return output;
 }
 
 // ─── POST /api/ai/summarize — 책 설명 한국어 요약 ────────────
-aiRouter.post('/summarize', rateLimit({ limit: 5, windowMs: 60_000, keyPrefix: 'ai_sum' }), authMiddleware, async (c) => {
+aiRouter.post('/summarize', rateLimit({ limit: 5, windowMs: 60_000, keyPrefix: 'ai' }), authMiddleware, async (c) => {
   const { description, title, author } = await c.req.json() as {
     description?: string;
     title: string;
@@ -80,201 +297,186 @@ aiRouter.post('/summarize', rateLimit({ limit: 5, windowMs: 60_000, keyPrefix: '
 });
 
 // ─── GET /api/ai/recommend — 사용자 독서 패턴 기반 추천 ──────
-aiRouter.get('/recommend', rateLimit({ limit: 10, windowMs: 60_000, keyPrefix: 'ai_rec' }), authMiddleware, async (c) => {
+aiRouter.get('/recommend', rateLimit({ limit: 10, windowMs: 60_000, keyPrefix: 'ai' }), authMiddleware, async (c) => {
   const userId = c.get('userId');
-  const limit = Math.min(parseInt(c.req.query('limit') ?? '3', 10), 5);
+  const requestedLimit = parseInt(c.req.query('limit') ?? '5', 10);
+  const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 10) : 5;
   const forceRefresh = c.req.query('refresh') === 'true';
 
-  const readBooks = await c.env.DB.prepare(
-    `SELECT genre, title, author, rating
-     FROM books
-     WHERE user_id = ? AND status IN ('done', 'reading')
-     ORDER BY created_at DESC
-     LIMIT 10`,
-  ).bind(userId).all();
+  const [readBooksResult, allBooksResult, userProfile] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT
+         b.title,
+         b.author,
+         b.genre,
+         b.rating,
+         b.status,
+         b.finished_date,
+         b.created_at,
+         b.note,
+         COALESCE((SELECT COUNT(*) FROM reading_sessions rs WHERE rs.book_id = b.id AND rs.user_id = ?), 0) AS session_count,
+         COALESCE((SELECT SUM(rs.pages_read) FROM reading_sessions rs WHERE rs.book_id = b.id AND rs.user_id = ?), 0) AS pages_read,
+         COALESCE((SELECT COUNT(*) FROM notes n WHERE n.book_id = b.id AND n.user_id = ?), 0) AS note_count
+       FROM books b
+       WHERE b.user_id = ? AND b.status IN ('done', 'reading')
+       ORDER BY
+         CASE b.status WHEN 'done' THEN 0 ELSE 1 END,
+         COALESCE(b.finished_date, b.created_at) DESC
+       LIMIT 30`,
+    ).bind(userId, userId, userId, userId).all<ReadingProfileBook>(),
+    c.env.DB.prepare(
+      `SELECT title, author FROM books WHERE user_id = ?`,
+    ).bind(userId).all<{ title: string; author: string | null }>(),
+    c.env.DB.prepare(
+      `SELECT favorite_genres FROM users WHERE id = ?`,
+    ).bind(userId).first<{ favorite_genres: string | null }>(),
+  ]);
 
-  if (!readBooks.results || readBooks.results.length === 0) {
+  const readBooks = readBooksResult.results ?? [];
+  if (readBooks.length === 0) {
     return c.json({
       message: '읽은 책이 없습니다. 책을 등록하고 나면 맞춤 추천을 받을 수 있습니다.',
       recommendations: [],
       topGenres: [],
+      source: 'none',
+      cached: false,
     });
   }
 
-  // 장르별 빈도 분석 (NULL 장르는 '기타'로 처리)
-  const genreCounts: Record<string, number> = {};
-  for (const book of readBooks.results) {
-    const g = (book.genre as string | null) ?? '기타';
-    genreCounts[g] = (genreCounts[g] ?? 0) + 1;
-  }
-
-  const topGenres = Object.entries(genreCounts)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 3)
-    .map(([genre]) => genre);
-
-  // 이미 읽었거나 위시리스트에 있는 책 → AI 프롬프트에서 제외
-  const wishResult = await c.env.DB.prepare(
-    `SELECT title FROM books WHERE user_id = ? AND status = 'wish'`,
-  ).bind(userId).all<{ title: string }>();
-  const wishTitles = (wishResult.results ?? []).map((b) => b.title as string);
-  const readTitles = readBooks.results.map((b) => b.title as string);
-  const excludeTitles = [...new Set([...wishTitles, ...readTitles])];
+  const favoriteGenres = parseFavoriteGenres(userProfile?.favorite_genres);
+  const topGenres = analyzeTopGenres(readBooks, favoriteGenres);
+  const excluded = buildExcludedSet(allBooksResult.results ?? []);
+  const historyFingerprint = hashString(
+    readBooks
+      .map((b) => `${b.title}|${b.author}|${b.genre ?? ''}|${b.rating ?? ''}|${b.status}|${b.created_at}`)
+      .join('\n'),
+  );
 
   // KV 캐시 확인 (refresh=true 이면 기존 캐시 삭제)
-  const cacheKey = `ai_recommend:${userId}:${topGenres.join(',')}`;
+  const cacheKey = `ai_recommend:v2:${userId}:${limit}:${historyFingerprint}`;
   if (forceRefresh) {
     await c.env.KV.delete(cacheKey);
   } else {
     const cached = await c.env.KV.get(cacheKey);
     if (cached) {
       try {
-        const parsed = JSON.parse(cached) as unknown[];
-        if (parsed.length > 0) {
-          return c.json({ recommendations: parsed, cached: true, topGenres });
+        const parsed = JSON.parse(cached) as {
+          recommendations?: unknown[];
+          topGenres?: string[];
+          source?: RecommendationSource;
+          analysis?: unknown;
+        } | unknown[];
+        const recommendations = Array.isArray(parsed)
+          ? normalizeRecommendations(parsed, excluded, topGenres[0] ?? '기타', 'workers-ai', limit)
+          : normalizeRecommendations(parsed.recommendations ?? [], excluded, topGenres[0] ?? '기타', parsed.source ?? 'workers-ai', limit);
+        if (recommendations.length > 0) {
+          return c.json({
+            recommendations,
+            cached: true,
+            topGenres,
+            source: Array.isArray(parsed) ? 'workers-ai' : parsed.source ?? 'workers-ai',
+            analysis: Array.isArray(parsed) ? undefined : parsed.analysis,
+          });
         }
-      } catch { /* 파싱 실패 시 캐시 무시 */ }
-    }
-  }
-
-  // ── 장르 → Kakao 검색어 매핑 ──────────────────────────────────
-  const GENRE_QUERIES: Record<string, string> = {
-    소설: '한국소설 추천 베스트',
-    현대문학: '한국 현대문학 추천',
-    외국문학: '외국소설 추천',
-    철학: '철학 교양서 추천',
-    자기계발: '자기계발 베스트셀러',
-    역사: '역사 교양서 추천',
-    과학: '과학 교양서 베스트',
-    경제경영: '경영 경제 베스트셀러',
-    에세이: '에세이 베스트셀러',
-    시: '한국 현대시 추천',
-    심리학: '심리학 추천 도서',
-    인문학: '인문학 베스트셀러',
-    기타: '교양도서 베스트셀러',
-  };
-
-  type KakaoDoc = { title: string; authors: string[]; isbn: string; thumbnail: string };
-
-  async function searchKakao(query: string, size: number): Promise<KakaoDoc[]> {
-    const kakaoKey = c.env.KAKAO_REST_API_KEY;
-    if (!kakaoKey) return [];
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 5000);
-    try {
-      const url = `https://dapi.kakao.com/v3/search/book?query=${encodeURIComponent(query)}&sort=accuracy&size=${size}`;
-      const res = await fetch(url, { headers: { Authorization: `KakaoAK ${kakaoKey}` }, signal: controller.signal });
-      clearTimeout(timer);
-      if (!res.ok) return [];
-      const data = await res.json() as { documents: KakaoDoc[] };
-      return data.documents;
-    } catch {
-      clearTimeout(timer);
-      return [];
-    }
-  }
-
-  // ── 1단계: Kakao로 장르별 후보 도서 수집 ─────────────────────
-  const excludeSet = new Set(excludeTitles.map((t) => t.toLowerCase()));
-  const seen = new Set<string>();
-
-  const genresToSearch = topGenres.slice(0, 3);
-  const docSets = await Promise.all(
-    genresToSearch.map((genre) => searchKakao(GENRE_QUERIES[genre] ?? `${genre} 추천`, 8)),
-  );
-
-  const fallbackGenre = topGenres[0] ?? '기타';
-  const candidates: (KakaoDoc & { matchedGenre: string })[] = [];
-  for (let i = 0; i < docSets.length; i++) {
-    const genre = genresToSearch[i] ?? fallbackGenre;
-    const docs = docSets[i] ?? [];
-    for (const d of docs) {
-      const titleLower = d.title.toLowerCase();
-      const isExcluded = excludeSet.has(titleLower)
-        || excludeTitles.some((et) => titleLower.includes(et.toLowerCase()));
-      if (isExcluded || seen.has(titleLower) || !d.thumbnail) continue;
-      seen.add(titleLower);
-      candidates.push({ ...d, matchedGenre: genre });
-      if (candidates.length >= limit * 3) break;
-    }
-  }
-
-  // 충분하지 않으면 "교양 베스트" 보충
-  if (candidates.length < limit) {
-    const extra = await searchKakao('베스트셀러 교양도서', 10);
-    for (const d of extra) {
-      const titleLower = d.title.toLowerCase();
-      const isExcluded = excludeSet.has(titleLower)
-        || excludeTitles.some((et) => titleLower.includes(et.toLowerCase()));
-      if (isExcluded || seen.has(titleLower) || !d.thumbnail) continue;
-      seen.add(titleLower);
-      candidates.push({ ...d, matchedGenre: fallbackGenre });
-      if (candidates.length >= limit) break;
-    }
-  }
-
-  const selected = candidates.slice(0, limit);
-
-  // ── 2단계: LLM으로 reason 생성 (실패해도 template fallback) ──
-  const reasonMap: Record<string, string> = {};
-  if (selected.length > 0) {
-    try {
-      const model = '@cf/meta/llama-3.1-8b-instruct' as Parameters<Ai['run']>[0];
-      const bookListForLLM = selected
-        .map((d, i) => `${i + 1}. "${d.title}" (${d.authors.join(', ')})`)
-        .join('\n');
-      const llmResponse = await c.env.AI.run(model, {
-        messages: [
-          {
-            role: 'system',
-            content: `You output ONLY a JSON object mapping book titles to Korean one-sentence reasons. No extra text.
-Example: {"책제목":"이유"}
-Genres the user likes: ${topGenres.join(', ')}`,
-          },
-          {
-            role: 'user',
-            content: `Books:\n${bookListForLLM}\n\nOutput JSON reasons:`,
-          },
-        ],
-        max_tokens: 400,
-      });
-      const llmText = (llmResponse as { response?: string }).response ?? '';
-      const parsed = extractJsonObject<Record<string, string>>(llmText);
-      if (parsed) {
-        // LLM이 따옴표/공백을 살짝 다르게 echo하는 경우가 있어 정규화된 키로 매칭
-        for (const [title, reason] of Object.entries(parsed)) {
-          reasonMap[normalizeTitle(title)] = reason;
-        }
+        await c.env.KV.delete(cacheKey);
+      } catch {
+        await c.env.KV.delete(cacheKey);
       }
-    } catch { /* reason 생성 실패는 무시 */ }
+    }
   }
 
-  // ── 3단계: 최종 추천 목록 조합 ───────────────────────────────
-  const recommendations = selected.map((d) => {
-    const parts = d.isbn.trim().split(/\s+/);
-    const isbn = (parts.length >= 2 ? parts[1] : parts[0]) ?? '';
-    const reason = reasonMap[normalizeTitle(d.title)]
-      ?? `${d.matchedGenre} 장르를 즐기신다면 꼭 읽어보실 만한 책입니다.`;
-    return {
-      title: d.title,
-      author: d.authors.join(', '),
-      genre: d.matchedGenre,
-      reason,
-      coverImage: d.thumbnail || null,
-      isbn,
+  const booksContext = readBooks
+    .slice(0, 12)
+    .map((b) => `"${b.title}" (${b.author}, 장르:${b.genre}, 별점:${b.rating ?? '?'}/5)`)
+    .join('\n');
+
+  const excludedTitles = [...excluded].filter((key) => !key.includes('::')).slice(0, 40);
+  const excludePrompt = excludedTitles.length > 0
+    ? `\n이미 사용자의 서재에 있으므로 추천하지 말 것: ${excludedTitles.join(', ')}`
+    : '';
+
+  // 대표 책 제목 (개인화 reason 작성에 활용)
+  const topBookTitle = readBooks.find((book) => book.rating && book.rating >= 4)?.title ?? readBooks[0]?.title ?? '';
+
+  try {
+    const model = '@cf/meta/llama-3.1-8b-instruct' as Parameters<Ai['run']>[0];
+    const systemPrompt = `당신은 독서 전문가입니다. 사용자의 독서 이력을 분석하여 다음에 읽을 책 ${limit}권을 추천해주세요.
+반드시 아래 JSON 배열 형식으로만 응답하세요(다른 텍스트 금지):
+[{"title":"책제목","author":"저자","reason":"추천 이유(사용자가 읽은 '${topBookTitle}'처럼 구체적인 책 이름을 언급하며 1~2문장으로 개인화하여 작성)","genre":"장르"}]
+${excludePrompt}
+추천 책은 실제 존재하는 책이어야 하며, 이미 읽은 책, 읽는 중인 책, 위시리스트에 있는 책은 절대 추천하지 마세요.`;
+    const response = await c.env.AI.run(model, {
+      messages: [
+        { role: 'system', content: systemPrompt },
+        {
+          role: 'user',
+          content: `최근 읽은 책들:\n${booksContext}\n\n선호 장르: ${topGenres.join(', ')}\n\n위 내용을 바탕으로 다음에 읽을 책 ${limit}권을 추천해주세요.`,
+        },
+      ],
+      max_tokens: 800,
+    });
+
+    const text = (response as { response?: string }).response?.trim() ?? '[]';
+    let recommendations: BookRecommendation[] = [];
+    try {
+      recommendations = normalizeRecommendations(
+        extractJsonArray(text),
+        excluded,
+        topGenres[0] ?? '기타',
+        'workers-ai',
+        limit,
+      );
+    } catch {
+      recommendations = [];
+    }
+
+    if (recommendations.length === 0) {
+      recommendations = buildCuratedRecommendations(readBooks, topGenres, excluded, limit);
+    }
+
+    const source: RecommendationSource = recommendations.some((rec) => rec.source === 'workers-ai')
+      ? 'workers-ai'
+      : 'curated-fallback';
+    const payload = {
+      recommendations,
+      cached: false,
+      topGenres,
+      source,
+      analysis: {
+        historyCount: readBooks.length,
+        anchorBook: topBookTitle,
+        favoriteGenres,
+      },
     };
-  });
 
-  if (recommendations.length > 0) {
-    await c.env.KV.put(cacheKey, JSON.stringify(recommendations), { expirationTtl: 3600 });
+    if (recommendations.length > 0) {
+      await c.env.KV.put(cacheKey, JSON.stringify(payload), { expirationTtl: 3600 });
+    }
+
+    return c.json(payload);
+  } catch (err) {
+    console.error('AI 추천 오류:', err);
+    const recommendations = buildCuratedRecommendations(readBooks, topGenres, excluded, limit);
+    return c.json({
+      recommendations,
+      message: recommendations.length > 0
+        ? 'AI 모델 응답이 지연되어 독서 이력 기반 추천을 먼저 보여드립니다.'
+        : '추천 후보를 만들 수 없습니다. 읽은 책을 몇 권 더 등록해 주세요.',
+      topGenres,
+      cached: false,
+      source: 'curated-fallback',
+      analysis: {
+        historyCount: readBooks.length,
+        anchorBook: topBookTitle,
+        favoriteGenres,
+      },
+    });
   }
-
-  return c.json({ recommendations, cached: false, topGenres });
 });
 
 // ─── POST /ocr ────────────────────────────────────────────────
 // 이미지에서 텍스트를 추출해 독서 노트로 저장할 수 있도록 반환
-aiRouter.post('/ocr', rateLimit({ limit: 10, windowMs: 60_000, keyPrefix: 'ocr' }), authMiddleware, async (c) => {
+aiRouter.post('/ocr', rateLimit({ limit: 3, windowMs: 60_000, keyPrefix: 'ai' }), authMiddleware, async (c) => {
   try {
     let formData: FormData;
     try {
@@ -288,123 +490,46 @@ aiRouter.post('/ocr', rateLimit({ limit: 10, windowMs: 60_000, keyPrefix: 'ocr' 
     if (!imageFile) {
       return c.json({ error: 'image 필드가 필요합니다' }, 400);
     }
-
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-    if (!allowedTypes.includes(imageFile.type)) {
-      return c.json({ error: '지원하지 않는 이미지 형식입니다 (JPEG/PNG/WebP)' }, 400);
-    }
-
     if (imageFile.size > 5 * 1024 * 1024) {
       return c.json({ error: '이미지 크기는 5MB 이하여야 합니다' }, 400);
     }
-    if (imageFile.size < 1024) {
-      return c.json({ error: '이미지 파일이 너무 작습니다' }, 400);
-    }
 
     const arrayBuffer = await imageFile.arrayBuffer();
-    const imageBytes = [...new Uint8Array(arrayBuffer)];
+    const uint8Array = new Uint8Array(arrayBuffer);
 
-    /**
-     * OCR 전용 프롬프트 — 간결·직접적이어야 비전 모델 성능이 높아짐.
-     */
-    const OCR_PROMPT =
-      'Extract all text from this book page image. ' +
-      'Output ONLY the extracted text, preserving line breaks. ' +
-      'Do not add explanations, descriptions, or translations. ' +
-      'Korean text: preserve exact spacing and characters.';
+    const model = '@cf/meta/llama-3.2-11b-vision-instruct' as Parameters<Ai['run']>[0];
+    const response = await c.env.AI.run(model, {
+      prompt:
+        'You are an expert OCR system specialized in Korean and English text from book pages. ' +
+        'Extract ALL visible text from this image with maximum accuracy. ' +
+        'Rules: ' +
+        '1. Output ONLY the extracted text — no explanations, labels, or image descriptions. ' +
+        '2. Preserve line breaks exactly as they appear. ' +
+        '3. For Korean text: maintain exact syllable spacing and word boundaries. ' +
+        '4. Do not translate, summarize, or modify the text in any way. ' +
+        '5. If text is partially obscured, provide your best interpretation based on context.',
+      image: [...uint8Array],
+      max_tokens: 1024,
+      temperature: 0.1,
+    });
 
-    /**
-     * 단일 모델 OCR 실행 헬퍼
-     */
-    async function runWithModel(
-      model: Parameters<Ai['run']>[0],
-      prompt: string,
-    ): Promise<string> {
-      const response = await c.env.AI.run(model, {
-        prompt,
-        image: imageBytes,
-        max_tokens: 1024,
-        temperature: 0.1,
-      });
-      return (response as { response?: string }).response?.trim() ?? '';
-    }
-
-    /**
-     * CF Workers AI 라이선스 게이팅 오류 판별
-     * 오류 코드 5016 또는 "agree" 문구 포함 시 해당
-     */
-    function isAgreementRequired(err: unknown): boolean {
-      const msg = err instanceof Error ? err.message : String(err);
-      return msg.includes('5016') || msg.toLowerCase().includes('agree');
-    }
-
-    // ── 모델 실행 전략 ────────────────────────────────────────
-    // 1순위: llama-3.2-11b-vision — 최고 품질 OCR
-    // 2순위: llava-1.5-7b        — 폴백 (라이선스 게이트 없음)
-    const PRIMARY_MODEL = '@cf/meta/llama-3.2-11b-vision-instruct' as Parameters<Ai['run']>[0];
-    const FALLBACK_MODEL = '@cf/llava-1.5-7b-hf' as Parameters<Ai['run']>[0];
-
-    let extractedText = '';
-    let usedFallback = false;
-
-    // ── 1차: 기본 모델 시도 ──────────────────────────────────
-    try {
-      extractedText = await runWithModel(PRIMARY_MODEL, OCR_PROMPT);
-    } catch (e) {
-      if (isAgreementRequired(e)) {
-        // CF 라이선스 게이팅: 이미지 없이 prompt='agree' 만 제출해야 약관 동의가 등록됨
-        // (계정당 1회 — 이후 요청은 게이트 통과)
-        try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await c.env.AI.run(PRIMARY_MODEL, { prompt: 'agree' } as any);
-        } catch {
-          // 동의 자체는 오류가 발생해도 무시 (등록은 완료됨)
-        }
-        // CF 측 동의 반영에 충분한 시간 부여
-        await new Promise((r) => setTimeout(r, 1500));
-        try {
-          extractedText = await runWithModel(PRIMARY_MODEL, OCR_PROMPT);
-        } catch (e2) {
-          console.error('OCR agree 후 기본 모델 재시도 실패:', e2 instanceof Error ? e2.message : String(e2));
-          // 동의 후에도 실패 → 폴백으로 진행
-        }
-      }
-      // 다른 오류도 폴백으로 진행
-    }
-
-    // ── 2차: 폴백 모델 ───────────────────────────────────────
+    const extractedText = (response as { response?: string }).response?.trim() ?? '';
     if (!extractedText) {
-      try {
-        extractedText = await runWithModel(FALLBACK_MODEL, OCR_PROMPT);
-        usedFallback = true;
-      } catch (e) {
-        console.error('OCR 폴백 모델 오류:', e instanceof Error ? e.message : String(e));
-        return c.json({ error: '이미지에서 텍스트를 인식하지 못했습니다. 잠시 후 다시 시도해주세요.' }, 503);
-      }
+      return c.json({ error: '이미지에서 텍스트를 인식하지 못했습니다. 더 선명한 이미지를 촬영해주세요.' }, 422);
     }
 
-    // ── 텍스트 추출 불가 ─────────────────────────────────────
-    if (!extractedText) {
-      return c.json({
-        error: '이미지에서 텍스트를 인식하지 못했습니다. 글자가 잘 보이는 사진을 다시 촬영해주세요.',
-      }, 422);
-    }
-
-    // ── 신뢰도 계산 (0~100) ───────────────────────────────────
+    // 신뢰도 휴리스틱: 한국어·영문 단어 밀도 기반 (0~100)
     const words = extractedText.split(/\s+/).filter(Boolean);
     const koreanChars = (extractedText.match(/[가-힣]/g) ?? []).length;
-    const englishChars = (extractedText.match(/[a-zA-Z]/g) ?? []).length;
     const totalChars = extractedText.replace(/\s/g, '').length;
-    const meaningfulRatio = totalChars > 0 ? (koreanChars + englishChars) / totalChars : 0;
-    const lengthScore = Math.min(1, words.length / 30);
-    const rawConfidence = Math.round((meaningfulRatio * 0.5 + lengthScore * 0.5) * 100);
-    // 폴백 모델은 품질이 다소 낮을 수 있으므로 신뢰도 보정
-    const confidence = usedFallback ? Math.round(rawConfidence * 0.85) : rawConfidence;
+    const langDensity = totalChars > 0 ? (koreanChars + (totalChars - koreanChars)) / totalChars : 0;
+    const lengthScore = Math.min(100, words.length * 3); // 최대 33단어 이상이면 100
+    const confidence = Math.round((langDensity * 0.4 + (lengthScore / 100) * 0.6) * 100);
 
     return c.json({ text: extractedText, confidence });
   } catch (err) {
-    console.error('OCR 예기치 않은 오류:', err instanceof Error ? err.message : String(err));
-    return c.json({ error: 'OCR 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }, 500);
+    console.error('OCR 오류:', err);
+    return c.json({ error: 'OCR 처리 중 오류가 발생했습니다' }, 500);
   }
 });
 
