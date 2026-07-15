@@ -11,7 +11,7 @@
     "build:worker": "echo 'Worker is bundled by wrangler deploy — no separate build needed'",
     "preview": "vite preview",
     "predeploy": "npm run docs:coverage-check",
-    "deploy": "npm run build && wrangler deploy",
+    "deploy": "bash scripts/predeploy-guard.sh && npm run build && wrangler deploy",
     "db:create": "wrangler d1 create bookshelf-db",
     "db:migrate": "wrangler d1 execute bookshelf-db --file=worker/db/schema.sql",
     "db:migrate:local": "wrangler d1 execute bookshelf-db --local --file=worker/db/schema.sql",

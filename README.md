@@ -478,13 +478,19 @@ npx wrangler d1 execute bookshelf-db \
   --file=worker/db/migrations/0001_initial_schema.sql
 ```
 
-### 전체 배포
+### 배포 원칙
+
+> **배포는 GitHub Actions로만.** `git push origin main` → CI가 lint → build → wrangler deploy 순으로 자동 실행합니다.  
+> `npm run deploy` 로컬 직접 배포는 비상 상황에만 허용되며, 클린 워킹트리 + main 브랜치 조건을 통과해야 실행됩니다.
+
+### 전체 배포 (비상시 전용)
 
 ```bash
+# 아래 명령은 워킹트리가 클린하고 main 브랜치인 경우에만 실행됩니다.
 npm run deploy
 ```
 
-### GitHub Actions 자동 배포
+### GitHub Actions 자동 배포 (정상 경로)
 
 `main` 브랜치 push 시 자동 배포 (`.github/workflows/deploy.yml`)  
 GitHub → Settings → Secrets에 추가:
