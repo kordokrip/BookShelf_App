@@ -284,6 +284,79 @@ ADMIN_TOKEN="<admin-jwt>" bash scripts/admin-api-test.sh
 
 ---
 
+## SECTION L — 오프라인 전략 수동 테스트 (F-03 Instant Library)
+
+> **전제**: PersistQueryClientProvider + setMutationDefaults 도입 후 검증 항목  
+> **관련 파일**: `src/lib/queryClient.ts`, `src/app/App.tsx`, `src/hooks/useSessions.ts`
+
+### L-1. 오프라인 재실행 시 즉시 서재 표시 🔍 MANUAL
+
+```text
+1. 로그인 후 서재(/)에서 책 목록이 표시되는 것 확인
+2. DevTools → Application → Storage → Local Storage → 'bookshelf_query_cache' 키 존재 확인
+3. DevTools → Network 탭 → "Offline" 체크박스 ON
+4. 브라우저 새로고침 (Cmd+Shift+R)
+5. 기대값: 네트워크 요청 없이 서재 데이터가 즉시 표시됨
+6. DevTools → Network 확인: /api/books 요청이 발생하지 않음 (캐시에서 로드)
+```
+
+| 검증 포인트 | 기대값 |
+| --- | --- |
+| 서재 데이터 표시 속도 | 로딩 스피너 없이 즉시 표시 |
+| Network 탭 /api/books | 요청 발생 없음 (offline) |
+| LocalStorage 키 | `bookshelf_query_cache` 24h 유효 데이터 존재 |
+
+---
+
+### L-2. 오프라인 중 세션 기록 → 온라인 복귀 자동 전송 🔍 MANUAL
+
+```text
+1. DevTools → Network → "Offline" ON
+2. 읽는 중 책 상세 페이지로 이동
+3. 독서 세션 기록 버튼 클릭 → 페이지/시간 입력 → 저장
+4. 기대값: UI 에러 없이 처리됨 (TQ가 mutation을 paused 상태로 보관)
+5. DevTools → Application → IndexedDB 또는 Console에서 TQ mutation 상태 확인 가능
+6. Network → "Offline" 체크 해제 (Online 복귀)
+7. 기대값: POST /api/sessions 요청이 자동으로 전송됨 (재전송 알림 표시)
+8. 서버 반영 확인: 통계 페이지에서 세션 수 증가 확인
+```
+
+| 단계 | 기대 동작 |
+| --- | --- |
+| 오프라인 세션 저장 | mutation paused, UI 정상 (에러 없음) |
+| 온라인 복귀 | POST /api/sessions 자동 전송 (0~2초 내) |
+| 재전송 후 캐시 | books/stats invalidate → 데이터 최신화 |
+
+---
+
+### L-3. 오프라인 중 페이지 재실행 → 온라인 복귀 시 전송 🔍 MANUAL
+
+```text
+1. Network → Offline ON
+2. 세션 기록 (위 L-2 3~4번 동일)
+3. 브라우저 완전 새로고침 (Cmd+Shift+R) — paused mutation이 localStorage에 복원되어야 함
+4. Network → Offline 해제
+5. 기대값: PersistQueryClientProvider.onSuccess → resumePausedMutations() 호출 →
+           POST /api/sessions 전송
+6. Network 탭에서 /api/sessions POST 요청 발생 확인
+```
+
+> **차이점 L-2 vs L-3**: L-2는 같은 세션 내 온라인 복귀, L-3은 페이지 새로고침 후 복귀.  
+> L-3이 더 엄격한 시나리오로 localStorage 직렬화/역직렬화 경로를 검증.
+
+---
+
+### L-4. 배포 후 캐시 자동 무효화 확인 🔍 MANUAL
+
+```text
+1. 서비스 사용 중 새 버전 배포 (buster = 빌드 타임스탬프 변경됨)
+2. UpdatePrompt 배너에서 [업데이트] 클릭
+3. 기대값: 구 bookshelf_query_cache 무효화 → 새 데이터로 재조회
+4. LocalStorage → bookshelf_query_cache 값이 초기화됐는지 확인
+```
+
+---
+
 ## 알려진 이슈
 
 | 항목 | 상태 | 비고 |
