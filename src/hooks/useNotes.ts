@@ -41,6 +41,9 @@ export function useAddNote() {
   const qc = useQueryClient();
   const addNotification = useUiStore((s) => s.addNotification);
   return useMutation({
+    // mutationKey: queryClient.setMutationDefaults와 연결 →
+    //   오프라인 pause 후 페이지 재실행 시 resumePausedMutations가 이 key로 함수 조회
+    mutationKey: ['addNote'],
     mutationFn: (data: {
       book_id: string;
       type: string;
