@@ -196,12 +196,24 @@ export function useDeleteMessage(groupId: string) {
   });
 }
 
-/** 채팅 읽음 표시 */
+/** 채팅 알림 읽음 처리 (last_read_at 갱신) */
 export function useMarkGroupRead(groupId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => groupsApi.markRead(groupId),
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.notifications.unreadCount() }); },
+  });
+}
+
+/** 읽음 Receipt 갱신 — 스크롤이 최신 메시지에 도달할 때 호출 (last_read_message_id 갱신) */
+export function useUpdateReadReceipt(groupId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (messageId: string) => groupsApi.updateRead(groupId, messageId),
+    onSuccess: () => {
+      // 그룹 상세(멤버 목록 + last_read_message_id) 갱신
+      qc.invalidateQueries({ queryKey: queryKeys.groups.detail(groupId) });
+    },
   });
 }
 

@@ -659,6 +659,7 @@ export interface GroupMember {
   role: string;
   status: string; // 'approved' | 'pending'
   joined_at: string;
+  last_read_message_id: string | null;
 }
 
 export interface Notification {
@@ -787,6 +788,12 @@ export const groupsApi = {
 
   markRead: (groupId: string) =>
     apiFetch<{ data: { read: boolean } }>(`/api/groups/${groupId}/mark-read`, { method: 'POST' }),
+
+  updateRead: (groupId: string, messageId: string) =>
+    apiFetch<{ data: { read: boolean; messageId: string } }>(`/api/groups/${groupId}/read`, {
+      method: 'PATCH',
+      body: JSON.stringify({ messageId }),
+    }),
 
   // 모임 일정
   getMeetings: (groupId: string) =>

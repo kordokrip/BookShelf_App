@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ================================================================
-# BookShelf App — E2E API 테스트 스크립트 (45개 | readonly 3개)
+# BookShelf App — E2E API 테스트 스크립트 (47개 | readonly 3개)
 # 실행: bash scripts/e2e-api-test.sh [--url <BASE_URL>] [--readonly]
 #   --url <URL>  : 대상 URL (기본: https://bookshelf-api.kordokrip.workers.dev)
 #   --readonly   : 쓰기 없는 읽기 전용 3케이스만 실행 (프로덕션 안전 검증)
@@ -46,7 +46,7 @@ FAILED_TESTS=()
 if [[ "$READONLY" == true ]]; then
   TOTAL=3
 else
-  TOTAL=45
+  TOTAL=47
 fi
 
 # ── 시작 시각 ────────────────────────────────────────────────────
@@ -999,6 +999,57 @@ if [[ "$HTTP_CODE" == "200" && "$OK" == "yes" ]]; then
   pass_test $T "$NAME" $ELAPSED
 else
   fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE}, ok=${OK} (기대: 200, ok:true)"
+fi
+
+# ================================================================
+# GROUP 15 — 읽음 표시 (Read Receipt)
+# ================================================================
+printf "\n%s── Group 15: 읽음 표시 (Read Receipt) (2개)%s\n" "$CYAN" "$NC"
+
+T=46; NAME="PATCH /api/groups/:id/read (last_read_message_id 갱신)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" -X PATCH \
+  "${BASE_URL}/api/groups/${GROUP_ID}/read" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d "{\"messageId\":\"${MESSAGE_ID}\"}")
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+READ_FLAG=$(json_val "$BODY" "d['data'].get('read', '')" 2>/dev/null || echo "")
+GOT_ID=$(json_val "$BODY" "d['data'].get('messageId', '')" 2>/dev/null || echo "")
+if [[ "$HTTP_CODE" == "200" && ("$READ_FLAG" == "True" || "$READ_FLAG" == "true") && "$GOT_ID" == "$MESSAGE_ID" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+  printf "         ${CYAN}↳ read:true, messageId=%s${NC}\n" "$GOT_ID"
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" \
+    "HTTP ${HTTP_CODE}, read=${READ_FLAG}, messageId=${GOT_ID} (기대: 200 + read:true + messageId 일치)"
+fi
+
+T=47; NAME="GET /api/groups/:id (members.last_read_message_id 필드 존재)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" \
+  "${BASE_URL}/api/groups/${GROUP_ID}" \
+  -H "Authorization: Bearer ${TOKEN}")
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+HAS_FIELD=$(python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+members = d.get('data', {}).get('members', [])
+if not members:
+    print('no_members')
+elif all('last_read_message_id' in m for m in members):
+    print('yes')
+else:
+    missing = [m.get('user_id','?') for m in members if 'last_read_message_id' not in m]
+    print('missing:' + ','.join(missing))
+" <<< "$BODY" 2>/dev/null || echo "parse_error")
+if [[ "$HTTP_CODE" == "200" && "$HAS_FIELD" == "yes" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+  printf "         ${CYAN}↳ 모든 멤버에 last_read_message_id 필드 확인${NC}\n"
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" \
+    "HTTP ${HTTP_CODE}, field_check=${HAS_FIELD} (기대: 200 + 모든 members에 last_read_message_id 키 존재)"
 fi
 
 # ================================================================

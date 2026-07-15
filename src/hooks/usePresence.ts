@@ -2,15 +2,27 @@ import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 
-const HEARTBEAT_INTERVAL = 30_000; // 30초마다 갱신 (KV TTL 35초)
+const HEARTBEAT_INTERVAL = 30_000; // 30초마다 갱신 (KV TTL 90초)
 
-/** 채팅탭 마운트 시 heartbeat 시작, 언마운트 시 자동 중단 (TTL 만료 → offline) */
+/** GroupDetailView 마운트 시 heartbeat 시작, 언마운트/탭 비활성 시 자동 중단 */
 export function usePresenceHeartbeat(): void {
   useEffect(() => {
-    const send = () => apiFetch('/api/presence/heartbeat', { method: 'POST' }).catch(() => {});
+    const send = () => {
+      if (document.hidden) return; // 탭 비활성 시 전송 스킵
+      apiFetch('/api/presence/heartbeat', { method: 'POST' }).catch(() => {});
+    };
+
     send();
     const id = setInterval(send, HEARTBEAT_INTERVAL);
-    return () => clearInterval(id);
+
+    // 탭이 다시 보이면 즉시 1회 전송 (TTL 만료 방지)
+    const handleVisibility = () => { if (!document.hidden) send(); };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, []);
 }
 
@@ -28,7 +40,7 @@ export function usePresenceStatus(userIds: string[]) {
     },
     enabled: userIds.length > 0,
     refetchInterval: 35_000,
-    refetchIntervalInBackground: false,
+    refetchIntervalInBackground: false, // 탭 비활성 시 폴링 자동 중단
     staleTime: 30_000,
   });
 }

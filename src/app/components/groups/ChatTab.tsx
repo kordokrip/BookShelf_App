@@ -1,27 +1,41 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Send, Loader2, Trash2, AlertCircle, RotateCcw } from 'lucide-react';
-import { useGroupMessages, useSendMessage, useDeleteMessage, useMarkGroupRead } from '../../../hooks/useGroups';
+import { useGroupMessages, useSendMessage, useDeleteMessage, useMarkGroupRead, useUpdateReadReceipt } from '../../../hooks/useGroups';
 import { useAuthStore } from '../../../stores/authStore';
-import type { GroupMessage } from '../../../lib/api';
+import type { GroupMember, GroupMessage } from '../../../lib/api';
 
 type PendingMsg = { tempId: string; content: string; status: 'sending' | 'failed' };
 
 const MAX_RETRIES = 3;
 const RETRY_DELAYS = [1000, 2000, 4000];
+const READ_DEBOUNCE_MS = 3_000; // 최신 메시지 도달 후 3초 대기 후 읽음 처리
 
-export function ChatTab({ groupId, isLeader }: { groupId: string; isLeader?: boolean }) {
+export function ChatTab({
+  groupId,
+  isLeader,
+  onlineCount,
+  members,
+}: {
+  groupId: string;
+  isLeader?: boolean;
+  onlineCount: number;
+  members: GroupMember[];
+}) {
   const user = useAuthStore((s) => s.user);
   const { data: messages = [], isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useGroupMessages(groupId);
   const sendMessage = useSendMessage(groupId);
   const deleteMessage = useDeleteMessage(groupId);
   const markRead = useMarkGroupRead(groupId);
+  const updateReadReceipt = useUpdateReadReceipt(groupId);
   const [text, setText] = useState('');
   const [pendingMsgs, setPendingMsgs] = useState<PendingMsg[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevLenRef = useRef(0);
+  const readTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isAtBottomRef = useRef(false);
 
-  // 탭 진입 시 읽음 표시
+  // 탭 진입 시 읽음 표시 (알림 배지 초기화)
   useEffect(() => {
     markRead.mutate();
   }, [groupId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -34,10 +48,49 @@ export function ChatTab({ groupId, isLeader }: { groupId: string; isLeader?: boo
     prevLenRef.current = messages.length;
   }, [messages.length]);
 
-  // 무한 스크롤: 최상단 도달 시 과거 메시지 로드
+  // 언마운트 시 읽음 타이머 정리
+  useEffect(() => {
+    return () => {
+      if (readTimerRef.current) clearTimeout(readTimerRef.current);
+    };
+  }, []);
+
+  // 멤버별 마지막 읽은 메시지 created_at 맵 (읽음 n 계산용)
+  const memberLastReadAt = useMemo(() => {
+    const msgById = new Map(messages.map((m) => [m.id, m.created_at]));
+    return new Map(
+      members
+        .filter((m) => m.user_id !== user?.id && m.status === 'approved')
+        .map((m) => [
+          m.user_id,
+          m.last_read_message_id ? (msgById.get(m.last_read_message_id) ?? null) : null,
+        ]),
+    );
+  }, [messages, members, user?.id]);
+
+  // 무한 스크롤 + 읽음 debounce 처리
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
-    if (!el || !hasNextPage || isFetchingNextPage) return;
+    if (!el) return;
+
+    // 최신 메시지 도달 감지 (하단 100px 이내)
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+    if (atBottom && !isAtBottomRef.current) {
+      // 방금 최하단 도달 → 3s 후 읽음 처리
+      if (readTimerRef.current) clearTimeout(readTimerRef.current);
+      readTimerRef.current = setTimeout(() => {
+        const lastMsg = messages[messages.length - 1];
+        if (lastMsg) updateReadReceipt.mutate(lastMsg.id);
+      }, READ_DEBOUNCE_MS);
+    } else if (!atBottom && readTimerRef.current) {
+      // 스크롤 위로 이동 → 타이머 취소
+      clearTimeout(readTimerRef.current);
+      readTimerRef.current = null;
+    }
+    isAtBottomRef.current = atBottom;
+
+    // 무한 스크롤: 최상단 도달 시 과거 메시지 로드
+    if (!hasNextPage || isFetchingNextPage) return;
     if (el.scrollTop < 60) {
       const prevH = el.scrollHeight;
       fetchNextPage().then(() => {
@@ -46,7 +99,7 @@ export function ChatTab({ groupId, isLeader }: { groupId: string; isLeader?: boo
         });
       });
     }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, messages, updateReadReceipt]);
 
   const sendWithRetry = useCallback(async (content: string, tempId: string) => {
     setPendingMsgs((prev) => prev.map((m) => m.tempId === tempId ? { ...m, status: 'sending' } : m));
@@ -73,29 +126,41 @@ export function ChatTab({ groupId, isLeader }: { groupId: string; isLeader?: boo
     sendWithRetry(content, tempId);
   };
 
-  /** 날짜 구분선을 위한 헬퍼 */
   const formatDateLabel = (dateStr: string) => {
     const d = new Date(dateStr);
     return d.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
   };
 
-  /** 같은 사용자의 연속 메시지 시 타임스탬프 표시 여부 판단 */
   const shouldShowTime = (msgs: GroupMessage[], index: number) => {
     const msg = msgs[index];
     if (!msg) return true;
     const next = msgs[index + 1];
-    if (!msg) return false;
     if (!next) return true;
     if (next.user_id !== msg.user_id) return true;
-    // 5분 이상 차이나면 표시
-    const diff = new Date(next.created_at).getTime() - new Date(msg.created_at).getTime();
-    return diff > 5 * 60 * 1000;
+    return new Date(next.created_at).getTime() - new Date(msg.created_at).getTime() > 5 * 60 * 1000;
   };
 
-  const reversed = messages;
+  /** 다른 멤버 중 이 메시지를 읽은 인원 수 */
+  const getReadCount = useCallback((msg: GroupMessage): number => {
+    let count = 0;
+    for (const lastReadAt of memberLastReadAt.values()) {
+      if (lastReadAt && lastReadAt >= msg.created_at) count++;
+    }
+    return count;
+  }, [memberLastReadAt]);
 
   return (
     <div className="flex flex-col h-full">
+      {/* 접속 중 배지 */}
+      {onlineCount > 0 && (
+        <div className="flex-shrink-0 px-4 py-1.5 border-b border-[#E2E8F0] dark:border-[#334155] bg-emerald-50/60 dark:bg-emerald-900/10">
+          <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
+            {onlineCount}명 접속 중
+          </span>
+        </div>
+      )}
+
       <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-4 py-3 space-y-1">
         {isFetchingNextPage && (
           <div className="flex justify-center py-2">
@@ -103,18 +168,19 @@ export function ChatTab({ groupId, isLeader }: { groupId: string; isLeader?: boo
           </div>
         )}
         {isLoading && <p className="text-center text-[#94A3B8] text-sm py-8">메시지 로딩 중...</p>}
-        {!isLoading && reversed.length === 0 && (
+        {!isLoading && messages.length === 0 && (
           <p className="text-center text-[#94A3B8] text-sm py-8">아직 대화가 없습니다. 첫 메시지를 보내보세요!</p>
         )}
-        {reversed.map((msg: GroupMessage, idx: number) => {
+        {messages.map((msg: GroupMessage, idx: number) => {
           const isMine = msg.user_id === user?.id;
-          const prevMsg = reversed[idx - 1];
+          const prevMsg = messages[idx - 1];
           const showDate = !prevMsg || formatDateLabel(prevMsg.created_at) !== formatDateLabel(msg.created_at);
-          const showTime = shouldShowTime(reversed, idx);
+          const showTime = shouldShowTime(messages, idx);
+          const readCount = isMine && !msg.deleted_at ? getReadCount(msg) : 0;
 
           return (
             <div key={msg.id}>
-              {/* UX-03: 날짜 구분선 */}
+              {/* 날짜 구분선 */}
               {showDate && (
                 <div className="flex items-center gap-3 my-4">
                   <div className="flex-1 h-px bg-[#E2E8F0] dark:bg-[#334155]" />
@@ -142,6 +208,12 @@ export function ChatTab({ groupId, isLeader }: { groupId: string; isLeader?: boo
                     {showTime && (
                       <p className={`text-[10px] text-[#CBD5E1] mt-0.5 ${isMine ? 'mr-1' : 'ml-1'}`}>
                         {new Date(msg.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    )}
+                    {/* 읽음 n 표시 (내 메시지, 비삭제) */}
+                    {isMine && readCount > 0 && (
+                      <p className="text-[10px] text-emerald-500 dark:text-emerald-400 mt-0.5 mr-1">
+                        읽음 {readCount}
                       </p>
                     )}
                     {isLeader && !msg.deleted_at && (
@@ -186,6 +258,7 @@ export function ChatTab({ groupId, isLeader }: { groupId: string; isLeader?: boo
         ))}
         <div ref={bottomRef} />
       </div>
+
       {/* 입력 */}
       <div className="flex-shrink-0 px-4 py-3 border-t border-[#E2E8F0] dark:border-[#334155]">
         {pendingMsgs.length === 0 && sendMessage.isError && (

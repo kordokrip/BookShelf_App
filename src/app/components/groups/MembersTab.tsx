@@ -2,10 +2,12 @@ import { Crown, Trash2, LogOut, UserMinus, ArrowRightLeft, Check, X } from 'luci
 import { useLeaveGroup, useDeleteGroup, useRemoveMember, useTransferLeader, useApproveMember, useRejectMember } from '../../../hooks/useGroups';
 import { useAuthStore } from '../../../stores/authStore';
 
-export function MembersTab({ groupId, members, isLeader, onBack }: {
+export function MembersTab({ groupId, members, isLeader, onBack, onlineSet }: {
   groupId: string;
   members: Array<{ user_id: string; name: string; role: string; status: string; profile_emoji?: string | null; joined_at: string }>;
-  isLeader: boolean; onBack: () => void;
+  isLeader: boolean;
+  onBack: () => void;
+  onlineSet: Set<string>;
 }) {
   const user = useAuthStore((s) => s.user);
   const leaveGroup = useLeaveGroup();
@@ -17,6 +19,7 @@ export function MembersTab({ groupId, members, isLeader, onBack }: {
 
   const approvedMembers = members.filter((m) => m.status === 'approved');
   const pendingMembers = members.filter((m) => m.status === 'pending');
+  const onlineCount = approvedMembers.filter((m) => onlineSet.has(m.user_id)).length;
 
   const handleLeave = async () => {
     if (!confirm('정말 이 모임을 나가시겠습니까?')) return;
@@ -87,41 +90,65 @@ export function MembersTab({ groupId, members, isLeader, onBack }: {
         </>
       )}
 
-      <h3 className="text-sm font-semibold text-[#64748B] dark:text-[#94A3B8]">멤버 ({approvedMembers.length}명)</h3>
+      {/* 멤버 헤더: 카운트 + 온라인 수 */}
+      <div className="flex items-center gap-2">
+        <h3 className="text-sm font-semibold text-[#64748B] dark:text-[#94A3B8]">
+          멤버 ({approvedMembers.length}명)
+        </h3>
+        {onlineCount > 0 && (
+          <span className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+            온라인 {onlineCount}명
+          </span>
+        )}
+      </div>
+
       <div className="space-y-2">
-        {approvedMembers.map((m) => (
-          <div key={m.user_id} className="flex items-center gap-3 p-3 bg-white dark:bg-[#1E293B] rounded-xl border border-[#E2E8F0] dark:border-[#334155]">
-            <div className="w-9 h-9 rounded-full bg-[#EEF2FF] dark:bg-[#312E81] flex items-center justify-center text-sm flex-shrink-0">
-              {m.profile_emoji || m.name?.[0] || '?'}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm font-medium text-[#1E293B] dark:text-[#F8FAFC] truncate">{m.name}</span>
-                {m.role === 'leader' && <Crown size={12} className="text-amber-500 flex-shrink-0" />}
+        {approvedMembers.map((m) => {
+          const isOnline = onlineSet.has(m.user_id);
+          return (
+            <div key={m.user_id} className="flex items-center gap-3 p-3 bg-white dark:bg-[#1E293B] rounded-xl border border-[#E2E8F0] dark:border-[#334155]">
+              {/* 아바타 + 온라인 dot */}
+              <div className="relative flex-shrink-0">
+                <div className="w-9 h-9 rounded-full bg-[#EEF2FF] dark:bg-[#312E81] flex items-center justify-center text-sm">
+                  {m.profile_emoji || m.name?.[0] || '?'}
+                </div>
+                {isOnline && (
+                  <span
+                    className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-[2.5px] border-white dark:border-[#1E293B]"
+                    aria-label="온라인"
+                  />
+                )}
               </div>
-              <p className="text-xs text-[#94A3B8]">{new Date(m.joined_at).toLocaleDateString('ko-KR')}</p>
-            </div>
-            {/* UX-02: 모임장 위임 버튼 */}
-            {isLeader && m.user_id !== user?.id && (
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => handleTransferLeader(m.user_id, m.name)}
-                  className="p-1.5 text-[#4F46E5] hover:bg-[#EEF2FF] dark:hover:bg-[#312E81] rounded-lg transition-colors"
-                  title="모임장 위임"
-                >
-                  <ArrowRightLeft size={14} />
-                </button>
-                <button
-                  onClick={() => handleRemove(m.user_id, m.name)}
-                  className="p-1.5 text-[#EF4444] hover:bg-[#FEF2F2] dark:hover:bg-[#450A0A] rounded-lg transition-colors"
-                  title="멤버 추방"
-                >
-                  <UserMinus size={14} />
-                </button>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-medium text-[#1E293B] dark:text-[#F8FAFC] truncate">{m.name}</span>
+                  {m.role === 'leader' && <Crown size={12} className="text-amber-500 flex-shrink-0" />}
+                </div>
+                <p className="text-xs text-[#94A3B8]">{new Date(m.joined_at).toLocaleDateString('ko-KR')}</p>
               </div>
-            )}
-          </div>
-        ))}
+              {/* UX-02: 모임장 위임 버튼 */}
+              {isLeader && m.user_id !== user?.id && (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleTransferLeader(m.user_id, m.name)}
+                    className="p-1.5 text-[#4F46E5] hover:bg-[#EEF2FF] dark:hover:bg-[#312E81] rounded-lg transition-colors"
+                    title="모임장 위임"
+                  >
+                    <ArrowRightLeft size={14} />
+                  </button>
+                  <button
+                    onClick={() => handleRemove(m.user_id, m.name)}
+                    className="p-1.5 text-[#EF4444] hover:bg-[#FEF2F2] dark:hover:bg-[#450A0A] rounded-lg transition-colors"
+                    title="멤버 추방"
+                  >
+                    <UserMinus size={14} />
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* 액션 버튼 */}

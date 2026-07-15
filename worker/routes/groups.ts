@@ -171,7 +171,8 @@ groupsRouter.get('/:id', authMiddleware, async (c) => {
   const [groupRes, membersRes] = await db.batch([
     db.prepare('SELECT * FROM groups WHERE id = ?').bind(groupId),
     db.prepare(`
-      SELECT gm.role, gm.joined_at, gm.status, u.id AS user_id, u.name, u.email, u.avatar_url, u.profile_emoji
+      SELECT gm.role, gm.joined_at, gm.status, gm.last_read_message_id,
+             u.id AS user_id, u.name, u.email, u.avatar_url, u.profile_emoji
       FROM group_members gm
       JOIN users u ON u.id = gm.user_id
       WHERE gm.group_id = ?
@@ -487,6 +488,41 @@ groupsRouter.delete('/:id/messages/:messageId', authMiddleware, async (c) => {
   ).bind(userId, messageId, groupId).run();
 
   return c.json({ data: { deleted: true } });
+});
+
+/** PATCH /api/groups/:id/read — 마지막 읽은 메시지 ID 갱신 (읽음 Receipt) */
+groupsRouter.patch('/:id/read', authMiddleware, async (c) => {
+  const userId = c.get('userId');
+  const groupId = c.req.param('id');
+  const db = c.env.DB;
+
+  if (!(await isMember(db, groupId, userId))) {
+    return c.json({ error: '그룹 멤버만 읽음 처리할 수 있습니다.' }, 403);
+  }
+
+  let body: { messageId?: string };
+  try {
+    body = await c.req.json<{ messageId?: string }>();
+  } catch {
+    return c.json({ error: '잘못된 JSON입니다.' }, 400);
+  }
+
+  const { messageId } = body;
+  if (!messageId || typeof messageId !== 'string') {
+    return c.json({ error: 'messageId가 필요합니다.' }, 400);
+  }
+
+  // 해당 messageId가 이 그룹의 메시지인지 확인
+  const msg = await db.prepare(
+    'SELECT id FROM group_messages WHERE id = ? AND group_id = ?',
+  ).bind(messageId, groupId).first();
+  if (!msg) return c.json({ error: '메시지를 찾을 수 없습니다.' }, 404);
+
+  await db.prepare(
+    `UPDATE group_members SET last_read_message_id = ? WHERE group_id = ? AND user_id = ?`,
+  ).bind(messageId, groupId, userId).run();
+
+  return c.json({ data: { read: true, messageId } });
 });
 
 /** POST /api/groups/:id/mark-read — 채팅 알림 읽음 처리 */

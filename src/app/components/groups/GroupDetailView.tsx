@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ArrowLeft, MessageCircle, Calendar, Users } from 'lucide-react';
 import { useGroupDetail } from '../../../hooks/useGroups';
 import { useAuthStore } from '../../../stores/authStore';
+import { usePresenceHeartbeat, usePresenceStatus } from '../../../hooks/usePresence';
 import { ChatTab } from './ChatTab';
 import { MeetingsTab } from './MeetingsTab';
 import { MembersTab } from './MembersTab';
@@ -12,6 +13,23 @@ export function GroupDetailView({ groupId, onBack }: { groupId: string; onBack: 
   const user = useAuthStore((s) => s.user);
   const { data: group, isLoading } = useGroupDetail(groupId);
   const [activeTab, setActiveTab] = useState<Tab>('chat');
+
+  // 진입 시 heartbeat 시작 (탭 비활성 시 자동 중단)
+  usePresenceHeartbeat();
+
+  // 승인된 멤버 userIds → 온라인 상태 폴링
+  const approvedMembers = useMemo(
+    () => (group?.members ?? []).filter((m) => m.status === 'approved'),
+    [group?.members],
+  );
+  const memberIds = useMemo(() => approvedMembers.map((m) => m.user_id), [approvedMembers]);
+  const { data: presenceData = [] } = usePresenceStatus(memberIds);
+
+  const onlineSet = useMemo(
+    () => new Set(presenceData.filter((p) => p.online).map((p) => p.userId)),
+    [presenceData],
+  );
+  const onlineCount = onlineSet.size;
 
   if (isLoading) {
     return (
@@ -74,7 +92,14 @@ export function GroupDetailView({ groupId, onBack }: { groupId: string; onBack: 
 
       {/* 탭 콘텐츠 */}
       <div className="flex-1 overflow-hidden">
-        {activeTab === 'chat' && <ChatTab groupId={groupId} isLeader={isLeader} />}
+        {activeTab === 'chat' && (
+          <ChatTab
+            groupId={groupId}
+            isLeader={isLeader}
+            onlineCount={onlineCount}
+            members={approvedMembers}
+          />
+        )}
         {activeTab === 'meetings' && <MeetingsTab groupId={groupId} isLeader={isLeader} />}
         {activeTab === 'members' && (
           <MembersTab
@@ -82,6 +107,7 @@ export function GroupDetailView({ groupId, onBack }: { groupId: string; onBack: 
             members={group.members ?? []}
             isLeader={isLeader}
             onBack={onBack}
+            onlineSet={onlineSet}
           />
         )}
       </div>
