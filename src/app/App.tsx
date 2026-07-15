@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { RouterProvider } from "react-router";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { queryClient } from "../lib/queryClient";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { queryClient, persister } from "../lib/queryClient";
 import { useAuthStore } from "../stores/authStore";
 import { useUiStore, getTimeBasedTheme } from "../stores/uiStore";
 import { useViewport } from "../hooks/useViewport";
@@ -63,14 +63,40 @@ export default function App() {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister,
+        // 24h: 비행기 모드에서 앱 재실행 시 캐시 유효 기간
+        maxAge: 24 * 60 * 60 * 1000,
+        // 배포마다 buster 변경 → 구 캐시 자동 무효화 (queryClient.ts의 __APP_BUILD__ 참조)
+        buster: __APP_BUILD__,
+        dehydrateOptions: {
+          // persist 대상 쿼리: books/stats/notes 성공 데이터만 저장
+          shouldDehydrateQuery: (query) => {
+            if (query.state.status !== 'success') return false;
+            const root = query.queryKey[0];
+            return typeof root === 'string' && ['books', 'stats', 'notes'].includes(root);
+          },
+          // pause된 mutation(오프라인 대기) + 알려진 mutationKey만 저장
+          shouldDehydrateMutation: (mutation) =>
+            mutation.state.isPaused === true && mutation.options.mutationKey != null,
+        },
+      }}
+      onSuccess={() => {
+        // rehydrate 완료 후 paused mutation 재개 + 화면 데이터 최신화
+        void queryClient.resumePausedMutations().then(() =>
+          queryClient.invalidateQueries(),
+        );
+      }}
+    >
       <TooltipProvider delayDuration={200}>
         {/* App-level ToastProvider: 오프라인/온라인 알림 전용 */}
         <ToastProvider>
           <AppInner />
         </ToastProvider>
       </TooltipProvider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }
 
