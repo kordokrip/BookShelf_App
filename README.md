@@ -473,10 +473,20 @@ npx wrangler secret put NAVER_CLIENT_SECRET
 
 ### 프로덕션 DB 마이그레이션
 
+마이그레이션 원천은 `worker/db/migrations/` 폴더입니다. `schema.sql`은 참고용 스냅샷이며 직접 실행하지 마세요.
+
 ```bash
-npx wrangler d1 execute bookshelf-db \
-  --file=worker/db/migrations/0001_initial_schema.sql
+# 신규 환경 초기화 (모든 미적용 마이그레이션 일괄 적용)
+npm run db:migrate          # 프로덕션 (--remote)
+npm run db:migrate:local    # 로컬 D1 (--local)
+
+# 적용 이력 및 대기 마이그레이션 확인
+npm run db:migrate:status
+# 또는: npx wrangler d1 migrations list bookshelf-db --remote
 ```
+
+> **FTS5 적용 여부 확인**: `db:migrate:status` 결과에서 `0002_fts5_notes` 행의 `Applied` 컬럼이 `✅` 인지 확인하세요.  
+> FTS5 virtual table은 D1 원격에서 일반 SQL로 직접 실행할 수 없으며, `wrangler d1 migrations apply` 경로로만 적용됩니다.
 
 ### 배포 원칙
 

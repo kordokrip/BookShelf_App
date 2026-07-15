@@ -147,12 +147,12 @@ jobs:
           command: deploy
           wranglerVersion: '4'
 
-      - name: Run D1 FTS5 migration
+      - name: Apply D1 migrations
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: d1 execute bookshelf-db --remote --file=worker/db/migrations/0002_fts5_notes.sql
+          command: d1 migrations apply bookshelf-db --remote
           wranglerVersion: '4'
 
       - name: Verify deployment
