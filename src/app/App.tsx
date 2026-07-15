@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { RouterProvider } from "react-router";
+import { initVitals } from "../lib/vitals";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { queryClient, persister } from "../lib/queryClient";
 import { useAuthStore } from "../stores/authStore";
@@ -16,6 +17,9 @@ export default function App() {
   const themeMode = useUiStore((s) => s.themeMode);
   // 실제 디바이스 뷰포트 크기를 CSS 변수로 주입 (iOS Safari, Android Chrome 대응)
   useViewport();
+
+  // Web Vitals 수집 — 앱 초기화 시 한 번만 등록 (20% 샘플링)
+  useEffect(() => { initVitals(); }, []);
 
   // 다크모드 class 적용 (auto: 시간 기반 자동, 1분마다 갱신)
   useEffect(() => {

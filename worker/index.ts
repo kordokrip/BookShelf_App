@@ -20,6 +20,7 @@ import { notificationsRouter } from './routes/notifications';
 import { discoverRouter } from './routes/discover';
 import { adminRouter } from './routes/admin';
 import { presenceRouter } from './routes/presence';
+import { vitalsRouter } from './routes/vitals';
 import { authMiddleware } from './auth';
 
 // ─── App 인스턴스 ─────────────────────────────────────────────
@@ -182,6 +183,7 @@ app.route('/api/notifications', notificationsRouter);
 app.route('/api/discover', discoverRouter);
 app.route('/api/admin', adminRouter);
 app.route('/api/presence', presenceRouter);
+app.route('/api/vitals', vitalsRouter);
 
 // ─── GET /api/initial-data — 앱 첫 진입 시 일괄 로드 ──────────
 // BottomNavBar 상태별 카운트 + 사용자 프로필을 단일 요청으로 반환
