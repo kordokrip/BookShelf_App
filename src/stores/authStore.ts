@@ -19,6 +19,9 @@ export interface AuthUser {
   favorite_genres?: string[];
   reading_goal?: number;
   created_at?: string;
+  reminder_time?: string;
+  reminder_enabled?: number;
+  weekly_report_enabled?: number;
 }
 
 type AuthStatus = 'idle' | 'authenticated' | 'unauthenticated';
@@ -142,7 +145,7 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true }, false, 'auth/check:start');
         try {
           const res = await usersApi.getProfile();
-          const raw = res.data as AuthUser & { favorite_genres?: string | string[]; role?: string; created_at?: string; profile_emoji?: string | null };
+          const raw = res.data as AuthUser & { favorite_genres?: string | string[]; role?: string; created_at?: string; profile_emoji?: string | null; reminder_time?: string; reminder_enabled?: number; weekly_report_enabled?: number };
           const favoriteGenres =
             typeof raw.favorite_genres === 'string'
               ? (JSON.parse(raw.favorite_genres || '[]') as string[])
@@ -159,6 +162,9 @@ export const useAuthStore = create<AuthState>()(
                 favorite_genres: favoriteGenres,
                 reading_goal: raw.reading_goal,
                 created_at: raw.created_at,
+                reminder_time: raw.reminder_time,
+                reminder_enabled: raw.reminder_enabled,
+                weekly_report_enabled: raw.weekly_report_enabled,
               },
               status: 'authenticated',
               isLoading: false,

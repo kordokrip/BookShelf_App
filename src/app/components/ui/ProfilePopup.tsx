@@ -41,6 +41,13 @@ const EMOJI_OPTIONS = [
   "🌸", "🌻", "🍀", "🌈", "☕", "🎵",
 ];
 
+const REMINDER_TIMES: string[] = [];
+for (let h = 6; h < 24; h++) {
+  for (const m of [0, 15, 30, 45]) {
+    REMINDER_TIMES.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+  }
+}
+
 function EmojiPicker({
   onSelect,
   onClose,
@@ -160,6 +167,10 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [reminderEnabled, setReminderEnabled] = useState((user?.reminder_enabled ?? 1) !== 0);
+  const [reminderTime, setReminderTime] = useState(user?.reminder_time ?? "17:00");
+  const [weeklyReportEnabled, setWeeklyReportEnabled] = useState((user?.weekly_report_enabled ?? 1) !== 0);
+  const [savingReminder, setSavingReminder] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
 
   // 바깥 클릭으로 닫기
@@ -205,6 +216,49 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
     logout();
     onClose();
     window.location.href = "/splash";
+  };
+
+  const saveReminderPrefs = async (prefs: {
+    reminder_enabled?: boolean;
+    reminder_time?: string;
+    weekly_report_enabled?: boolean;
+  }) => {
+    setSavingReminder(true);
+    try {
+      await usersApi.updateProfile(prefs);
+      useAuthStore.setState((prev) => ({
+        user: prev.user
+          ? {
+              ...prev.user,
+              ...(prefs.reminder_enabled !== undefined ? { reminder_enabled: prefs.reminder_enabled ? 1 : 0 } : {}),
+              ...(prefs.reminder_time !== undefined ? { reminder_time: prefs.reminder_time } : {}),
+              ...(prefs.weekly_report_enabled !== undefined ? { weekly_report_enabled: prefs.weekly_report_enabled ? 1 : 0 } : {}),
+            }
+          : null,
+      }));
+    } catch {
+      // 저장 실패 시 무시
+    } finally {
+      setSavingReminder(false);
+    }
+  };
+
+  const handleReminderToggle = async () => {
+    const next = !reminderEnabled;
+    setReminderEnabled(next);
+    await saveReminderPrefs({ reminder_enabled: next });
+  };
+
+  const handleReminderTimeChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const next = e.target.value;
+    setReminderTime(next);
+    await saveReminderPrefs({ reminder_time: next });
+  };
+
+  const handleWeeklyReportToggle = async () => {
+    const next = !weeklyReportEnabled;
+    setWeeklyReportEnabled(next);
+    await saveReminderPrefs({ weekly_report_enabled: next });
   };
 
   return (
@@ -277,6 +331,56 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
       <div className="p-3 space-y-2">
         {/* 푸시 알림 토글 */}
         <PushNotificationToggle />
+
+        {/* 알림 설정 */}
+        <div className="rounded-xl border border-[#E2E8F0] dark:border-[#475569] p-3 space-y-2">
+          <p className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 11, fontWeight: 700 }}>
+            알림 설정
+          </p>
+          {/* 독서 리마인더 토글 */}
+          <div className="flex items-center justify-between">
+            <span className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 13 }}>독서 리마인더</span>
+            <button
+              onClick={handleReminderToggle}
+              disabled={savingReminder}
+              className={`relative w-10 h-5 rounded-full transition-colors ${reminderEnabled ? "bg-[#4F46E5]" : "bg-[#CBD5E1] dark:bg-[#475569]"}`}
+            >
+              <span
+                className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${reminderEnabled ? "translate-x-5" : "translate-x-0.5"}`}
+              />
+            </button>
+          </div>
+          {/* 알림 시각 */}
+          {reminderEnabled && (
+            <div className="flex items-center justify-between">
+              <span className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 12 }}>알림 시각</span>
+              <select
+                value={reminderTime}
+                onChange={handleReminderTimeChange}
+                disabled={savingReminder}
+                className="rounded-lg border border-[#E2E8F0] dark:border-[#475569] bg-white dark:bg-[#334155] text-[#1E293B] dark:text-[#F8FAFC] px-2 py-1"
+                style={{ fontSize: 12 }}
+              >
+                {REMINDER_TIMES.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          {/* 주간 독서 리포트 */}
+          <div className="flex items-center justify-between">
+            <span className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 13 }}>주간 독서 리포트</span>
+            <button
+              onClick={handleWeeklyReportToggle}
+              disabled={savingReminder}
+              className={`relative w-10 h-5 rounded-full transition-colors ${weeklyReportEnabled ? "bg-[#4F46E5]" : "bg-[#CBD5E1] dark:bg-[#475569]"}`}
+            >
+              <span
+                className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${weeklyReportEnabled ? "translate-x-5" : "translate-x-0.5"}`}
+              />
+            </button>
+          </div>
+        </div>
 
         <button
           onClick={handleLogout}

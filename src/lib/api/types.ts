@@ -32,6 +32,9 @@ export interface User {
   name: string;
   avatar_url: string | null;
   created_at: string;
+  reminder_time?: string;
+  reminder_enabled?: number;
+  weekly_report_enabled?: number;
 }
 
 export interface ReadingSession {

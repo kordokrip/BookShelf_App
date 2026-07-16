@@ -46,6 +46,9 @@ export const usersApi = {
     reading_goal?: number;
     avatar_url?: string;
     profile_emoji?: string | null;
+    reminder_time?: string;
+    reminder_enabled?: boolean;
+    weekly_report_enabled?: boolean;
   }) =>
     apiFetch<{ data: unknown }>('/api/users/profile', {
       method: 'PATCH',
