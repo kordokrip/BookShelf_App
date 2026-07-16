@@ -46,7 +46,7 @@ FAILED_TESTS=()
 if [[ "$READONLY" == true ]]; then
   TOTAL=3
 else
-  TOTAL=47
+  TOTAL=49
 fi
 
 # ── 시작 시각 ────────────────────────────────────────────────────
@@ -1050,6 +1050,50 @@ if [[ "$HTTP_CODE" == "200" && "$HAS_FIELD" == "yes" ]]; then
 else
   fail_test $T "$NAME" $ELAPSED "$BODY" \
     "HTTP ${HTTP_CODE}, field_check=${HAS_FIELD} (기대: 200 + 모든 members에 last_read_message_id 키 존재)"
+fi
+
+# ================================================================
+# GROUP 16 — 리마인더 설정 (Reminder Prefs)
+# ================================================================
+printf "\n%s── Group 16: 리마인더 설정 (Reminder Prefs) (2개)%s\n" "$CYAN" "$NC"
+
+T=48; NAME="PATCH /api/users/profile (reminder_time 유효값 설정)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" -X PATCH \
+  "${BASE_URL}/api/users/profile" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"reminder_time":"09:00"}')
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+GOT_TIME=$(python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+print(d.get('data', {}).get('reminder_time', ''))
+" <<< "$BODY" 2>/dev/null || echo "")
+if [[ "$HTTP_CODE" == "200" && "$GOT_TIME" == "09:00" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+  printf "         ${CYAN}↳ reminder_time=%s${NC}\n" "$GOT_TIME"
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" \
+    "HTTP ${HTTP_CODE}, reminder_time=${GOT_TIME} (기대: 200 + reminder_time=09:00)"
+fi
+
+T=49; NAME="PATCH /api/users/profile (reminder_time 잘못된 형식 → 400)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" -X PATCH \
+  "${BASE_URL}/api/users/profile" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"reminder_time":"17:07"}')
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+if [[ "$HTTP_CODE" == "400" || "$HTTP_CODE" == "422" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+  printf "         ${CYAN}↳ HTTP %s (유효성 검사 거부)${NC}\n" "$HTTP_CODE"
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" \
+    "HTTP ${HTTP_CODE} (기대: 400 또는 422)"
 fi
 
 # ================================================================
