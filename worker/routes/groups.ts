@@ -18,6 +18,7 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
+import { Jwt } from 'hono/utils/jwt';
 import type { Bindings } from '../types';
 import { authMiddleware } from '../auth';
 import { rateLimit } from '../middleware/rateLimit';
@@ -541,6 +542,40 @@ groupsRouter.post('/:id/mark-read', authMiddleware, async (c) => {
   ]);
 
   return c.json({ data: { read: true } });
+});
+
+/** GET /api/groups/:id/ws — WebSocket 업그레이드 (DO ChatRoom으로 프록시) */
+groupsRouter.get('/:id/ws', async (c) => {
+  if (c.req.header('Upgrade') !== 'websocket') {
+    return c.json({ error: 'WebSocket upgrade required' }, 426);
+  }
+
+  // WS는 커스텀 헤더 불가 → 쿼리 파라미터로 토큰 수신
+  const token = c.req.query('token');
+  if (!token) return c.json({ error: '인증 토큰이 필요합니다.' }, 401);
+
+  let userId: string;
+  try {
+    const payload = await Jwt.verify(token, c.env.JWT_SECRET, 'HS256');
+    if (typeof payload !== 'object' || typeof (payload as { sub?: unknown }).sub !== 'string') {
+      throw new Error('invalid payload');
+    }
+    userId = (payload as { sub: string }).sub;
+  } catch {
+    return c.json({ error: '유효하지 않은 토큰입니다.' }, 401);
+  }
+
+  const groupId = c.req.param('id');
+  if (!(await isMember(c.env.DB, groupId, userId))) {
+    return c.json({ error: '그룹 멤버만 채팅에 참여할 수 있습니다.' }, 403);
+  }
+
+  const stub = c.env.CHAT_ROOM.getByName(groupId);
+  const upgradeHeaders = new Headers(c.req.raw.headers);
+  upgradeHeaders.set('X-User-Id', userId);
+  upgradeHeaders.set('X-Group-Id', groupId);
+
+  return stub.fetch(new Request(c.req.raw.url, { method: 'GET', headers: upgradeHeaders }));
 });
 
 // ═══════════════════════════════════════════════════════════════
