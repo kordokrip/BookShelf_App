@@ -1,6 +1,6 @@
 # BookShelf PWA — QA 통합 가이드
 
-> **최종 업데이트**: 2026-05-31  
+> **최종 업데이트**: 2026-07-16  
 > **테스트 URL**: https://bookshelf-api.kordokrip.workers.dev  
 > **참고 Worker Version**: `df732bc7-8a69-461b-97a3-6a646259c35c` (반응형/뷰포트 리팩토링 배포)
 
@@ -13,11 +13,55 @@
 - `bash scripts/admin-api-test.sh` ⚠️ 기본 관리자 자격증명 없으면 로그인 단계 실패 가능
   - 개선: `ADMIN_TOKEN` 환경변수 직접 주입 실행 지원
 
-### 최신 변경 반영 메모 (2026-05-31)
+### 최신 변경 반영 메모 (2026-07-16)
 
-- `WishlistPage` ISBN 카메라 검색 진입 버튼 추가 여부를 수동 회귀 테스트 항목으로 추가
-- 뷰포트 리팩토링으로 `min-h-svh/h-svh` 전환: iOS Safari 주소창/노치 환경에서 레이아웃 확인 필요
-- Safe-area 기반 하단 패딩(`--page-pb`) 적용으로 iPhone 홈 인디케이터 겹침 회귀 확인 필요
+- WebSocket 채팅 추가 (ADR-002): `localStorage.chat_ws=1` 플래그로 WS 모드 활성화
+- WS 비활성 시 기존 3초 폴링 그대로 동작 (폴백 유지)
+- DO ChatRoom 배포 시 `wrangler.toml` migration `v1` 자동 실행 (CI 배포)
+
+---
+
+## WebSocket 채팅 로컬 테스트 가이드
+
+> WS 기능은 `localStorage.chat_ws=1` 플래그가 있어야 활성화됩니다.
+
+### 사전 준비
+
+```bash
+# 로컬 워커 실행 (DO 지원)
+npx wrangler dev --local --persist
+# 주의: wrangler dev 기본 모드는 DO SQLite를 로컬에 에뮬레이션함
+```
+
+### WS 모드 활성화 (브라우저 콘솔)
+
+```javascript
+// 활성화
+localStorage.setItem('chat_ws', '1');
+location.reload();
+
+// 비활성화 (폴링 폴백으로 전환)
+localStorage.removeItem('chat_ws');
+location.reload();
+```
+
+### 테스트 시나리오
+
+| # | 시나리오 | 기대 결과 |
+|---|---------|----------|
+| 1 | 같은 그룹에 두 탭 접속 후 메시지 전송 | 양쪽 탭에 <1초 내 수신 |
+| 2 | 첫 번째 탭 채팅 열면 "{n}명 접속 중" 배지 표시 | 두 번째 탭 열면 카운트 증가 |
+| 3 | 한 탭 닫기 | 남은 탭에서 카운트 감소 |
+| 4 | 네트워크 차단 후 복구 | 지수 백오프 재연결 (1s→2s→4s…) |
+| 5 | `chat_ws` 미설정 (기본) | 3초 폴링으로 정상 동작 |
+| 6 | WS 연결 실패 (잘못된 그룹 멤버) | 403 에러, 폴링 폴백 동작 |
+
+### 디버깅
+
+DevTools → Network → WS 탭에서 프레임 내용 확인:
+- `{"type":"presence","onlineUsers":["user-id-1","user-id-2"]}`
+- `{"type":"message","data":{...}}`
+- `{"type":"pong"}` (30초마다 ping/pong)
 
 ---
 

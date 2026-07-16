@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Send, Loader2, Trash2, AlertCircle, RotateCcw } from 'lucide-react';
 import { useGroupMessages, useSendMessage, useDeleteMessage, useMarkGroupRead, useUpdateReadReceipt } from '../../../hooks/useGroups';
+import { useGroupChat } from '../../../hooks/useGroupChat';
 import { useAuthStore } from '../../../stores/authStore';
 import type { GroupMember, GroupMessage } from '../../../lib/api';
 
@@ -22,6 +23,8 @@ export function ChatTab({
   members: GroupMember[];
 }) {
   const user = useAuthStore((s) => s.user);
+  const { onlineUsers: wsOnlineUsers, isWsConnected } = useGroupChat(groupId);
+  const displayOnlineCount = isWsConnected ? wsOnlineUsers.length : onlineCount;
   const { data: messages = [], isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useGroupMessages(groupId);
   const sendMessage = useSendMessage(groupId);
   const deleteMessage = useDeleteMessage(groupId);
@@ -152,11 +155,11 @@ export function ChatTab({
   return (
     <div className="flex flex-col h-full">
       {/* 접속 중 배지 */}
-      {onlineCount > 0 && (
+      {displayOnlineCount > 0 && (
         <div className="flex-shrink-0 px-4 py-1.5 border-b border-[#E2E8F0] dark:border-[#334155] bg-emerald-50/60 dark:bg-emerald-900/10">
           <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
-            {onlineCount}명 접속 중
+            {displayOnlineCount}명 접속 중
           </span>
         </div>
       )}
