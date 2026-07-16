@@ -272,7 +272,7 @@ usersRouter.patch(
     ).bind(...values).run();
 
     const user = await c.env.DB.prepare(
-      'SELECT id, email, name, avatar_url, profile_emoji, favorite_genres, reading_goal, role, created_at, updated_at FROM users WHERE id = ?'
+      'SELECT id, email, name, avatar_url, profile_emoji, favorite_genres, reading_goal, role, reminder_time, reminder_enabled, weekly_report_enabled, created_at, updated_at FROM users WHERE id = ?'
     ).bind(userId).first();
 
     return c.json({ data: user });
