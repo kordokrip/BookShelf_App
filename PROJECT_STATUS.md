@@ -1,7 +1,7 @@
 # BookShelf App — 현재 상태 스냅샷
 
-> **최종 업데이트:** 2026-07-16  
-> **Cloudflare Workers Version:** `df732bc7-8a69-461b-97a3-6a646259c35c`  
+> **최종 업데이트:** 2026-07-16 (인생책 기능 추가)  
+> **Cloudflare Workers Version:** `d4d48eb` (CI 배포 진행 중)  
 > **Git 브랜치:** `main` (kordokrip/BookShelf_App)  
 > **E2E 테스트:** `bash scripts/e2e-api-test.sh` → **49/49 PASS** ✅
 
@@ -48,6 +48,7 @@
 | `/share` | SharePage (통계 공유) | ✅ |
 | `/collections` | CollectionsPage (컬렉션) | ✅ |
 | `/admin` | AdminPage (4탭 — role=admin only) | ✅ |
+| `/lifebooks` | LifeBooksPage (AI 인생책 추천) | ✅ |
 | `/book/:id` | BookDetailPage | ✅ |
 | `/onboarding` | OnboardingPage | ✅ |
 | `/login` | LoginPage | ✅ |
@@ -131,7 +132,7 @@ wrangler d1 migrations apply bookshelf-db --remote
 | `useSessions.ts` | useSessions, useAddSession (staleTime 30s) |
 | `useReadingTimer.ts` | elapsed, isRunning, displayTime, start/pause/reset |
 | `useStats.ts` | useStats (staleTime 5분) |
-| `useAI.ts` | useBookSummary, useAIRecommendations, useRefreshAIRecommendations |
+| `useAI.ts` | useBookSummary, useAIRecommendations, useRefreshAIRecommendations, useLifeBooks, useRefreshLifeBooks |
 | `useGroups.ts` | 17개 hooks (useGroups, useGroupDetail, useGroupMessages 등) |
 | `useCollections.ts` | useCollections, useAddCollection, useDeleteCollection |
 | `useDiscover.ts` | useDiscover (탐색/발견 기능) |
@@ -187,7 +188,7 @@ push main → Job1: lint+typecheck → Job2: build → Job3: wrangler deploy
 | 독서 세션 + 타이머 | ✅ 100% |
 | 노트 CRUD + FTS5 검색 | ✅ 100% |
 | 통계 + 연간결산 + 성취배지 | ✅ 100% |
-| AI 요약·추천·OCR | ✅ 100% |
+| AI 요약·추천·OCR·인생책 추천 | ✅ 100% |
 | 독서 모임 + 채팅 + 일정 | ✅ 100% |
 | 통계 공유 보고서 | ✅ 100% |
 | 관리자 대시보드 | ✅ 100% |
