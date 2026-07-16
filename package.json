@@ -20,7 +20,7 @@
     "type-check": "tsc --noEmit",
     "pwa:ios-startup": "node scripts/generate-ios-startup-images.mjs",
     "pwa:assets": "node scripts/generate-icons.mjs && npm run pwa:ios-startup",
-    "docs:coverage-check": "for x in collections discover push share admin useCollections useDiscover useOfflineQueue usePushNotification useViewport 0005_collections 0006_push_subscriptions 0009_indexes_and_session_unique /collections /api/collections /api/discover /api/push /share /api/admin; do rg -n \"$x\" PROJECT_STATUS.md docs/TRACE_MAP.md docs/BookShelf_UI_UX.md >/dev/null && echo \"OK $x\" || { echo \"MISS $x\"; exit 1; }; done",
+    "docs:coverage-check": "for x in collections discover push share admin useCollections useDiscover useOfflineQueue usePushNotification useViewport 0005_collections 0006_push_subscriptions 0009_indexes_and_session_unique /collections /api/collections /api/discover /api/push /share /api/admin; do rg -n \"$x\" PROJECT_STATUS.md docs/CHANGELOG.md docs/TRACE_MAP.md docs/BookShelf_UI_UX.md >/dev/null && echo \"OK $x\" || { echo \"MISS $x\"; exit 1; }; done",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
