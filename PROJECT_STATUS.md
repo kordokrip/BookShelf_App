@@ -111,6 +111,9 @@ GET *              → ASSETS.fetch() SPA 폴백
 | `0009_indexes_and_session_unique.sql` | 인덱스 보강 + 세션 유니크 | ✅ |
 | `0010_group_approval_notifications.sql` | 모임 승인 + 알림 | ✅ |
 | `0011_admin_notifications.sql` | 관리자 알림 + 활동 로그 | ✅ |
+| `0012_soft_delete_messages.sql` | 채팅 메시지 소프트 삭제 | ✅ |
+| `0013_read_receipts.sql` | 읽음 Receipt (last_read_message_id) | ✅ |
+| `0014_reminder_prefs.sql` | users 리마인더 설정 3컬럼 추가 | ✅ |
 
 ```bash
 wrangler d1 migrations apply bookshelf-db --remote
