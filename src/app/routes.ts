@@ -49,6 +49,7 @@ const LazyCollectionsPage = makeLazy(() => import("./pages/CollectionsPage"), "C
 const LazyGroupsPage      = makeLazy(() => import("./pages/GroupsPage"),       "GroupsPage");
 const LazySharePage       = makeLazy(() => import("./pages/SharePage"),        "SharePage");
 const LazyAdminPage       = makeLazy(() => import("./pages/AdminPage"),        "AdminPage");
+const LazyLifeBooksPage   = makeLazy(() => import("./pages/LifeBooksPage"),    "LifeBooksPage");
 
 function withSuspense(Component: React.ComponentType, fallbackText = "로딩 중...") {
   return () =>
@@ -132,6 +133,7 @@ export const router = createBrowserRouter([
       { path: "groups", Component: protected_(withSuspense(LazyGroupsPage, "독서 모임 로딩 중...")), ErrorBoundary: EB },
       { path: "share", Component: protected_(withSuspense(LazySharePage, "공유 로딩 중...")), ErrorBoundary: EB },
       { path: "admin", Component: protected_(withSuspense(LazyAdminPage, "관리자 페이지 로딩 중...")), ErrorBoundary: EB },
+      { path: "lifebooks", Component: protected_(withSuspense(LazyLifeBooksPage, "인생책 로딩 중...")), ErrorBoundary: EB },
     ],
   },
   // ─── 404 Fallback ─────────────────────────────────────────────

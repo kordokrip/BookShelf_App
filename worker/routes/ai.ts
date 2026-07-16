@@ -474,6 +474,188 @@ ${excludePrompt}
   }
 });
 
+// ─── GET /api/ai/lifebooks — 완독 이력 기반 인생책 추천 ────────
+interface LifeBookItem {
+  title: string;
+  author: string;
+  reason: string;
+  thumbnail: string;
+  publisher: string;
+  isbn: string;
+  url: string;
+}
+
+interface KakaoBookDoc {
+  title: string;
+  authors: string[];
+  publisher: string;
+  isbn: string;
+  thumbnail: string;
+  url: string;
+}
+
+aiRouter.get(
+  '/lifebooks',
+  rateLimit({ limit: 3, windowMs: 600_000, keyPrefix: 'ai_life' }),
+  authMiddleware,
+  async (c) => {
+    const userId = c.get('userId');
+    const forceRefresh = c.req.query('refresh') === 'true';
+
+    const doneResult = await c.env.DB.prepare(
+      `SELECT title, author, genre, rating, finished_date, created_at
+       FROM books
+       WHERE user_id = ? AND status = 'done'
+       ORDER BY COALESCE(rating, 0) DESC, COALESCE(finished_date, created_at) DESC
+       LIMIT 30`,
+    ).bind(userId).all<{
+      title: string;
+      author: string | null;
+      genre: string | null;
+      rating: number | null;
+      finished_date: string | null;
+      created_at: string;
+    }>();
+
+    const doneBooks = doneResult.results ?? [];
+    if (doneBooks.length < 2) {
+      return c.json(
+        { error: '완독한 책이 2권 이상 필요합니다. 더 많은 책을 읽으면 인생책 추천을 받을 수 있어요!', data: [], cached: false },
+        400,
+      );
+    }
+
+    const fingerprint = hashString(doneBooks.map((b) => `${b.title}|${b.rating ?? ''}`).join('|'));
+    const cacheKey = `ai_lifebooks:${userId}:${fingerprint}`;
+
+    if (forceRefresh) {
+      await c.env.KV.delete(cacheKey);
+    } else {
+      const cached = await c.env.KV.get(cacheKey);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached) as { data: LifeBookItem[] };
+          if (Array.isArray(parsed.data) && parsed.data.length > 0) {
+            return c.json({ ...parsed, cached: true });
+          }
+          await c.env.KV.delete(cacheKey);
+        } catch {
+          await c.env.KV.delete(cacheKey);
+        }
+      }
+    }
+
+    const booksContext = doneBooks
+      .slice(0, 15)
+      .map((b) => `"${sanitizeForPrompt(b.title)}" (${sanitizeForPrompt(b.author ?? '')}, 별점:${b.rating ?? '?'}/5)`)
+      .join('\n');
+
+    type AiBook = { title: string; author: string; reason: string };
+    let aiBooks: AiBook[] = [];
+
+    try {
+      const model = '@cf/meta/llama-3.1-8b-instruct' as Parameters<Ai['run']>[0];
+      const response = await c.env.AI.run(model, {
+        messages: [
+          {
+            role: 'system',
+            content: `당신은 독서 전문가입니다. 사용자가 완독한 책들을 분석하여 평생 곁에 두고 싶은 "인생책" 5권을 추천해주세요.
+반드시 아래 JSON 형식으로만 응답하세요(다른 텍스트 금지):
+{"books":[{"title":"책제목","author":"저자","reason":"이 책이 인생책인 이유를 읽은 책과 연결지어 2-3문장으로"}]}
+이미 읽은 책은 절대 추천하지 마세요. 실제 존재하는 책만 추천하세요.`,
+          },
+          {
+            role: 'user',
+            content: `완독 목록:\n${booksContext}\n\n이 독서 이력을 바탕으로 인생에 큰 영향을 줄 인생책 5권을 추천해주세요.`,
+          },
+        ],
+        max_tokens: 1000,
+      });
+
+      const text = (response as { response?: string }).response?.trim() ?? '';
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]) as { books?: unknown[] };
+        if (Array.isArray(parsed.books)) {
+          aiBooks = parsed.books
+            .filter((b): b is Record<string, string> => typeof b === 'object' && b !== null)
+            .map((b) => ({
+              title: sanitizeForPrompt(String(b.title ?? '')).trim(),
+              author: sanitizeForPrompt(String(b.author ?? '')).trim(),
+              reason: sanitizeForPrompt(String(b.reason ?? '')).trim(),
+            }))
+            .filter((b) => b.title && b.author)
+            .slice(0, 5);
+        }
+      }
+    } catch (err) {
+      console.error('AI 인생책 추천 오류:', err);
+    }
+
+    // curated fallback
+    if (aiBooks.length === 0) {
+      const profileBooks = doneBooks.map((b) => ({
+        ...b,
+        author: b.author ?? '',
+        status: 'done' as const,
+        note: null,
+        session_count: 0,
+        pages_read: 0,
+        note_count: 0,
+      }));
+      const topGenres = analyzeTopGenres(profileBooks, []);
+      const excluded = buildExcludedSet(doneBooks.map((b) => ({ title: b.title, author: b.author })));
+      const curated = buildCuratedRecommendations(profileBooks, topGenres, excluded, 5);
+      aiBooks = curated.map((rec) => ({ title: rec.title, author: rec.author, reason: rec.reason }));
+    }
+
+    // Kakao API로 표지·메타데이터 보강
+    const kakaoKey = c.env.KAKAO_REST_API_KEY;
+    const data: LifeBookItem[] = await Promise.all(
+      aiBooks.slice(0, 5).map(async (book): Promise<LifeBookItem> => {
+        const base: LifeBookItem = {
+          title: book.title,
+          author: book.author,
+          reason: book.reason,
+          thumbnail: '',
+          publisher: '',
+          isbn: '',
+          url: '',
+        };
+        if (!kakaoKey) return base;
+        try {
+          const query = encodeURIComponent(`${book.title} ${book.author}`);
+          const res = await fetch(`https://dapi.kakao.com/v3/search/book?query=${query}&size=1`, {
+            headers: { Authorization: `KakaoAK ${kakaoKey}` },
+          });
+          if (!res.ok) return base;
+          const json = await res.json() as { documents?: KakaoBookDoc[] };
+          const doc = json.documents?.[0];
+          if (!doc) return base;
+          return {
+            title: book.title,
+            author: book.author,
+            reason: book.reason,
+            thumbnail: doc.thumbnail ?? '',
+            publisher: doc.publisher ?? '',
+            isbn: doc.isbn ?? '',
+            url: doc.url ?? '',
+          };
+        } catch {
+          return base;
+        }
+      }),
+    );
+
+    const payload = { data, cached: false, source: 'workers-ai' as const };
+    if (data.length > 0) {
+      await c.env.KV.put(cacheKey, JSON.stringify(payload), { expirationTtl: 86400 });
+    }
+
+    return c.json(payload);
+  },
+);
+
 // ─── POST /ocr ────────────────────────────────────────────────
 // 이미지에서 텍스트를 추출해 독서 노트로 저장할 수 있도록 반환
 aiRouter.post('/ocr', rateLimit({ limit: 3, windowMs: 60_000, keyPrefix: 'ai' }), authMiddleware, async (c) => {

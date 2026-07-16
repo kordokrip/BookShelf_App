@@ -1,6 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, queryKeys } from '../lib/api';
 
+export interface LifeBookItem {
+  title: string;
+  author: string;
+  reason: string;
+  thumbnail: string;
+  publisher: string;
+  isbn: string;
+  url: string;
+}
+
+interface LifeBooksResponse {
+  data: LifeBookItem[];
+  cached: boolean;
+  source?: 'workers-ai' | 'curated-fallback';
+  error?: string;
+}
+
 export interface AIRecommendation {
   title: string;
   author: string;
@@ -51,6 +68,27 @@ export function useAIRecommendations() {
       apiFetch<RecommendResponse>('/api/ai/recommend?limit=5'),
     staleTime: 60 * 60 * 1000, // 1시간
     retry: false,
+  });
+}
+
+/** 인생책 AI 추천 */
+export function useLifeBooks() {
+  return useQuery({
+    queryKey: queryKeys.ai.lifeBooks(),
+    queryFn: () => apiFetch<LifeBooksResponse>('/api/ai/lifebooks'),
+    staleTime: 24 * 60 * 60 * 1000, // 24시간
+    retry: false,
+  });
+}
+
+/** 인생책 강제 새로고침 (KV 캐시 무효화) */
+export function useRefreshLifeBooks() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiFetch<LifeBooksResponse>('/api/ai/lifebooks?refresh=true'),
+    onSuccess: (data) => {
+      queryClient.setQueryData(queryKeys.ai.lifeBooks(), data);
+    },
   });
 }
 

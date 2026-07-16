@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router";
-import { BookMarked, BookOpen, Star, BarChart2, Settings, Palette, PlusCircle, FileText, ChevronsLeft, ChevronsRight, ShieldCheck, Users, Mail } from "lucide-react";
+import { BookMarked, BookOpen, Star, BarChart2, Settings, Palette, PlusCircle, FileText, ChevronsLeft, ChevronsRight, ShieldCheck, Users, Mail, Sparkles } from "lucide-react";
 import { useAuthStore } from "../../../stores/authStore";
 import { useBookCount, useBooks } from "../../../hooks/useBooks";
 import { useShareUnreadCount } from "../../../hooks/useGroups";
@@ -45,6 +45,7 @@ export function SideNav() {
     { path: "/stats", label: "독서 통계 📊", icon: BarChart2 },
     { path: "/register-flow", label: "책 등록 플로우", icon: PlusCircle },
     { path: "/notes-search", label: "노트 & 검색", icon: FileText },
+    { path: "/lifebooks", label: "인생책 ✨", icon: Sparkles },
     { path: "/groups", label: "독서 모임 👥", icon: Users },
     { path: "/share", label: "공유 보고서 📬", icon: Mail, badge: shareUnread },
     { path: "/design-system", label: "디자인 시스템", icon: Palette, adminOnly: true },
