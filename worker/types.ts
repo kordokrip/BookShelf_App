@@ -39,6 +39,9 @@ export interface DbUser {
   role: string; // 'admin' | 'user'
   favorite_genres?: string;
   reading_goal?: number;
+  reminder_time: string;         // "HH:MM" 15분 단위, DEFAULT '17:00'
+  reminder_enabled: number;      // 0 | 1
+  weekly_report_enabled: number; // 0 | 1
   created_at: string;
   updated_at: string;
 }
