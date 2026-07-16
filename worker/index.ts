@@ -22,6 +22,7 @@ import { adminRouter } from './routes/admin';
 import { presenceRouter } from './routes/presence';
 import { vitalsRouter } from './routes/vitals';
 import { authMiddleware } from './auth';
+export { ChatRoom } from './durable/ChatRoom';
 
 // ─── App 인스턴스 ─────────────────────────────────────────────
 const app = new Hono<{ Bindings: Bindings }>();

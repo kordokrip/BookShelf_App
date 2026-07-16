@@ -52,6 +52,15 @@ bucket_name = "bookshelf-covers"
 [ai]
 binding = "AI"
 
+# ─── Durable Objects — 채팅룸 (WebSocket Hibernation) ─────────
+[[durable_objects.bindings]]
+name = "CHAT_ROOM"
+class_name = "ChatRoom"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ChatRoom"]
+
 # ─── Cron Trigger — 독서 리마인더 (매일 오전 8시 UTC = KST 17시) ─
 [triggers]
 crons = ["0 8 * * *"]
