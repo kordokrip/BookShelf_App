@@ -17,6 +17,7 @@ import { z } from 'zod';
 import type { Bindings } from '../types';
 import { authMiddleware } from '../auth';
 import { rateLimit } from '../middleware/rateLimit';
+import { getKstSlot, getKstDayOfWeek, calcStreak } from '../lib/reminderUtils';
 
 export const pushRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -335,9 +336,12 @@ type ReminderRow = {
   goal_date: string | null; is_overdue: number;
 };
 
-function buildPersonalizedPayload(book: Omit<ReminderRow, 'endpoint' | 'p256dh' | 'auth' | 'user_id'>): {
-  title: string; body: string; url: string; tag: string;
-} {
+type Sub = { endpoint: string; p256dh: string; auth: string };
+
+function buildPersonalizedPayload(
+  book: Omit<ReminderRow, 'endpoint' | 'p256dh' | 'auth' | 'user_id'>,
+  streak: number,
+): { title: string; body: string; url: string; tag: string } {
   const progress = book.total_pages && book.total_pages > 0 && book.current_page != null
     ? Math.round((book.current_page / book.total_pages) * 100)
     : null;
@@ -360,54 +364,125 @@ function buildPersonalizedPayload(book: Omit<ReminderRow, 'endpoint' | 'p256dh' 
     else if (diff <= 3)                    urgency = ` · 🔥 D-${diff}`;
   }
 
+  // 3일 이상 연속 독서 스트릭 인지 문구
+  const title = streak >= 3
+    ? `🔥 ${streak}일 연속 독서가 끊기기 전에!`
+    : '📖 독서 리마인더';
+
   const shortTitle = book.title.length > 18 ? book.title.slice(0, 18) + '…' : book.title;
   return {
-    title: '📖 오후 5시 독서 알림',
+    title,
     body:  `「${shortTitle}」 ${pageInfo}${urgency}`,
     url:   '/reading',
     tag:   'daily-reminder',
   };
 }
 
-export async function sendDailyReminders(env: Bindings): Promise<{ sent: number; failed: number }> {
+/** 일요일 20:00 KST 슬롯에서 이번 주 통계 리포트 발송 */
+async function sendWeeklyReports(db: D1Database, env: Bindings): Promise<{ sent: number; failed: number }> {
+  let sent = 0;
+  let failed = 0;
+
+  const { results } = await db.prepare(`
+    SELECT ps.endpoint, ps.p256dh, ps.auth, ps.user_id,
+           COALESCE(SUM(rs.pages_read), 0) AS pages,
+           COALESCE(SUM(rs.duration_min), 0) AS minutes
+    FROM push_subscriptions ps
+    JOIN users u ON u.id = ps.user_id
+    LEFT JOIN reading_sessions rs
+      ON rs.user_id = ps.user_id
+      AND rs.session_date >= date('now', '-6 days')
+      AND rs.session_date <= date('now')
+    WHERE u.weekly_report_enabled = 1
+    GROUP BY ps.endpoint, ps.p256dh, ps.auth, ps.user_id
+  `).all<{ endpoint: string; p256dh: string; auth: string; user_id: string; pages: number; minutes: number }>();
+
+  for (const row of results ?? []) {
+    const ok = await sendPushNotification(
+      { endpoint: row.endpoint, p256dh: row.p256dh, auth: row.auth },
+      env,
+      {
+        title: '📊 이번 주 독서 리포트',
+        body:  `이번 주 ${row.pages}p · ${row.minutes}분 읽었어요!`,
+        url:   '/stats',
+        tag:   'weekly-report',
+      },
+    );
+    if (ok) sent++;
+    else failed++;
+  }
+
+  return { sent, failed };
+}
+
+// Cron 스케줄러에서 호출 (매 15분)
+// - 현재 KST 15분 슬롯에 해당하는 reminder_time 사용자에게 개인화 리마인더 발송
+// - 스트릭 3일 이상이면 "🔥 {n}일 연속 독서가 끊기기 전에!" 문구 사용
+// - 일요일 20:00 KST 슬롯에서 weekly_report_enabled 사용자에게 주간 리포트 발송
+export async function sendDailyReminders(env: Bindings, nowUtcMs: number = Date.now()): Promise<{ sent: number; failed: number }> {
   const db = env.DB;
   let sent = 0;
   let failed = 0;
 
-  // 사용자별 읽는 중인 책(지연 우선 → 최근 수정 순) + 구독 정보 일괄 조회
+  const slot = getKstSlot(nowUtcMs);
+  const dayOfWeek = getKstDayOfWeek(nowUtcMs);
+
+  // ── 1. 개인화 리마인더 ─────────────────────────────────────
   const { results } = await db.prepare(`
     SELECT ps.endpoint, ps.p256dh, ps.auth, ps.user_id,
            b.title, b.current_page, b.total_pages, b.goal_date,
            CASE WHEN b.goal_date IS NOT NULL AND b.goal_date < date('now') THEN 1 ELSE 0 END AS is_overdue
     FROM push_subscriptions ps
+    JOIN users u ON u.id = ps.user_id
     JOIN books b ON b.user_id = ps.user_id AND b.status = 'reading'
+    WHERE u.reminder_enabled = 1
+      AND u.reminder_time = ?
     ORDER BY ps.user_id,
              CASE WHEN b.goal_date IS NOT NULL AND b.goal_date < date('now') THEN 0 ELSE 1 END,
              b.updated_at DESC
-  `).all<ReminderRow>();
+  `).bind(slot).all<ReminderRow>();
 
-  if (!results?.length) return { sent, failed };
-
-  // user_id 별로 그룹화: 가장 먼저 나온 책(가장 긴급)을 대표 책으로 사용
-  const userMap = new Map<string, { subs: Array<{ endpoint: string; p256dh: string; auth: string }>; book: ReminderRow }>();
-  for (const row of results) {
-    if (!userMap.has(row.user_id)) {
-      userMap.set(row.user_id, { subs: [], book: row });
+  if (results?.length) {
+    // user_id 별 그룹화: 가장 긴급한 책을 대표로
+    const userMap = new Map<string, { subs: Sub[]; book: ReminderRow }>();
+    for (const row of results) {
+      if (!userMap.has(row.user_id)) userMap.set(row.user_id, { subs: [], book: row });
+      const entry = userMap.get(row.user_id)!;
+      if (!entry.subs.some((s) => s.endpoint === row.endpoint)) {
+        entry.subs.push({ endpoint: row.endpoint, p256dh: row.p256dh, auth: row.auth });
+      }
     }
-    const entry = userMap.get(row.user_id)!;
-    if (!entry.subs.some((s) => s.endpoint === row.endpoint)) {
-      entry.subs.push({ endpoint: row.endpoint, p256dh: row.p256dh, auth: row.auth });
+
+    // 스트릭 일괄 조회
+    const userIds = [...userMap.keys()];
+    const placeholders = userIds.map(() => '?').join(',');
+    const { results: sessions } = await db.prepare(
+      `SELECT user_id, session_date FROM reading_sessions
+       WHERE user_id IN (${placeholders}) AND session_date >= date('now', '-30 days')`,
+    ).bind(...userIds).all<{ user_id: string; session_date: string }>();
+
+    const sessionsByUser = new Map<string, string[]>();
+    for (const s of sessions ?? []) {
+      if (!sessionsByUser.has(s.user_id)) sessionsByUser.set(s.user_id, []);
+      sessionsByUser.get(s.user_id)!.push(s.session_date);
+    }
+
+    for (const [userId, { subs, book }] of userMap.entries()) {
+      const streak = calcStreak(sessionsByUser.get(userId) ?? [], nowUtcMs);
+      const payload = buildPersonalizedPayload(book, streak);
+      for (const sub of subs) {
+        const ok = await sendPushNotification(sub, env, payload);
+        if (ok) sent++;
+        else failed++;
+      }
     }
   }
 
-  // 개인화 알림 전송
-  for (const { subs, book } of userMap.values()) {
-    const payload = buildPersonalizedPayload(book);
-    for (const sub of subs) {
-      const ok = await sendPushNotification(sub, env, payload);
-      if (ok) sent++;
-      else failed++;
-    }
+  // ── 2. 주간 리포트 (일요일 20:00 KST) ────────────────────
+  if (dayOfWeek === 0 && slot === '20:00') {
+    const weekly = await sendWeeklyReports(db, env);
+    sent += weekly.sent;
+    failed += weekly.failed;
   }
 
   return { sent, failed };

@@ -203,6 +203,9 @@ const updateProfileSchema = z.object({
   reading_goal: z.number().int().min(1).max(100).optional(),
   avatar_url: z.string().url().optional(),
   profile_emoji: z.string().max(10).nullable().optional(),
+  reminder_time: z.string().regex(/^([01]\d|2[0-3]):(00|15|30|45)$/).optional(),
+  reminder_enabled: z.boolean().optional(),
+  weekly_report_enabled: z.boolean().optional(),
 });
 
 // ─── PATCH /api/users/profile ───────────────────────────────────
@@ -240,6 +243,21 @@ usersRouter.patch(
     if (body.profile_emoji !== undefined) {
       updates.push('profile_emoji = ?');
       values.push(body.profile_emoji);
+    }
+
+    if (body.reminder_time !== undefined) {
+      updates.push('reminder_time = ?');
+      values.push(body.reminder_time);
+    }
+
+    if (body.reminder_enabled !== undefined) {
+      updates.push('reminder_enabled = ?');
+      values.push(body.reminder_enabled ? 1 : 0);
+    }
+
+    if (body.weekly_report_enabled !== undefined) {
+      updates.push('weekly_report_enabled = ?');
+      values.push(body.weekly_report_enabled ? 1 : 0);
     }
 
     if (updates.length === 0) {

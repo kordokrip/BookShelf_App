@@ -255,7 +255,7 @@ export default {
     ctx: ExecutionContext,
   ) {
     ctx.waitUntil(
-      sendDailyReminders(env).then((result) => {
+      sendDailyReminders(env, Date.now()).then((result) => {
         console.log(`[Cron] Push reminders sent: ${result.sent}, failed: ${result.failed}`);
       }),
     );
