@@ -401,6 +401,79 @@ ADMIN_TOKEN="<admin-jwt>" bash scripts/admin-api-test.sh
 
 ---
 
+## Lighthouse 접근성 감사 (모바일 프리셋, a11y 90+ 목표)
+
+### 방법 1 — Chrome DevTools (권장)
+
+```text
+1. 프로덕션 빌드 미리보기 실행
+   npm run build && npx serve dist -p 4173
+
+2. Chrome에서 http://localhost:4173 열기
+
+3. DevTools 열기 (F12) → Lighthouse 탭
+
+4. 설정:
+   - Mode: Navigation
+   - Device: Mobile  ← 반드시 모바일 프리셋 선택
+   - Categories: Accessibility (단독 선택 시 빠름), 또는 전체 선택
+
+5. "Analyze page load" 클릭
+
+6. 목표 점수: Accessibility 90+
+```
+
+### 방법 2 — CLI (CI 통합용)
+
+```bash
+# 전역 설치 (최초 1회)
+npm install -g lighthouse
+
+# 프리뷰 서버를 백그라운드에서 실행
+npm run build && npx serve dist -p 4173 &
+
+# 모바일 프리셋으로 Lighthouse 실행
+lighthouse http://localhost:4173 \
+  --preset=perf \
+  --form-factor=mobile \
+  --only-categories=accessibility \
+  --output=html \
+  --output-path=./lighthouse-a11y.html
+
+# 결과 열기
+open lighthouse-a11y.html
+```
+
+### 주요 점검 항목 (a11y 카테고리)
+
+| 항목 | 목표 | 관련 파일 |
+|------|------|-----------|
+| 버튼/링크 접근 가능한 이름 | 100 | TopBar, BottomNavBar, ChatTab |
+| 색상 대비 | 90+ | theme.css, BottomNavBar |
+| 이미지 alt 속성 | 100 | BookCard, ProfileAvatar |
+| ARIA 속성 유효성 | 100 | Modal, AlertDialog |
+| 폼 라벨 | 90+ | RegisterFlowPage, LoginPage |
+| 포커스 순서 | 90+ | Modal, Sheet |
+
+### 알려진 감점 요인 및 대응
+
+| 항목 | 예상 감점 | 대응 방안 |
+|------|----------|-----------|
+| `Modal.tsx` 포커스 트랩 미구현 | ~5점 | `focus-trap-react` 도입 예정 |
+| `text-[#64748B]` 대비 4.26:1 | ~3점 | `#5E6B80` 변경으로 해소 가능 |
+| CameraOCRSheet aria-label 일부 누락 | ~2점 | 다음 sprint 처리 |
+
+### 점수 기록
+
+| 날짜 | 점수 | 비고 |
+|------|------|------|
+| 2026-07-16 | 측정 예정 | 접근성 감사 수정 후 최초 측정 필요 |
+
+> **팁**: `--only-categories=accessibility` 대신 전체 카테고리로 실행하면 Performance·PWA 지표도 함께 확인 가능.  
+> Best Practices · SEO 점수도 90+ 유지 권장.
+
+---
+
 ## 알려진 이슈
 
 | 항목 | 상태 | 비고 |

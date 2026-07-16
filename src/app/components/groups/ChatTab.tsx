@@ -223,7 +223,7 @@ export function ChatTab({
                       <button
                         onClick={() => { if (confirm('이 메시지를 삭제하시겠습니까?')) deleteMessage.mutate(msg.id); }}
                         className="text-[10px] text-red-400 hover:text-red-500 mt-0.5 ml-1 opacity-0 group-hover/msg:opacity-100 transition-opacity"
-                        title="메시지 삭제"
+                        aria-label="메시지 삭제"
                       >
                         <Trash2 size={11} />
                       </button>
@@ -280,6 +280,7 @@ export function ChatTab({
           <button
             onClick={handleSend}
             disabled={!text.trim() || sendMessage.isPending}
+            aria-label="메시지 전송"
             className="w-10 h-10 rounded-xl bg-[#4F46E5] text-white flex items-center justify-center hover:bg-[#4338CA] disabled:opacity-50 transition-colors flex-shrink-0"
           >
             <Send size={16} />

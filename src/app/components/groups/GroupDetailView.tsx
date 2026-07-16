@@ -57,7 +57,7 @@ export function GroupDetailView({ groupId, onBack }: { groupId: string; onBack: 
     <div className="max-w-4xl mx-auto flex flex-col h-[calc(var(--vp-h)-var(--topbar-h))]">
       {/* 헤더 */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-[#E2E8F0] dark:border-[#334155] flex-shrink-0">
-        <button onClick={onBack} className="p-1 -ml-1 text-[#64748B] hover:text-[#1E293B] dark:hover:text-[#F8FAFC]">
+        <button onClick={onBack} aria-label="이전으로 돌아가기" className="p-1 -ml-1 text-[#64748B] hover:text-[#1E293B] dark:hover:text-[#F8FAFC]">
           <ArrowLeft size={20} />
         </button>
         <div className="w-10 h-10 rounded-xl bg-[#EEF2FF] dark:bg-[#312E81] flex items-center justify-center text-xl flex-shrink-0">

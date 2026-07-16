@@ -66,7 +66,7 @@ function EmojiPicker({
     >
       <div className="flex items-center justify-between mb-2">
         <p style={{ fontSize: 12, fontWeight: 700, color: "#64748B" }}>프로필 이모지 선택</p>
-        <button onClick={onClose} className="text-[#94A3B8] hover:text-[#64748B]">
+        <button onClick={onClose} aria-label="이모지 피커 닫기" className="text-[#94A3B8] hover:text-[#64748B]">
           <X size={14} />
         </button>
       </div>

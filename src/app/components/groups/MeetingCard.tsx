@@ -32,6 +32,7 @@ export function MeetingCard({ meeting, groupId, isLeader, expanded, onToggle, on
           </div>
           {isLeader && (
             <button onClick={(e) => { e.stopPropagation(); onDelete(); }}
+              aria-label="모임 일정 삭제"
               className="p-1 text-[#EF4444] hover:bg-[#FEF2F2] dark:hover:bg-[#450A0A] rounded-lg transition-colors flex-shrink-0">
               <Trash2 size={14} />
             </button>

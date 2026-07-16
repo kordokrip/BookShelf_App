@@ -72,14 +72,14 @@ export function MembersTab({ groupId, members, isLeader, onBack, onlineSet }: {
                   <button
                     onClick={() => handleApprove(m.user_id)}
                     className="p-1.5 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-lg transition-colors"
-                    title="승인"
+                    aria-label={`${m.name} 가입 승인`}
                   >
                     <Check size={16} />
                   </button>
                   <button
                     onClick={() => handleReject(m.user_id)}
                     className="p-1.5 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                    title="거절"
+                    aria-label={`${m.name} 가입 거절`}
                   >
                     <X size={16} />
                   </button>
@@ -133,14 +133,14 @@ export function MembersTab({ groupId, members, isLeader, onBack, onlineSet }: {
                   <button
                     onClick={() => handleTransferLeader(m.user_id, m.name)}
                     className="p-1.5 text-[#4F46E5] hover:bg-[#EEF2FF] dark:hover:bg-[#312E81] rounded-lg transition-colors"
-                    title="모임장 위임"
+                    aria-label={`${m.name}에게 모임장 위임`}
                   >
                     <ArrowRightLeft size={14} />
                   </button>
                   <button
                     onClick={() => handleRemove(m.user_id, m.name)}
                     className="p-1.5 text-[#EF4444] hover:bg-[#FEF2F2] dark:hover:bg-[#450A0A] rounded-lg transition-colors"
-                    title="멤버 추방"
+                    aria-label={`${m.name} 멤버 추방`}
                   >
                     <UserMinus size={14} />
                   </button>

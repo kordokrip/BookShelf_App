@@ -19,6 +19,7 @@ export function StarRating({ value, onChange, readonly = false, size = 16 }: Sta
             key={star}
             type="button"
             disabled={readonly}
+            aria-label={`별점 ${star}점`}
             onClick={() => onChange?.(star)}
             onMouseEnter={() => !readonly && setHover(star)}
             onMouseLeave={() => !readonly && setHover(0)}

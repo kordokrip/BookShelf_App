@@ -197,7 +197,7 @@ export function SideNav() {
                   올해 읽은 책 {yearDoneCount}권
                 </p>
               </div>
-              <button className="text-[#94A3B8] hover:text-[#64748B] dark:hover:text-[#CBD5E1] transition-colors">
+              <button aria-label="프로필 설정" className="text-[#94A3B8] hover:text-[#64748B] dark:hover:text-[#CBD5E1] transition-colors">
                 <Settings size={16} />
               </button>
             </>

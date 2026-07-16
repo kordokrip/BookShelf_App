@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useId, type ReactNode } from "react";
 import { X } from "lucide-react";
 
 interface ModalProps {
@@ -9,20 +9,35 @@ interface ModalProps {
 }
 
 export function Modal({ open, onClose, title, children }: ModalProps) {
+  const titleId = useId();
+
   useEffect(() => {
     if (open) document.body.style.overflow = "hidden";
     else document.body.style.overflow = "";
     return () => { document.body.style.overflow = ""; };
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    const handleKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [open, onClose]);
+
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center safe-area-inset">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={title ? titleId : undefined}
+      className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center safe-area-inset"
+    >
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}
+        aria-hidden="true"
       />
 
       {/* Sheet (mobile: bottom sheet, desktop: centered modal) */}
@@ -35,7 +50,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         {/* Header */}
         {title && (
           <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-[#F1F5F9]">
-            <h2 className="text-[#1E293B] text-[17px] sm:text-[18px]" style={{ fontWeight: 700 }}>
+            <h2 id={titleId} className="text-[#1E293B] text-[17px] sm:text-[18px]" style={{ fontWeight: 700 }}>
               {title}
             </h2>
             <button

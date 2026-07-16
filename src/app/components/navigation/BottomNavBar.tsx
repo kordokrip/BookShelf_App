@@ -79,7 +79,7 @@ export function BottomNavBar() {
                   className={`block transition-colors duration-200 ${
                     isActive
                       ? "text-[#4F46E5]"
-                      : "text-[#94A3B8] group-hover:text-[#64748B]"
+                      : "text-[#64748B]"
                   }`}
                 >
                   {isActive ? item.activeIcon : item.icon}
@@ -102,7 +102,7 @@ export function BottomNavBar() {
                 className={`transition-colors duration-200 ${
                   isActive
                     ? "text-[#4F46E5]"
-                    : "text-[#94A3B8] group-hover:text-[#64748B]"
+                    : "text-[#64748B]"
                 }`}
                 style={{ fontSize: 11, fontWeight: isActive ? 600 : 400 }}
               >

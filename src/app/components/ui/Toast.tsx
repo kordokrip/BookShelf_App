@@ -94,7 +94,7 @@ function ToastItem({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => vo
       <span className="flex-1" style={{ fontSize: 14, fontWeight: 500 }}>
         {toast.message}
       </span>
-      <button onClick={onDismiss} className="opacity-60 hover:opacity-100 transition-opacity">
+      <button onClick={onDismiss} aria-label="알림 닫기" className="opacity-60 hover:opacity-100 transition-opacity">
         <X size={16} />
       </button>
     </div>
