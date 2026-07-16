@@ -44,24 +44,31 @@
   ],
   "shortcuts": [
     {
-      "name": "내 서재",
-      "short_name": "서재",
-      "description": "읽은 책 목록으로 바로 이동",
-      "url": "/",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "읽는 중",
-      "short_name": "읽중",
-      "description": "현재 읽고 있는 책",
+      "name": "오늘 기록하기",
+      "short_name": "기록",
+      "description": "오늘 읽은 책 독서 기록 추가",
       "url": "/reading",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "위시리스트",
-      "short_name": "위시",
-      "description": "읽고 싶은 책 목록",
-      "url": "/wishlist",
+      "name": "책 등록",
+      "short_name": "등록",
+      "description": "새 책을 서재에 등록",
+      "url": "/register-flow",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "통계",
+      "short_name": "통계",
+      "description": "내 독서 통계 보기",
+      "url": "/stats",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "내 서재",
+      "short_name": "서재",
+      "description": "읽은 책 목록으로 바로 이동",
+      "url": "/",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     }
   ],
