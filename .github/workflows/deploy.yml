@@ -116,7 +116,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy
+          command: deploy --env=""
           wranglerVersion: '4'
 
       - name: Apply D1 migrations
@@ -124,7 +124,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: d1 migrations apply bookshelf-db --remote
+          command: d1 migrations apply bookshelf-db --remote --env=""
           wranglerVersion: '4'
 
       - name: Verify deployment
