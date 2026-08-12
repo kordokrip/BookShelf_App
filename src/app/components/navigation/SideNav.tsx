@@ -58,7 +58,7 @@ export function SideNav() {
 
   return (
     <aside
-      className={`hidden md:flex group/sidebar flex-col w-20 md:max-lg:hover:w-60 ${desktopWidth} min-h-[var(--vp-h)] bg-white dark:bg-[#0F172A] border-r border-[#E2E8F0] dark:border-[#334155] fixed left-0 top-0 bottom-0 z-30 transition-all duration-300 ease-in-out overflow-x-hidden`}
+      className={`fixed-nav hidden md:flex group/sidebar flex-col w-20 md:max-lg:hover:w-60 ${desktopWidth} min-h-[var(--vp-h)] bg-white dark:bg-[#0F172A] border-r border-[#E2E8F0] dark:border-[#334155] fixed left-0 top-0 bottom-0 z-30 transition-all duration-300 ease-in-out overflow-x-hidden`}
     >
       {/* Logo + 토글 버튼 */}
       <div className={`flex items-center h-16 border-b border-[#E2E8F0] dark:border-[#334155] ${showLabelsOnDesktop ? "lg:gap-3 lg:px-4" : "lg:justify-center lg:px-2"} md:justify-center md:px-2 md:max-lg:group-hover/sidebar:justify-start md:max-lg:group-hover/sidebar:px-4 md:max-lg:group-hover/sidebar:gap-3`}>

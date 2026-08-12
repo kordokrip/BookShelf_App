@@ -9,6 +9,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { pushApi } from '../lib/api';
+import { detectPlatform } from '../lib/platform';
 
 export type PushPermission = 'default' | 'granted' | 'denied';
 
@@ -31,19 +32,6 @@ export interface PushNotificationState {
   /** 구독/해제 액션 — 반드시 사용자 제스처 핸들러에서 호출 */
   subscribe: () => Promise<void>;
   unsubscribe: () => Promise<void>;
-}
-
-// ─── 플랫폼 감지 ────────────────────────────────────────────
-function detectPlatform() {
-  const ua = navigator.userAgent;
-  const isIOS =
-    /iPad|iPhone|iPod/.test(ua) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  const isAndroid = /Android/.test(ua);
-  const isStandalone =
-    ('standalone' in navigator && (navigator as { standalone?: boolean }).standalone === true) ||
-    window.matchMedia('(display-mode: standalone)').matches;
-  return { isIOS, isAndroid, isStandalone };
 }
 
 // base64url → Uint8Array (VAPID 공개키 변환)

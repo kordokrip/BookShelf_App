@@ -58,7 +58,7 @@ export function TopBar() {
   const bellRef = useRef<HTMLDivElement>(null);
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#0F172A]/95 glass-surface border-b border-[#E2E8F0] dark:border-[#334155]">
+    <header className="fixed-nav sticky top-0 z-40 bg-white/95 dark:bg-[#0F172A]/95 glass-surface border-b border-[#E2E8F0] dark:border-[#334155]">
       {/* iOS 노치 / PWA 스탠드얼론 모드에서 상단 안전 영역 여백 */}
       <div aria-hidden style={{ height: 'var(--safe-top)' }} />
 
