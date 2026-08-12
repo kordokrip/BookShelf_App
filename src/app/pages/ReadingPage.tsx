@@ -5,23 +5,30 @@
  * - 읽기 목표(읽는 중 도서 제한) 설정
  */
 import { useState, useEffect, useRef } from "react";
-import { Plus, X, Target, BookOpen, Play, Pause, RotateCcw, Timer, ChevronDown, RefreshCw, CheckCircle2 } from "lucide-react";
+import { X, Target, BookOpen, Play, Pause, RotateCcw, Timer, ChevronDown, RefreshCw, CheckCircle2 } from "lucide-react";
 import type { UIBook, GenreKey } from "../../types/book";
 import { ALL_GENRES } from "../../types/book";
 import { ReadingBookCard, BookCover } from "../components/books/BookCard";
 import { GenreFilterBar } from "../components/books/GenreFilterBar";
 import { EmptyState } from "../components/ui/EmptyState";
+import { AddBookFab } from "../components/ui/Buttons";
 import { useToast } from "../components/ui/Toast";
 import { NumberStepper } from "../components/ui/NumberStepper";
 import { ReadingBookCardSkeleton, ErrorState } from "../components/ui/skeleton";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "../components/ui/alert-dialog";
 import { useNavigate } from "react-router";
-import { useBooks, useUpdateBook, useRefreshBookCovers } from "../../hooks/useBooks";
+import { useBooks, useUpdateBook, useRefreshBookCovers, useDeleteBook } from "../../hooks/useBooks";
 import { useAddSession } from "../../hooks/useSessions";
 import { useReadingTimer } from "../../hooks/useReadingTimer";
 import { useQueryClient } from "@tanstack/react-query";
 import { usersApi, queryKeys, searchApi } from "../../lib/api";
 import { useAuthStore } from "../../stores/authStore";
 import { useStats } from "../../hooks/useStats";
+import { useTimerStore } from "../../stores/timerStore";
 
 
 
@@ -853,8 +860,10 @@ function ReadingTimerWidget({
 export function ReadingPage() {
   const { data: books = [], isLoading, isError, refetch } = useBooks({ status: 'reading' });
   const updateBook = useUpdateBook();
+  const deleteBook = useDeleteBook();
   const addSession = useAddSession();
   const [selectedBook, setSelectedBook] = useState<UIBook | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<UIBook | null>(null);
   const [selectedGenre, setSelectedGenre] = useState<GenreKey | null>(null);
   const [timerBook, setTimerBook] = useState<UIBook | null>(null);
   const [logModalOpen, setLogModalOpen] = useState(false);
@@ -1064,30 +1073,20 @@ export function ReadingPage() {
           onCta={() => navigate("/register-flow")}
         />
       ) : (
-        <div className="px-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
+        // pb-24: FAB가 리스트 마지막 카드와 겹치지 않도록 확실한 여유 공간 확보
+        <div className="px-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4 pb-24">
           {filtered.map((book) => (
             <ReadingBookCard
               key={book.id}
               book={book}
               onClick={() => handleBookClick(book)}
+              onDeleteRequest={setDeleteTarget}
             />
           ))}
         </div>
       )}
 
-      {/* FAB — bottom 80px = above BottomNavBar (60px) + 20px gap */}
-      <button
-        onClick={() => navigate("/register-flow")}
-        aria-label="책 추가"
-        className="fixed w-14 h-14 rounded-full text-white shadow-xl flex items-center justify-center transition-transform hover:scale-105 active:scale-95 z-40"
-        style={{
-          bottom: "var(--floating-bottom)",
-          right: "var(--floating-right)",
-          background: "linear-gradient(135deg, #4F46E5, #7C3AED)",
-        }}
-      >
-        <Plus size={24} />
-      </button>
+      <AddBookFab onClick={() => navigate("/register-flow")} />
 
       {/* Page Update Modal */}
       {selectedBook && (
@@ -1098,6 +1097,34 @@ export function ReadingPage() {
           onComplete={handleComplete}
         />
       )}
+
+      {/* 책 삭제 확인 다이얼로그 */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>"{deleteTarget?.title}"을(를) 삭제할까요?</AlertDialogTitle>
+            <AlertDialogDescription>노트와 독서 세션도 함께 삭제됩니다.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteTarget(null)}>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!deleteTarget) return;
+                if (useTimerStore.getState().bookId === deleteTarget.id) {
+                  useTimerStore.getState().reset();
+                  useTimerStore.getState().setBookId(null);
+                }
+                await deleteBook.mutateAsync(deleteTarget.id);
+                showToast('책이 삭제됐어요', 'success');
+                setDeleteTarget(null);
+              }}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              {deleteBook.isPending ? "삭제 중..." : "삭제"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Log Today Modal */}
       {logModalOpen && (

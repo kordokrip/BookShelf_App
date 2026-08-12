@@ -98,6 +98,10 @@ export function useDeleteBook() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.books.all });
       qc.invalidateQueries({ queryKey: queryKeys.stats.all });
+      // D1 FK cascade로 서버에서 notes/collection_books도 함께 삭제되므로
+      // 클라이언트 캐시도 맞춰 무효화한다.
+      qc.invalidateQueries({ queryKey: queryKeys.collections.all });
+      qc.invalidateQueries({ queryKey: queryKeys.notes.all });
     },
   });
 }

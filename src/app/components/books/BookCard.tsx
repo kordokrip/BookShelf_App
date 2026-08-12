@@ -1,7 +1,10 @@
 import { useState } from "react";
-import { Calendar, Star } from "lucide-react";
+import { Calendar, Star, MoreVertical, Trash2 } from "lucide-react";
 import { type UIBook as Book, GENRE_CONFIG } from "../../../types/book";
 import { GenreBadge } from "../ui/GenreBadge";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+} from "../ui/dropdown-menu";
 
 /* ─── Shared Book Cover ────────────────────────────────────── */
 export function BookCover({ book, size = "md" }: { book: Book; size?: "sm" | "md" | "lg" }) {
@@ -182,9 +185,11 @@ export function DoneBookCard({
 export function ReadingBookCard({
   book,
   onClick,
+  onDeleteRequest,
 }: {
   book: Book;
   onClick?: () => void;
+  onDeleteRequest?: (book: Book) => void;
 }) {
   const progress =
     book.totalPages && book.totalPages > 0 && book.currentPage != null
@@ -199,13 +204,35 @@ export function ReadingBookCard({
   return (
     <div
       onClick={onClick}
-      className={`bg-white dark:bg-[#1E293B] rounded-xl p-3 flex flex-col gap-3 cursor-pointer hover:shadow-md transition-all active:scale-[0.99] border ${isOverdue ? 'border-[#FECACA] dark:border-[#7F1D1D]' : 'border-[#F1F5F9] dark:border-[#334155]'}`}
+      className={`relative bg-white dark:bg-[#1E293B] rounded-xl p-3 flex flex-col gap-3 cursor-pointer hover:shadow-md transition-all active:scale-[0.99] border ${isOverdue ? 'border-[#FECACA] dark:border-[#7F1D1D]' : 'border-[#F1F5F9] dark:border-[#334155]'}`}
       style={{
         boxShadow: isOverdue
           ? "0 1px 3px rgba(239,68,68,0.08)"
           : "0 1px 3px rgba(0,0,0,0.06)",
       }}
     >
+      {/* "···" 옵션 트리거 — 삭제 메뉴 */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            onClick={(e) => e.stopPropagation()}
+            aria-label="책 옵션 더보기"
+            className="absolute top-2.5 right-2.5 z-10 w-7 h-7 rounded-full flex items-center justify-center text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F1F5F9] dark:hover:bg-[#334155] hover:text-[#1E293B] dark:hover:text-[#F8FAFC] transition-colors"
+          >
+            <MoreVertical size={16} />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            onClick={(e) => { e.stopPropagation(); onDeleteRequest?.(book); }}
+            className="text-red-600 dark:text-red-400 focus:bg-red-50 dark:focus:bg-red-950 focus:text-red-600 dark:focus:text-red-400"
+          >
+            <Trash2 size={14} className="mr-2" />
+            삭제
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
       {/* ── Top section: cover + info ── */}
       <div className="flex gap-3">
         {/* Cover with SVG circular progress overlay */}
@@ -253,7 +280,7 @@ export function ReadingBookCard({
             </text>
           </svg>
         </div>
-        <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+        <div className="flex-1 min-w-0 flex flex-col gap-1.5 pr-8">
           <h3
             className="text-[#1E293B] dark:text-[#F8FAFC] line-clamp-2"
             style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.4 }}
