@@ -332,7 +332,8 @@ export function WishGrid({
       ) : (
         <>
           {/* Mobile: single col */}
-          <div className="lg:hidden px-4 flex flex-col gap-3">
+          {/* pb-24: FAB가 리스트 마지막 카드와 겹치지 않도록 확실한 여유 공간 확보 */}
+          <div className="lg:hidden px-4 flex flex-col gap-3 pb-24">
             {visible.map((book) => (
               <div key={book.id} onClick={() => setSelectedBook(book)} className="cursor-pointer">
                 <WishBookCard
@@ -354,7 +355,8 @@ export function WishGrid({
           </div>
 
           {/* Desktop: 3-col */}
-          <div className="hidden lg:grid px-4 grid-cols-3 gap-4">
+          {/* pb-24: FAB가 리스트 마지막 카드와 겹치지 않도록 확실한 여유 공간 확보 */}
+          <div className="hidden lg:grid px-4 grid-cols-3 gap-4 pb-24">
             {sorted.map((book) => (
               <div key={book.id} onClick={() => setSelectedBook(book)} className="cursor-pointer">
                 <WishBookCard

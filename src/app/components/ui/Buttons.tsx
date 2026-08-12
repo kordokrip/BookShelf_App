@@ -82,18 +82,19 @@ interface FABProps {
   label?: string;
 }
 
-export function FAB({ onClick, label = "책 추가" }: FABProps) {
+export function AddBookFab({ onClick, label = "책 추가" }: FABProps) {
   return (
     <button
       onClick={onClick}
       aria-label={label}
-      className="fixed z-50 w-14 h-14 rounded-full bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] text-white shadow-lg hover:shadow-xl flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+      className="fixed-nav fixed z-40 w-14 h-14 rounded-full text-white shadow-xl flex items-center justify-center transition-transform hover:scale-105 active:scale-95"
       style={{
         bottom: "var(--floating-bottom)",
         right: "var(--floating-right)",
+        background: "linear-gradient(135deg, #4F46E5, #7C3AED)",
       }}
     >
-      <Plus size={26} strokeWidth={2.5} />
+      <Plus size={24} />
     </button>
   );
 }

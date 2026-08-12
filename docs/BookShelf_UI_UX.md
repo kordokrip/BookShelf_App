@@ -1511,7 +1511,7 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 |---------|------|-------|------|
 | **Button** | `ui/Buttons.tsx` | variant(primary/secondary/ghost/danger), size(sm/md/lg), fullWidth, loading | 기본 버튼, rounded-xl, active:scale-95 |
 | **IconButton** | `ui/Buttons.tsx` | icon, label, variant(default/primary/ghost) | 40px 원형 아이콘 버튼 |
-| **FAB** | `ui/Buttons.tsx` | onClick, label | 56px 원형 플로팅 버튼, gradient, fixed 우하단 |
+| **AddBookFab** | `ui/Buttons.tsx` | onClick, label | 56px 원형 플로팅 버튼, gradient, fixed 우하단 — 완독/읽는중/추천 3개 페이지 공용 |
 | **TextInput** | `ui/Inputs.tsx` | label, error, helper, (HTML input props) | Floating label, focus ring, error/success 상태 |
 | **GenreSelect** | `ui/Inputs.tsx` | value, onChange, label | 드롭다운 + 검색 필터, GENRE_CONFIG 기반 |
 | **NumberStepper** | `ui/Inputs.tsx` | value, onChange, min, max, step, label | Minus/Plus 스텝퍼, h-12 |

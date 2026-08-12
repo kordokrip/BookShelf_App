@@ -6,7 +6,7 @@ import { useToast } from "../components/ui/Toast";
 import { SearchSheet } from "../components/wishlist/SearchSheet";
 import { RecommendSection } from "../components/wishlist/RecommendSection";
 import { WishGrid } from "../components/wishlist/WishGrid";
-import { WishFab } from "../components/wishlist/WishFab";
+import { AddBookFab } from "../components/ui/Buttons";
 import { DiscoverTab } from "../components/wishlist/DiscoverTab";
 
 type TabKey = 'new' | 'popular' | 'life' | 'mine';
@@ -104,7 +104,7 @@ export function WishlistPage() {
         )}
       </div>
 
-      <WishFab onClick={() => setShowSearch(true)} />
+      <AddBookFab onClick={() => setShowSearch(true)} label="책 검색하여 추가" />
     </div>
   );
 }

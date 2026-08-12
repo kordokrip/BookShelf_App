@@ -5,13 +5,14 @@
  * - 컨렉션 폸 표시
  */
 import { useState, useEffect, useMemo } from "react";
-import { ChevronDown, Plus, ChevronRight, LayoutGrid, List, GitBranch, Search, X, FolderOpen, BookMarked } from "lucide-react";
+import { ChevronDown, ChevronRight, LayoutGrid, List, GitBranch, Search, X, FolderOpen, BookMarked } from "lucide-react";
 import type { UIBook, GenreKey } from "../../types/book";
 import { ALL_GENRES, GENRE_CONFIG } from "../../types/book";
 import { useBooks, useRefreshBookCovers } from "../../hooks/useBooks";
 import { DoneBookCard } from "../components/books/BookCard";
 import { GenreFilterBar } from "../components/books/GenreFilterBar";
 import { EmptyState } from "../components/ui/EmptyState";
+import { AddBookFab } from "../components/ui/Buttons";
 import { useNavigate, Link } from "react-router";
 import { BookCardSkeleton, ErrorState } from "../components/ui/skeleton";
 
@@ -245,25 +246,6 @@ function SortDropdown({
   );
 }
 
-/* ─── Add Book Button ─────────────────────────────── */
-function AddBookButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-white transition-opacity hover:opacity-90 active:scale-[0.97]"
-      style={{
-        background: "linear-gradient(135deg, #4F46E5, #7C3AED)",
-        fontSize: 13,
-        fontWeight: 700,
-        fontFamily: "var(--font-pretendard)",
-      }}
-    >
-      <Plus size={15} />
-      추가
-    </button>
-  );
-}
-
 export function LibraryPage() {
   const [selectedGenre, setSelectedGenre] = useState<GenreKey | null>(null);
   const [sortBy, setSortBy] = useState<"date" | "rating" | "title">("date");
@@ -355,7 +337,6 @@ export function LibraryPage() {
             ))}
           </div>
           <SortDropdown value={sortBy} onChange={setSortBy} />
-          <AddBookButton onClick={() => navigate("/register-flow")} />
         </div>
       </div>
 
@@ -455,7 +436,8 @@ export function LibraryPage() {
           ) : (
             <>
               {/* Desktop/Tablet: 2-col(md) → 3-col(lg) grid */}
-              <div className="hidden md:block">
+              {/* pb-24: FAB가 리스트 마지막 카드와 겹치지 않도록 확실한 여유 공간 확보 */}
+              <div className="hidden md:block pb-24">
                 {sortBy === "date" ? (
                   monthKeys.map((key) => (
                     <div key={key}>
@@ -485,7 +467,8 @@ export function LibraryPage() {
               </div>
 
               {/* Mobile: single column */}
-              <div className={viewMode === "grid" ? "md:hidden" : ""}>
+              {/* pb-24: FAB가 리스트 마지막 카드와 겹치지 않도록 확실한 여유 공간 확보 */}
+              <div className={`${viewMode === "grid" ? "md:hidden" : ""} pb-24`}>
                 {sortBy === "date" ? (
                   <>
                     {visibleKeys.map((key) => (
@@ -532,7 +515,7 @@ export function LibraryPage() {
         </>
       )}
 
-
+      <AddBookFab onClick={() => navigate("/register-flow")} />
     </div>
   );
 }
