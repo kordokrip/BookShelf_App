@@ -11,6 +11,10 @@ export function InstallBanner() {
   const [promptEvent, setPromptEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [visible, setVisible] = useState(false);
   // iOS Safari는 beforeinstallprompt 이벤트 자체가 없어 promptEvent가 영영 안 옴 → 수동 안내로 대체
+  // iosEligible: 세션 중 계속 유지되는 마운트 게이트(dismiss해도 안 꺼짐)
+  // iosVisible: 슬라이드 인/아웃 트랜지션만 담당 — dismiss 시 이것만 false로 바뀌어야
+  // opacity/transform 전환이 실제로 재생된다 (Android 분기의 promptEvent/visible과 동일 패턴)
+  const [iosEligible, setIosEligible] = useState(false);
   const [iosVisible, setIosVisible] = useState(false);
 
   useEffect(() => {
@@ -30,6 +34,7 @@ export function InstallBanner() {
     // iOS Safari + 미설치: beforeinstallprompt를 기다리지 않고 바로 수동 안내 노출
     const { isIOS, isStandalone } = detectPlatform();
     if (isIOS && !isStandalone) {
+      setIosEligible(true);
       setIosVisible(true);
     }
 
@@ -54,12 +59,15 @@ export function InstallBanner() {
   }
 
   // ── iOS Safari: beforeinstallprompt 미지원 → 홈 화면 추가 수동 안내 ──
-  if (!promptEvent && iosVisible) {
+  if (!promptEvent && iosEligible) {
     return (
       <div
-        className="fixed left-0 right-0 z-40 flex justify-center px-4"
+        className="fixed left-0 z-40 flex justify-center px-4"
         style={{
           bottom: "var(--install-banner-bottom)",
+          // right: FAB(--floating-right 지점에서 w-14=3.5rem 폭)와 겹쳐 클릭을
+          // 가로채지 않도록 그만큼 여유를 두고 배너 폭을 줄임
+          right: "calc(var(--floating-right) + 4.5rem)",
           transform: iosVisible ? "translateY(0)" : "translateY(100%)",
           opacity: iosVisible ? 1 : 0,
           transition: "transform 0.3s ease, opacity 0.3s ease",
@@ -91,9 +99,11 @@ export function InstallBanner() {
 
   return (
     <div
-      className="fixed left-0 right-0 z-40 flex justify-center px-4"
+      className="fixed left-0 z-40 flex justify-center px-4"
       style={{
         bottom: "var(--install-banner-bottom)",
+        // right: FAB와 겹쳐 클릭을 가로채지 않도록 여유를 둠 (iOS 분기와 동일 이유)
+        right: "calc(var(--floating-right) + 4.5rem)",
         transform: visible ? "translateY(0)" : "translateY(100%)",
         opacity: visible ? 1 : 0,
         transition: "transform 0.3s ease, opacity 0.3s ease",
