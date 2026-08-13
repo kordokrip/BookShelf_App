@@ -84,13 +84,16 @@ span[role="button"] {
 
 /* ── 3. 입력 필드 — iOS 줌 방지 ─────────────────────────────── */
 /*
-  iOS Safari: font-size < 16px 입력 필드에 자동 줌 적용
-  → 16px 강제로 줌 방지. 시각적 크기는 Tailwind 클래스로 제어.
+  iOS Safari: font-size < 16px 입력 필드에 자동 줌 적용.
+  개별 페이지에서 text-sm/text-[15px] 같은 Tailwind 클래스나 인라인
+  style={{fontSize}}로 16px 미만을 지정하는 경우가 많아(둘 다 이 규칙보다
+  detail 상 우선순위가 높음) !important 없이는 이 규칙이 실제로 무력화됨.
+  포커스 시 줌이 걸리면 무조건 여기 값이 적용되도록 강제한다.
 */
 input,
 select,
 textarea {
-  font-size: max(16px, 1rem);
+  font-size: max(16px, 1rem) !important;
   -webkit-tap-highlight-color: transparent;
   /* iOS 기본 스타일 제거 */
   -webkit-appearance: none;
