@@ -4,6 +4,7 @@ import { BottomNavBar } from "./components/navigation/BottomNavBar";
 import { SideNav } from "./components/navigation/SideNav";
 import { ToastProvider } from "./components/ui/Toast";
 import { OfflineBanner } from "./components/ui/OfflineBanner";
+import { InstallBanner } from "./components/ui/InstallBanner";
 import { LayoutDebugPanel } from "./components/ui/LayoutDebugPanel";
 import { useUiStore } from "../stores/uiStore";
 import { useOfflineQueue } from "../hooks/useOfflineQueue";
@@ -43,6 +44,10 @@ export function Root() {
 
         {/* Mobile Bottom Nav */}
         <BottomNavBar />
+
+        {/* 로그인된 앱 셸에서만 노출 — 로그인/회원가입/온보딩 등 공개 라우트에서는
+             주 CTA(로그인 버튼, FAB 등)와 겹치지 않도록 여기서만 마운트 */}
+        <InstallBanner />
 
         {/* DEV only: layout 계산값 실시간 패널 */}
         <LayoutDebugPanel />
