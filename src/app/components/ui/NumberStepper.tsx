@@ -90,6 +90,7 @@ export function NumberStepper({ value, min = 0, max = 9999, onChange, unit = "�
             onKeyDown={handleKeyDown}
             min={min}
             max={max}
+            className="number-stepper-input [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
             style={{
               width: 80,
               fontSize: 32,
@@ -106,7 +107,6 @@ export function NumberStepper({ value, min = 0, max = 9999, onChange, unit = "�
               // input[type=number] 화살표 제거
               MozAppearance: "textfield" as never,
             }}
-            className="[&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           />
         ) : (
           <button
