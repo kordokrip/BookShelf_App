@@ -472,7 +472,7 @@ function LogTodayModal({
     <div className="fixed inset-0 z-50 flex flex-col justify-end lg:items-center lg:justify-center">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div
-        className="relative bg-white rounded-t-2xl lg:rounded-3xl w-full lg:max-w-md lg:mx-4 z-10"
+        className="relative bg-white dark:bg-[#1E293B] rounded-t-2xl lg:rounded-3xl w-full lg:max-w-md lg:mx-4 z-10"
         style={{ boxShadow: "0 -8px 40px rgba(0,0,0,0.12)" }}
       >
         <div className="flex justify-center pt-3 pb-2 lg:hidden">
@@ -487,7 +487,7 @@ function LogTodayModal({
             <X size={18} />
           </button>
 
-          <h2 className="text-[#1E293B] mb-1" style={{ fontSize: 18, fontWeight: 800 }}>
+          <h2 className="text-[#1E293B] dark:text-[#F8FAFC] mb-1" style={{ fontSize: 18, fontWeight: 800 }}>
             오늘 독서 기록
           </h2>
           {initialDuration && initialDuration > 0 && (
@@ -504,30 +504,30 @@ function LogTodayModal({
               <p className="text-[#64748B] mb-1.5" style={{ fontSize: 12, fontWeight: 600 }}>책 선택</p>
               <button
                 onClick={() => setShowBookPicker((v) => !v)}
-                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] text-left transition-colors hover:bg-[#F1F5F9]"
+                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-[#334155] text-left transition-colors hover:bg-[#F1F5F9] dark:hover:bg-[#334155]"
               >
                 {selectedBook && <BookCover book={selectedBook} size="sm" />}
                 <div className="flex-1 min-w-0">
-                  <p className="text-[#1E293B] truncate" style={{ fontSize: 13, fontWeight: 700 }}>{selectedBook?.title}</p>
+                  <p className="text-[#1E293B] dark:text-[#F8FAFC] truncate" style={{ fontSize: 13, fontWeight: 700 }}>{selectedBook?.title}</p>
                   <p className="text-[#94A3B8]" style={{ fontSize: 11 }}>{selectedBook?.currentPage ?? 0}p 읽는 중</p>
                 </div>
                 <ChevronDown size={16} style={{ color: "#94A3B8", flexShrink: 0, transform: showBookPicker ? "rotate(180deg)" : undefined, transition: "transform 0.2s" }} />
               </button>
               {showBookPicker && (
                 <div
-                  className="absolute left-0 right-0 mt-1 bg-white rounded-2xl border border-[#E2E8F0] overflow-hidden z-10"
+                  className="absolute left-0 right-0 mt-1 bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-[#334155] overflow-hidden z-10"
                   style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}
                 >
                   {books.map((b) => (
                     <button
                       key={b.id}
                       onClick={() => { handleSelectBook(b.id); }}
-                      className="w-full flex items-center gap-3 p-3 text-left hover:bg-[#F8FAFC] transition-colors"
+                      className="w-full flex items-center gap-3 p-3 text-left hover:bg-[#F8FAFC] dark:hover:bg-[#0F172A] transition-colors"
                       style={{ borderBottom: "1px solid #F1F5F9" }}
                     >
                       <BookCover book={b} size="sm" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-[#1E293B] truncate" style={{ fontSize: 13, fontWeight: 600 }}>{b.title}</p>
+                        <p className="text-[#1E293B] dark:text-[#F8FAFC] truncate" style={{ fontSize: 13, fontWeight: 600 }}>{b.title}</p>
                         <p className="text-[#94A3B8]" style={{ fontSize: 11 }}>{b.currentPage ?? 0}p 읽는 중</p>
                       </div>
                       {b.id === selectedBookId && (
@@ -540,10 +540,10 @@ function LogTodayModal({
             </div>
           ) : (
             selectedBook && (
-              <div className="flex items-center gap-3 p-3 rounded-2xl bg-[#F8FAFC] mb-4">
+              <div className="flex items-center gap-3 p-3 rounded-2xl bg-[#F8FAFC] dark:bg-[#0F172A] mb-4">
                 <BookCover book={selectedBook} size="sm" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[#1E293B] truncate" style={{ fontSize: 13, fontWeight: 700 }}>{selectedBook.title}</p>
+                  <p className="text-[#1E293B] dark:text-[#F8FAFC] truncate" style={{ fontSize: 13, fontWeight: 700 }}>{selectedBook.title}</p>
                   <p className="text-[#94A3B8]" style={{ fontSize: 11 }}>{selectedBook.currentPage ?? 0}p 까지 읽음</p>
                 </div>
               </div>
@@ -641,7 +641,7 @@ function GoalModal({
     <div className="fixed inset-0 z-50 flex flex-col justify-end lg:items-center lg:justify-center">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div
-        className="relative bg-white rounded-t-2xl lg:rounded-3xl w-full lg:max-w-md lg:mx-4 z-10"
+        className="relative bg-white dark:bg-[#1E293B] rounded-t-2xl lg:rounded-3xl w-full lg:max-w-md lg:mx-4 z-10"
         style={{ boxShadow: "0 -8px 40px rgba(0,0,0,0.12)" }}
       >
         <div className="flex justify-center pt-3 pb-2 lg:hidden">
@@ -656,7 +656,7 @@ function GoalModal({
             <X size={18} />
           </button>
 
-          <h2 className="text-[#1E293B] mb-1" style={{ fontSize: 18, fontWeight: 800 }}>
+          <h2 className="text-[#1E293B] dark:text-[#F8FAFC] mb-1" style={{ fontSize: 18, fontWeight: 800 }}>
             올해 독서 목표
           </h2>
           <p className="text-[#64748B] mb-4" style={{ fontSize: 13 }}>
@@ -1149,7 +1149,7 @@ export function ReadingPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={handleTimerPromptSkip} />
           <div
-            className="relative bg-white rounded-3xl w-[calc(100%-2rem)] max-w-sm mx-4 p-6 text-center"
+            className="relative bg-white dark:bg-[#1E293B] rounded-3xl w-[calc(100%-2rem)] max-w-sm mx-4 p-6 text-center"
             style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.15)" }}
           >
             <div
@@ -1158,7 +1158,7 @@ export function ReadingPage() {
             >
               <Timer size={24} style={{ color: "#4F46E5" }} />
             </div>
-            <h3 className="text-[#1E293B] mb-2" style={{ fontSize: 17, fontWeight: 800 }}>
+            <h3 className="text-[#1E293B] dark:text-[#F8FAFC] mb-2" style={{ fontSize: 17, fontWeight: 800 }}>
               독서 {timerPromptMinutes}분을 기록할까요?
             </h3>
             <p className="text-[#64748B] mb-6" style={{ fontSize: 13 }}>

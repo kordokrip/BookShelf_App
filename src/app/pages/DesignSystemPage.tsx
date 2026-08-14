@@ -116,7 +116,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <section className="mb-8">
       <div className="flex items-center gap-3 mb-4">
-        <h2 className="text-[#1E293B]" style={{ fontSize: 18, fontWeight: 700 }}>{title}</h2>
+        <h2 className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 18, fontWeight: 700 }}>{title}</h2>
         <div className="flex-1 h-px bg-[#E2E8F0]" />
       </div>
       {children}

@@ -608,7 +608,7 @@ function BookInfoTab({ book }: { book: UIBook }) {
             style={{ borderBottom: i < rows.length - 1 ? "1px solid #F1F5F9" : "none" }}
           >
             <span className="text-[#94A3B8]" style={{ fontSize: 13 }}>{row.label}</span>
-            <span className="text-[#1E293B]" style={{ fontSize: 13, fontWeight: 600 }}>{row.value}</span>
+            <span className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 13, fontWeight: 600 }}>{row.value}</span>
           </div>
         ))}
       </div>
@@ -628,7 +628,7 @@ function BookInfoTab({ book }: { book: UIBook }) {
               type="date"
               value={goalDateVal}
               onChange={(e) => setGoalDateVal(e.target.value)}
-              className="flex-1 border border-[#E2E8F0] rounded-xl px-3 py-2 text-[#1E293B] bg-[#F8FAFC] outline-none focus:border-[#4F46E5]"
+              className="flex-1 border border-[#E2E8F0] dark:border-[#334155] rounded-xl px-3 py-2 text-[#1E293B] dark:text-[#F8FAFC] bg-[#F8FAFC] dark:bg-[#0F172A] outline-none focus:border-[#4F46E5]"
               style={{ fontSize: 13 }}
             />
             <Button
@@ -645,9 +645,9 @@ function BookInfoTab({ book }: { book: UIBook }) {
 
       {/* 한 줄 감상 */}
       {book.note && (
-        <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0]">
+        <div className="p-4 rounded-2xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-[#334155]">
           <p className="text-[#64748B] mb-1" style={{ fontSize: 12, fontWeight: 600 }}>한 줄 감상</p>
-          <p className="text-[#1E293B] leading-relaxed" style={{ fontSize: 14 }}>{book.note}</p>
+          <p className="text-[#1E293B] dark:text-[#F8FAFC] leading-relaxed" style={{ fontSize: 14 }}>{book.note}</p>
         </div>
       )}
 
@@ -655,7 +655,7 @@ function BookInfoTab({ book }: { book: UIBook }) {
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
           <Clock size={14} className="text-[#64748B]" />
-          <h3 className="text-[#1E293B]" style={{ fontSize: 14, fontWeight: 700 }}>독서 기록</h3>
+          <h3 className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 14, fontWeight: 700 }}>독서 기록</h3>
           <span className="text-[#94A3B8]" style={{ fontSize: 12 }}>({sessions.length}건)</span>
         </div>
         {sessionsLoading ? (
@@ -669,11 +669,11 @@ function BookInfoTab({ book }: { book: UIBook }) {
             {sessions.slice(0, 10).map((s) => (
               <div
                 key={s.id}
-                className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-white border border-[#F1F5F9]"
+                className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-white dark:bg-[#1E293B] border border-[#F1F5F9] dark:border-[#334155]"
                 style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
               >
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-[#1E293B]" style={{ fontSize: 13, fontWeight: 600 }}>
+                  <span className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 13, fontWeight: 600 }}>
                     +{s.pagesRead}p
                   </span>
                   <span className="text-[#94A3B8]" style={{ fontSize: 11 }}>
@@ -869,7 +869,7 @@ export function BookDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-svh bg-[#F8FAFC] flex items-center justify-center">
+      <div className="min-h-svh bg-[#F8FAFC] dark:bg-[#0F172A] flex items-center justify-center">
         <div className="w-8 h-8 border-3 border-[#4F46E5] border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -877,7 +877,7 @@ export function BookDetailPage() {
 
   if (isError || !book) {
     return (
-      <div className="min-h-svh bg-[#F8FAFC] flex items-center justify-center">
+      <div className="min-h-svh bg-[#F8FAFC] dark:bg-[#0F172A] flex items-center justify-center">
         <p className="text-[#64748B]">책을 찾을 수 없습니다.</p>
       </div>
     );
@@ -889,7 +889,7 @@ export function BookDetailPage() {
   ];
 
   return (
-    <div className="min-h-svh bg-[#F8FAFC] pb-[var(--page-pb)] lg:pb-8">
+    <div className="min-h-svh bg-[#F8FAFC] dark:bg-[#0F172A] pb-[var(--page-pb)] lg:pb-8">
       {/* ── Top nav: ChevronLeft #1E293B + MoreVertical ── */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <button

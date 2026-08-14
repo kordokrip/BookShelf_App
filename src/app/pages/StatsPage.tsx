@@ -251,7 +251,7 @@ export function StatsPage() {
     <div className="pb-[var(--page-pb)] lg:pb-8">
       {/* Header */}
       <div className="px-4 pt-4 pb-3">
-        <h2 className="text-[#1E293B]" style={{ fontSize: 20, fontWeight: 700 }}>나의 독서 통계 📊</h2>
+        <h2 className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 20, fontWeight: 700 }}>나의 독서 통계 📊</h2>
         <p className="text-[#64748B]" style={{ fontSize: 13, marginTop: 2 }}>
           {stats ? `완독 ${totalDone}권 · 읽는 중 ${totalReading}권 · Wish ${totalWish}권` : "통계를 불러오는 중..."}
         </p>
