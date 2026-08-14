@@ -31,6 +31,11 @@ import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { cn } from "../components/ui/utils";
 import { CameraOCRSheet } from "../components/books/CameraOCRSheet";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "../components/ui/alert-dialog";
 
 /* ─── Star display / input ──────────────────────────────────── */
 function StarRow({ value, onRate }: { value: number; onRate?: (n: number) => void }) {
@@ -798,6 +803,7 @@ export function BookDetailPage() {
   const qc = useQueryClient();
 
   const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: book, isLoading, isError } = useBookDetail(id!);
@@ -805,10 +811,15 @@ export function BookDetailPage() {
   const deleteBook = useDeleteBook();
   const updateBook = useUpdateBook();
 
-  const handleDeleteBook = async () => {
+  const handleDeleteBook = () => {
     if (!book) return;
-    if (!confirm(`"${book.title}"을(를) 삭제할까요? 노트와 독서 세션도 함께 삭제됩니다.`)) return;
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!book) return;
     await deleteBook.mutateAsync(book.id);
+    setShowDeleteConfirm(false);
     back();
     showToast('책이 삭제됐어요', 'success');
   };
@@ -1069,6 +1080,25 @@ export function BookDetailPage() {
           )}
         </div>
       </div>
+
+      {/* 책 삭제 확인 다이얼로그 */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>"{book.title}"을(를) 삭제할까요?</AlertDialogTitle>
+            <AlertDialogDescription>노트와 독서 세션도 함께 삭제됩니다.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowDeleteConfirm(false)}>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              {deleteBook.isPending ? "삭제 중..." : "삭제"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
