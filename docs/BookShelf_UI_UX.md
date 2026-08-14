@@ -130,7 +130,7 @@ background: linear-gradient(135deg, #94A3B8 0%, #CBD5E1 100%)
 | `--destructive` | `0 84.2% 60.2%` | `0 62.8% 30.6%` | 삭제/에러 |
 | `--safe-top` | `env(safe-area-inset-top, 0px)` | — | iOS 노치 대응 |
 | `--topbar-content-h` | `56px` | — | TopBar 콘텐츠 높이 |
-| `--bottomnav-content-h` | `60px` | — | BottomNav 콘텐츠 높이 |
+| `--bottomnav-content-h` | `64px` | — | BottomNav 콘텐츠 높이 |
 | `--topbar-h` | `calc(var(--topbar-content-h) + var(--safe-top))` | — | TopBar 전체 높이 (safe-area 포함) |
 | `--bottomnav-h` | `calc(var(--bottomnav-content-h) + var(--safe-bottom))` | — | BottomNav 전체 높이 (safe-area 포함) |
 | `--page-pb` | `calc(var(--bottomnav-h) + 1rem)` | — | 페이지 하단 패딩 (탭바 + 여유) |

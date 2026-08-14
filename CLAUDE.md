@@ -29,7 +29,7 @@ npm run type-check && npm run lint && npm run build
 ```bash
 bash scripts/e2e-api-test.sh
 ```
-27/27 PASS 유지 필수. 실패하면 커밋 전에 반드시 수정.
+49/49 PASS 유지 필수. 실패하면 커밋 전에 반드시 수정.
 
 ## 문서 관리
 - `PROJECT_STATUS.md`: 세션 종료 시에만 갱신 (작업 중 수정 금지)
