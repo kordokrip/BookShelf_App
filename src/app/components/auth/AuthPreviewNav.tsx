@@ -10,6 +10,8 @@ const pages = [
 export function AuthPreviewNav() {
   const location = useLocation();
 
+  if (!import.meta.env.DEV) return null;
+
   return (
     <div
       className="fixed left-1/2 -translate-x-1/2 z-50"
