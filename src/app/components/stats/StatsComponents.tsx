@@ -539,7 +539,7 @@ export function ReadingHeatmap({ sessions }: ReadingHeatmapProps) {
             {/* Month labels row */}
             <div style={{ display: "flex", height: 14, position: "relative", marginBottom: 2 }}>
               {monthStarts.map(({ label, weekIndex }) => (
-                <div key={label} style={{
+                <div key={weekIndex} style={{
                   position: "absolute",
                   left: weekIndex * (10 + 2),
                   fontSize: 10, color: C.slate6,

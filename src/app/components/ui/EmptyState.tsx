@@ -27,11 +27,11 @@ export function EmptyState({ emoji = "📚", heading, subtext, ctaLabel, onCta }
 
       {/* Heading: 18px SemiBold #1E293B, 16px gap from icon */}
       <h3
+        className="text-[#1E293B] dark:text-[#F8FAFC]"
         style={{
           marginTop: 16,
           fontSize: 18,
           fontWeight: 600,
-          color: "#1E293B",
           fontFamily: "var(--font-pretendard)",
         }}
       >
@@ -40,10 +40,10 @@ export function EmptyState({ emoji = "📚", heading, subtext, ctaLabel, onCta }
 
       {/* Subtext: 14px Regular #64748B, 8px gap from heading */}
       <p
+        className="text-[#64748B] dark:text-[#94A3B8]"
         style={{
           marginTop: 8,
           fontSize: 14,
-          color: "#64748B",
           lineHeight: 1.6,
           fontFamily: "var(--font-pretendard)",
         }}
