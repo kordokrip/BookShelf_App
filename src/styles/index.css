@@ -337,3 +337,11 @@ svg {
   .card-title  { font-size: 1.125rem; }
   .card-layout { flex-direction: row; align-items: center; gap: 1rem; }
 }
+
+/* ── 16. BookDetailPage 히어로 그라디언트 (라이트/다크) ─────────── */
+.book-hero-gradient {
+  background: linear-gradient(180deg, #EEF2FF 0%, #FFFFFF 60%);
+}
+.dark .book-hero-gradient {
+  background: linear-gradient(180deg, #1E1B4B 0%, #0F172A 60%);
+}

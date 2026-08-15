@@ -905,10 +905,10 @@ export function BookDetailPage() {
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <button
           onClick={back}
-          className="flex items-center gap-1.5 hover:opacity-70 transition-opacity"
-          style={{ color: "#1E293B", fontSize: 14, fontWeight: 600 }}
+          className="flex items-center gap-1.5 hover:opacity-70 transition-opacity text-[#1E293B] dark:text-[#F8FAFC]"
+          style={{ fontSize: 14, fontWeight: 600 }}
         >
-          {/* Spec: ChevronLeft 20px #1E293B */}
+          {/* Spec: ChevronLeft 20px #1E293B / dark:#F8FAFC */}
           <ChevronLeft size={20} />
           뒤로
         </button>
@@ -917,8 +917,7 @@ export function BookDetailPage() {
           {book?.status === 'done' && (
             <button
               onClick={handleShare}
-              className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#F1F5F9] transition-colors"
-              style={{ color: "#4F46E5" }}
+              className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition-colors text-[#4F46E5] dark:text-[#A5B4FC]"
               aria-label="공유"
             >
               <Share2 size={18} />
@@ -927,8 +926,7 @@ export function BookDetailPage() {
           <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
-              className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#F1F5F9] transition-colors"
-              style={{ color: "#1E293B" }}
+              className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition-colors text-[#1E293B] dark:text-[#F8FAFC]"
               aria-label="더보기"
             >
               <MoreVertical size={20} />
@@ -969,8 +967,7 @@ export function BookDetailPage() {
       <div className="max-w-2xl mx-auto lg:max-w-3xl">
         {/* ── Hero section ── */}
         <div
-          className="px-4 py-8 flex flex-col items-center gap-4 border-b border-[#F1F5F9]"
-          style={{ background: "linear-gradient(180deg, #EEF2FF 0%, #FFFFFF 60%)" }}
+          className="px-4 py-8 flex flex-col items-center gap-4 border-b border-[#F1F5F9] dark:border-[#334155] book-hero-gradient"
         >
           {/* Cover: 120×168px — 클릭 시 표지 이미지 업로드 */}
           <div
@@ -1001,7 +998,7 @@ export function BookDetailPage() {
           {/* Meta */}
           <div className="flex flex-col items-center gap-2 text-center">
             {/* Title: 20px Bold */}
-            <h1 className="text-[#1E293B] line-clamp-2" style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.3 }}>
+            <h1 className="text-[#1E293B] dark:text-[#F8FAFC] line-clamp-2" style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.3 }}>
               {book.title}
             </h1>
             {/* Author: 14px Regular #64748B */}
