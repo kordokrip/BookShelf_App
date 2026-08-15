@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
 import { Search } from "lucide-react";
-import { useNavigate } from "react-router";
 import { useBooks, useDeleteBook, useUpdateBook } from "../../hooks/useBooks";
 import { useToast } from "../components/ui/Toast";
 import { SearchSheet } from "../components/wishlist/SearchSheet";
@@ -26,7 +25,6 @@ export function WishlistPage() {
   const deleteBook = useDeleteBook();
   const updateBook = useUpdateBook();
   const { showToast } = useToast();
-  const navigate = useNavigate();
 
   const wishTitleSet = useMemo(
     () => new Set(books.map((b) => b.title.toLowerCase())),
@@ -99,7 +97,7 @@ export function WishlistPage() {
             onDelete={handleDelete}
             onPriorityChange={handlePriorityChange}
             onRetry={refetch}
-            onNavigateAdd={() => navigate("/register-flow")}
+            onNavigateAdd={() => setShowSearch(true)}
           />
         )}
       </div>

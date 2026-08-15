@@ -6,7 +6,7 @@
  * - 알림 벨: 미읽음 카운트 배지 + NotificationPanel 드롭다운
  */
 import { useState, useRef } from 'react';
-import { Bell, BookPlus, Sun, Moon, Clock, FileSearch, UserCog } from 'lucide-react';
+import { Bell, Sun, Moon, Clock, FileSearch, UserCog } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { useAuthStore } from '../../../stores/authStore';
 import { useUiStore } from '../../../stores/uiStore';
@@ -126,20 +126,6 @@ export function TopBar() {
               </button>
             </TooltipTrigger>
             <TooltipContent side="bottom" sideOffset={4}>{THEME_LABEL[themeMode]}</TooltipContent>
-          </Tooltip>
-
-          {/* 책 등록 */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={() => navigate('/register-flow')}
-                aria-label="책 등록"
-                className="w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-[#4F46E5] hover:bg-[#EEF2FF] dark:hover:bg-[#312E81] transition-colors"
-              >
-                <BookPlus size={19} />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" sideOffset={4}>새 책 등록하기</TooltipContent>
           </Tooltip>
 
           {/* 노트 & 검색 */}
