@@ -35,7 +35,7 @@ const DESKTOP_NAV_LINKS = [
   { to: '/notes-search', label: '노트' },
 ];
 
-const THEME_LABEL = {
+export const THEME_LABEL = {
   auto:  '자동 (시간 기반) — 클릭하면 라이트 모드',
   light: '라이트 모드 고정 — 클릭하면 다크 모드',
   dark:  '다크 모드 고정 — 클릭하면 자동 모드',
