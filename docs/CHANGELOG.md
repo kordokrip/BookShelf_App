@@ -4,6 +4,31 @@
 
 ---
 
+## 30차 (2026-08-15) — 전체 문서 정합화 + PWA/접근성/진입점 개선
+
+상세 경위: `docs/sessions/2026-08-15-public-pages-a11y-pwa.md`
+
+- PWA 셸: GPU 레이어 보강, InstallBanner를 로그인 등 공개 페이지 밖으로 스코프 제한, iOS 설치 안내, 개발 전용 AuthPreviewNav 프로덕션 노출 차단
+- 반응형/입력: iOS 입력창 자동 확대 버그 근본 수정(`!important` 누락), 모바일 테마 토글(ProfilePopup), BookDetailPage 히어로 다크모드
+- 접근성(WCAG 2.1 AA): 다크모드 텍스트/배경 대비 위반 16곳 + `--destructive` 토큰 수정, EmptyState 다크모드 지원
+- UX: "책 등록" 진입점 9곳 → FAB 중심 단일화
+- 인프라: wrangler 4.70.0→4.107.1, CI Node 20(EOL)→24, GitHub Actions 5종 업데이트
+- 문서: 전체 문서(README/PROJECT_STATUS/TRACE_MAP/SECURITY/UI_UX/QA_가이드/A11Y_AUDIT 등) 코드 대조 정합화, `docs/CI_CD.md` 신설, 낡은/중복 문서 정리
+- E2E 49/49 PASS
+
+---
+
+## 29차 (2026-06~07) — 인생책 추천, 실시간 채팅, 알림 리마인더
+
+- `feat: Cloudflare Durable Objects ChatRoom 추가 (WebSocket Hibernation)` — 그룹 채팅을 폴링에서 DO WebSocket으로 전환(`docs/adr/ADR-002-chat-websocket.md`)
+- `feat: 독서 모임 온라인 표시 + 읽음 표시 구현`
+- `feat: reminder_prefs DB 마이그레이션 및 타입 추가` — 리마인더 알림 설정 3컬럼(`0014_reminder_prefs.sql`)
+- `feat: 인생책 메뉴 — AI 완독 기반 인생책 추천 + Kakao 표지 연동` — `LifeBooksPage`, `/api/ai/lifebooks`
+
+> 이 구간은 세션 요약 문서(`docs/WORK_SUMMARY_*.md`) 없이 커밋 이력만 남아있던 공백을 2026-08-15에 소급 정리한 것이라, 위 28차만큼 상세하지 않다. 정확한 세부 사항은 각 커밋 diff를 참고할 것.
+
+---
+
 ## 28차 (2026-05-31) — 문서 정합성 보강
 
 CF: `df732bc7-8a69-461b-97a3-6a646259c35c`
