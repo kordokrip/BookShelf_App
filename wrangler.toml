@@ -22,9 +22,8 @@ database_id = "013db269-dc7a-4a60-9920-ed40c12ab623"
 migrations_dir = "worker/db/migrations"
 
 # ─── KV Namespaces ───────────────────────────────────────────
-# @deprecated: JWT Refresh Token 저장 용도는 KV 바인딩으로 이전됨.
-# SESSIONS 바인딩은 현재 사용되지 않으며 차후 제거 예정.
 # 세션 / JWT Refresh Token 저장
+# (worker/routes/auth.ts POST /refresh: KV 우선 조회, 없으면 SESSIONS 폴백 후 KV로 이관)
 [[kv_namespaces]]
 binding = "SESSIONS"
 id = "3cb76beb5e9e49b3be2373d3f2a84972"
