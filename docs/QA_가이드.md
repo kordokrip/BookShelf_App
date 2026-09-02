@@ -9,7 +9,7 @@
 - `npm run type-check` ✅ 통과
 - `npm run lint` ✅ 통과
 - `npm run build` ✅ 통과
-- `bash scripts/e2e-api-test.sh` ✅ 27/27 PASS
+- `bash scripts/e2e-api-test.sh` ✅ 49/49 PASS
 - `bash scripts/admin-api-test.sh` ⚠️ 기본 관리자 자격증명 없으면 로그인 단계 실패 가능
   - 개선: `ADMIN_TOKEN` 환경변수 직접 주입 실행 지원
 
@@ -195,6 +195,15 @@ DevTools 설정:
 | 오프라인 배너 표시/숨김 | ✅ PASS | `window.addEventListener('offline')` |
 | BottomNavBar, TopBar, 테마 색상 | 🔍 MANUAL | |
 
+### C-1. 반응형/디바이스 회귀 (`docs/테스트_체크리스트.md`에서 흡수)
+
+| # | 테스트 항목 | 결과 |
+|---|------------|------|
+| 1 | iPhone Safari(노치 기기)에서 TopBar가 상태바/노치와 겹치지 않는지 확인 | 🔍 MANUAL |
+| 2 | iPhone Safari에서 BottomNav와 콘텐츠가 홈 인디케이터와 겹치지 않는지 확인 | 🔍 MANUAL |
+| 3 | Android Chrome에서 주소창 접힘/펼침 시 레이아웃 점프가 과도하지 않은지 확인 | 🔍 MANUAL |
+| 4 | 세로/가로 회전 시 `BookDetailPage`, `NotesSearchPage`, `RegisterFlowPage` 높이 계산이 깨지지 않는지 확인 | 🔍 MANUAL |
+
 ---
 
 ## SECTION D — 도서 관리
@@ -280,16 +289,18 @@ DevTools 설정:
 ## SECTION J — E2E API 테스트
 
 ```bash
-# 자동화 E2E 테스트 (27개)
+# 자동화 E2E 테스트 (49개)
 bash scripts/e2e-api-test.sh
 
-# 예상 결과: 27/27 PASS
+# 예상 결과: 49/49 PASS
 ```
 
 | 최근 실행 | 결과 |
 |-----------|------|
-| 24차 (2026-04-13) | ✅ 27/27 PASS |
-| 2026-04-28 | ✅ 27/27 PASS |
+| 24차 (2026-04-13) | ✅ 27/27 PASS (당시 스크립트 기준 — 이후 기능 추가로 테스트 항목 증가) |
+| 2026-04-28 | ✅ 27/27 PASS (당시 스크립트 기준) |
+
+> 현재 `scripts/e2e-api-test.sh`는 49개 테스트(`TOTAL=49`)로 구성되어 있다. 위 기록은 각 실행 시점의 스크립트 기준이므로 값을 그대로 유지했다 — 최신 실행 기록은 다음 배포/검증 시 갱신할 것.
 
 ---
 
@@ -401,6 +412,85 @@ ADMIN_TOKEN="<admin-jwt>" bash scripts/admin-api-test.sh
 
 ---
 
+## SECTION M — 성능 벤치마크 & 번들 크기 (`docs/테스트_체크리스트.md`에서 흡수)
+
+### M-1. 번들 크기 기준
+
+```bash
+# 빌드 후 청크별 크기 확인
+npm run build 2>&1 | grep "dist/assets"
+```
+
+| 청크 | 허용 기준 |
+|------|----------|
+| `vendor-react-*.js` (gzip) | < 100 kB |
+| `index-*.js` (앱 번들, gzip) | < 80 kB |
+| `vendor-charts-*.js` (lazy, gzip) | < 120 kB |
+| `index-*.css` (gzip) | < 25 kB |
+| **초기 로드 합계** | **< 600 kB gzip** |
+
+> `vendor-charts`는 `/stats` 진입 시에만 로드되는 lazy chunk
+
+**마지막 측정: 2026-04-28** (재측정 필요 — wrangler 4.107.1, react-router 등 대규모 업그레이드 이후 미검증)
+
+| 청크 | 측정값 (gzip, 2026-04-28) | 기준 대비 (당시) |
+|------|---------------------------|------------------|
+| `vendor-react-*.js` | 102.77 kB | ⚠️ +2.77 kB 초과 |
+| `index-*.js` | 31.21 kB | ✅ 기준 이내 |
+| `vendor-charts-*.js` | 102.40 kB | ✅ 기준 이내 |
+| `index-*.css` | 17.82 kB | ✅ 기준 이내 |
+
+### M-2. Lighthouse 목표 점수 (전체 카테고리)
+
+1. `http://localhost:8787` 시크릿 창에서 접속
+2. DevTools (`F12`) → **Lighthouse** 탭
+3. Device: **Mobile** (우선 측정)
+4. Categories: Performance, Accessibility, Best Practices, SEO, PWA 모두 체크
+5. **Analyze page load** 클릭
+
+| 항목 | 목표 점수 | 결과 | 판정 |
+|------|----------|------|------|
+| Performance | ≥ 80 | | |
+| Accessibility | ≥ 90 | | |
+| Best Practices | ≥ 90 | | |
+| SEO | ≥ 80 | | |
+| PWA | ≥ 90 | | |
+
+> Accessibility 단독 측정 방법은 아래 "Lighthouse 접근성 감사" 절 참고.
+
+### M-3. Core Web Vitals 기준
+
+| 지표 | 설명 | 목표 |
+|------|------|------|
+| LCP | Largest Contentful Paint | < 2.5초 |
+| CLS | Cumulative Layout Shift | < 0.1 |
+| FCP | First Contentful Paint | < 1.8초 |
+| TTFB | Time to First Byte | < 800ms |
+| TBT | Total Blocking Time | < 200ms |
+
+### M-4. 트러블슈팅
+
+**Performance 점수 낮음**
+
+```bash
+npx vite-bundle-visualizer
+```
+- `vendor-charts` lazy 분리 확인 (`/stats` 직접 접속 시에만 로드)
+- `framer-motion` 트리쉐이킹: `import { motion } from 'framer-motion/m'` 검토
+
+**PWA 점수 낮음**
+- HTTPS 필수: localhost는 OK, 프로덕션은 Workers 자동 HTTPS
+- SW 등록 실패: `vite.config.ts`의 `devOptions.enabled: true` 확인
+
+**LCP 개선**
+- 첫 렌더 hero 이미지: `loading="eager"` + `fetchpriority="high"`
+- `BookCover` 컴포넌트 고정 비율 컨테이너 확인
+
+**CLS 개선**
+- 이미지에 명시적 `width`/`height` 또는 `aspect-ratio` CSS 적용
+
+---
+
 ## Lighthouse 접근성 감사 (모바일 프리셋, a11y 90+ 목표)
 
 ### 방법 1 — Chrome DevTools (권장)
@@ -480,5 +570,5 @@ open lighthouse-a11y.html
 |------|------|------|
 | OCR 한국어 인식 | ⚠️ 부분 지원 | CF Dashboard에서 llama-3.2-11b 라이선스 수락 필요 (코드 변경 불필요) |
 | SplashPage 자동 이동 없음 | ⚠️ 설계 결정 | 버튼 클릭 기반 (자동 타이머 없음) |
-| WebSocket 채팅 | ❌ 미구현 | 30초 폴링 방식 사용 중 (Durable Objects 유료) |
+| WebSocket 채팅 | ✅ 구현됨 (ADR-002) | `localStorage.chat_ws=1` 플래그로 활성화, 기본값은 3초 폴링 폴백 |
 | 관리자 API 스크립트 기본 로그인 | ⚠️ 환경 의존 | 기본 자격증명이 없으면 실패. `ADMIN_TOKEN` 실행 경로 사용 권장 |

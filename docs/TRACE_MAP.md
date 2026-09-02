@@ -3,7 +3,11 @@
 > 작성 기준: 실제 소스 코드 전수 분석 (2026-05-31 기준)
 > 목적: 프로덕션 오류 발생 시 UI → Hook → API → DB 레이어를 빠르게 추적하기 위한 기준 문서
 >
-> **최신 변경**: 2026-05-31 — 반응형/뷰포트 리팩토링 + ISBN 스캐너 확장 반영
+> **최신 변경**: 2026-08-15 — 다크모드 접근성 대비 수정 + 인프라 업그레이드 반영
+> - 다크모드 텍스트/배경 명도 대비 WCAG AA 위반 다수 수정 (커밋 `ac28f7e`) — 상세는 `docs/A11Y_AUDIT_2026-07.md`의 "2026-08 후속 수정" 절 참고
+> - Wrangler 4.70.0 → 4.107.1 안전 업그레이드
+> - 책 등록 진입점 9곳 → 통일된 FAB(플로팅 액션 버튼) 중심으로 정리
+> **이전 변경**: 2026-05-31 — 반응형/뷰포트 리팩토링 + ISBN 스캐너 확장 반영
 > - `useViewport` 신규 도입, `visualViewport` 기반 CSS 변수 주입
 > - `min-h-screen/h-screen` → `min-h-svh/h-svh` 전환
 > - `WishlistPage` ISBN 스캐너 버튼 및 오버레이 연동
@@ -51,10 +55,9 @@
 |---|---|---|---|
 | `/splash` | `SplashPage` | 공개 | 2.8초 후 `authenticated`→`/`, else→`/onboarding` 분기 ✅ |
 | `/onboarding` | `OnboardingPage` | 공개 | 스와이프 제스처(≥50px), 상단 ProgressBar, 장르 칩 44px 터치 타겟, 독서목표 슬라이더(1~100) ✅ |
-| `/login` | `LoginPage` | 공개 | 로컬 + 카카오 로그인 |
+| `/login` | `LoginPage` | 공개 | 로컬 + Google 로그인 (카카오 로그인은 2026-03-29 `c2dbe1e`로 제거됨) |
 | `/signup` | `SignUpPage` | 공개 | 로컬 회원가입 |
 | `/register-flow` | `RegisterFlowPage` | **보호** ✅ | `protected_()` 래핑 (2026-03-28 수정) |
-| `/auth/kakao/callback` | `KakaoCallbackPage` | 공개 | 에러코드별 메시지 매핑 (access_denied 등) ✅ |
 | `/auth/google/callback` | `GoogleCallbackPage` | 공개 | Google OAuth SPA 콜백 ★ (A-1) |
 | `/notes-search` | `NotesSearchPage` | **보호** | `protected_()` 래핑 |
 | `/` | `Root` > `LibraryPage` | **보호** | ProtectedRoute 래핑 |
@@ -69,6 +72,7 @@
 | `/groups` | `GroupsPage` (lazy) | **보호** ★ (21차) | 독서 모임 목록/생성/가입 + GroupDetailView(채팅/일정/피드백/멤버 탭) |
 | `/share` | `SharePage` (lazy) | **보호** | 공유 리포트 inbox/outbox |
 | `/admin` | `AdminPage` (lazy) | **보호** | 관리자 대시보드 |
+| `/lifebooks` | `LifeBooksPage` (lazy) | **보호** | AI 인생책 추천 — `GET /api/ai/lifebooks` |
 | `*` | `NotFoundPage` | 공개 | 404 fallback 라우트 ✅ |
 
 > **공통**: 모든 라우트에 `errorElement={RouteErrorFallback}` 적용 — 청크 로드 오류 시 1회 자동 새로고침
@@ -99,7 +103,8 @@
 
 | 보강 대상 | 반영 내용 | 상태 |
 |---|---|---|
-| 페이지 | `CollectionsPage`, `SharePage` 경로 및 데이터 흐름 추적 추가 | ✅ |
+| 페이지 | `CollectionsPage`, `SharePage` 라우트 매핑(1-A) 반영 완료 | ✅ |
+| 페이지 | `CollectionsPage`, `SharePage`, `GroupsPage`, `AdminPage`, `LifeBooksPage`의 UI→Hook→API→DB 상세 트레이스 (2장) | ⚠️ 미기재 — 1-B/3장 API 매핑으로 대체 확인 |
 | API 라우트 | `collections`, `discover`, `push`, `admin` 라우트 매핑 추가 | ✅ |
 | 훅 | `useCollections`, `useDiscover`, `useOfflineQueue`, `usePushNotification`, `useViewport` 추적 반영 | ✅ |
 | DB | 마이그레이션 `0005`, `0006`, `0009` 및 관련 테이블 추적 반영 | ✅ |
@@ -399,18 +404,6 @@ UI(email+password submit) → authStore.login(email, password)
       → createToken()  [JWT, 2h (exp: now + 7200)]
     → localStorage.setItem('auth_token', token)
     → authStore.user = 파싱된 사용자
-
-[카카오 로그인]
-UI(카카오 버튼) → window.Kakao.Auth.authorize(redirectUri)
-  → 카카오 서버 → GET /api/auth/kakao/callback?code=
-    → POST https://kauth.kakao.com/oauth/token
-    → GET https://kapi.kakao.com/v2/user/me
-    → D1: SELECT/INSERT/UPDATE users
-    → createToken()
-    → redirect("/?token=...&provider=kakao")
-  → App.tsx: URLSearchParams('token')
-    → localStorage.setItem('auth_token', token)
-    → URL 클린업
 
 [Google 로그인] ★ (A-1, 14차)
 UI(Google 버튼) → window.location.href = '/api/auth/google/callback'
@@ -885,8 +878,8 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 
 | Method | 경로 | 인증 | 요청 | 응답 | Worker 파일 |
 |---|---|---|---|---|---|
-| GET | `/api/auth/kakao/callback` | 없음 | `?code=` | redirect `/?token=...` | `routes/auth.ts` |
-| GET | `/api/auth/google/callback` | 없음 | `?code=` | redirect `/?token=...` | `routes/auth.ts` | ★ (A-1) |
+| GET | `/api/auth/google/callback` | 없음 | `?code=` | redirect `/?token=...` | `routes/auth.ts` ★ (A-1) |
+| POST | `/api/auth/refresh` | 없음(쿠키) | Refresh Token 쿠키 | `{data:{token}}` | `routes/auth.ts` — rate limit 10회/60s |
 
 ### 사용자 (`/api/users`)
 
@@ -999,6 +992,75 @@ totals:       { totalPages: number; totalMinutes: number }
 | GET | `/api/notifications/unread-count` | **authMiddleware** | — | `{data: {count: N}}` | `routes/notifications.ts` |
 | PATCH | `/api/notifications/:id/read` | **authMiddleware** | — | `{data: {success: true}}` | `routes/notifications.ts` |
 | POST | `/api/notifications/read-all` | **authMiddleware** | — | `{data: {success: true}}` | `routes/notifications.ts` |
+
+### 컬렉션 (`/api/collections`)
+
+| Method | 경로 | 인증 | 요청 | 응답 | Worker 파일 |
+|---|---|---|---|---|---|
+| GET | `/api/collections` | **authMiddleware** | — | `{data: Collection[]}` | `routes/collections.ts` |
+| GET | `/api/collections/:id` | **authMiddleware** | — | `{data: Collection}` (books 포함) | `routes/collections.ts` |
+| POST | `/api/collections` | **authMiddleware** | `{name, description?, emoji?}` (zod) | `{data: Collection}` 201 | `routes/collections.ts` |
+| PUT | `/api/collections/:id` | **authMiddleware** | `{name?, description?, emoji?}` (zod, partial) | `{data: Collection}` | `routes/collections.ts` |
+| DELETE | `/api/collections/:id` | **authMiddleware** | — | `{success: true}` | `routes/collections.ts` |
+| POST | `/api/collections/:id/books` | **authMiddleware** | `{book_id, sort_order?}` (zod) | `{data}` | `routes/collections.ts` |
+| DELETE | `/api/collections/:id/books/:bookId` | **authMiddleware** | — | `{success: true}` | `routes/collections.ts` |
+
+### 도서 탐색 (`/api/discover`)
+
+| Method | 경로 | 인증 | 요청 | 응답 | 비고 |
+|---|---|---|---|---|---|
+| GET | `/api/discover` | **authMiddleware** | `?tab=popular\|new\|life&genre=&page=&size=` | `{data: DiscoverBook[]}` | 서재 데이터 집계 기반, rate limit 30회/60s |
+| GET | `/api/discover/external` | **authMiddleware** | `?tab=new\|bestseller` | `{books, fetchedAt}` | 카카오/네이버/알라딘 외부 API, KV 캐시, rate limit 20회/60s |
+
+### 푸시 알림 (`/api/push`)
+
+| Method | 경로 | 인증 | 요청 | 응답 | 비고 |
+|---|---|---|---|---|---|
+| GET | `/api/push/vapid-key` | 없음 | — | `{key}` | VAPID 공개키 |
+| POST | `/api/push/subscribe` | **authMiddleware** | `{endpoint, keys:{p256dh, auth}}` (zod) | `{success: true}` | rate limit 5회/300s |
+| DELETE | `/api/push/unsubscribe` | **authMiddleware** | — | `{success: true}` | |
+| GET | `/api/push/status` | **authMiddleware** | — | `{subscribed: boolean}` | |
+| POST | `/api/push/test` | **authMiddleware** | — | `{sent: boolean}` | 테스트 알림 발송, rate limit 3회/3600s |
+| GET | `/api/push/debug` | **authMiddleware** | — | 디버그 정보 | |
+
+**Cron**: 매일 오전 8시(KST 17시) `*/15 * * * *` 트리거 → `sendDailyReminders()` 독서 리마인더 발송 (`worker/index.ts` scheduled)
+
+### 공유 리포트 (`/api/share`)
+
+| Method | 경로 | 인증 | 요청 | 응답 | Worker 파일 |
+|---|---|---|---|---|---|
+| POST | `/api/share/report` | **authMiddleware** | `{recipient_email, message?}` (zod) | `{success: true}` | `routes/share.ts` — 미존재 수신자도 동일 응답(이메일 열거 방지) |
+| GET | `/api/share/inbox` | **authMiddleware** | — | `{data: SharedReport[]}` | `routes/share.ts` |
+| GET | `/api/share/sent` | **authMiddleware** | — | `{data: SharedReport[]}` | `routes/share.ts` |
+| PATCH | `/api/share/:id/read` | **authMiddleware** | — | `{success: true}` | `routes/share.ts` |
+| GET | `/api/share/unread-count` | **authMiddleware** | — | `{data: {count}}` | `routes/share.ts` |
+
+### 온라인 상태 (`/api/presence`)
+
+| Method | 경로 | 인증 | 요청 | 응답 | 비고 |
+|---|---|---|---|---|---|
+| POST | `/api/presence/heartbeat` | **authMiddleware** | — | `{online: true}` | KV `presence:{userId}` TTL 90초 갱신, rate limit 10회/60s |
+| GET | `/api/presence/status` | **authMiddleware** | `?userIds[]=...` | `{data: {userId, online}[]}` | KV 일괄 조회 |
+
+### Web Vitals 수집 (`/api/vitals`)
+
+| Method | 경로 | 인증 | 요청 | 응답 | 비고 |
+|---|---|---|---|---|---|
+| POST | `/api/vitals` | 없음 | `{metric, value, page, ua_mobile}` (zod) | `{ok: true}` | 저장 없이 Workers Logs로만 수집, rate limit 60회/60s |
+
+### 관리자 (`/api/admin`) — authMiddleware + adminMiddleware(role==='admin') 전체 적용
+
+| Method | 경로 | 요청 | 응답 | 비고 |
+|---|---|---|---|---|
+| POST | `/api/admin/seed-admins` | — | `{results: {email, updated}[]}` | 최초 1회 관리자 시드, rate limit 5회/60s |
+| GET | `/api/admin/stats` | — | `{data: {users, books, engagement, charts, topUsers}}` | 대시보드 요약 통계 |
+| GET | `/api/admin/users` | `?q=&role=&sort=&order=&page=&size=` | `{data: AdminUser[], meta}` | 회원 목록 검색/정렬/페이지네이션 |
+| GET | `/api/admin/users/:id` | — | `{data: AdminUserDetail}` | 회원 상세(독서 통계, 최근 도서/활동 포함) |
+| PATCH | `/api/admin/users/:id/role` | `{role: 'admin'\|'user'}` | `{success: true}` | 회원 역할 변경 |
+| GET | `/api/admin/activity` | `?action=&userId=&limit=&offset=` | `{data: ActivityLog[]}` | 전체 활동 로그 |
+| GET | `/api/admin/messages` | `?limit=&offset=` | `{data: AdminMessage[], total}` | 발송한 관리자 메시지 목록 |
+| POST | `/api/admin/messages` | `{type: 'broadcast'\|'individual', title, body, targetUserId?}` | `{data}` | 공지/개별 메시지 발송, rate limit 30회/60s |
+| DELETE | `/api/admin/messages/:id` | — | `{data: {deleted: true}}` | 발송 내역 삭제 |
 
 ---
 
@@ -1178,23 +1240,22 @@ LoginPage → authStore.login(email, password)
   → authStore.status = 'authenticated'
 ```
 
-### 5-B. 카카오 OAuth 플로우
+### 5-B. Google OAuth 플로우 ★ (A-1)
 
 ```
 LoginPage
-  → window.Kakao.Auth.authorize({ redirectUri })
-    redirectUri = VITE_KAKAO_REDIRECT_URI 또는 "${origin}/api/auth/kakao/callback"
-  → 카카오 서버 redirect → GET /api/auth/kakao/callback?code=
+  → handleGoogleLogin() → window.location.href = "https://accounts.google.com/o/oauth2/v2/auth?..."
+    redirect_uri = "${origin}/api/auth/google/callback"
+  → Google 서버 redirect → GET /api/auth/google/callback?code=
 
 Worker (routes/auth.ts):
-  1. POST https://kauth.kakao.com/oauth/token (code 교환)
-  2. GET https://kapi.kakao.com/v2/user/me (사용자 정보)
-  3. D1 조회: SELECT * FROM users WHERE kakao_id = ?
-     3a. 없고 이메일 있으면 → 기존 계정 연결 (UPDATE kakao_id)
-     3b. 연결 불가 → 새 계정 INSERT
-     3c. 있으면 → 프로필 최신화 (UPDATE name, avatar_url)
-  4. createToken({sub, email}, JWT_SECRET)
-  5. redirect "${FRONTEND_URL}/?token={JWT}&provider=kakao"
+  1. POST https://oauth2.googleapis.com/token (code 교환, GOOGLE_CLIENT_ID/SECRET)
+  2. GET https://www.googleapis.com/oauth2/v2/userinfo (email, name, avatar_url)
+  3. ALLOWED_EMAILS 게이트 확인 (설정된 경우)
+  4. D1 조회/생성/최신화: SELECT/INSERT/UPDATE users (google_id 기준)
+  5. createToken({sub, email}, JWT_SECRET) + createRefreshToken() (KV 저장, HttpOnly 쿠키)
+  6. redirect "${FRONTEND_URL}/?token={JWT}&provider=google"
+  실패 시: redirect "${FRONTEND_URL}/login?error=google_cancelled|google_token|google_userinfo"
 
 App.tsx (useEffect):
   → URLSearchParams 'token' 감지
@@ -1202,11 +1263,12 @@ App.tsx (useEffect):
   → URL 클린업 (window.history.replaceState)
   → checkAuth() 실행
 
-KakaoCallbackPage:
-  → 정상 흐름에서는 실제로 미도달 ⚠️
-  → error 파라미터 있으면 에러 메시지 표시 → 2초 후 /login
-  → error 없으면 즉시 /login navigate
+GoogleCallbackPage:
+  → 정상 흐름에서는 실제로 미도달(서버 리다이렉트가 곧바로 처리) ⚠️
+  → error 파라미터 있으면 에러 메시지 표시 → /login으로 안내
 ```
+
+> **참고**: 카카오 로그인은 2026-03-29 `c2dbe1e` 커밋으로 완전히 제거되었다. `worker/routes/auth.ts`에는 카카오 관련 코드가 없으며, `KAKAO_REST_API_KEY` 시크릿은 현재 도서 검색(`/api/search/*`, `/api/discover/external`)에만 쓰인다.
 
 ### 5-C. 토큰 검증 (미들웨어)
 
@@ -1476,17 +1538,6 @@ maxAge: 86400 (24h)
 
 ---
 
-### BUG-007 `[FIXED]` — KakaoCallbackPage 에러 메시지 개선
-
-| 항목 | 내용 |
-|---|---|
-| **파일** | [src/app/pages/KakaoCallbackPage.tsx](../src/app/pages/KakaoCallbackPage.tsx) |
-| **문제** | 에러 파라미터 종류 무관 하드코딩 메시지 "카카오 로그인이 취소되었습니다." |
-| **수정** | `messageMap: {access_denied, server_error, kakao_failed, token_failed}` 매핑 추가 |
-| **상태** | ✅ 수정 완료 (2026-03-28) |
-
----
-
 ### BUG-008 `[DESIGN]` — cover_image 필드 이중 의미
 
 | 항목 | 내용 |
@@ -1596,11 +1647,15 @@ maxAge: 86400 (24h)
 | `ASSETS` | Fetcher | PWA SPA 정적 파일 서빙 |
 | `ENVIRONMENT` | string | 'production' \| 'development' |
 | `JWT_SECRET` | secret | JWT 서명 키 |
-| `KAKAO_REST_API_KEY` | secret | 카카오 OAuth + 도서 검색 |
+| `KAKAO_REST_API_KEY` | secret | 카카오 도서 검색 API (로그인 아님 — 카카오 로그인은 2026-03-29 `c2dbe1e`로 제거) |
 | `NAVER_CLIENT_ID` | secret | 네이버 도서 검색 |
 | `NAVER_CLIENT_SECRET` | secret | 네이버 도서 검색 |
-| `GOOGLE_CLIENT_ID` | secret | (구글 OAuth, 미구현) |
-| `GOOGLE_CLIENT_SECRET` | secret | (구글 OAuth, 미구현) |
+| `GOOGLE_CLIENT_ID` | secret | Google OAuth (구현됨, `routes/auth.ts`) ★ (A-1) |
+| `GOOGLE_CLIENT_SECRET` | secret | Google OAuth (구현됨, `routes/auth.ts`) ★ (A-1) |
+| `ALLOWED_EMAILS` | secret | 세미콜론 구분 가입 허용 이메일 목록 (선택) |
+| `VAPID_PUBLIC_KEY` | secret | Web Push 공개키 (base64url) |
+| `VAPID_PRIVATE_KEY` | secret | Web Push 비밀키 (JWK JSON) |
+| `ALADIN_TTB_KEY` | secret | 알라딘 베스트셀러 조회 (선택) |
 
 ---
 

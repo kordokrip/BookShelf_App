@@ -51,8 +51,12 @@
   - [9.13 NotesSearchPage (노트 검색)](#913-notessearchpage-노트-검색)
   - [9.14 DesignSystemPage (디자인 시스템)](#914-designsystempage-디자인-시스템)
   - [9.15 NotFoundPage (404)](#915-notfoundpage-404)
+  - [9.16 GroupsPage (독서 모임)](#916-groupspage-독서-모임)
+  - [9.17 GroupDetailView (모임 상세)](#917-groupdetailview-모임-상세)
   - [9.18 CollectionsPage (컬렉션)](#918-collectionspage-컬렉션)
   - [9.19 SharePage (공유 리포트)](#919-sharepage-공유-리포트)
+  - [9.20 AdminPage (관리자 대시보드)](#920-adminpage-관리자-대시보드)
+  - [9.21 LifeBooksPage (인생책)](#921-lifebookspage-인생책)
 - [10. 공유 컴포넌트 라이브러리](#10-공유-컴포넌트-라이브러리)
 - [11. API 엔드포인트 ↔ UI 매핑](#11-api-엔드포인트--ui-매핑)
 - [12. 상태 관리 데이터 흐름](#12-상태-관리-데이터-흐름)
@@ -1500,6 +1504,82 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 - 읽지 않은 공유 항목 강조 표시
 - 읽음 처리 즉시 카운트 동기화(SideNav/TopBar 배지)
 - 네트워크 불안정 시 오프라인 큐 기반 재시도 UX (`useOfflineQueue`)
+
+---
+
+### 9.20 AdminPage (관리자 대시보드)
+
+- **파일**: `src/app/pages/AdminPage.tsx`
+- **경로**: `/admin` (Lazy loaded, 인증 필수 + `role === 'admin'` 가드)
+
+#### 접근 제어
+
+- 마운트 시 `useAuthStore(s => s.user)`로 `role` 확인 → `role !== 'admin'`이면 즉시 `navigate('/', { replace: true })`
+- 백엔드 측에서도 `worker/routes/admin.ts`의 `adminMiddleware`로 이중 검증 (전 엔드포인트)
+
+#### 레이아웃
+
+- **헤더**: 뒤로가기(ArrowLeft) + "관리자 대시보드" 타이틀, sticky top
+- **탭 바** (4탭, 하단 라벨 아이콘): 대시보드 / 회원 / 알림 / 내역
+
+#### DashboardTab (대시보드)
+
+- **핵심 지표 카드**(회원): 전체 회원, 오늘 신규 가입(+주간 증감), 오늘 활성, 오늘 활동 건수 — `GET /api/admin/stats`
+- **핵심 지표 카드**(도서·참여): 전체 등록 도서(+이번달 증감), 완독 도서, 누적 독서 세션, 누적 노트
+- **월별 신규 가입 추이**: 최근 6개월 막대 그래프(순수 CSS, `height = (cnt/max)*80px`)
+- **이번 달 활성 회원 Top 5**: 순위 + 아바타 + 이름/이메일 + 활동 건수, admin은 Crown 배지
+
+#### UsersTab (회원 관리)
+
+- **검색**: 이름/이메일 텍스트 검색(디바운스 없음, 즉시 쿼리) + 역할 필터(전체/관리자/회원)
+- **정렬**: 가입일/이름/도서 수/마지막 활동 — 같은 컬럼 재클릭 시 asc/desc 토글
+- **목록**: 아바타 + 이름(Crown 배지 for admin) + 이메일 + 도서 수, 클릭 시 `UserDetailModal` 오픈
+- **페이지네이션**: 20개/페이지, 이전/다음 버튼
+- **UserDetailModal**: 프로필, 역할 변경 버튼(확인 `confirm()` 후 `PATCH /api/admin/users/:id/role`), 독서 통계 6종(완독/읽는중/위시/노트/세션/모임), 최근 등록 도서 4권, 최근 활동 6건, 가입일
+
+#### SendNotifTab (알림 발송)
+
+- **발송 유형 토글**: 📢 전체 공지 / ✉️ 개별 메시지
+- **개별 메시지**: 수신자 검색(이름/이메일 2자 이상 입력 시 조회) → 선택 시 확정 배지 표시
+- **제목**(100자) + **내용**(500자, 실시간 글자 수) 입력
+- 발송 버튼 → `POST /api/admin/messages` → 성공 시 폼 초기화 + 성공 배너(3초 후 자동 소멸) + `발송 내역` 쿼리 무효화
+
+#### MessagesHistoryTab (발송 내역)
+
+- 발송 메시지 목록(전체 공지/개별 구분 배지, 제목/본문 2줄 클램프, 개별 메시지는 수신자 표시)
+- 항목별 삭제(Trash2, 확인 `confirm()` 후 `DELETE /api/admin/messages/:id`)
+- 페이지네이션 (20개/페이지)
+
+#### 데이터 연결
+
+- **API**: `adminApi.*` → `/api/admin/*` (9개 엔드포인트, `worker/routes/admin.ts`)
+- **훅**: TanStack Query 직접 사용(`ADMIN_KEYS` 쿼리 키 팩토리), 별도 커스텀 훅 없음
+
+---
+
+### 9.21 LifeBooksPage (인생책)
+
+- **파일**: `src/app/pages/LifeBooksPage.tsx`
+- **경로**: `/lifebooks` (Lazy loaded, 인증 필수)
+
+#### 역할
+
+- 완독한 책을 바탕으로 AI가 추천하는 "인생책" 목록 표시 (`GET /api/ai/lifebooks`)
+
+#### UI 상태
+
+- **헤더**: Sparkles 아이콘 + "나의 인생책" 타이틀, 부제 안내 문구, 새로고침 버튼(추천 결과 있을 때만 노출)
+- **캐시 배지**: `data.cached === true`이면 "캐시된 결과 · 24시간 유지" 안내
+- **로딩**: 카드 5개 스켈레톤(표지 16×24 + 텍스트 라인 4줄, `animate-pulse`)
+- **완독 2권 미만(400 에러)**: BookOpen 아이콘 + "완독한 책이 2권 이상 필요해요" 안내 + "서재로 이동" CTA(`Link to="/"`)
+- **일반 오류**: 안내 텍스트 + "다시 시도" 버튼(`refreshMutation.mutate()`)
+- **추천 카드 목록**: 표지 썸네일(없으면 Sparkles 플레이스홀더) + 제목/저자·출판사 + 외부 링크(ExternalLink, 있을 때만) + AI 추천 이유(`book.reason`)
+
+#### 데이터 연결
+
+- **훅**: `useLifeBooks()`, `useRefreshLifeBooks()` (`src/hooks/useAI.ts`)
+- **API**: `GET /api/ai/lifebooks` — rate limit 3회/600초(10분), KV 캐시 24시간
+- **에러 판별**: `error instanceof ApiError && error.status === 400`으로 "완독 2권 미만" 케이스만 별도 분기
 
 ---
 

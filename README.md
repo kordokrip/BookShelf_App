@@ -18,13 +18,6 @@
 
 ---
 
-## 📘 채팅 설계 문서
-
-- [docs/채팅_시스템_상세_디자인.md](docs/채팅_시스템_상세_디자인.md) — 현재 구현 기준의 채팅 아키텍처, 데이터 모델, API 흐름 분석
-- [docs/CHAT_SYSTEM_ANALYSIS_AND_PROMPT.md](docs/CHAT_SYSTEM_ANALYSIS_AND_PROMPT.md) — 외부 시스템 설계 비교, Claude 전달용 프롬프트, 개선 우선순위 정리
-
----
-
 *PC · iOS · Android 모든 환경에서 작동하는 Progressive Web App*
 
 </div>
@@ -372,8 +365,21 @@ BookShelf_App/
 │   ├── services/                         # ocrService, bookMetadataService, aiReviewService, aiRecommendService
 │   └── db/
 │       ├── migrations/
-│       │   ├── 0001_initial_schema.sql
-│       │   └── 0001_rollback.sql
+│       │   ├── 0001_initial.sql
+│       │   ├── 0002_fts5_notes.sql
+│       │   ├── 0003_notes_review_type.sql
+│       │   ├── 0004_user_role.sql
+│       │   ├── 0005_collections.sql
+│       │   ├── 0006_push_subscriptions.sql
+│       │   ├── 0007_profile_emoji.sql
+│       │   ├── 0008_groups_and_sharing.sql
+│       │   ├── 0009_indexes_and_session_unique.sql
+│       │   ├── 0010_group_approval_notifications.sql
+│       │   ├── 0011_admin_notifications.sql
+│       │   ├── 0012_soft_delete_messages.sql
+│       │   ├── 0013_read_receipts.sql
+│       │   └── 0014_reminder_prefs.sql
+│       ├── schema.sql            # 참고용 스냅샷 — 직접 실행 금지
 │       └── seed.sql
 │
 ├── public/
@@ -434,13 +440,19 @@ npx wrangler pages project create bookshelf-web
 ```bash
 # .dev.vars (Worker 로컬 시크릿)
 JWT_SECRET=<32자 이상 랜덤 문자열>
-OPENAI_API_KEY=sk-...
-NAVER_CLIENT_ID=...
+GOOGLE_CLIENT_ID=...                  # Google OAuth
+GOOGLE_CLIENT_SECRET=...              # Google OAuth
+KAKAO_REST_API_KEY=...                # 카카오 도서 검색 API
+NAVER_CLIENT_ID=...                   # 네이버 도서 검색 API
 NAVER_CLIENT_SECRET=...
+ALLOWED_EMAILS=you@example.com;another@example.com   # 세미콜론 구분 가입 허용 이메일
+VAPID_PUBLIC_KEY=...                  # Web Push (base64url)
+VAPID_PRIVATE_KEY=...                 # Web Push (JWK JSON)
+# ALADIN_TTB_KEY=...                  # 선택 — 알라딘 베스트셀러 조회
 
 # .env.local (프론트엔드)
 VITE_API_BASE_URL=http://localhost:8787
-VITE_USE_MOCK=true
+VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 ```
 
 ### 4. 데이터베이스 초기화
@@ -466,9 +478,14 @@ npm run dev:full
 
 ```bash
 npx wrangler secret put JWT_SECRET
-npx wrangler secret put OPENAI_API_KEY
+npx wrangler secret put GOOGLE_CLIENT_ID
+npx wrangler secret put GOOGLE_CLIENT_SECRET
+npx wrangler secret put KAKAO_REST_API_KEY
 npx wrangler secret put NAVER_CLIENT_ID
 npx wrangler secret put NAVER_CLIENT_SECRET
+npx wrangler secret put ALLOWED_EMAILS
+npx wrangler secret put VAPID_PUBLIC_KEY
+npx wrangler secret put VAPID_PRIVATE_KEY
 ```
 
 ### 프로덕션 DB 마이그레이션
@@ -521,58 +538,7 @@ GitHub → Settings → Secrets에 추가:
 
 ## 📡 API 레퍼런스
 
-### 인증
-
-```
-POST /api/auth/register    # 회원가입
-POST /api/auth/login       # 로그인 (JWT 반환)
-POST /api/auth/refresh     # 토큰 갱신
-DELETE /api/auth/logout    # 로그아웃
-```
-
-### 책 관리
-
-```
-GET    /api/books?genre=&shelfType=    # 내 책 목록
-POST   /api/books                      # 책 등록
-GET    /api/books/:id                  # 책 상세
-PUT    /api/books/:id                  # 정보 수정
-DELETE /api/books/:id                  # 삭제
-```
-
-### 책장 관리
-
-```
-GET    /api/shelf/:type                # 책장 목록 (done|reading|wishlist)
-POST   /api/shelf                      # 책장에 추가
-PUT    /api/shelf/:id                  # 업데이트 (진도, 날짜 등)
-DELETE /api/shelf/:id                  # 제거
-POST   /api/shelf/:id/move             # 책장 이동
-```
-
-### OCR / 바코드
-
-```
-POST /api/ocr/scan       # 이미지 → 책 정보 추출
-POST /api/ocr/barcode    # ISBN → 책 메타데이터
-```
-
-### 통계
-
-```
-GET /api/stats/overview        # 요약 (완독수, 읽는중, Wish, 총페이지)
-GET /api/stats/monthly?year=   # 월별 독서량
-GET /api/stats/genre           # 장르별 분포
-GET /api/stats/streak?days=365 # 독서 스트릭 히트맵 데이터
-```
-
-### AI 기능
-
-```
-POST /api/ai/recommend       # 맞춤 책 추천
-POST /api/ai/review-assist   # 독후감 초안 생성
-POST /api/notes/:id/ai-summary # 노트 AI 요약
-```
+API 상세 스펙은 `docs/TRACE_MAP.md`를 참고하세요.
 
 ---
 

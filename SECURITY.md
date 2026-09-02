@@ -57,8 +57,23 @@ OWASP 권장 반복 횟수는 600,000+ 이지만, Cloudflare Workers의 CPU 시�
 | POST /api/auth/refresh | 10회 | 60초 |
 | POST /api/ai/summarize | 5회 | 60초 |
 | GET /api/ai/recommend | 10회 | 60초 |
-| POST /api/groups/:id/messages | 10회 | 60초 |
-| POST /api/groups/:id/meetings/:mid/feedback | 5회 | 60초 |
+| GET /api/ai/lifebooks | 3회 | 600초(10분) |
+| POST /api/ai/ocr | 3회 | 60초 |
+| GET /api/search/books | 20회 | 60초 |
+| GET /api/search/books/isbn | 10회 | 60초 |
+| GET /api/search/pagecount | 15회 | 60초 |
+| GET /api/discover | 30회 | 60초 |
+| GET /api/discover/external | 20회 | 60초 |
+| POST /api/groups/:id/messages | 30회 | 60초 |
+| POST /api/groups/:id/meetings/:meetingId/feedbacks | 10회 | 60초 |
+| POST /api/admin/seed-admins | 5회 | 60초 |
+| POST /api/admin/messages | 30회 | 60초 |
+| POST /api/push/subscribe | 5회 | 300초(5분) |
+| POST /api/push/test | 3회 | 3600초(1시간) |
+| POST /api/presence/heartbeat | 10회 | 60초 |
+| POST /api/vitals | 60회 | 60초 |
+
+> 전수 확인 기준: `worker/routes/*.ts` 전체에서 `rateLimit(` 사용처 grep (`worker/middleware/rateLimit.ts` 기반, KV 고정 창 방식)
 
 ---
 
