@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # ================================================================
-# BookShelf App — E2E API 테스트 스크립트 (47개 | readonly 3개)
+# BookShelf App — E2E API 테스트 스크립트
 # 실행: bash scripts/e2e-api-test.sh [--url <BASE_URL>] [--readonly]
 #   --url <URL>  : 대상 URL (기본: https://bookshelf-api.kordokrip.workers.dev)
 #   --readonly   : 쓰기 없는 읽기 전용 3케이스만 실행 (프로덕션 안전 검증)
+# 전체 테스트 개수는 스크립트 내 TOTAL 변수를 따른다 (하드코딩 수치 금지 —
+# 현재 값은 아래 "── 카운터 ──" 섹션 또는 `grep -n '^  TOTAL=' scripts/e2e-api-test.sh`로 확인)
 # ================================================================
 
 set -uo pipefail
@@ -157,11 +159,11 @@ if [[ "$READONLY" == true ]]; then
   printf "${BOLD}╚══════════════════════════════════════════════════╝${NC}\n"
 else
   printf "\n${BOLD}╔══════════════════════════════════════════════════╗${NC}\n"
-  printf "${BOLD}║     BookShelf App — E2E API Test Suite (44)      ║${NC}\n"
+  printf "${BOLD}║     BookShelf App — E2E API Test Suite (%2d)      ║${NC}\n" "$TOTAL"
   printf "${BOLD}╚══════════════════════════════════════════════════╝${NC}\n"
 fi
 printf "  BASE_URL : %s\n" "$BASE_URL"
-printf "  Mode     : %s\n" "$( [[ "$READONLY" == true ]] && echo 'readonly (3 tests)' || echo 'full (44 tests)' )"
+printf "  Mode     : %s\n" "$( [[ "$READONLY" == true ]] && echo 'readonly (3 tests)' || echo "full (${TOTAL} tests)" )"
 printf "  Email    : %s\n" "$TEST_EMAIL"
 printf "  Started  : %s\n" "$(date '+%Y-%m-%d %H:%M:%S')"
 
@@ -591,12 +593,11 @@ AI_ERR=$(json_val "$BODY" "d.get('error', '')")
 if [[ -n "$SUMMARY" ]]; then
   pass_test $T "$NAME" $ELAPSED
   printf "         ${CYAN}↳ cached: %s${NC}\n" "$(json_val "$BODY" "d.get('cached', '')")"
-elif [[ "$AI_ERR" == "AI 요약에 실패했습니다" ]]; then
-  # Workers AI (llama-3.1-8b-instruct) 일시 불가 — 외부 의존성 장애로 허용
-  printf "         ${YELLOW}⚠️  SKIP (Workers AI 일시 장애 — 외부 의존성): %s${NC}\n" "$AI_ERR"
-  PASS=$((PASS+1))
 else
-  fail_test $T "$NAME" $ELAPSED "$BODY" "summary 없음 (AI 응답 실패 또는 타임아웃)"
+  # 의도적으로 "AI 요약에 실패했습니다" 등 알려진 에러 메시지를 자동 PASS 처리하지 않는다.
+  # (과거 이 자동 PASS 마스킹 때문에 폐기된 Workers AI 모델 500 에러가 몇 달간 CI에서 가려졌음 — 재발 방지)
+  fail_test $T "$NAME" $ELAPSED "$BODY" \
+    "summary 없음 — AI 응답 실패 또는 타임아웃 (error: '${AI_ERR:-알 수 없음}')"
 fi
 
 T=23; NAME="GET /api/ai/recommend (완독 기반 추천)"; START=$(now_ms)
@@ -614,12 +615,32 @@ try:
 except Exception:
     print('fail')
 " 2>/dev/null || echo "fail")
-if [[ "$HAS_RECS" == "ok" ]]; then
-  pass_test $T "$NAME" $ELAPSED
-  RECS_COUNT=$(json_val "$BODY" "len(d.get('recommendations', []))")
+REC_SOURCE=$(json_val "$BODY" "d.get('source', '')")
+RECS_COUNT=$(json_val "$BODY" "len(d.get('recommendations', []))")
+# 폴백이든 실제 AI 응답이든, recommendations가 있다면 최소한 유효한 추천 데이터
+# 구조(title/author 필수 필드)는 갖추고 있는지 검증한다.
+RECS_VALID=$(echo "$BODY" | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    recs = d.get('recommendations', [])
+    ok = all(isinstance(r, dict) and r.get('title') and r.get('author') for r in recs)
+    print('ok' if ok else 'fail')
+except Exception:
+    print('fail')
+" 2>/dev/null || echo "fail")
+if [[ "$HAS_RECS" == "ok" && "$RECS_VALID" == "ok" ]]; then
+  if [[ "$REC_SOURCE" == "curated-fallback" ]]; then
+    pass_test $T "${NAME} (fallback)" $ELAPSED
+    printf "         ${YELLOW}↳ source: curated-fallback — Workers AI 미사용, 큐레이션 폴백으로 대체됨${NC}\n"
+  else
+    pass_test $T "$NAME" $ELAPSED
+    printf "         ${CYAN}↳ source: %s${NC}\n" "${REC_SOURCE:-none}"
+  fi
   printf "         ${CYAN}↳ recommendations: %s건${NC}\n" "${RECS_COUNT:-0}"
 else
-  fail_test $T "$NAME" $ELAPSED "$BODY" "recommendations 또는 message 필드 없음"
+  fail_test $T "$NAME" $ELAPSED "$BODY" \
+    "recommendations/message 구조 오류 또는 항목 title/author 필드 누락 (source='${REC_SOURCE}', has_recs=${HAS_RECS}, recs_valid=${RECS_VALID})"
 fi
 
 # ================================================================
