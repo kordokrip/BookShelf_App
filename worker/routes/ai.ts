@@ -552,6 +552,7 @@ aiRouter.get(
 
     type AiBook = { title: string; author: string; reason: string };
     let aiBooks: AiBook[] = [];
+    let source: RecommendationSource = 'workers-ai';
 
     try {
       const model = '@cf/meta/llama-3.1-8b-instruct-fast' as Parameters<Ai['run']>[0];
@@ -607,6 +608,7 @@ aiRouter.get(
       const excluded = buildExcludedSet(doneBooks.map((b) => ({ title: b.title, author: b.author })));
       const curated = buildCuratedRecommendations(profileBooks, topGenres, excluded, 5);
       aiBooks = curated.map((rec) => ({ title: rec.title, author: rec.author, reason: rec.reason }));
+      source = 'curated-fallback';
     }
 
     // Kakao API로 표지·메타데이터 보강
@@ -647,7 +649,7 @@ aiRouter.get(
       }),
     );
 
-    const payload = { data, cached: false, source: 'workers-ai' as const };
+    const payload = { data, cached: false, source };
     if (data.length > 0) {
       await c.env.KV.put(cacheKey, JSON.stringify(payload), { expirationTtl: 86400 });
     }

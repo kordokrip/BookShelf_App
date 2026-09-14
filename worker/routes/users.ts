@@ -7,7 +7,7 @@
  * PATCH  /api/users/profile   — 프로필 수정 (이름/장르/목표/아바타)
  * GET    /api/users/:id       — 사용자 조회 (자신: 전체, 타인: 공개 필드만)
  * POST   /api/users           — 소셜 로그인 upsert (인증 필요)
- * GET    /api/users/:id/stats — 공개 독서 통계
+ * GET    /api/users/:id/stats — 독서 통계 (인증 필요, 프론트 미사용 죽은 코드)
  *
  * 보안 주의사항:
  * - password_hash는 외부에 절대 노출되지 않도록 safeUser() 사용
@@ -280,7 +280,8 @@ usersRouter.patch(
 );
 
 // ─── GET /api/users/:id/stats ──────────────────────────────────
-usersRouter.get('/:id/stats', async (c) => {
+// SEC: 인증 필수 (IDOR 방지 — 비로그인 사용자가 임의 userId의 통계를 열람하지 못하도록)
+usersRouter.get('/:id/stats', authMiddleware, async (c) => {
   const id = c.req.param('id');
 
   const [counts, genreStats, monthlyStats] = await Promise.all([

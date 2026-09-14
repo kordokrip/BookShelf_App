@@ -248,7 +248,7 @@ app.notFound((c) => c.json({ error: 'Not Found' }, 404));
 export default {
   fetch: app.fetch,
 
-  /** Cron 트리거: 매일 오전 8시 (KST 17시) 독서 리마인더 전송 */
+  /** Cron 트리거: 15분마다 실행되어 현재 시각과 reminder_time이 일치하는 사용자에게 독서 리마인더 전송 */
   async scheduled(
     _controller: ScheduledController,
     env: Bindings,

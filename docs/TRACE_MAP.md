@@ -1023,7 +1023,7 @@ totals:       { totalPages: number; totalMinutes: number }
 | POST | `/api/push/test` | **authMiddleware** | — | `{sent: boolean}` | 테스트 알림 발송, rate limit 3회/3600s |
 | GET | `/api/push/debug` | **authMiddleware** | — | 디버그 정보 | |
 
-**Cron**: 매일 오전 8시(KST 17시) `*/15 * * * *` 트리거 → `sendDailyReminders()` 독서 리마인더 발송 (`worker/index.ts` scheduled)
+**Cron**: `*/15 * * * *` (15분마다) 트리거 → `sendDailyReminders()`가 현재 시각과 사용자별 `reminder_time` 슬롯이 일치하는 사용자에게 독서 리마인더 발송 (`worker/index.ts` scheduled)
 
 ### 공유 리포트 (`/api/share`)
 

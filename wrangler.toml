@@ -60,7 +60,7 @@ class_name = "ChatRoom"
 tag = "v1"
 new_sqlite_classes = ["ChatRoom"]
 
-# ─── Cron Trigger — 독서 리마인더 (매일 오전 8시 UTC = KST 17시) ─
+# ─── Cron Trigger — 독서 리마인더 (15분마다 실행, 사용자별 reminder_time 슬롯과 매칭) ─
 [triggers]
 crons = ["*/15 * * * *"]
 
