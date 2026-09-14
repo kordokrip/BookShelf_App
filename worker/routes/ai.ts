@@ -274,7 +274,7 @@ aiRouter.post('/summarize', rateLimit({ limit: 5, windowMs: 60_000, keyPrefix: '
     : `책 제목: "${safeTitle}"\n저자: ${safeAuthor}\n\n이 책이 어떤 책인지 2-3문장으로 소개해주세요.`;
 
   try {
-    const model = '@cf/meta/llama-3.1-8b-instruct' as Parameters<Ai['run']>[0];
+    const model = '@cf/meta/llama-3.1-8b-instruct-fast' as Parameters<Ai['run']>[0];
     const response = await c.env.AI.run(model, {
       messages: [
         { role: 'system', content: systemPrompt },
@@ -399,7 +399,7 @@ aiRouter.get('/recommend', rateLimit({ limit: 10, windowMs: 60_000, keyPrefix: '
   const topBookTitle = readBooks.find((book) => book.rating && book.rating >= 4)?.title ?? readBooks[0]?.title ?? '';
 
   try {
-    const model = '@cf/meta/llama-3.1-8b-instruct' as Parameters<Ai['run']>[0];
+    const model = '@cf/meta/llama-3.1-8b-instruct-fast' as Parameters<Ai['run']>[0];
     const systemPrompt = `당신은 독서 전문가입니다. 사용자의 독서 이력을 분석하여 다음에 읽을 책 ${limit}권을 추천해주세요.
 반드시 아래 JSON 배열 형식으로만 응답하세요(다른 텍스트 금지):
 [{"title":"책제목","author":"저자","reason":"추천 이유(사용자가 읽은 '${topBookTitle}'처럼 구체적인 책 이름을 언급하며 1~2문장으로 개인화하여 작성)","genre":"장르"}]
@@ -554,7 +554,7 @@ aiRouter.get(
     let aiBooks: AiBook[] = [];
 
     try {
-      const model = '@cf/meta/llama-3.1-8b-instruct' as Parameters<Ai['run']>[0];
+      const model = '@cf/meta/llama-3.1-8b-instruct-fast' as Parameters<Ai['run']>[0];
       const response = await c.env.AI.run(model, {
         messages: [
           {
