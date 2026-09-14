@@ -435,9 +435,10 @@ export function LibraryPage() {
             />
           ) : (
             <>
-              {/* Desktop/Tablet: 2-col(md) → 3-col(lg) grid */}
+              {/* Desktop/Tablet: 2-col(md) → 3-col(lg) grid — list 모드에서는 아래 단일 컬럼 블록이
+                  이 역할을 대신하므로 숨김(그렇지 않으면 데스크톱에서 동일 책이 두 번 렌더링됨) */}
               {/* pb-24: FAB가 리스트 마지막 카드와 겹치지 않도록 확실한 여유 공간 확보 */}
-              <div className="hidden md:block pb-24">
+              <div className={`${viewMode === "list" ? "hidden" : "hidden md:block"} pb-24`}>
                 {sortBy === "date" ? (
                   monthKeys.map((key) => (
                     <div key={key}>
