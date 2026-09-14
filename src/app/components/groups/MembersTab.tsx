@@ -1,6 +1,7 @@
 import { Crown, Trash2, LogOut, UserMinus, ArrowRightLeft, Check, X } from 'lucide-react';
 import { useLeaveGroup, useDeleteGroup, useRemoveMember, useTransferLeader, useApproveMember, useRejectMember } from '../../../hooks/useGroups';
 import { useAuthStore } from '../../../stores/authStore';
+import { useToast } from '../ui/Toast';
 
 export function MembersTab({ groupId, members, isLeader, onBack, onlineSet }: {
   groupId: string;
@@ -16,6 +17,7 @@ export function MembersTab({ groupId, members, isLeader, onBack, onlineSet }: {
   const transferLeader = useTransferLeader();
   const approveMember = useApproveMember();
   const rejectMember = useRejectMember();
+  const { showToast } = useToast();
 
   const approvedMembers = members.filter((m) => m.status === 'approved');
   const pendingMembers = members.filter((m) => m.status === 'pending');
@@ -23,33 +25,57 @@ export function MembersTab({ groupId, members, isLeader, onBack, onlineSet }: {
 
   const handleLeave = async () => {
     if (!confirm('정말 이 모임을 나가시겠습니까?')) return;
-    await leaveGroup.mutateAsync(groupId);
-    onBack();
+    try {
+      await leaveGroup.mutateAsync(groupId);
+      onBack();
+    } catch {
+      showToast('실패했어요. 다시 시도해주세요.', 'error');
+    }
   };
 
   const handleDelete = async () => {
     if (!confirm('정말 이 모임을 삭제하시겠습니까? 모든 데이터가 삭제됩니다.')) return;
-    await deleteGroup.mutateAsync(groupId);
-    onBack();
+    try {
+      await deleteGroup.mutateAsync(groupId);
+      onBack();
+    } catch {
+      showToast('삭제에 실패했어요. 다시 시도해주세요.', 'error');
+    }
   };
 
   const handleRemove = async (targetUserId: string, targetName: string) => {
     if (!confirm(`${targetName}님을 추방하시겠습니까?`)) return;
-    await removeMember.mutateAsync({ groupId, userId: targetUserId });
+    try {
+      await removeMember.mutateAsync({ groupId, userId: targetUserId });
+    } catch {
+      showToast('실패했어요. 다시 시도해주세요.', 'error');
+    }
   };
 
   const handleTransferLeader = async (targetUserId: string, targetName: string) => {
     if (!confirm(`${targetName}님에게 모임장을 위임하시겠습니까? 본인은 일반 멤버가 됩니다.`)) return;
-    await transferLeader.mutateAsync({ groupId, newLeaderId: targetUserId });
+    try {
+      await transferLeader.mutateAsync({ groupId, newLeaderId: targetUserId });
+    } catch {
+      showToast('실패했어요. 다시 시도해주세요.', 'error');
+    }
   };
 
   const handleApprove = async (targetUserId: string) => {
-    await approveMember.mutateAsync({ groupId, userId: targetUserId });
+    try {
+      await approveMember.mutateAsync({ groupId, userId: targetUserId });
+    } catch {
+      showToast('승인에 실패했어요. 다시 시도해주세요.', 'error');
+    }
   };
 
   const handleReject = async (targetUserId: string) => {
     if (!confirm('가입 신청을 거절하시겠습니까?')) return;
-    await rejectMember.mutateAsync({ groupId, userId: targetUserId });
+    try {
+      await rejectMember.mutateAsync({ groupId, userId: targetUserId });
+    } catch {
+      showToast('거절 처리에 실패했어요. 다시 시도해주세요.', 'error');
+    }
   };
 
   return (

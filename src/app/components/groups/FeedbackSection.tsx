@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { Star } from 'lucide-react';
 import { useMeetingFeedbacks, useCreateFeedback } from '../../../hooks/useGroups';
 import { useAuthStore } from '../../../stores/authStore';
+import { useToast } from '../ui/Toast';
 import type { MeetingFeedback } from '../../../lib/api';
 
 export function FeedbackSection({ groupId, meetingId }: { groupId: string; meetingId: string }) {
   const user = useAuthStore((s) => s.user);
   const { data: feedbacks = [], isLoading } = useMeetingFeedbacks(groupId, meetingId);
   const createFeedback = useCreateFeedback(groupId, meetingId);
+  const { showToast } = useToast();
   const [content, setContent] = useState('');
   const [rating, setRating] = useState(5);
 
@@ -15,9 +17,13 @@ export function FeedbackSection({ groupId, meetingId }: { groupId: string; meeti
 
   const handleSubmit = async () => {
     if (!content.trim()) return;
-    await createFeedback.mutateAsync({ content: content.trim(), rating });
-    setContent('');
-    setRating(5);
+    try {
+      await createFeedback.mutateAsync({ content: content.trim(), rating });
+      setContent('');
+      setRating(5);
+    } catch {
+      showToast('등록에 실패했어요. 다시 시도해주세요.', 'error');
+    }
   };
 
   return (

@@ -907,6 +907,7 @@ export function ReadingPage() {
           onSuccess: () => {
             timer.reset();
           },
+          onError: () => showToast("기록에 실패했어요. 다시 시도해주세요.", "error"),
         },
       );
     }
@@ -926,6 +927,7 @@ export function ReadingPage() {
           showToast(`📖 ${page}p 업데이트 완료!`, "success");
           setSelectedBook(null);
         },
+        onError: () => showToast("업데이트에 실패했어요. 다시 시도해주세요.", "error"),
       },
     );
   }
@@ -941,6 +943,8 @@ export function ReadingPage() {
         startPage,
         endPage: page,
         durationMinutes: timer.minutes > 0 ? timer.minutes : undefined,
+      }, {
+        onError: () => showToast("기록에 실패했어요. 다시 시도해주세요.", "error"),
       });
     }
 
@@ -961,6 +965,7 @@ export function ReadingPage() {
           showToast(`🎉 「${selectedBook.title}」 완독 완료!`, "success");
           setSelectedBook(null);
         },
+        onError: () => showToast("완독 처리에 실패했어요. 다시 시도해주세요.", "error"),
       },
     );
   }
@@ -1114,9 +1119,13 @@ export function ReadingPage() {
                   useTimerStore.getState().reset();
                   useTimerStore.getState().setBookId(null);
                 }
-                await deleteBook.mutateAsync(deleteTarget.id);
-                showToast('책이 삭제됐어요', 'success');
-                setDeleteTarget(null);
+                try {
+                  await deleteBook.mutateAsync(deleteTarget.id);
+                  showToast('책이 삭제됐어요', 'success');
+                  setDeleteTarget(null);
+                } catch {
+                  showToast('삭제에 실패했어요. 다시 시도해주세요.', 'error');
+                }
               }}
               className="bg-red-600 text-white hover:bg-red-700"
             >

@@ -4,6 +4,7 @@ import { cn } from '../ui/utils';
 import { ocrApi } from '../../../lib/api';
 import { useAddNote } from '../../../hooks/useNotes';
 import { Textarea } from '../ui/textarea';
+import { useToast } from '../ui/Toast';
 
 type NoteType = 'memo' | 'quote' | 'review';
 
@@ -94,6 +95,7 @@ export function CameraOCRSheet({ bookId, onClose }: Props) {
   const capturedFileRef = useRef<File | null>(null);
 
   const addMutation = useAddNote();
+  const { showToast } = useToast();
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -224,12 +226,16 @@ export function CameraOCRSheet({ bookId, onClose }: Props) {
 
   const handleSave = async () => {
     if (!extractedText.trim() || addMutation.isPending) return;
-    await addMutation.mutateAsync({
-      book_id: bookId,
-      type: noteType,
-      content: extractedText.trim(),
-    });
-    onClose();
+    try {
+      await addMutation.mutateAsync({
+        book_id: bookId,
+        type: noteType,
+        content: extractedText.trim(),
+      });
+      onClose();
+    } catch {
+      showToast('저장에 실패했어요. 다시 시도해주세요.', 'error');
+    }
   };
 
   return (

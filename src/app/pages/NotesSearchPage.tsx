@@ -9,6 +9,7 @@ import { ArrowLeft, Search, X, Clock, Pencil, Trash2 } from "lucide-react";
 import { useBack } from "../../hooks/useBack";
 import { useNotes, useUpdateNote, useDeleteNote } from "../../hooks/useNotes";
 import { useRecentSearches } from "../../hooks/useRecentSearches";
+import { useToast } from "../components/ui/Toast";
 
 const NOTES_RECENT_KEY = "notes_recent_searches";
 import type { BookNote } from "../../types/book";
@@ -95,6 +96,7 @@ export function NotesSearchPage() {
   const { data: notes = [], isLoading, isError } = useNotes(notesFilter);
   const updateNoteMutation = useUpdateNote();
   const deleteNoteMutation = useDeleteNote();
+  const { showToast } = useToast();
 
   return (
     <div className="flex flex-col min-h-[var(--vp-h)] bg-background">
@@ -359,17 +361,21 @@ export function NotesSearchPage() {
 
               <button
                 onClick={async () => {
-                  await updateNoteMutation.mutateAsync({
-                    id: editingNote.id,
-                    data: {
-                      type: editingNote.type,
-                      content: editingNote.content,
-                      page_number: editingNote.page,
-                      color: editingNote.color,
-                    },
-                  });
-                  setIsEditSheetOpen(false);
-                  setEditingNote(null);
+                  try {
+                    await updateNoteMutation.mutateAsync({
+                      id: editingNote.id,
+                      data: {
+                        type: editingNote.type,
+                        content: editingNote.content,
+                        page_number: editingNote.page,
+                        color: editingNote.color,
+                      },
+                    });
+                    setIsEditSheetOpen(false);
+                    setEditingNote(null);
+                  } catch {
+                    showToast("저장에 실패했어요. 다시 시도해주세요.", "error");
+                  }
                 }}
                 disabled={updateNoteMutation.isPending || !editingNote.content.trim()}
                 className="w-full h-11 rounded-xl bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-50 transition-opacity"
@@ -395,9 +401,13 @@ export function NotesSearchPage() {
             <AlertDialogAction
               onClick={async () => {
                 if (!deletingNoteId) return;
-                await deleteNoteMutation.mutateAsync(deletingNoteId);
-                setIsDeleteDialogOpen(false);
-                setDeletingNoteId(null);
+                try {
+                  await deleteNoteMutation.mutateAsync(deletingNoteId);
+                  setIsDeleteDialogOpen(false);
+                  setDeletingNoteId(null);
+                } catch {
+                  showToast("삭제에 실패했어요. 다시 시도해주세요.", "error");
+                }
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >

@@ -2,10 +2,18 @@ import { Link } from "react-router";
 import { RefreshCw, Sparkles, BookOpen, ExternalLink } from "lucide-react";
 import { useLifeBooks, useRefreshLifeBooks } from "../../hooks/useAI";
 import { ApiError } from "../../lib/api";
+import { useToast } from "../components/ui/Toast";
 
 export function LifeBooksPage() {
   const { data, isLoading, isError, error } = useLifeBooks();
   const refreshMutation = useRefreshLifeBooks();
+  const { showToast } = useToast();
+
+  const handleRefresh = () => {
+    refreshMutation.mutate(undefined, {
+      onError: () => showToast("새로고침에 실패했어요. 다시 시도해주세요.", "error"),
+    });
+  };
 
   const is400 = isError && error instanceof ApiError && error.status === 400;
 
@@ -25,7 +33,7 @@ export function LifeBooksPage() {
           </div>
           {data?.data && data.data.length > 0 && (
             <button
-              onClick={() => refreshMutation.mutate()}
+              onClick={handleRefresh}
               disabled={refreshMutation.isPending}
               className="flex items-center gap-1.5 mt-1 text-sm text-[#64748B] dark:text-[#94A3B8] hover:text-[#4F46E5] dark:hover:text-[#A5B4FC] transition-colors disabled:opacity-40"
               aria-label="인생책 새로고침"
@@ -86,7 +94,7 @@ export function LifeBooksPage() {
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <p className="text-sm text-[#64748B] dark:text-[#94A3B8] mb-4">추천을 불러오는 중 오류가 발생했습니다.</p>
             <button
-              onClick={() => refreshMutation.mutate()}
+              onClick={handleRefresh}
               className="px-5 py-2 bg-[#4F46E5] text-white rounded-xl text-sm font-semibold hover:bg-[#4338CA] transition-colors"
             >
               다시 시도

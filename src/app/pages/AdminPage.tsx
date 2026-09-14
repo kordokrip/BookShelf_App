@@ -18,6 +18,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { adminApi, type AdminUser, type AdminUserDetail } from "../../lib/api";
 import { useAuthStore } from "../../stores/authStore";
 import { useNavigate } from "react-router";
+import { useToast } from "../components/ui/Toast";
 
 // ─── 쿼리 키 ─────────────────────────────────────────────────
 const ADMIN_KEYS = {
@@ -334,6 +335,7 @@ function DashboardTab() {
 // ─── 회원 관리 탭 ─────────────────────────────────────────────
 function UsersTab() {
   const qc = useQueryClient();
+  const { showToast } = useToast();
   const [q, setQ]           = useState("");
   const [role, setRole]     = useState("");
   const [sort, setSort]     = useState("created_at");
@@ -356,6 +358,7 @@ function UsersTab() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin"] });
     },
+    onError: () => showToast("변경에 실패했어요. 다시 시도해주세요.", "error"),
   });
 
   const users = data?.data ?? [];
@@ -677,6 +680,7 @@ function SendNotifTab() {
 // ─── 발송 내역 탭 ─────────────────────────────────────────────
 function MessagesHistoryTab() {
   const qc = useQueryClient();
+  const { showToast } = useToast();
   const [offset, setOffset] = useState(0);
   const SIZE = 20;
   const params = { limit: SIZE, offset };
@@ -691,6 +695,7 @@ function MessagesHistoryTab() {
   const deleteMutation = useMutation({
     mutationFn: adminApi.deleteMessage,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "messages"] }),
+    onError: () => showToast("삭제에 실패했어요. 다시 시도해주세요.", "error"),
   });
 
   const messages  = data?.data  ?? [];

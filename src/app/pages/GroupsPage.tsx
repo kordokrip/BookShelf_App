@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Plus, LogIn, Crown, ChevronRight, Search, Clock } from 'lucide-react';
 import { useGroups, useCreateGroup, useJoinGroup } from '../../hooks/useGroups';
 import { useAuthStore } from '../../stores/authStore';
+import { useToast } from '../components/ui/Toast';
 import type { Group } from '../../lib/api';
 
 const GroupDetailView = lazy(() => import('../components/groups/GroupDetailView').then(m => ({ default: m.GroupDetailView })));
@@ -18,6 +19,7 @@ export function GroupsPage() {
   const { data, isLoading } = useGroups();
   const createGroup = useCreateGroup();
   const joinGroup = useJoinGroup();
+  const { showToast } = useToast();
 
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -45,13 +47,17 @@ export function GroupsPage() {
 
   const handleCreate = async () => {
     if (!form.name.trim()) return;
-    await createGroup.mutateAsync({
-      name: form.name.trim(),
-      description: form.description.trim() || undefined,
-      cover_emoji: form.cover_emoji || '📖',
-    });
-    setForm({ name: '', description: '', cover_emoji: '📖' });
-    setShowCreate(false);
+    try {
+      await createGroup.mutateAsync({
+        name: form.name.trim(),
+        description: form.description.trim() || undefined,
+        cover_emoji: form.cover_emoji || '📖',
+      });
+      setForm({ name: '', description: '', cover_emoji: '📖' });
+      setShowCreate(false);
+    } catch {
+      showToast('생성에 실패했어요. 다시 시도해주세요.', 'error');
+    }
   };
 
   const emojiOptions = ['📖', '📚', '🎯', '💡', '🌟', '🔥', '🎨', '🌈', '☕', '🏆', '💬', '🧠'];
@@ -161,7 +167,9 @@ export function GroupsPage() {
                 group={group}
                 userId={user?.id}
                 onClick={() => setSelectedGroupId(group.id)}
-                onJoin={() => joinGroup.mutate(group.id)}
+                onJoin={() => joinGroup.mutate(group.id, {
+                  onError: () => showToast('가입 신청에 실패했어요. 다시 시도해주세요.', 'error'),
+                })}
                 showJoin
               />
             ))}

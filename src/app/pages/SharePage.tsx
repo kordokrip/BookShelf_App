@@ -15,6 +15,7 @@ import {
   useMarkReportRead,
 } from '../../hooks/useGroups';
 import type { SharedReport } from '../../lib/api';
+import { useToast } from '../components/ui/Toast';
 
 type Tab = 'inbox' | 'sent';
 
@@ -218,12 +219,17 @@ function ComposeModal({ onClose }: { onClose: () => void }) {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const shareReport = useShareReport();
+  const { showToast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
-    await shareReport.mutateAsync({ recipient_email: email.trim(), message: message.trim() || undefined });
-    onClose();
+    try {
+      await shareReport.mutateAsync({ recipient_email: email.trim(), message: message.trim() || undefined });
+      onClose();
+    } catch {
+      showToast('전송에 실패했어요. 다시 시도해주세요.', 'error');
+    }
   };
 
   return (

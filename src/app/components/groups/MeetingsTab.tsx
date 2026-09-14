@@ -3,12 +3,14 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import { useGroupMeetings, useCreateMeeting, useDeleteMeeting } from '../../../hooks/useGroups';
 import { MeetingCard } from './MeetingCard';
+import { useToast } from '../ui/Toast';
 import type { GroupMeeting } from '../../../lib/api';
 
 export function MeetingsTab({ groupId, isLeader }: { groupId: string; isLeader: boolean }) {
   const { data: meetings = [], isLoading } = useGroupMeetings(groupId);
   const createMeeting = useCreateMeeting(groupId);
   const deleteMeeting = useDeleteMeeting(groupId);
+  const { showToast } = useToast();
   const [showCreate, setShowCreate] = useState(false);
   const [expandedMeetingId, setExpandedMeetingId] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -97,7 +99,9 @@ export function MeetingsTab({ groupId, isLeader }: { groupId: string; isLeader: 
           isLeader={isLeader}
           expanded={expandedMeetingId === meeting.id}
           onToggle={() => setExpandedMeetingId(expandedMeetingId === meeting.id ? null : meeting.id)}
-          onDelete={() => deleteMeeting.mutate(meeting.id)}
+          onDelete={() => deleteMeeting.mutate(meeting.id, {
+            onError: () => showToast('삭제에 실패했어요. 다시 시도해주세요.', 'error'),
+          })}
         />
       ))}
     </div>

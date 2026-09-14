@@ -13,6 +13,7 @@ import {
   useDeleteCollection,
   useCollectionDetail,
 } from "../../hooks/useCollections";
+import { useToast } from "../components/ui/Toast";
 
 /* ─── 컬렉션 생성 모달 ──────────────────────────────────────── */
 function CreateCollectionDialog({
@@ -26,6 +27,7 @@ function CreateCollectionDialog({
   const [emoji, setEmoji] = useState("📚");
   const [description, setDescription] = useState("");
   const createMutation = useCreateCollection();
+  const { showToast } = useToast();
 
   const handleSubmit = () => {
     if (!name.trim()) return;
@@ -38,6 +40,7 @@ function CreateCollectionDialog({
           setDescription("");
           onClose();
         },
+        onError: () => showToast("생성에 실패했어요. 다시 시도해주세요.", "error"),
       },
     );
   };
@@ -189,6 +192,7 @@ export function CollectionsPage() {
   const navigate = useNavigate();
   const { data: collections = [], isLoading } = useCollections();
   const deleteMutation = useDeleteCollection();
+  const { showToast } = useToast();
   const [showCreate, setShowCreate] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -282,7 +286,9 @@ export function CollectionsPage() {
                   onClick={(e) => {
                     e.stopPropagation();
                     if (confirm(`"${col.name}" 컬렉션을 삭제하시겠습니까?`)) {
-                      deleteMutation.mutate(col.id);
+                      deleteMutation.mutate(col.id, {
+                        onError: () => showToast("삭제에 실패했어요. 다시 시도해주세요.", "error"),
+                      });
                     }
                   }}
                   className="p-2 rounded-lg hover:bg-red-50 transition-colors flex-shrink-0"

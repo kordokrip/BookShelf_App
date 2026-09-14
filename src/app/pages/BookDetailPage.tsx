@@ -168,6 +168,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
   const [showOCR, setShowOCR] = useState(false);
   const [editingNote, setEditingNote] = useState<BookNote | null>(null);
   const [form, setForm] = useState<NoteForm>({ type: "memo", content: "", page: "" });
+  const { showToast } = useToast();
 
   // 빠른 노트 캡처 바 상태
   const [quickText, setQuickText] = useState("");
@@ -208,26 +209,34 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
       content: form.content.trim(),
       page_number: form.page ? parseInt(form.page, 10) : undefined,
     };
-    if (editingNote) {
-      await updateMutation.mutateAsync({ id: editingNote.id, data: payload });
-    } else {
-      await addMutation.mutateAsync(payload);
+    try {
+      if (editingNote) {
+        await updateMutation.mutateAsync({ id: editingNote.id, data: payload });
+      } else {
+        await addMutation.mutateAsync(payload);
+      }
+      closeSheet();
+    } catch {
+      showToast("저장에 실패했어요. 다시 시도해주세요.", "error");
     }
-    closeSheet();
   };
 
   const handleQuickSave = useCallback(async () => {
     const text = quickText.trim();
     if (!text) return;
-    await addMutation.mutateAsync({
-      book_id: bookId,
-      type: quickType,
-      content: text,
-      page_number: currentPage && currentPage > 0 ? currentPage : undefined,
-    });
-    setQuickText("");
-    quickTextareaRef.current?.focus();
-  }, [quickText, quickType, bookId, currentPage, addMutation]);
+    try {
+      await addMutation.mutateAsync({
+        book_id: bookId,
+        type: quickType,
+        content: text,
+        page_number: currentPage && currentPage > 0 ? currentPage : undefined,
+      });
+      setQuickText("");
+      quickTextareaRef.current?.focus();
+    } catch {
+      showToast("저장에 실패했어요. 다시 시도해주세요.", "error");
+    }
+  }, [quickText, quickType, bookId, currentPage, addMutation, showToast]);
 
   // Ctrl+Enter / Cmd+Enter 단축키
   const handleQuickKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -239,7 +248,11 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
 
   const handleDelete = async (id: string) => {
     if (!confirm("이 노트를 삭제할까요?")) return;
-    await deleteMutation.mutateAsync(id);
+    try {
+      await deleteMutation.mutateAsync(id);
+    } catch {
+      showToast("삭제에 실패했어요. 다시 시도해주세요.", "error");
+    }
   };
 
   const isPending = addMutation.isPending || updateMutation.isPending;
@@ -587,19 +600,31 @@ function BookInfoTab({ book }: { book: UIBook }) {
   };
 
   const handleRate = async (rating: number) => {
-    await updateBook.mutateAsync({ id: book.id, data: { rating } });
-    showToast(`별점 ${rating}점 저장됐어요 ⭐`, "success");
+    try {
+      await updateBook.mutateAsync({ id: book.id, data: { rating } });
+      showToast(`별점 ${rating}점 저장됐어요 ⭐`, "success");
+    } catch {
+      showToast("저장에 실패했어요. 다시 시도해주세요.", "error");
+    }
   };
 
   const handleGoalDateSave = async () => {
-    await updateBook.mutateAsync({ id: book.id, data: { goalDate: goalDateVal || undefined } });
-    showToast("목표 날짜가 저장됐어요 📅", "success");
+    try {
+      await updateBook.mutateAsync({ id: book.id, data: { goalDate: goalDateVal || undefined } });
+      showToast("목표 날짜가 저장됐어요 📅", "success");
+    } catch {
+      showToast("저장에 실패했어요. 다시 시도해주세요.", "error");
+    }
   };
 
   const handleDeleteSession = async (sessionId: string) => {
     if (!confirm("이 독서 기록을 삭제할까요? 진행 페이지도 되돌아갑니다.")) return;
-    await deleteSession.mutateAsync(sessionId);
-    showToast("독서 기록이 삭제됐어요", "success");
+    try {
+      await deleteSession.mutateAsync(sessionId);
+      showToast("독서 기록이 삭제됐어요", "success");
+    } catch {
+      showToast("삭제에 실패했어요. 다시 시도해주세요.", "error");
+    }
   };
 
   return (
@@ -818,20 +843,28 @@ export function BookDetailPage() {
 
   const confirmDelete = async () => {
     if (!book) return;
-    await deleteBook.mutateAsync(book.id);
-    setShowDeleteConfirm(false);
-    back();
-    showToast('책이 삭제됐어요', 'success');
+    try {
+      await deleteBook.mutateAsync(book.id);
+      setShowDeleteConfirm(false);
+      back();
+      showToast('책이 삭제됐어요', 'success');
+    } catch {
+      showToast('삭제에 실패했어요. 다시 시도해주세요.', 'error');
+    }
   };
 
   const handleChangeStatus = async (status: 'done' | 'reading' | 'wish') => {
     if (!book || book.status === status) return;
-    await updateBook.mutateAsync({ id: book.id, data: { status } });
-    if (status === 'done') {
-      showToast(`🎉 "${book.title}" 완독을 축하해요!`, 'success');
-    } else {
-      const label = status === 'reading' ? '읽는 중' : '위시리스트';
-      showToast(`"${book.title}" → ${label}로 변경됐어요`, 'success');
+    try {
+      await updateBook.mutateAsync({ id: book.id, data: { status } });
+      if (status === 'done') {
+        showToast(`🎉 "${book.title}" 완독을 축하해요!`, 'success');
+      } else {
+        const label = status === 'reading' ? '읽는 중' : '위시리스트';
+        showToast(`"${book.title}" → ${label}로 변경됐어요`, 'success');
+      }
+    } catch {
+      showToast('변경에 실패했어요. 다시 시도해주세요.', 'error');
     }
   };
 

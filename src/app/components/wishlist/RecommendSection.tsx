@@ -2,10 +2,18 @@ import { RefreshCw, Sparkles, BookOpen, ExternalLink } from "lucide-react";
 import { Link } from "react-router";
 import { useLifeBooks, useRefreshLifeBooks } from "../../../hooks/useAI";
 import { ApiError } from "../../../lib/api";
+import { useToast } from "../ui/Toast";
 
 export function RecommendSection({ wishTitleSet: _wishTitleSet }: { wishTitleSet: Set<string> }) {
   const { data, isLoading, isError, error } = useLifeBooks();
   const refresh = useRefreshLifeBooks();
+  const { showToast } = useToast();
+
+  const handleRefresh = () => {
+    refresh.mutate(undefined, {
+      onError: () => showToast("새로고침에 실패했어요. 다시 시도해주세요.", "error"),
+    });
+  };
 
   const is400 = isError && error instanceof ApiError && error.status === 400;
   const books = data?.data ?? [];
@@ -33,7 +41,7 @@ export function RecommendSection({ wishTitleSet: _wishTitleSet }: { wishTitleSet
         </div>
         {books.length > 0 && (
           <button
-            onClick={() => refresh.mutate()}
+            onClick={handleRefresh}
             disabled={refresh.isPending || isLoading}
             className="flex items-center gap-1.5 disabled:opacity-50 rounded-full px-3 py-1.5 text-white"
             style={{
@@ -112,7 +120,7 @@ export function RecommendSection({ wishTitleSet: _wishTitleSet }: { wishTitleSet
             새로운 추천 버튼을 눌러 다시 시도해보세요
           </p>
           <button
-            onClick={() => refresh.mutate()}
+            onClick={handleRefresh}
             className="mt-3 rounded-full px-4 py-1.5 text-white"
             style={{ fontSize: 12, fontWeight: 700, background: "linear-gradient(135deg, #4F46E5, #7C3AED)" }}
           >

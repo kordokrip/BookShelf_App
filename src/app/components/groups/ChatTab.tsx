@@ -3,6 +3,7 @@ import { Send, Loader2, Trash2, AlertCircle, RotateCcw } from 'lucide-react';
 import { useGroupMessages, useSendMessage, useDeleteMessage, useMarkGroupRead, useUpdateReadReceipt } from '../../../hooks/useGroups';
 import { useGroupChat } from '../../../hooks/useGroupChat';
 import { useAuthStore } from '../../../stores/authStore';
+import { useToast } from '../ui/Toast';
 import type { GroupMember, GroupMessage } from '../../../lib/api';
 
 type PendingMsg = { tempId: string; content: string; status: 'sending' | 'failed' };
@@ -30,6 +31,7 @@ export function ChatTab({
   const deleteMessage = useDeleteMessage(groupId);
   const markRead = useMarkGroupRead(groupId);
   const updateReadReceipt = useUpdateReadReceipt(groupId);
+  const { showToast } = useToast();
   const [text, setText] = useState('');
   const [pendingMsgs, setPendingMsgs] = useState<PendingMsg[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -221,7 +223,9 @@ export function ChatTab({
                     )}
                     {isLeader && !msg.deleted_at && (
                       <button
-                        onClick={() => { if (confirm('이 메시지를 삭제하시겠습니까?')) deleteMessage.mutate(msg.id); }}
+                        onClick={() => { if (confirm('이 메시지를 삭제하시겠습니까?')) deleteMessage.mutate(msg.id, {
+                          onError: () => showToast('삭제에 실패했어요. 다시 시도해주세요.', 'error'),
+                        }); }}
                         className="text-[10px] text-red-400 hover:text-red-500 mt-0.5 ml-1 opacity-0 group-hover/msg:opacity-100 transition-opacity"
                         aria-label="메시지 삭제"
                       >

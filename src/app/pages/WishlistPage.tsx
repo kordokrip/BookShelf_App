@@ -35,6 +35,7 @@ export function WishlistPage() {
     const book = books.find((b) => b.id === id);
     deleteBook.mutate(id, {
       onSuccess: () => showToast(`"${book?.title}" 삭제됨`, "error"),
+      onError: () => showToast("삭제에 실패했어요. 다시 시도해주세요.", "error"),
     });
   }
 
@@ -42,12 +43,18 @@ export function WishlistPage() {
     const book = books.find((b) => b.id === id);
     updateBook.mutate(
       { id, data: { status: "reading" } },
-      { onSuccess: () => showToast(`"${book?.title}" 읽기를 시작했어요! 📖`, "success") },
+      {
+        onSuccess: () => showToast(`"${book?.title}" 읽기를 시작했어요! 📖`, "success"),
+        onError: () => showToast("실패했어요. 다시 시도해주세요.", "error"),
+      },
     );
   }
 
   function handlePriorityChange(id: string, priority: number) {
-    updateBook.mutate({ id, data: { priority } });
+    updateBook.mutate(
+      { id, data: { priority } },
+      { onError: () => showToast("변경에 실패했어요. 다시 시도해주세요.", "error") },
+    );
   }
 
   return (
