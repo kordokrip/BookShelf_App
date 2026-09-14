@@ -261,6 +261,10 @@ booksRouter.post('/', authMiddleware, zValidator('json', createBookSchema), asyn
 
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
+  // DB-103: 등록 시점에 이미 status가 'done'이면 PUT과 동일하게 finished_date 자동 설정
+  // (명시적으로 전달된 경우는 그 값을 우선함) — 그렇지 않으면 완독 등록 도서가
+  // 라이브러리의 기본(날짜별) 정렬 뷰에서 finishedDate 누락으로 통째로 누락됨.
+  const finishedDate = body.finished_date ?? (body.status === 'done' ? now.slice(0, 10) : null);
 
   await c.env.DB.prepare(
     `INSERT INTO books (
@@ -275,7 +279,7 @@ booksRouter.post('/', authMiddleware, zValidator('json', createBookSchema), asyn
       id, userId, body.title, body.author,
       body.publisher ?? null, body.isbn ?? null, body.genre,
       body.cover_emoji, body.cover_color, body.cover_image ?? null,
-      body.status, body.rating ?? null, body.finished_date ?? null,
+      body.status, body.rating ?? null, finishedDate,
       body.note ?? null, body.total_pages ?? null, body.current_page,
       body.goal_date ?? null, body.daily_goal ?? null,
       body.priority, now.slice(0, 10), now, now,
