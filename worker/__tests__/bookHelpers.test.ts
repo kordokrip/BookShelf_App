@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calcIsOverdue } from '../lib/bookHelpers';
+import { calcIsOverdue, deriveFinishedDate } from '../lib/bookHelpers';
 import { calcReadingStreak } from '../../src/app/components/stats/StatsComponents';
 import type { UISession } from '../../src/types/book';
 
@@ -37,6 +37,35 @@ describe('calcIsOverdue', () => {
     // 미래 날짜는 overdue 아님
     const result = calcIsOverdue('2099-12-31', 'reading');
     expect(result).toBe(false);
+  });
+});
+
+// ── deriveFinishedDate ────────────────────────────────────────
+// Bug #6: POST /api/books로 status='done'을 직접 등록하면서 완독일을 비워두면
+// finished_date가 null로 저장되어 LibraryPage 기본 뷰에서 통째로 사라졌던 문제.
+
+describe('deriveFinishedDate', () => {
+  const TODAY = '2026-09-16';
+
+  it('status가 done이고 완독일 미입력이면 오늘 날짜를 사용한다', () => {
+    expect(deriveFinishedDate('done', undefined, TODAY)).toBe(TODAY);
+  });
+
+  it('완독일을 직접 입력했다면 그 값을 그대로 사용한다 (과거 날짜 포함)', () => {
+    expect(deriveFinishedDate('done', '2023-05-10', TODAY)).toBe('2023-05-10');
+  });
+
+  it('status가 reading이면 완독일 미입력 시 null', () => {
+    expect(deriveFinishedDate('reading', undefined, TODAY)).toBeNull();
+  });
+
+  it('status가 wish이면 완독일 미입력 시 null', () => {
+    expect(deriveFinishedDate('wish', undefined, TODAY)).toBeNull();
+  });
+
+  it('status가 done이 아니어도 완독일을 명시했다면 그 값을 존중한다', () => {
+    // updateBookSchema는 createBookSchema.partial()이라 이 조합도 스키마상 가능
+    expect(deriveFinishedDate('reading', '2026-01-01', TODAY)).toBe('2026-01-01');
   });
 });
 

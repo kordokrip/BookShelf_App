@@ -24,14 +24,38 @@ function getMonthLabel(dateStr: string) {
   return `${y}년 ${parseInt(m)}월`;
 }
 
-function groupByMonth(books: UIBook[]) {
+export const UNKNOWN_DATE_LABEL = "날짜 미상";
+
+/**
+ * "Desktop" 다단 그리드 블록의 className을 결정한다.
+ * list 모드에서는 아래 "Mobile" 단일 컬럼 블록이 모든 화면 폭에서 이 역할을
+ * 대신하므로 이 블록은 항상 숨김 처리해야 한다 — 그렇지 않으면 데스크톱 폭에서
+ * 같은 책이 두 번 렌더링된다(Bug: LibraryPage 데스크톱 중복 렌더링).
+ */
+export function getDesktopBlockClassName(viewMode: "grid" | "list" | "timeline" | "bookshelf"): string {
+  return `${viewMode === "list" ? "hidden" : "hidden md:block"} pb-24`;
+}
+
+/** 위 데스크톱 블록과 상호 배타적으로 md 이상 화면 노출을 결정하는 짝 함수. */
+export function getMobileBlockClassName(viewMode: "grid" | "list" | "timeline" | "bookshelf"): string {
+  return `${viewMode === "grid" ? "md:hidden" : ""} pb-24`;
+}
+
+export function groupByMonth(books: UIBook[]) {
   const map = new Map<string, UIBook[]>();
+  const undated: UIBook[] = [];
   books.forEach((b) => {
-    if (!b.finishedDate) return;
+    if (!b.finishedDate) {
+      undated.push(b);
+      return;
+    }
     const key = getMonthLabel(b.finishedDate);
     if (!map.has(key)) map.set(key, []);
     map.get(key)!.push(b);
   });
+  // 완독일을 기록하지 않은 책도 숨기지 않고 별도 그룹으로 마지막에 노출
+  // (실제 완독 날짜를 모른다고 해서 데이터를 지어내지 않음 — Bug #6)
+  if (undated.length > 0) map.set(UNKNOWN_DATE_LABEL, undated);
   return map;
 }
 
@@ -438,7 +462,7 @@ export function LibraryPage() {
               {/* Desktop/Tablet: 2-col(md) → 3-col(lg) grid — list 모드에서는 아래 단일 컬럼 블록이
                   이 역할을 대신하므로 숨김(그렇지 않으면 데스크톱에서 동일 책이 두 번 렌더링됨) */}
               {/* pb-24: FAB가 리스트 마지막 카드와 겹치지 않도록 확실한 여유 공간 확보 */}
-              <div className={`${viewMode === "list" ? "hidden" : "hidden md:block"} pb-24`}>
+              <div className={getDesktopBlockClassName(viewMode)}>
                 {sortBy === "date" ? (
                   monthKeys.map((key) => (
                     <div key={key}>
@@ -469,7 +493,7 @@ export function LibraryPage() {
 
               {/* Mobile: single column */}
               {/* pb-24: FAB가 리스트 마지막 카드와 겹치지 않도록 확실한 여유 공간 확보 */}
-              <div className={`${viewMode === "grid" ? "md:hidden" : ""} pb-24`}>
+              <div className={getMobileBlockClassName(viewMode)}>
                 {sortBy === "date" ? (
                   <>
                     {visibleKeys.map((key) => (

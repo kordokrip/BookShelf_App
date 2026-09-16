@@ -22,6 +22,7 @@ import { HTTPException } from 'hono/http-exception';
 import type { Bindings, DbBook } from '../types';
 import { authMiddleware } from '../auth';
 import { logActivity } from './admin';
+import { deriveFinishedDate } from '../lib/bookHelpers';
 
 export const booksRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -264,7 +265,7 @@ booksRouter.post('/', authMiddleware, zValidator('json', createBookSchema), asyn
   // DB-103: 등록 시점에 이미 status가 'done'이면 PUT과 동일하게 finished_date 자동 설정
   // (명시적으로 전달된 경우는 그 값을 우선함) — 그렇지 않으면 완독 등록 도서가
   // 라이브러리의 기본(날짜별) 정렬 뷰에서 finishedDate 누락으로 통째로 누락됨.
-  const finishedDate = body.finished_date ?? (body.status === 'done' ? now.slice(0, 10) : null);
+  const finishedDate = deriveFinishedDate(body.status, body.finished_date, now.slice(0, 10));
 
   await c.env.DB.prepare(
     `INSERT INTO books (
