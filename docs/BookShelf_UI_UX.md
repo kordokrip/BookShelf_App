@@ -1647,7 +1647,7 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 | **MonthlyBarChart** | `stats/StatsComponents.tsx` | 월별 바 차트 (recharts), 클릭→상세 카드(AnimatePresence) |
 | **GenreDonutChart** | `stats/StatsComponents.tsx` | 장르 파이 차트 (recharts) |
 | **ReadingHeatmap** | `stats/StatsComponents.tsx` | 독서 히트맵 |
-| **BookStack** ★ 리뉴얼 Phase 2 (`book_stack`) | `stats/BookStack.tsx` | 완독 책을 페이지 수 비례 두께로 쌓은 시각화. 아래=오래된 책, 위=최근 완독(완독일 미상은 맨 아래). 두께 14쪽당 1px(12~32px), 총 높이는 쪽당 0.06mm+표지 1mm로 **추정**해 "약 n cm" 표기(`src/lib/bookStack.ts`). 책등 색은 사용자가 고른 표지 색, 기본값이면 id 기반 팔레트(등록 흐름이 대부분 기본값이라 단색 방지). 폭 78~96%·좌우 ±8px 어긋남을 id로 고정. 최대 40권 표시 + "이전 n권" 요약(높이에는 포함), 쌓기 영역 최대 폭 360px. 배치 화면(StatsPage·YearlyReviewPage) 카드가 다크 모드에서도 흰색이라 밝은 톤 고정. `useReducedMotion` 시 낙하 애니메이션 생략. 책등은 전역 버튼 `min-height: 44px`를 인라인 `minHeight`로 덮어써 두께를 표현 — **얇은 책등(12~23px)은 WCAG 2.5.8 권장 24px 미만**(절충 사항) |
+| **BookStack** ★ 리뉴얼 Phase 2 (`book_stack`) | `stats/BookStack.tsx` | 완독 책을 페이지 수 비례 두께로 쌓은 시각화. 아래=오래된 책, 위=최근 완독(완독일 미상은 맨 아래). 두께 14쪽당 1px(12~32px), 총 높이는 쪽당 0.06mm+표지 1mm로 **추정**해 "약 n cm" 표기(`src/lib/bookStack.ts`). 책등 색은 사용자가 고른 표지 색, 기본값이면 id 기반 팔레트(등록 흐름이 대부분 기본값이라 단색 방지). 폭 78~96%·좌우 ±8px 어긋남을 id로 고정. 최대 40권 표시 + "이전 n권" 요약(높이에는 포함), 쌓기 영역 최대 폭 360px. 배치 화면(StatsPage·YearlyReviewPage) 카드가 다크 모드에서도 흰색이라 밝은 톤 고정. `useReducedMotion` 시 낙하 애니메이션 생략. 책등 제목은 흰 글씨 + `bg-black/40` 배경(모든 책등 색에서 대비 5.07:1 이상). 책등은 전역 버튼 `min-height: 44px`를 인라인 `minHeight`로 덮어써 두께를 표현 — **얇은 책등(12~23px)은 WCAG 2.5.8 권장 24px 미만**(절충 사항) |
 
 ### 10.6b Notes 컴포넌트 (`components/notes/`) ★ 리뉴얼 Phase 1 (플래그 `notes_v2`)
 
