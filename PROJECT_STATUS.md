@@ -1,9 +1,9 @@
 # BookShelf App — 현재 상태 스냅샷
 
-> **최종 업데이트:** 2026-08-15 (전체 문서 정합화 + PWA/접근성/진입점 개선 세션)
+> **최종 업데이트:** 2026-09-26 (2026-09-14~16 QA 버그 수정 세션 사후 정리)
 > **Git 브랜치:** `main` (kordokrip/BookShelf_App)
-> **E2E 테스트:** `bash scripts/e2e-api-test.sh` → **49/49 PASS** ✅
-> **상세 세션 리포트:** `docs/sessions/2026-08-15-public-pages-a11y-pwa.md`
+> **E2E 테스트:** `bash scripts/e2e-api-test.sh` → **전체 PASS** ✅ (2026-09-26 확인, 테스트 개수는 `grep -n '^  TOTAL=' scripts/e2e-api-test.sh`로 확인)
+> **상세 세션 리포트:** `docs/sessions/2026-09-14-qa-bugfix-ai-library.md`
 
 ---
 
@@ -207,7 +207,7 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 | 독서 세션 + 타이머 | ✅ 완료 |
 | 노트 CRUD + FTS5 검색 | ✅ 완료 |
 | 통계 + 연간결산 + 성취배지 | ✅ 완료 |
-| AI 요약·추천·OCR·인생책 추천 | ✅ 완료 |
+| AI 요약·추천·OCR·인생책 추천 | ✅ 완료 — 2026-09 폐기 모델 교체로 복구(`@cf/meta/llama-3.1-8b-instruct-fast`). 폴백 사용 여부는 e2e TEST 23의 "(fallback)" 표시로 확인 |
 | 독서 모임 + 실시간 채팅(DO WebSocket) + 일정 | ✅ 완료 |
 | 통계 공유 보고서 | ✅ 완료 |
 | 관리자 대시보드 | ✅ 완료 |
@@ -217,7 +217,7 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 | "책 등록" 진입점 통일 | ✅ 완료(9개 진입점 → FAB 중심 단일화, 2026-08-15) |
 
 > 상세 변경 이력: `docs/CHANGELOG.md`
-> 마지막 세션 상세 리포트: `docs/sessions/2026-08-15-public-pages-a11y-pwa.md`
+> 마지막 세션 상세 리포트: `docs/sessions/2026-09-14-qa-bugfix-ai-library.md`
 > 아키텍처 결정 기록: `docs/adr/README.md`
 > API 스펙: `docs/TRACE_MAP.md`
 > QA 절차: `docs/QA_가이드.md`

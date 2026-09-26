@@ -4,6 +4,19 @@
 
 ---
 
+## 31차 (2026-09-14 ~ 09-16) — QA 전면 점검 버그 수정: AI 기능 복구·보안·서재 표시
+
+상세 경위: `docs/sessions/2026-09-14-qa-bugfix-ai-library.md` (원 세션 로그 유실로 2026-09-26 커밋 이력 기반 재구성)
+
+- AI: 폐기된 `llama-3.1-8b-instruct` → `-fast` 교체로 요약·추천·인생책 복구, 비문자열 응답 TypeError 수정(`extractAiText()`)
+- 테스트: e2e가 AI 요약 실패를 자동 PASS로 가리던 마스킹 제거, 추천 폴백 여부 표시
+- 보안: `GET /api/users/:id/stats` 인증 누락(IDOR) 차단, `/lifebooks` 응답 출처 정정
+- UX: mutation 실패 에러 토스트 37곳 적용
+- 서재: 완독으로 직접 등록한 책 누락, 데스크톱 list 뷰 중복 렌더링, 완독일 미상 책 "날짜 미상" 그룹 노출
+- 데이터: `finished_date` 없는 완독 레코드 3건 중 QA 잔여 2건 삭제, 실사용자 1건은 NULL 유지
+
+---
+
 ## 30차 (2026-08-15) — 전체 문서 정합화 + PWA/접근성/진입점 개선
 
 상세 경위: `docs/sessions/2026-08-15-public-pages-a11y-pwa.md`
