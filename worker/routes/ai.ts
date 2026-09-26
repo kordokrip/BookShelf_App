@@ -255,7 +255,7 @@ function buildCuratedRecommendations(
 }
 
 // ─── POST /api/ai/summarize — 책 설명 한국어 요약 ────────────
-aiRouter.post('/summarize', rateLimit({ limit: 5, windowMs: 60_000, keyPrefix: 'ai' }), authMiddleware, async (c) => {
+aiRouter.post('/summarize', rateLimit({ limit: 5, windowMs: 60_000, keyPrefix: 'ai_sum' }), authMiddleware, async (c) => {
   const { description, title, author } = await c.req.json() as {
     description?: string;
     title: string;
@@ -311,7 +311,7 @@ aiRouter.post('/summarize', rateLimit({ limit: 5, windowMs: 60_000, keyPrefix: '
 });
 
 // ─── GET /api/ai/recommend — 사용자 독서 패턴 기반 추천 ──────
-aiRouter.get('/recommend', rateLimit({ limit: 10, windowMs: 60_000, keyPrefix: 'ai' }), authMiddleware, async (c) => {
+aiRouter.get('/recommend', rateLimit({ limit: 10, windowMs: 60_000, keyPrefix: 'ai_rec' }), authMiddleware, async (c) => {
   const userId = c.get('userId');
   const requestedLimit = parseInt(c.req.query('limit') ?? '5', 10);
   const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 10) : 5;
@@ -674,7 +674,7 @@ aiRouter.get(
 
 // ─── POST /ocr ────────────────────────────────────────────────
 // 이미지에서 텍스트를 추출해 독서 노트로 저장할 수 있도록 반환
-aiRouter.post('/ocr', rateLimit({ limit: 3, windowMs: 60_000, keyPrefix: 'ai' }), authMiddleware, async (c) => {
+aiRouter.post('/ocr', rateLimit({ limit: 3, windowMs: 60_000, keyPrefix: 'ai_ocr' }), authMiddleware, async (c) => {
   try {
     let formData: FormData;
     try {
