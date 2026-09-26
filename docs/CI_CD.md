@@ -67,6 +67,12 @@ PWA 정적 자산(아이콘, iOS startup 이미지, `sw.js`/workbox 프리캐시
 **스테이징 사용 절차:** `git push origin main:staging`(또는 작업 브랜치를 `staging`에 push) → CI 배포 → `bash scripts/e2e-api-test.sh --url https://bookshelf-api-staging.kordokrip.workers.dev`. 스테이징 worker 시크릿은 프로덕션과 별도이며 이름은 `npx wrangler secret list --env staging`으로 확인한다.
 
 > 최초 부트스트랩 예외: 2026-09-27 스테이징 D1을 만든 직후 0001~0014 마이그레이션을 로컬에서 `--remote --env staging`으로 1회 직접 적용했다(빈 DB 초기화). 이후 스테이징 D1 변경도 CI 경로로만 한다.
+>
+> **알려진 스키마 드리프트 — `users.role`:** 프로덕션의 `users.role` 컬럼은 마이그레이션 파일에 기록되지 않은 경로로 추가됐다(`0004_user_role.sql`은 no-op이고, 이를 고치는 마이그레이션은 프로덕션에서 `duplicate column`으로 실패해 `1592da8`에서 되돌림). 그래서 **마이그레이션만으로 새로 만든 D1(로컬·스테이징)에는 `role`이 없어** `/api/flags`와 프로필 수정 등이 500을 낸다. 새 D1을 만들면 마이그레이션 적용 직후 다음을 1회 실행한다(스테이징은 2026-09-27 적용 완료):
+>
+> ```bash
+> npx wrangler d1 execute <db-name> --local|--remote [--env staging] --command "ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'"
+> ```
 
 ---
 
