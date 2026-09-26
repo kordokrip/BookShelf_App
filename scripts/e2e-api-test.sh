@@ -480,9 +480,9 @@ else
   fail_test $T "$NAME" $ELAPSED "$BODY" "note.id 없거나 type != 'memo' (got: '${NOTE_TYPE}')"
 fi
 
-T=16; NAME="GET /api/notes?bookId=... (책별 노트 조회)"; START=$(now_ms)
+T=16; NAME="GET /api/notes?book_id=... (책별 노트 조회)"; START=$(now_ms)
 TMPF=$(mktemp /tmp/e2e_XXXXXX)
-curl -s -o "$TMPF" "${BASE_URL}/api/notes?bookId=${BOOK_ID_DONE}" \
+curl -s -o "$TMPF" "${BASE_URL}/api/notes?book_id=${BOOK_ID_DONE}" \
   -H "Authorization: Bearer ${TOKEN}"
 BODY=$(cat "$TMPF"); rm -f "$TMPF"
 ELAPSED=$(( $(now_ms) - START ))
