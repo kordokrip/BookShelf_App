@@ -19,8 +19,11 @@ export default defineConfig({
         skipWaiting: false,
         clientsClaim: true,
         cleanupOutdatedCaches: true,
-        // PWA precache 최적화: HTML·아이콘·폰트만 precache, JS/CSS는 runtime caching으로
-        globPatterns: ['**/*.{html,ico,png,svg,webp,woff,woff2}'],
+        // JS/CSS도 precache해야 한다: 탐색 요청은 precache된 index.html(옛 버전)로 응답되는데,
+        // 그 HTML이 참조하는 진입 JS는 첫 방문 시 SW 제어 전에 로드돼 런타임 캐시에 남지 않는다.
+        // JS/CSS를 빼면 배포 후 옛 index.html + 사라진 옛 해시 JS(404) 조합으로 앱이 빈 화면에 멈추고
+        // 업데이트 안내(UpdatePrompt)조차 뜨지 않는다 (2026-09-27 스테이징 재현, ADR-001 참고).
+        globPatterns: ['**/*.{html,js,css,ico,png,svg,webp,woff,woff2}'],
         // Push 알림 핸들러 주입
         importScripts: ['/sw-push.js'],
         // OAuth 콜백은 303 리다이렉트 응답이므로 SW가 절대 인터셉트하면 안 됨

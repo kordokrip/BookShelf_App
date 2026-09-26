@@ -210,3 +210,5 @@ npm view wrangler@<올리려는 버전> peerDependencies
 2026-09-27 스테이징에서 Phase 2를 확인하던 중, 이전 배포의 `index.html`을 가진 브라우저가 이미 사라진 `/assets/index-<옛 해시>.css`·`.js`를 요청하자 worker의 SPA 폴백(`app.get('*')`)이 이를 `index.html`(200, `text/html`)로 응답했다. 브라우저는 MIME 오류로 스크립트를 실행하지 못해 "로딩 중..."에서 멈췄다. 게다가 `vite.config.ts`의 JS 청크 런타임 캐시는 "옛 해시는 404"를 전제로 `cacheableResponse: 200`만 저장하므로, HTML이 JS 청크로 캐시될 수 있는 구조였다.
 
 **교훈**: SPA 폴백은 클라이언트 라우트에만 적용하고 파일 요청(`/assets/*`, 확장자가 있는 경로)은 404를 그대로 돌려준다(`worker/lib/spaFallback.ts`). 배포 후 확인은 `curl -s -o /dev/null -w "%{http_code} %{content_type}" <url>/assets/index-OLD.js`가 404인지로 한다.
+
+같은 조사에서 서비스 워커 precache가 JS/CSS를 빠뜨려, 404가 올바르게 나와도 구 `index.html` + 사라진 진입 JS 조합으로 앱이 부팅하지 못한다는 것도 확인했다. `vite.config.ts` `globPatterns`에 `js,css`를 추가해 해결했다(ADR-001 보완 절).
