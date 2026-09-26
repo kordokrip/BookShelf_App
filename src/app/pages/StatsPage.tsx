@@ -12,6 +12,8 @@ import { SummaryCard, MonthlyBarChart, GenreDonutChart, ReadingHeatmap, StreakCa
 import { StatCardSkeleton, ChartSkeleton } from "../components/ui/skeleton";
 import { useStats } from "../../hooks/useStats";
 import { useBooks } from "../../hooks/useBooks";
+import { useFlag } from "../../hooks/useFeatureFlags";
+import { BookStack } from "../components/stats/BookStack";
 import type { UISession } from "../../types/book";
 import { GENRE_CONFIG } from "../../types/book";
 import { useAuthStore } from "../../stores/authStore";
@@ -211,6 +213,7 @@ function AchievementBadges({ totalDone, totalPages }: { totalDone: number; total
 export function StatsPage() {
   const { data: stats, isLoading, isError } = useStats();
   const { data: doneBooks = [] } = useBooks({ status: "done" });
+  const bookStackEnabled = useFlag("book_stack");
   const user = useAuthStore((s) => s.user);
   const readingGoal = user?.reading_goal;
 
@@ -416,6 +419,13 @@ export function StatsPage() {
 
           {/* FEAT-101: 성취 배지 */}
           <AchievementBadges totalDone={totalDone} totalPages={totalPages} />
+
+          {/* 지금까지 쌓은 책 (book_stack 플래그) */}
+          {bookStackEnabled && doneBooks.length > 0 && (
+            <div className="px-4 mb-3">
+              <BookStack books={doneBooks} title="지금까지 쌓은 책" />
+            </div>
+          )}
 
           {/* Charts */}
           <div className="px-4">
