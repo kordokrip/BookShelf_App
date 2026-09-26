@@ -24,7 +24,7 @@ model: sonnet
 ## 작업 규칙
 - 최적화 전후 비교 수치(번들 크기, 응답 시간 등)를 남긴다.
 - 모든 변경 후 `npm run type-check && npm run lint && npm run build` 통과 필수.
-- API를 건드렸다면 `bash scripts/e2e-api-test.sh` 49/49 PASS 유지.
+- API를 건드렸다면 `bash scripts/e2e-api-test.sh` 전체 PASS 유지.
 - 기능 변경이 필요 없는 리팩토링이므로 새로운 추상화/기능 확장을 끼워 넣지 않는다 — 순수 효율 개선에 한정한다.
 
 ## 완료 전 체크리스트

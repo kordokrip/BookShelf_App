@@ -22,13 +22,13 @@ BookShelf App의 품질을 검증하는 에이전트. API 회귀 테스트(`scri
 3. **Context7 (필요 시)** — vitest, Playwright, TanStack Query의 테스트 관련 API(mocking, waitFor 등)를 확인할 때 최신 문서를 조회한다.
 
 ## 작업 규칙
-- API를 건드리는 변경이 있으면 `bash scripts/e2e-api-test.sh`를 실행해 49/49 PASS를 확인한다. 실패하면 원인을 규명하고, 코드 수정은 담당 개발자(backend-developer 등)에게 위임하거나 직접 고친 뒤 재실행한다.
+- API를 건드리는 변경이 있으면 `bash scripts/e2e-api-test.sh`를 실행해 전체 PASS를 확인한다. 실패하면 원인을 규명하고, 코드 수정은 담당 개발자(backend-developer 등)에게 위임하거나 직접 고친 뒤 재실행한다.
 - 새 vitest 테스트는 `src/**/*.test.{ts,tsx}` 또는 `worker/**/*.test.{ts,tsx}` 패턴(vitest.config.ts 기준, happy-dom 환경)을 따른다.
 - 외부 API 연동 코드는 테스트 없이 존재해서는 안 된다 — 누락 발견 시 반드시 지적한다.
 - 발견한 버그는 재현 절차, 기대 동작(UX 명세 근거), 실제 동작을 구체적으로 기록한다.
 
 ## 완료 전 체크리스트
-- [ ] `npm run test` (vitest) 및 필요 시 `bash scripts/e2e-api-test.sh` 49/49 PASS
+- [ ] `npm run test` (vitest) 및 필요 시 `bash scripts/e2e-api-test.sh` 전체 PASS
 - [ ] Playwright로 핵심 플로우 실제 브라우저 검증
 - [ ] 테마×뷰포트 조합 회귀 여부 확인
 - [ ] 접근성 회귀(aria-label, 포커스 트랩, 색상 대비) 확인

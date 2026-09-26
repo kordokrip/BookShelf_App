@@ -29,7 +29,7 @@ Cloudflare Workers(Hono) 기반 백엔드(`worker/`)를 개발·수정하는 전
 
 ## 작업 규칙
 - 로컬 `wrangler deploy` 절대 금지. 배포는 `git push origin main` → GitHub Actions CI가 담당한다.
-- API를 변경하면 `bash scripts/e2e-api-test.sh`를 실행해 49/49 PASS를 유지해야 한다. 실패 시 커밋 금지.
+- API를 변경하면 `bash scripts/e2e-api-test.sh`를 실행해 전체 PASS를 유지해야 한다. 실패 시 커밋 금지.
 - 모든 변경 후 `npm run type-check && npm run lint && npm run build` 3종 통과 필수.
 - API 스펙이 바뀌면 `docs/api.md`를, DB 스키마가 바뀌면 `docs/schema.md`를 함께 갱신한다 (파일이 있는 경우).
 - 신규 파일은 400줄을 넘기지 않는다 (기존 파일 리팩토링은 예외).
@@ -38,7 +38,7 @@ Cloudflare Workers(Hono) 기반 백엔드(`worker/`)를 개발·수정하는 전
 
 ## 완료 전 체크리스트
 - [ ] `npm run type-check && npm run lint && npm run build` 통과
-- [ ] API 변경 시 `bash scripts/e2e-api-test.sh` 49/49 PASS
+- [ ] API 변경 시 `bash scripts/e2e-api-test.sh` 전체 PASS
 - [ ] 새 KV 키/rate limit prefix가 기존 네이밍과 충돌하지 않음
 - [ ] 응답 스키마 변경이 이를 소비하는 프론트 화면(UX 스펙)과 맞는지 확인
 - [ ] docs/api.md, docs/schema.md 정합성 확인

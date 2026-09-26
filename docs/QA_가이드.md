@@ -9,7 +9,7 @@
 - `npm run type-check` ✅ 통과
 - `npm run lint` ✅ 통과
 - `npm run build` ✅ 통과
-- `bash scripts/e2e-api-test.sh` ✅ 49/49 PASS
+- `bash scripts/e2e-api-test.sh` ✅ 전체 PASS
 - `bash scripts/admin-api-test.sh` ⚠️ 기본 관리자 자격증명 없으면 로그인 단계 실패 가능
   - 개선: `ADMIN_TOKEN` 환경변수 직접 주입 실행 지원
 
@@ -289,10 +289,10 @@ DevTools 설정:
 ## SECTION J — E2E API 테스트
 
 ```bash
-# 자동화 E2E 테스트 (49개)
+# 자동화 E2E 테스트 (개수: grep -n '^  TOTAL=' scripts/e2e-api-test.sh)
 bash scripts/e2e-api-test.sh
 
-# 예상 결과: 49/49 PASS
+# 예상 결과: 전체 PASS (마지막 GROUP에서 테스트 계정을 DELETE /api/users/me로 삭제)
 ```
 
 | 최근 실행 | 결과 |
@@ -300,7 +300,7 @@ bash scripts/e2e-api-test.sh
 | 24차 (2026-04-13) | ✅ 27/27 PASS (당시 스크립트 기준 — 이후 기능 추가로 테스트 항목 증가) |
 | 2026-04-28 | ✅ 27/27 PASS (당시 스크립트 기준) |
 
-> 현재 `scripts/e2e-api-test.sh`는 49개 테스트(`TOTAL=49`)로 구성되어 있다. 위 기록은 각 실행 시점의 스크립트 기준이므로 값을 그대로 유지했다 — 최신 실행 기록은 다음 배포/검증 시 갱신할 것.
+> 현재 테스트 개수는 `grep -n '^  TOTAL=' scripts/e2e-api-test.sh`로 확인한다. 위 기록은 각 실행 시점의 스크립트 기준이므로 값을 그대로 유지했다 — 최신 실행 기록은 다음 배포/검증 시 갱신할 것.
 
 ---
 

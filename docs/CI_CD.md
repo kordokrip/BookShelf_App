@@ -117,7 +117,7 @@ DO(Durable Objects)를 포함한 기능(채팅룸)을 테스트할 때는 `npx w
    # = wrangler d1 migrations apply bookshelf-db --local
    ```
 3. `wrangler dev --local`로 실제 쿼리 경로(해당 컬럼/테이블을 참조하는 라우트)까지 동작하는지 확인한다.
-4. API를 건드리는 변경이면 `bash scripts/e2e-api-test.sh`로 49/49 PASS를 재확인한다.
+4. API를 건드리는 변경이면 `bash scripts/e2e-api-test.sh`로 전체 PASS를 재확인한다.
 5. 커밋 후 `git push origin main`.
 6. CI의 `deploy-production` job — **Apply D1 migrations** 스텝이 `wrangler d1 migrations apply bookshelf-db --remote --env=""`로 프로덕션 D1에 자동 적용한다.
 
