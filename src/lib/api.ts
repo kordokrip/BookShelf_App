@@ -13,6 +13,7 @@ export * from './api/groups';
 export * from './api/collections';
 export * from './api/stats-search-ai';
 export * from './api/push-share-admin';
+export * from './api/flags';
 
 import type { booksApi } from './api/books';
 import type { sessionsApi } from './api/sessions';
@@ -88,6 +89,9 @@ export const queryKeys = {
   },
   initialData: {
     all: ['initial-data'] as const,
+  },
+  flags: {
+    user: (userId: string) => ['flags', userId] as const,
   },
   discover: {
     all: ['discover'] as const,

@@ -48,7 +48,7 @@ FAILED_TESTS=()
 if [[ "$READONLY" == true ]]; then
   TOTAL=3
 else
-  TOTAL=53
+  TOTAL=54
 fi
 
 # ── 시작 시각 ────────────────────────────────────────────────────
@@ -1120,6 +1120,29 @@ if [[ "$HTTP_CODE" == "400" || "$HTTP_CODE" == "422" ]]; then
 else
   fail_test $T "$NAME" $ELAPSED "$BODY" \
     "HTTP ${HTTP_CODE} (기대: 400 또는 422)"
+fi
+
+# ================================================================
+# GROUP 16b — 기능 플래그
+# ================================================================
+printf "\n%s── Group 16b: 기능 플래그 (1개)%s\n" "$CYAN" "$NC"
+
+T=54; NAME="GET /api/flags (flags 배열 반환)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" "${BASE_URL}/api/flags" \
+  -H "Authorization: Bearer ${TOKEN}")
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+IS_LIST=$(python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+print('yes' if isinstance(d.get('data', {}).get('flags'), list) else 'no')
+" <<< "$BODY" 2>/dev/null || echo "no")
+if [[ "$HTTP_CODE" == "200" && "$IS_LIST" == "yes" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+  printf "         ${CYAN}↳ %s${NC}\n" "$BODY"
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE}, flags 배열 여부=${IS_LIST} (기대: 200 + 배열)"
 fi
 
 # ================================================================

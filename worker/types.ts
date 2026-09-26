@@ -133,6 +133,8 @@ export interface Bindings {
   ENVIRONMENT: string;
   APP_NAME: string;
   FRONTEND_URL: string;
+  /** 쉼표 구분 기능 플래그 기본값 (worker/lib/featureFlags.ts) */
+  FEATURE_FLAGS?: string;
   // Secrets (wrangler secret put 으로 설정)
   JWT_SECRET: string;
   KAKAO_REST_API_KEY: string;

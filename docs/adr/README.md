@@ -6,6 +6,7 @@
 |---|------|------|------|------|
 | 001 | SW 업데이트 전략 (`autoUpdate` → prompt) | 2026-07-15 | 승인됨 | [ADR-001](ADR-001-sw-update-strategy.md) |
 | 002 | 채팅 시스템 D1 폴링 → Durable Objects WebSocket | 2026-07-16 | 채택 | [ADR-002](ADR-002-chat-websocket.md) |
+| 003 | 리뉴얼 기능 공개: 기능 플래그 + 스테이징 점진 공개 | 2026-09-27 | 채택 | [ADR-003](ADR-003-feature-flags-staging.md) |
 
 ---
 

@@ -69,6 +69,9 @@ crons = ["*/15 * * * *"]
 ENVIRONMENT = "production"
 APP_NAME = "BookShelf"
 FRONTEND_URL = "https://bookshelf-api.kordokrip.workers.dev"
+# 기능 플래그 기본값(쉼표 구분, worker/lib/featureFlags.ts 참고). 프로덕션은 비워 두고
+# 관리자 계정(전체 on)으로 먼저 검증한 뒤 여기에 추가해 전체 공개한다.
+FEATURE_FLAGS = ""
 # ALLOWED_EMAILS 는 wrangler secret put ALLOWED_EMAILS 로 등록 (vars와 동시 사용 불가)
 
 # ─── 옵저버빌리티 ────────────────────────────────────────────
@@ -87,6 +90,7 @@ name = "bookshelf-api-staging"
 ENVIRONMENT = "staging"
 APP_NAME = "BookShelf Staging"
 FRONTEND_URL = "https://bookshelf-api-staging.kordokrip.workers.dev"
+FEATURE_FLAGS = "notes_v2,book_stack,characters,focus_timer,ai_tags"
 
 # 스테이징 D1 (프로덕션과 동일 스키마, 분리된 데이터)
 # [[env.staging.d1_databases]]
