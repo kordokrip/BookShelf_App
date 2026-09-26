@@ -92,24 +92,38 @@ APP_NAME = "BookShelf Staging"
 FRONTEND_URL = "https://bookshelf-api-staging.kordokrip.workers.dev"
 FEATURE_FLAGS = "notes_v2,book_stack,characters,focus_timer,ai_tags"
 
-# 스테이징 D1 (프로덕션과 동일 스키마, 분리된 데이터)
-# [[env.staging.d1_databases]]
-# binding = "DB"
-# database_name = "bookshelf-db-staging"
-# database_id = "<staging-db-id>"  # wrangler d1 create bookshelf-db-staging 으로 생성 후 기입
+# ─── 스테이징 바인딩 ─────────────────────────────────────────────
+# d1/kv/r2/ai/durable_objects/vars는 env에 상속되지 않으므로 전부 명시한다.
+# (migrations, assets, observability는 최상위 설정을 상속)
+# 리소스 생성: 2026-09-27 wrangler d1 create / kv namespace create / r2 bucket create
+# 배포는 staging 브랜치 push → CI deploy-staging job만 사용 (로컬 wrangler deploy 금지)
 
-# 스테이징 KV
-# [[env.staging.kv_namespaces]]
-# binding = "KV"
-# id = "<staging-kv-id>"
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "bookshelf-db-staging"
+database_id = "3760f0ef-30e3-4519-bcde-216b6039b890"
+migrations_dir = "worker/db/migrations"
 
-# [[env.staging.kv_namespaces]]
-# binding = "SESSIONS"
-# id = "<staging-sessions-kv-id>"
+# SESSIONS는 deprecated(refresh token은 KV로 이전) — 바인딩만 유지하도록 같은 네임스페이스 공유
+[[env.staging.kv_namespaces]]
+binding = "KV"
+id = "b758ab900d114b5b8c0ab0f1a595a35c"
 
-# 스테이징 R2
-# [[env.staging.r2_buckets]]
-# binding = "R2"
-# bucket_name = "bookshelf-covers-staging"
+[[env.staging.kv_namespaces]]
+binding = "SESSIONS"
+id = "b758ab900d114b5b8c0ab0f1a595a35c"
 
+[[env.staging.r2_buckets]]
+binding = "R2"
+bucket_name = "bookshelf-covers-staging"
 
+[env.staging.ai]
+binding = "AI"
+
+[[env.staging.durable_objects.bindings]]
+name = "CHAT_ROOM"
+class_name = "ChatRoom"
+
+# 스테이징은 리마인더 푸시 cron을 돌리지 않는다
+[env.staging.triggers]
+crons = []

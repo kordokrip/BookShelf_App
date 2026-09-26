@@ -59,8 +59,14 @@ PWA 정적 자산(아이콘, iOS startup 이미지, `sw.js`/workbox 프리캐시
 ### 4) `deploy-staging` (needs: `build`, `staging` push에서만)
 
 `environment: staging`. 구조는 production과 동일하되:
-- `command: deploy --env staging` (D1 마이그레이션 스텝 없음 — `wrangler.toml`의 `[env.staging]`에는 아직 D1/KV 바인딩이 주석 처리된 상태라 마이그레이션 대상 자체가 없음)
+- `command: deploy --env staging` (D1 마이그레이션 스텝은 아직 없음 — 스테이징 D1 스키마 변경 시 워크플로에 스텝 추가 필요)
 - health check 없이 결과만 로그로 출력
+
+**스테이징 리소스**(2026-09-27 생성, ID는 `wrangler.toml [env.staging]` 참고): D1 `bookshelf-db-staging`, KV 1개(`KV`·`SESSIONS` 바인딩 공유), R2 `bookshelf-covers-staging`. AI와 Durable Object 바인딩도 env에 명시돼 있다(wrangler env는 바인딩을 상속하지 않음). 스테이징은 리마인더 cron을 끈다(`[env.staging.triggers] crons = []`).
+
+**스테이징 사용 절차:** `git push origin main:staging`(또는 작업 브랜치를 `staging`에 push) → CI 배포 → `bash scripts/e2e-api-test.sh --url https://bookshelf-api-staging.kordokrip.workers.dev`. 스테이징 worker 시크릿은 프로덕션과 별도이며 이름은 `npx wrangler secret list --env staging`으로 확인한다.
+
+> 최초 부트스트랩 예외: 2026-09-27 스테이징 D1을 만든 직후 0001~0014 마이그레이션을 로컬에서 `--remote --env staging`으로 1회 직접 적용했다(빈 DB 초기화). 이후 스테이징 D1 변경도 CI 경로로만 한다.
 
 ---
 
