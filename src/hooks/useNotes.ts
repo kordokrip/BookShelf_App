@@ -56,7 +56,7 @@ export function useAddNote() {
       const typeLabel: Record<string, string> = {
         quote: '인용구',
         memo: '메모',
-        review: '리뉴',
+        review: '독후감',
       };
       addNotification('note_saved', `새 ${typeLabel[variables.type] ?? '노트'}를 저장했습니다`, `p.${variables.page_number ?? '?'}`);
     },
