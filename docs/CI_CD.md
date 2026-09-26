@@ -204,3 +204,9 @@ wrangler를 `4.70.0`에서 최신 마이너로 올리려고 처음 `npm update w
 npm view wrangler@<올리려는 버전> peerDependencies
 ```
 이 경계를 확인한 뒤 (`629248c`에서는 `4.107.1`이 v4 계열로 갈 수 있는 최댓값으로 확인됨) wrangler와 `@cloudflare/workers-types`를 캐럿 없이 정확한 버전으로, 같은 커밋에서 함께 갱신했다. CHANGELOG를 전수 확인해 breaking change가 없는 범위인지도 함께 검증했다.
+
+### 3. 배포로 사라진 옛 해시 자산에 SPA 폴백이 `index.html`을 200으로 응답 → 빈 화면 + 청크 캐시 오염
+
+2026-09-27 스테이징에서 Phase 2를 확인하던 중, 이전 배포의 `index.html`을 가진 브라우저가 이미 사라진 `/assets/index-<옛 해시>.css`·`.js`를 요청하자 worker의 SPA 폴백(`app.get('*')`)이 이를 `index.html`(200, `text/html`)로 응답했다. 브라우저는 MIME 오류로 스크립트를 실행하지 못해 "로딩 중..."에서 멈췄다. 게다가 `vite.config.ts`의 JS 청크 런타임 캐시는 "옛 해시는 404"를 전제로 `cacheableResponse: 200`만 저장하므로, HTML이 JS 청크로 캐시될 수 있는 구조였다.
+
+**교훈**: SPA 폴백은 클라이언트 라우트에만 적용하고 파일 요청(`/assets/*`, 확장자가 있는 경로)은 404를 그대로 돌려준다(`worker/lib/spaFallback.ts`). 배포 후 확인은 `curl -s -o /dev/null -w "%{http_code} %{content_type}" <url>/assets/index-OLD.js`가 404인지로 한다.

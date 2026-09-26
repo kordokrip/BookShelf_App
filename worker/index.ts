@@ -22,6 +22,7 @@ import { adminRouter } from './routes/admin';
 import { presenceRouter } from './routes/presence';
 import { vitalsRouter } from './routes/vitals';
 import { flagsRouter } from './routes/flags';
+import { shouldServeSpaFallback } from './lib/spaFallback';
 import { authMiddleware } from './auth';
 export { ChatRoom } from './durable/ChatRoom';
 
@@ -230,8 +231,11 @@ app.get('*', async (c) => {
   // Cloudflare Assets 바인딩으로 정적 파일 서빙
   const asset = await c.env.ASSETS.fetch(c.req.raw);
   if (asset.status !== 404) return asset;
-  // 404 → index.html 반환 (React Router가 처리)
-  return c.env.ASSETS.fetch(new Request(`${new URL(c.req.url).origin}/index.html`));
+  // 파일 요청(옛 해시 자산 등)은 404 그대로 — HTML을 JS로 캐시·실행하지 않도록 (lib/spaFallback.ts)
+  const url = new URL(c.req.url);
+  if (!shouldServeSpaFallback(url.pathname)) return asset;
+  // 클라이언트 라우트 → index.html 반환 (React Router가 처리)
+  return c.env.ASSETS.fetch(new Request(`${url.origin}/index.html`));
 });
 
 // ─── ARCH-02: 글로벌 에러 핸들러 (표준화) ────────────────────
