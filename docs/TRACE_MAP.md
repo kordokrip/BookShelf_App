@@ -33,7 +33,7 @@
 | **TanStack Query** | v5.90.21 |
 | **Zustand** | v5.0.11 |
 | **Database** | Cloudflare D1 (`bookshelf-db`, ID: `013db269-dc7a-4a60-9920-ed40c12ab623`) |
-| **AI** | Workers AI (`@cf/meta/llama-3.1-8b-instruct`, `@cf/meta/llama-3.2-11b-vision-instruct` + 폴백 `@cf/llava-1.5-7b-hf`) |
+| **AI** | Workers AI (`@cf/meta/llama-3.1-8b-instruct-fast`, `@cf/meta/llama-3.2-11b-vision-instruct`) |
 | **Storage** | Cloudflare R2 (`covers/{userId}/{bookId}.{ext}`) |
 | **TypeScript check** | ✅ 0 errors |
 | **Lint** | ✅ 0 errors |
@@ -477,7 +477,7 @@ UI("AI 분석 시작" 버튼 클릭, Sparkles 아이콘)
             true:  기존 description 기반 요약 프롬프트
             false: "title+author로 책 소개해주세요" 프롬프트 ★
         → KV: 캐시 확인 (1일 TTL)
-        → Workers AI: llama-3.1-8b-instruct
+        → Workers AI: llama-3.1-8b-instruct-fast
         → KV: 결과 저장 (캐시 키 분기)
     → setSummaryResult(summary)
       → useEffect: 타이핑 애니메이션 (18ms/char, setInterval)
@@ -708,7 +708,7 @@ UI(마운트) → useAIRecommendations()
     → D1: SELECT title FROM books WHERE status = 'wish' → wishTitles (제외 목록)  ★ (11차)
     → forceRefresh=true 시 → KV.delete(cacheKey)  ★ (11차)
     → KV: 캐시 확인(1시간 TTL, 키: ai_recommend:{userId}:{topGenres})
-    → Workers AI(llama-3.1-8b-instruct): 독서 패턴 → JSON 추천 목록
+    → Workers AI(llama-3.1-8b-instruct-fast): 독서 패턴 → JSON 추천 목록
       systemPrompt: reason에 읽은 특정 책 언급, wishTitles 제외, max_tokens 800  ★ (11차)
 
 [visibleRecs 자동 필터링] ★ (11차)
@@ -1643,7 +1643,7 @@ maxAge: 86400 (24h)
 | `SESSIONS` | KVNamespace | (예약, 현재 미사용) |
 | `KV` | KVNamespace | AI 결과 캐시 (summarize 1일, recommend 1시간) + Rate Limiting 카운터 ★ (2026-03-28) |
 | `R2` | R2Bucket | 표지 이미지 저장 |
-| `AI` | Ai | Workers AI (llama-3.1-8b, llama-3.2-11b-vision) |
+| `AI` | Ai | Workers AI (llama-3.1-8b-instruct-fast, llama-3.2-11b-vision) |
 | `ASSETS` | Fetcher | PWA SPA 정적 파일 서빙 |
 | `ENVIRONMENT` | string | 'production' \| 'development' |
 | `JWT_SECRET` | secret | JWT 서명 키 |

@@ -164,7 +164,7 @@ BookShelf는 바로 그 질문에서 시작되었습니다.
 │  ┌─────────────┐  ┌───────────────┐  ┌──────────────────────┐  │
 │  │  /api/auth  │  │  /api/shelf   │  │  /api/ocr            │  │
 │  │  /api/books │  │  /api/notes   │  │  /api/ai             │  │
-│  │  /api/stats │  │  JWT + KV     │  │  Workers AI (llava)  │  │
+│  │  /api/stats │  │  JWT + KV     │  │  Workers AI (vision) │  │
 │  └──────┬──────┘  └───────┬───────┘  └──────────┬───────────┘  │
 └─────────┼─────────────────┼──────────────────────┼─────────────┘
                               │
@@ -193,7 +193,7 @@ BookShelf는 바로 그 질문에서 시작되었습니다.
 사용자 카메라 촬영
   → Canvas 캡처 → Blob 변환
   → POST /api/ocr/scan (multipart)
-  → Workers AI llava-1.5-7b 분석
+  → Workers AI llama-3.2-11b-vision 분석
   → { title, author, publisher, confidence }
   → 신뢰도 ≥ 0.7: 폼 자동 완성
   → 신뢰도 < 0.7: 수동 입력 폼으로 fallback
@@ -282,7 +282,7 @@ users ──┬── books ──── shelf_items ──┬── reading_not
 | Cloudflare D1 | SQLite 기반 엣지 데이터베이스 |
 | Cloudflare KV | 세션 / 캐시 저장소 |
 | Cloudflare R2 | 책 표지 이미지 오브젝트 스토리지 |
-| Cloudflare Workers AI | OCR (llava-1.5-7b) + 임베딩 |
+| Cloudflare Workers AI | OCR (llama-3.2-11b-vision) + 요약·추천 (llama-3.1-8b-instruct-fast) |
 | Cloudflare Pages | 프론트엔드 CDN 배포 |
 | jose | JWT (Workers 런타임 호환) |
 | OpenAI gpt-4o-mini | 독후감 보조 + 책 추천 텍스트 |
@@ -613,7 +613,7 @@ function calcDailyGoal(progress: ReadingProgress): DailyReadingGoal {
 
 | 기능 | 모델 | 비용 절감 방법 |
 |------|------|----------------|
-| OCR | Workers AI llava (무료) | 유료 Vision API 대신 무료 Workers AI 우선 |
+| OCR | Workers AI vision 모델 (무료) | 유료 Vision API 대신 무료 Workers AI 우선 |
 | 책 추천 | gpt-4o-mini | KV 캐시 30분, 일일 5회 제한 |
 | 독후감 보조 | gpt-4o-mini | 사용자 메모 기반 → 토큰 절약 |
 | 임베딩 | Workers AI bge-large (무료) | 유사도 계산 무료 처리 |
@@ -680,7 +680,7 @@ npm run build && npm run preview
 ### Phase 2 — AI & 강화 ✅ 완료
 - [x] AI 독후감 보조 (gpt-4o-mini, 일 5회 제한)
 - [x] 맞춤 책 추천 (장르 분석 + 30분 KV 캐시)
-- [x] Workers AI OCR (llava-1.5-7b)
+- [x] Workers AI OCR (llama-3.2-11b-vision)
 - [x] GitHub Actions CI/CD 자동 배포
 - [ ] 푸시 알림 (구독 저장 완료, 발송 구현 예정)
 - [ ] 소셜 로그인 (Google, Kakao)

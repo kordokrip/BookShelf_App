@@ -225,7 +225,7 @@ DevTools 설정:
 
 | 항목 | 결과 | 비고 |
 |------|------|------|
-| OCR `POST /api/ai/ocr` → confidence 반환 | ✅ PASS | 기본 모델(llama-3.2-11b) + 폴백(llava-1.5-7b) |
+| OCR `POST /api/ai/ocr` → confidence 반환 | ✅ PASS | llama-3.2-11b-vision (폴백 모델 없음) |
 | ISBN 바코드 스캔 | 🔍 MANUAL | ZXing 라이브러리 |
 | pageCount 자동 조회 `GET /api/search/pagecount` | ✅ PASS | Google Books + Open Library |
 
@@ -237,7 +237,7 @@ DevTools 설정:
 |------|------|------|
 | `GET /api/notes?q=` FTS5 검색 | ✅ PASS | FTS5 MATCH + LIKE 폴백 |
 | `POST /api/notes` 노트 생성 | ✅ PASS | |
-| AI 독후감 요약 `POST /api/ai/summarize` | ✅ PASS | llama-3.1-8b-instruct, KV 캐시 24h |
+| AI 독후감 요약 `POST /api/ai/summarize` | ✅ PASS | llama-3.1-8b-instruct-fast, KV 캐시 24h |
 
 ---
 
