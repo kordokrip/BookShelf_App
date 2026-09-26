@@ -111,20 +111,22 @@ jobs:
           name: dist-${{ github.sha }}
           path: dist/
 
-      - name: Deploy to Cloudflare Workers
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy --env=""
-          wranglerVersion: '4'
-
+      # 마이그레이션을 코드 배포보다 먼저 적용 — 새 코드가 아직 없는 컬럼을 조회하는 틈 방지
+      # (마이그레이션은 컬럼·테이블 추가 등 하위 호환 변경만 허용, docs/CI_CD.md 참고)
       - name: Apply D1 migrations
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: d1 migrations apply bookshelf-db --remote --env=""
+          wranglerVersion: '4'
+
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --env=""
           wranglerVersion: '4'
 
       - name: Verify deployment
@@ -174,6 +176,14 @@ jobs:
         with:
           name: dist-${{ github.sha }}
           path: dist/
+
+      - name: Apply D1 migrations (Staging)
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: d1 migrations apply bookshelf-db-staging --remote --env staging
+          wranglerVersion: '4'
 
       - name: Deploy to Cloudflare Workers (Staging)
         uses: cloudflare/wrangler-action@v4

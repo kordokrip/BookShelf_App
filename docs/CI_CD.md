@@ -47,24 +47,24 @@ PWA 정적 자산(아이콘, iOS startup 이미지, `sw.js`/workbox 프리캐시
 
 1. checkout, setup-node, `npm ci`
 2. `actions/download-artifact@v8`로 `build` job이 올린 `dist-${{ github.sha }}`를 `dist/`에 복원 (같은 커밋을 두 번 빌드하지 않기 위함)
-3. **Deploy to Cloudflare Workers** — `cloudflare/wrangler-action@v4`, `command: deploy --env=""`
-4. **Apply D1 migrations** — 같은 액션으로 `command: d1 migrations apply bookshelf-db --remote --env=""`
+3. **Apply D1 migrations** — `cloudflare/wrangler-action@v4`, `command: d1 migrations apply bookshelf-db --remote --env=""`
+4. **Deploy to Cloudflare Workers** — 같은 액션으로 `command: deploy --env=""`
 5. **Verify deployment** — 10초 대기 후 `curl -sf .../api/health`로 `"status":"ok"` 확인 (실패해도 워크플로 자체를 실패시키진 않고 경고만 출력 — 전파 지연 가능성 고려)
 6. **Notify deployment result** — `if: always()`, job 성공/실패를 로그에 명시적으로 남김
 
 두 wrangler-action 스텝 모두 `wranglerVersion: '4'`로 고정 — 이는 항상 4.x 최신을 쓰겠다는 뜻이며, 로컬 `package.json`의 정확한 고정 버전(`4.107.1`)과는 독립적이다. 즉 CI가 실제로 배포에 쓰는 wrangler 버전과 로컬 개발용 wrangler 버전이 다를 수 있다 — [Node / wrangler 버전 정책](#node--wrangler-버전-정책) 참고.
 
-**배포보다 마이그레이션이 나중이라는 점**에 주의: 워커 코드가 먼저 배포되고, 그다음 D1 마이그레이션이 적용된다. 새 컬럼/테이블을 참조하는 코드를 배포와 동시에 내보낼 때는 이 순서가 일시적으로 코드-스키마 불일치를 만들 수 있다는 뜻이므로, 되도록 "컬럼을 먼저 추가하는 마이그레이션"과 "그 컬럼을 사용하는 코드"를 분리된 배포로 나누는 편이 안전하다.
+**마이그레이션이 코드 배포보다 먼저 적용된다**(2026-09-27 순서 변경). 이전에는 코드가 먼저 배포돼, 새 컬럼을 조회하는 코드가 마이그레이션 적용 전까지 실패할 수 있었다. 이 순서가 안전하려면 **마이그레이션은 하위 호환 변경(컬럼·테이블·인덱스 추가)만** 해야 한다. 기존 코드는 새 컬럼을 무시하기 때문이다. 컬럼 삭제나 이름 변경처럼 기존 코드를 깨는 변경은 "코드에서 사용 중단 → 배포 → 다음 배포에서 스키마 변경"의 2단계로 나눈다.
 
 ### 4) `deploy-staging` (needs: `build`, `staging` push에서만)
 
 `environment: staging`. 구조는 production과 동일하되:
-- `command: deploy --env staging` (D1 마이그레이션 스텝은 아직 없음 — 스테이징 D1 스키마 변경 시 워크플로에 스텝 추가 필요)
+- **Apply D1 migrations (Staging)** — `d1 migrations apply bookshelf-db-staging --remote --env staging` 후 `deploy --env staging`
 - health check 없이 결과만 로그로 출력
 
 **스테이징 리소스**(2026-09-27 생성, ID는 `wrangler.toml [env.staging]` 참고): D1 `bookshelf-db-staging`, KV 1개(`KV`·`SESSIONS` 바인딩 공유), R2 `bookshelf-covers-staging`. AI와 Durable Object 바인딩도 env에 명시돼 있다(wrangler env는 바인딩을 상속하지 않음). 스테이징은 리마인더 cron을 끈다(`[env.staging.triggers] crons = []`).
 
-**스테이징 사용 절차:** `git push origin main:staging`(또는 작업 브랜치를 `staging`에 push) → CI 배포 → `bash scripts/e2e-api-test.sh --url https://bookshelf-api-staging.kordokrip.workers.dev`. 스테이징 worker 시크릿은 프로덕션과 별도이며 이름은 `npx wrangler secret list --env staging`으로 확인한다.
+**스테이징 사용 절차:** `git push origin main:staging`(또는 작업 브랜치를 `staging`에 push) → CI가 마이그레이션 + 배포 → `bash scripts/e2e-api-test.sh --url https://bookshelf-api-staging.kordokrip.workers.dev`. 스테이징 worker 시크릿은 프로덕션과 별도이며 이름은 `npx wrangler secret list --env staging`으로 확인한다.
 
 > 최초 부트스트랩 예외: 2026-09-27 스테이징 D1을 만든 직후 0001~0014 마이그레이션을 로컬에서 `--remote --env staging`으로 1회 직접 적용했다(빈 DB 초기화). 이후 스테이징 D1 변경도 CI 경로로만 한다.
 >
