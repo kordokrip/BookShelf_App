@@ -888,9 +888,10 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 | POST | `/api/users/register` | 없음 | `{name, email, password}` | `{data:{user, token}}` 201 | `routes/users.ts` |
 | POST | `/api/users/login` | 없음 | `{email, password}` | `{data:{user, token}}` | `routes/users.ts` |
 | GET | `/api/users/profile` | **authMiddleware** | — | `{data: user}` | `routes/users.ts` |
-| GET | `/api/users/:id` | 없음 | — | `{data: user}` | `routes/users.ts` |
-| POST | `/api/users` | 없음 | `{id, email, name, avatar_url?}` | `{data: user}` 201 | `routes/users.ts` |
+| GET | `/api/users/:id` | **authMiddleware** | — | `{data: user}` (자신: 전체, 타인: 공개 필드) | `routes/users.ts` |
+| POST | `/api/users` | **authMiddleware** | `{id, email, name, avatar_url?}` | `{data: user}` 201 | `routes/users.ts` |
 | PATCH | `/api/users/profile` | **authMiddleware** | `{name?, favorite_genres?, reading_goal?, avatar_url?}` (zod 검증 ✅) | `{data}` (SELECT 시 role 포함 ★16차) | `routes/users.ts` |
+| DELETE | `/api/users/me` | **authMiddleware** + rate limit `delete_account` 3회/분 | `{password}` | `{data:{deleted:true}}` · 401 비밀번호 불일치 · 403 관리자 · 400 소셜 계정 | `routes/users.ts` (FK CASCADE로 연관 데이터 삭제, `group_messages.deleted_by` NULL 처리, R2 `covers/{userId}/` 정리) |
 
 ### 책 (`/api/books`)
 

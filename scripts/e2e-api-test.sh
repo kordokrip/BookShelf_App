@@ -48,7 +48,7 @@ FAILED_TESTS=()
 if [[ "$READONLY" == true ]]; then
   TOTAL=3
 else
-  TOTAL=49
+  TOTAL=53
 fi
 
 # ── 시작 시각 ────────────────────────────────────────────────────
@@ -1120,6 +1120,70 @@ if [[ "$HTTP_CODE" == "400" || "$HTTP_CODE" == "422" ]]; then
 else
   fail_test $T "$NAME" $ELAPSED "$BODY" \
     "HTTP ${HTTP_CODE} (기대: 400 또는 422)"
+fi
+
+# ================================================================
+# GROUP 17 — 계정 삭제 (테스트 계정 정리 겸 검증)
+# ================================================================
+printf "\n%s── Group 17: 계정 삭제 (DELETE /api/users/me) (4개)%s\n" "$CYAN" "$NC"
+
+T=50; NAME="DELETE /api/users/me (잘못된 비밀번호 → 401)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" -X DELETE \
+  "${BASE_URL}/api/users/me" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"password":"WrongPass999!"}')
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+if [[ "$HTTP_CODE" == "401" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE} (기대: 401)"
+fi
+
+T=51; NAME="DELETE /api/users/me (user2 정리)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" -X DELETE \
+  "${BASE_URL}/api/users/me" \
+  -H "Authorization: Bearer ${TOKEN_2}" \
+  -H "Content-Type: application/json" \
+  -d "{\"password\":\"${TEST_PASS}\"}")
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+if [[ "$HTTP_CODE" == "200" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE} (기대: 200)"
+fi
+
+T=52; NAME="DELETE /api/users/me (user1 정리)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" -X DELETE \
+  "${BASE_URL}/api/users/me" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d "{\"password\":\"${TEST_PASS}\"}")
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+if [[ "$HTTP_CODE" == "200" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE} (기대: 200)"
+fi
+
+T=53; NAME="POST /api/users/login (삭제된 계정 → 401)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" -X POST \
+  "${BASE_URL}/api/users/login" \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"${TEST_EMAIL}\",\"password\":\"${TEST_PASS}\"}")
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+if [[ "$HTTP_CODE" == "401" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE} (기대: 401)"
 fi
 
 # ================================================================

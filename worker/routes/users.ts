@@ -5,6 +5,7 @@
  * POST   /api/users/login     — 로그인, JWT + Refresh Token 발급 (Rate Limit: 5회/분)
  * GET    /api/users/profile   — 내 프로필 조회 (인증 필요)
  * PATCH  /api/users/profile   — 프로필 수정 (이름/장르/목표/아바타)
+ * DELETE /api/users/me        — 본인 계정 영구 삭제 (비밀번호 재확인, Rate Limit: 3회/분)
  * GET    /api/users/:id       — 사용자 조회 (자신: 전체, 타인: 공개 필드만)
  * POST   /api/users           — 소셜 로그인 upsert (인증 필요)
  * GET    /api/users/:id/stats — 독서 통계 (인증 필요, 프론트 미사용 죽은 코드)
@@ -21,6 +22,7 @@ import type { Bindings, DbUser } from '../types';
 import { hashPassword, verifyPassword, createToken, createRefreshToken, authMiddleware } from '../auth';
 import { rateLimit } from '../middleware/rateLimit';
 import { logActivity } from './admin';
+import { getAccountDeletionBlock } from '../lib/accountHelpers';
 
 export const usersRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -33,6 +35,10 @@ const registerSchema = z.object({
 
 const loginSchema = z.object({
   email: z.string().email(),
+  password: z.string().min(1),
+});
+
+const deleteAccountSchema = z.object({
   password: z.string().min(1),
 });
 
@@ -151,6 +157,51 @@ usersRouter.get('/profile', authMiddleware, async (c) => {
 
   return c.json({ data: safeUser(user) });
 });
+
+// ─── DELETE /api/users/me ─────────────────────────────────────
+// 본인 계정 영구 삭제(비밀번호 재확인). 연관 데이터는 FK ON DELETE CASCADE로 정리되고,
+// 기존 refresh token은 /api/auth/refresh의 사용자 존재 확인에서 401이 된다.
+usersRouter.delete(
+  '/me',
+  rateLimit({ limit: 3, windowMs: 60_000, keyPrefix: 'delete_account' }),
+  authMiddleware,
+  zValidator('json', deleteAccountSchema),
+  async (c) => {
+    const userId = c.get('userId');
+    const { password } = c.req.valid('json');
+
+    const user = await c.env.DB.prepare(
+      'SELECT * FROM users WHERE id = ?',
+    ).bind(userId).first<DbUser>();
+    if (!user) throw new HTTPException(404, { message: '사용자를 찾을 수 없습니다.' });
+
+    const block = getAccountDeletionBlock(user);
+    if (block) return c.json({ error: block.error }, block.status);
+
+    const valid = await verifyPassword(password, user.password_hash!);
+    if (!valid) return c.json({ error: '비밀번호가 올바르지 않습니다.' }, 401);
+
+    // group_messages.deleted_by는 ON DELETE 규칙이 없어 먼저 끊어야 FK 위반이 나지 않는다
+    await c.env.DB.batch([
+      c.env.DB.prepare('UPDATE group_messages SET deleted_by = NULL WHERE deleted_by = ?').bind(userId),
+      c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(userId),
+    ]);
+
+    // R2 표지는 DB 밖이라 별도 정리 — 실패해도 계정 삭제 자체는 이미 완료
+    try {
+      let cursor: string | undefined;
+      do {
+        const listed = await c.env.R2.list({ prefix: `covers/${userId}/`, cursor });
+        if (listed.objects.length > 0) await c.env.R2.delete(listed.objects.map((o) => o.key));
+        cursor = listed.truncated ? listed.cursor : undefined;
+      } while (cursor);
+    } catch (err) {
+      console.error('계정 삭제 후 R2 표지 정리 실패:', userId, err);
+    }
+
+    return c.json({ data: { deleted: true } });
+  },
+);
 
 // ─── GET /api/users/:id ───────────────────────────────────────
 // SEC-01: 인증 필수, 자신은 전체 조회 / 타인은 공개 필드만
