@@ -86,7 +86,7 @@
 | `/api/users/*` | `worker/routes/users.ts` | 엔드포인트별 |
 | `/api/books/*` | `worker/routes/books.ts` | GET→`optionalAuth` / 쓰기(POST/PUT/DELETE)→`authMiddleware` ✅ |
 | `/api/sessions/*` | `worker/routes/sessions.ts` | GET→`optionalAuth` / POST→`authMiddleware` ✅ |
-| `/api/notes/*` | `worker/routes/notes.ts` | GET→`optionalAuth` / 쓰기(POST/PUT/DELETE)→`authMiddleware` ✅ |
+| `/api/notes/*` | `worker/routes/notes.ts` | 전 엔드포인트 `authMiddleware` ✅ |
 | `/api/search/*` | `worker/routes/search.ts` | 없음 (공개) |
 | `/api/ai/*` | `worker/routes/ai.ts` | `optionalAuth` 각 핸들러 |
 | `/api/stats/*` | `worker/routes/stats.ts` | `authMiddleware` (전체) ✅ |
@@ -922,12 +922,16 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 
 ### 노트 (`/api/notes`)
 
+노트 컬럼: `page_number`(시작 페이지), `end_page`(0015, 범위 끝 — `page_number` 이상), `session_id`·`tags`(0015, Phase 4 예정).
+
 | Method | 경로 | 인증 | 요청 | 응답 | Worker 파일 |
 |---|---|---|---|---|---|
-| GET | `/api/notes` | optionalAuth | `?bookId=&type=&search=&limit=&offset=` | `{notes:[], total}` | `routes/notes.ts` |
-| GET | `/api/notes/:id` | optionalAuth | — | `{note}` | `routes/notes.ts` |
-| POST | `/api/notes` | **authMiddleware** ✅ | `{book_id, type?, content, page_number?, color?}` | `{note}` 201 | `routes/notes.ts` |
-| PUT | `/api/notes/:id` | **authMiddleware** ✅ | `{type?, content?, page_number?, color?}` | `{note}` | `routes/notes.ts` |
+| GET | `/api/notes` | **authMiddleware** | `?book_id=&type=&search=&limit=&offset=` | `{data: Note[], count}` | `routes/notes.ts` |
+| GET | `/api/notes/export` | **authMiddleware** | `?book_id=` | Markdown 파일 (페이지 범위는 `(p.12–15)` 표기) | `routes/notes.ts` |
+| GET | `/api/notes/random` | **authMiddleware** | — | `{data: Note & {book_title, book_author, book_cover_image, book_cover_color} \| null}` — 오늘의 회고. 사용자·KST 날짜별 결정적 선택(`pickDailyIndex`), 노트가 없으면 `null` | `routes/notes.ts` + `lib/noteHelpers.ts` |
+| GET | `/api/notes/:id` | **authMiddleware** | — | `{data: Note}` | `routes/notes.ts` |
+| POST | `/api/notes` | **authMiddleware** ✅ | `{book_id, type?, content, page_number?, end_page?, color?}` | `{data: Note}` 201 · 400 범위 오류 | `routes/notes.ts` |
+| PUT | `/api/notes/:id` | **authMiddleware** ✅ | `{type?, content?, page_number?, end_page?, color?}` | `{data: Note}` · 400 범위 오류(기존 값과 합쳐 검증) | `routes/notes.ts` |
 | DELETE | `/api/notes/:id` | **authMiddleware** ✅ | — | `{success: true}` | `routes/notes.ts` |
 
 ### 검색 (`/api/search`) — 인증 없음

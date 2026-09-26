@@ -124,7 +124,7 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 
 ---
 
-## 5. D1 마이그레이션 상태 (`worker/db/migrations/`, 14개)
+## 5. D1 마이그레이션 상태 (`worker/db/migrations/`, 개수는 `ls worker/db/migrations | wc -l`로 확인)
 
 | 파일 | 목적 |
 |------|------|
@@ -142,6 +142,7 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 | `0012_soft_delete_messages.sql` | 채팅 메시지 소프트 삭제 |
 | `0013_read_receipts.sql` | 읽음 Receipt (last_read_message_id) |
 | `0014_reminder_prefs.sql` | users 리마인더 설정 3컬럼 추가 |
+| `0015_notes_page_range_session_tags.sql` | notes `end_page`(페이지 범위), `session_id`(몰입 타이머 연결, FK SET NULL), `tags`(AI 태깅) 추가 + session_id 인덱스 |
 
 마이그레이션 적용 절차·로컬 검증 원칙은 `docs/CI_CD.md` 참고. **로컬에서 `--remote` 마이그레이션을 직접 실행하지 말 것** — `git push origin main` 시 CI가 자동 적용한다.
 

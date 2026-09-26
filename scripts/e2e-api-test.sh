@@ -48,7 +48,7 @@ FAILED_TESTS=()
 if [[ "$READONLY" == true ]]; then
   TOTAL=3
 else
-  TOTAL=54
+  TOTAL=57
 fi
 
 # ── 시작 시각 ────────────────────────────────────────────────────
@@ -534,6 +534,51 @@ if [[ "$GET_CONTENT" == "E2E 수정된 메모" ]]; then
   pass_test $T "$NAME" $ELAPSED
 else
   fail_test $T "$NAME" $ELAPSED "$BODY" "content 불일치 (got: '${GET_CONTENT}')"
+fi
+
+# ── 노트 v2: 페이지 범위 + 오늘의 회고 (TEST 55~57) ──
+T=55; NAME="PUT /api/notes/:id (end_page=45, 범위 p.42–45)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" -X PUT "${BASE_URL}/api/notes/${NOTE_ID}" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"end_page":45}')
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+END_PAGE=$(json_val "$BODY" "d['data']['end_page']")
+if [[ "$HTTP_CODE" == "200" && "$END_PAGE" == "45" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE}, end_page=${END_PAGE} (기대: 200 + 45)"
+fi
+
+T=56; NAME="PUT /api/notes/:id (end_page < 시작 페이지 → 400)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" -X PUT "${BASE_URL}/api/notes/${NOTE_ID}" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"end_page":10}')
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+if [[ "$HTTP_CODE" == "400" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE} (기대: 400)"
+fi
+
+T=57; NAME="GET /api/notes/random (오늘의 회고)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" "${BASE_URL}/api/notes/random" \
+  -H "Authorization: Bearer ${TOKEN}")
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+RANDOM_ID=$(json_val "$BODY" "d['data']['id']")
+RANDOM_TITLE=$(json_val "$BODY" "d['data']['book_title']")
+if [[ "$HTTP_CODE" == "200" && "$RANDOM_ID" == "$NOTE_ID" && -n "$RANDOM_TITLE" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+  printf "         ${CYAN}↳ note=%s, book_title=%s${NC}\n" "$RANDOM_ID" "$RANDOM_TITLE"
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE}, id=${RANDOM_ID} (기대: 200 + 유일한 노트 ${NOTE_ID} + book_title)"
 fi
 
 # ================================================================

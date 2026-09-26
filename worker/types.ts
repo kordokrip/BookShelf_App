@@ -96,6 +96,12 @@ export interface DbNote {
   type: NoteType;
   content: string;
   page_number: number | null;
+  /** 페이지 범위 끝 (0015) — page_number가 시작 페이지 */
+  end_page: number | null;
+  /** 몰입 타이머 세션 연결 (0015, Phase 4) */
+  session_id: string | null;
+  /** JSON 배열 문자열 (0015, Phase 4 AI 태깅) */
+  tags: string | null;
   color: string;
   created_at: string;
   updated_at: string;
@@ -106,6 +112,7 @@ export interface CreateNoteBody {
   type?: NoteType;
   content: string;
   page_number?: number;
+  end_page?: number;
   color?: string;
 }
 

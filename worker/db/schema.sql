@@ -97,7 +97,7 @@ CREATE INDEX IF NOT EXISTS idx_sessions_date  ON reading_sessions (user_id, sess
 CREATE UNIQUE INDEX IF NOT EXISTS idx_sessions_dedup
   ON reading_sessions (user_id, book_id, session_date, pages_read);
 
--- ─── 노트/하이라이트 (0001 → 0003 rebuild: 'review' 타입 추가) ─
+-- ─── 노트/하이라이트 (0001 → 0003 rebuild: 'review' 타입 추가, 0015 end_page/session_id/tags) ─
 CREATE TABLE IF NOT EXISTS notes (
   id          TEXT PRIMARY KEY,
   book_id     TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
@@ -106,6 +106,9 @@ CREATE TABLE IF NOT EXISTS notes (
               CHECK (type IN ('memo', 'highlight', 'quote', 'review')),
   content     TEXT NOT NULL,
   page_number INTEGER,
+  end_page    INTEGER,
+  session_id  TEXT REFERENCES reading_sessions(id) ON DELETE SET NULL,
+  tags        TEXT,
   color       TEXT DEFAULT 'yellow',
   created_at  TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
@@ -114,6 +117,7 @@ CREATE TABLE IF NOT EXISTS notes (
 CREATE INDEX IF NOT EXISTS idx_notes_book_id ON notes(book_id);
 CREATE INDEX IF NOT EXISTS idx_notes_user_id ON notes(user_id);
 CREATE INDEX IF NOT EXISTS idx_notes_type    ON notes(type);
+CREATE INDEX IF NOT EXISTS idx_notes_session_id ON notes(session_id);
 
 CREATE TRIGGER IF NOT EXISTS update_notes_timestamp
   AFTER UPDATE ON notes

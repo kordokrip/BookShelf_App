@@ -3,8 +3,9 @@
  *
  * GET    /api/notes/export    — 노트 마크다운 파일 내보내기 (book_id 필터 가능)
  * GET    /api/notes           — 노트 목록 조회 (book_id, type, search 필터 + FTS5 전문검색)
+ * GET    /api/notes/random    — 오늘의 회고 노트 1건 (사용자·KST 날짜별 결정적 선택, 없으면 null)
  * POST   /api/notes           — 노트 생성
- * PATCH  /api/notes/:id       — 노트 수정
+ * PUT    /api/notes/:id       — 노트 수정 (end_page는 page_number 이상)
  * DELETE /api/notes/:id       — 노트 삭제
  *
  * 노트 타입: memo | highlight | quote | review
@@ -17,6 +18,7 @@ import { HTTPException } from 'hono/http-exception';
 import type { Bindings, DbNote } from '../types';
 import { authMiddleware } from '../auth';
 import { logActivity } from './admin';
+import { validatePageRange, formatPageRange, kstDateString, pickDailyIndex } from '../lib/noteHelpers';
 
 export const notesRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -29,6 +31,7 @@ const createNoteSchema = z.object({
   type: z.enum(NOTE_TYPES).optional().default('memo'),
   content: z.string().min(1).max(5000),
   page_number: z.number().int().positive().optional(),
+  end_page: z.number().int().positive().optional(),
   color: z.string().max(30).optional().default('yellow'),
 });
 
@@ -36,6 +39,7 @@ const updateNoteSchema = z.object({
   type: z.enum(NOTE_TYPES).optional(),
   content: z.string().min(1).max(5000).optional(),
   page_number: z.number().int().positive().nullable().optional(),
+  end_page: z.number().int().positive().nullable().optional(),
   color: z.string().max(30).optional(),
 });
 
@@ -68,6 +72,7 @@ notesRouter.get('/export', authMiddleware, async (c) => {
     type: string;
     content: string;
     page_number: number | null;
+    end_page: number | null;
     created_at: string;
   };
 
@@ -108,7 +113,7 @@ notesRouter.get('/export', authMiddleware, async (c) => {
 
     for (const note of notes) {
       const label = TYPE_LABEL[note.type] ?? note.type;
-      const page = note.page_number ? ` (p.${note.page_number})` : '';
+      const page = formatPageRange(note.page_number, note.end_page);
       lines.push(`### ${label}${page}`);
       lines.push('');
       lines.push(note.content);
@@ -217,6 +222,30 @@ notesRouter.get('/', authMiddleware, async (c) => {
   return c.json({ data: results, count: countResult?.total ?? 0 });
 });
 
+// ─── GET /api/notes/random ───────────────────────────────────
+// 오늘의 회고: 사용자·KST 날짜로 결정적 인덱스를 골라 하루 동안 같은 노트를 보여준다.
+// RANDOM()은 새로고침마다 바뀌고 전체 스캔이 필요해 쓰지 않는다. /:id 보다 앞에 선언.
+notesRouter.get('/random', authMiddleware, async (c) => {
+  const userId = c.get('userId');
+
+  const countRow = await c.env.DB.prepare('SELECT COUNT(*) AS total FROM notes WHERE user_id = ?')
+    .bind(userId).first<{ total: number }>();
+  const index = pickDailyIndex(userId, kstDateString(Date.now()), countRow?.total ?? 0);
+  if (index === null) return c.json({ data: null });
+
+  const note = await c.env.DB.prepare(
+    `SELECT n.*, b.title AS book_title, b.author AS book_author,
+            b.cover_image AS book_cover_image, b.cover_color AS book_cover_color
+     FROM notes n
+     JOIN books b ON b.id = n.book_id
+     WHERE n.user_id = ?
+     ORDER BY n.created_at ASC, n.id ASC
+     LIMIT 1 OFFSET ?`,
+  ).bind(userId, index).first();
+
+  return c.json({ data: note ?? null });
+});
+
 // ─── GET /api/notes/:id ──────────────────────────────────────
 notesRouter.get('/:id', authMiddleware, async (c) => {
   const userId = c.get('userId');
@@ -248,11 +277,14 @@ notesRouter.post('/', authMiddleware, zValidator('json', createNoteSchema), asyn
 
   if (!book) throw new HTTPException(403, { message: '해당 책에 대한 권한이 없습니다.' });
 
+  const rangeError = validatePageRange(body.page_number, body.end_page);
+  if (rangeError) return c.json({ error: rangeError }, 400);
+
   await c.env.DB.prepare(
-    `INSERT INTO notes (id, book_id, user_id, type, content, page_number, color)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO notes (id, book_id, user_id, type, content, page_number, end_page, color)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
   )
-    .bind(id, body.book_id, userId, body.type, body.content, body.page_number ?? null, body.color)
+    .bind(id, body.book_id, userId, body.type, body.content, body.page_number ?? null, body.end_page ?? null, body.color)
     .run();
 
   const created = await c.env.DB.prepare('SELECT * FROM notes WHERE id = ?')
@@ -273,17 +305,24 @@ notesRouter.put('/:id', authMiddleware, zValidator('json', updateNoteSchema), as
 
   // 소유권 확인
   const existing = await c.env.DB.prepare(
-    'SELECT id FROM notes WHERE id = ? AND user_id = ?',
+    'SELECT id, page_number, end_page FROM notes WHERE id = ? AND user_id = ?',
   )
     .bind(id, userId)
-    .first();
+    .first<{ id: string; page_number: number | null; end_page: number | null }>();
 
   if (!existing) throw new HTTPException(403, { message: '노트에 대한 권한이 없거나 존재하지 않습니다.' });
+
+  // 한쪽만 수정해도 범위가 깨지지 않도록 기존 값과 합쳐서 검증
+  const nextPage = 'page_number' in body ? body.page_number : existing.page_number;
+  const nextEnd = 'end_page' in body ? body.end_page : existing.end_page;
+  const rangeError = validatePageRange(nextPage, nextEnd);
+  if (rangeError) return c.json({ error: rangeError }, 400);
 
   const fieldMap: Record<string, string> = {
     type: 'type',
     content: 'content',
     page_number: 'page_number',
+    end_page: 'end_page',
     color: 'color',
   };
 
