@@ -10,6 +10,7 @@ import { useBack } from "../../hooks/useBack";
 import { useNotes, useUpdateNote, useDeleteNote } from "../../hooks/useNotes";
 import { useRecentSearches } from "../../hooks/useRecentSearches";
 import { useToast } from "../components/ui/Toast";
+import { stripNoteMarkup, formatNotePages } from "../../lib/noteMarkup";
 
 const NOTES_RECENT_KEY = "notes_recent_searches";
 import type { BookNote } from "../../types/book";
@@ -252,12 +253,13 @@ export function NotesSearchPage() {
                     {TYPE_LABELS[note.type] ?? note.type}
                   </span>
                   {note.page != null && (
-                    <span className="text-xs text-muted-foreground">{note.page}페이지</span>
+                    <span className="text-xs text-muted-foreground">{formatNotePages(note.page, note.endPage)}</span>
                   )}
                 </div>
 
                 <p className="text-sm text-foreground leading-relaxed mb-3">
-                  {highlightText(note.content, debouncedQuery)}
+                  {/* 검색어 하이라이트와 겹치지 않도록 서식 기호는 걷어 내고 표시 */}
+                  {highlightText(stripNoteMarkup(note.content), debouncedQuery)}
                 </p>
 
                 <div className="flex items-center justify-between">

@@ -4,7 +4,8 @@
  * - useAddNote / useUpdateNote / useDeleteNote: CRUD 뮤테이션
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { notesApi, queryKeys } from '../lib/api';
+import { notesApi, queryKeys, type NoteWriteFields } from '../lib/api';
+import { formatNotePages } from '../lib/noteMarkup';
 import { normalizeBookNote } from '../types/book';
 import { useUiStore } from '../stores/uiStore';
 
@@ -36,6 +37,20 @@ export function useBookNotes(bookId: string) {
   });
 }
 
+/**
+ * 오늘의 회고 노트 (GET /api/notes/random)
+ * - 서버가 사용자·KST 날짜별로 같은 노트를 돌려주므로 1시간 캐시해도 하루 동안 일관됨
+ * - notes.all 하위 키라 노트 추가·수정·삭제 시 함께 무효화됨
+ */
+export function useDailyNote(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.notes.daily(),
+    queryFn: async () => (await notesApi.daily()).data,
+    enabled,
+    staleTime: 60 * 60_000,
+  });
+}
+
 /** 노트 생성 */
 export function useAddNote() {
   const qc = useQueryClient();
@@ -49,6 +64,7 @@ export function useAddNote() {
       type: string;
       content: string;
       page_number?: number;
+      end_page?: number;
       color?: string;
     }) => notesApi.create(data),
     onSuccess: (_, variables) => {
@@ -58,7 +74,7 @@ export function useAddNote() {
         memo: '메모',
         review: '독후감',
       };
-      addNotification('note_saved', `새 ${typeLabel[variables.type] ?? '노트'}를 저장했습니다`, `p.${variables.page_number ?? '?'}`);
+      addNotification('note_saved', `새 ${typeLabel[variables.type] ?? '노트'}를 저장했습니다`, formatNotePages(variables.page_number, variables.end_page) || '페이지 미지정');
     },
   });
 }
@@ -69,7 +85,7 @@ export function useUpdateNote() {
   return useMutation({
     mutationFn: ({ id, data }: {
       id: string;
-      data: Partial<{ type: string; content: string; page_number: number; color: string }>;
+      data: Partial<NoteWriteFields>;
     }) => notesApi.update(id, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.notes.all }),
   });

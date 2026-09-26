@@ -11,6 +11,7 @@ import { ALL_GENRES, GENRE_CONFIG } from "../../types/book";
 import { useBooks, useRefreshBookCovers } from "../../hooks/useBooks";
 import { DoneBookCard } from "../components/books/BookCard";
 import { GenreFilterBar } from "../components/books/GenreFilterBar";
+import { DailyRecallCard } from "../components/notes/DailyRecallCard";
 import { EmptyState } from "../components/ui/EmptyState";
 import { AddBookFab } from "../components/ui/Buttons";
 import { useNavigate, Link } from "react-router";
@@ -382,6 +383,9 @@ export function LibraryPage() {
       {/* CV-7: Success state — book list */}
       {loadState === "success" && (
         <>
+          {/* ── 오늘의 회고 (notes_v2 플래그, 노트 없으면 숨김) ── */}
+          <DailyRecallCard />
+
           {/* ── 컬렉션 바로가기 ── */}
           <div className="px-4 mb-3">
             <Link

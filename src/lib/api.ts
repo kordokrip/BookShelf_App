@@ -47,6 +47,7 @@ export const queryKeys = {
       [...queryKeys.notes.lists(), filters] as const,
     details: () => [...queryKeys.notes.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.notes.details(), id] as const,
+    daily: () => [...queryKeys.notes.all, 'daily'] as const,
   },
   search: {
     all: ['search'] as const,

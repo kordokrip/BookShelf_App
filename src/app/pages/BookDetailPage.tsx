@@ -31,6 +31,10 @@ import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { cn } from "../components/ui/utils";
 import { CameraOCRSheet } from "../components/books/CameraOCRSheet";
+import { NoteContent } from "../components/notes/NoteContent";
+import { NoteEditor } from "../components/notes/NoteEditor";
+import { useFlag } from "../../hooks/useFeatureFlags";
+import { formatNotePages } from "../../lib/noteMarkup";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription,
@@ -76,7 +80,7 @@ function QuoteCard({ note }: { note: BookNote }) {
           className="flex-1 text-[#4C1D95] italic leading-relaxed"
           style={{ fontSize: 14 }}
         >
-          {note.content}
+          <NoteContent content={note.content} />
         </p>
         {/* 66/99 style closing quotation mark */}
         <span style={{ fontSize: 28, color: "#7C3AED", lineHeight: 1, alignSelf: "flex-end", marginBottom: -4 }}>"</span>
@@ -94,7 +98,7 @@ function QuoteCard({ note }: { note: BookNote }) {
               borderRadius: 4,
             }}
           >
-            p.{note.page}
+            {formatNotePages(note.page, note.endPage)}
           </span>
         )}
         <span className="text-[#A78BFA]" style={{ fontSize: 11 }}>{note.date}</span>
@@ -111,7 +115,7 @@ function MemoCard({ note }: { note: BookNote }) {
       style={{ backgroundColor: "#FAFAFA" }}
     >
       <p className="text-[#374151] leading-relaxed" style={{ fontSize: 14 }}>
-        {note.content}
+        <NoteContent content={note.content} />
       </p>
       <div className="flex items-center gap-2 mt-3">
         {note.page && (
@@ -119,7 +123,7 @@ function MemoCard({ note }: { note: BookNote }) {
             className="px-2 py-0.5 rounded-full bg-[#EEF2FF]"
             style={{ fontSize: 11, fontWeight: 700, color: "#4F46E5" }}
           >
-            p.{note.page}
+            {formatNotePages(note.page, note.endPage)}
           </span>
         )}
         <span className="text-[#94A3B8]" style={{ fontSize: 11 }}>{note.date}</span>
@@ -134,7 +138,7 @@ function ReviewCard({ note, expanded, onToggle }: { note: BookNote; expanded: bo
   return (
     <div className="rounded-2xl p-4 border border-[#F1F5F9] bg-white" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
       <p className="text-[#374151] leading-relaxed" style={{ fontSize: 14 }}>
-        {expanded ? note.content : preview}
+        <NoteContent content={expanded ? note.content : preview} />
       </p>
       {note.content.length > 120 && (
         <button
@@ -159,6 +163,8 @@ interface NoteForm {
   type: NoteFormType;
   content: string;
   page: string;
+  /** 범위 끝 페이지 (notes_v2) */
+  endPage: string;
 }
 
 /* ─── Notes Tab ──────────────────────────────────────────────── */
@@ -167,7 +173,8 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [showOCR, setShowOCR] = useState(false);
   const [editingNote, setEditingNote] = useState<BookNote | null>(null);
-  const [form, setForm] = useState<NoteForm>({ type: "memo", content: "", page: "" });
+  const [form, setForm] = useState<NoteForm>({ type: "memo", content: "", page: "", endPage: "" });
+  const notesV2 = useFlag("notes_v2");
   const { showToast } = useToast();
 
   // 빠른 노트 캡처 바 상태
@@ -181,7 +188,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
 
   const openAdd = (type: NoteFormType) => {
     setEditingNote(null);
-    setForm({ type, content: "", page: "" });
+    setForm({ type, content: "", page: "", endPage: "" });
     setIsSheetOpen(true);
   };
 
@@ -191,6 +198,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
       type: note.type as NoteFormType,
       content: note.content,
       page: String(note.page ?? ""),
+      endPage: String(note.endPage ?? ""),
     });
     setIsSheetOpen(true);
   };
@@ -198,22 +206,32 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
   const closeSheet = () => {
     setIsSheetOpen(false);
     setEditingNote(null);
-    setForm({ type: "memo", content: "", page: "" });
+    setForm({ type: "memo", content: "", page: "", endPage: "" });
   };
 
   const handleSave = async () => {
     if (!form.content.trim()) return;
+    const startPage = form.page ? parseInt(form.page, 10) : undefined;
+    const endPage = notesV2 && form.endPage ? parseInt(form.endPage, 10) : undefined;
+    if (endPage !== undefined && (startPage === undefined || endPage < startPage)) {
+      showToast("끝 페이지는 시작 페이지 이상이어야 해요.", "error");
+      return;
+    }
     const payload = {
       book_id: bookId,
       type: form.type,
       content: form.content.trim(),
-      page_number: form.page ? parseInt(form.page, 10) : undefined,
+      page_number: startPage,
     };
     try {
       if (editingNote) {
-        await updateMutation.mutateAsync({ id: editingNote.id, data: payload });
+        // v2에서는 끝 페이지를 지운 경우도 반영되도록 null을 명시적으로 보냄
+        await updateMutation.mutateAsync({
+          id: editingNote.id,
+          data: notesV2 ? { ...payload, end_page: endPage ?? null } : payload,
+        });
       } else {
-        await addMutation.mutateAsync(payload);
+        await addMutation.mutateAsync({ ...payload, end_page: endPage });
       }
       closeSheet();
     } catch {
@@ -340,16 +358,29 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
               </button>
             ))}
           </div>
-          <textarea
-            ref={quickTextareaRef}
-            rows={2}
-            value={quickText}
-            onChange={(e) => setQuickText(e.target.value)}
-            onKeyDown={handleQuickKeyDown}
-            placeholder="빠른 노트를 입력하세요... (⌘+Enter로 저장)"
-            className="w-full bg-white rounded-xl border border-[#E2E8F0] outline-none focus:border-[#4F46E5] resize-none px-3 py-2 transition-colors"
-            style={{ fontSize: 13, color: "#1E293B" }}
-          />
+          {notesV2 ? (
+            <NoteEditor
+              ref={quickTextareaRef}
+              rows={2}
+              value={quickText}
+              onChange={setQuickText}
+              onKeyDown={handleQuickKeyDown}
+              placeholder="빠른 노트를 입력하세요... (⌘+Enter로 저장)"
+              className="w-full bg-white rounded-xl border border-[#E2E8F0] outline-none focus:border-[#4F46E5] resize-none px-3 py-2 transition-colors"
+              style={{ fontSize: 13, color: "#1E293B" }}
+            />
+          ) : (
+            <textarea
+              ref={quickTextareaRef}
+              rows={2}
+              value={quickText}
+              onChange={(e) => setQuickText(e.target.value)}
+              onKeyDown={handleQuickKeyDown}
+              placeholder="빠른 노트를 입력하세요... (⌘+Enter로 저장)"
+              className="w-full bg-white rounded-xl border border-[#E2E8F0] outline-none focus:border-[#4F46E5] resize-none px-3 py-2 transition-colors"
+              style={{ fontSize: 13, color: "#1E293B" }}
+            />
+          )}
           <div className="flex items-center justify-between mt-2">
             {currentPage && currentPage > 0 ? (
               <span style={{ fontSize: 11, color: "#94A3B8" }}>📄 현재 {currentPage}p 자동 반영</span>
@@ -505,27 +536,63 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
             </div>
 
             {/* 내용 */}
-            <Textarea
-              value={form.content}
-              onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
-              placeholder={
-                form.type === "quote" ? "인용할 구절을 입력하세요" :
-                form.type === "review" ? "독후감을 작성하세요" :
-                "메모 내용을 입력하세요"
-              }
-              rows={5}
-              className="resize-none"
-              autoFocus
-            />
+            {notesV2 ? (
+              <NoteEditor
+                value={form.content}
+                onChange={(content) => setForm((f) => ({ ...f, content }))}
+                placeholder={
+                  form.type === "quote" ? "인용할 구절을 입력하세요" :
+                  form.type === "review" ? "독후감을 작성하세요" :
+                  "메모 내용을 입력하세요"
+                }
+                rows={5}
+                autoFocus
+              />
+            ) : (
+              <Textarea
+                value={form.content}
+                onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
+                placeholder={
+                  form.type === "quote" ? "인용할 구절을 입력하세요" :
+                  form.type === "review" ? "독후감을 작성하세요" :
+                  "메모 내용을 입력하세요"
+                }
+                rows={5}
+                className="resize-none"
+                autoFocus
+              />
+            )}
 
-            {/* 페이지 번호 */}
-            <Input
-              type="number"
-              min={1}
-              value={form.page}
-              onChange={(e) => setForm((f) => ({ ...f, page: e.target.value }))}
-              placeholder="페이지 번호 (선택)"
-            />
+            {/* 페이지 번호 (v2: 시작~끝 범위) */}
+            {notesV2 ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={1}
+                  value={form.page}
+                  onChange={(e) => setForm((f) => ({ ...f, page: e.target.value }))}
+                  placeholder="시작 페이지"
+                  aria-label="시작 페이지"
+                />
+                <span className="text-[#94A3B8]" aria-hidden>~</span>
+                <Input
+                  type="number"
+                  min={1}
+                  value={form.endPage}
+                  onChange={(e) => setForm((f) => ({ ...f, endPage: e.target.value }))}
+                  placeholder="끝 페이지 (선택)"
+                  aria-label="끝 페이지"
+                />
+              </div>
+            ) : (
+              <Input
+                type="number"
+                min={1}
+                value={form.page}
+                onChange={(e) => setForm((f) => ({ ...f, page: e.target.value }))}
+                placeholder="페이지 번호 (선택)"
+              />
+            )}
 
             {/* 저장 버튼 */}
             <Button

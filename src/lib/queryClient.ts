@@ -64,6 +64,7 @@ queryClient.setMutationDefaults(['addNote'], {
     type: string;
     content: string;
     page_number?: number;
+    end_page?: number;
     color?: string;
   }) => notesApi.create(data),
 });

@@ -8,9 +8,29 @@ export interface Note {
   type: string;
   content: string;
   page_number: number | null;
+  end_page: number | null;
+  session_id: string | null;
+  /** JSON 배열 문자열 */
+  tags: string | null;
   color: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** GET /api/notes/random 응답 — 오늘의 회고 */
+export interface DailyNote extends Note {
+  book_title: string;
+  book_author: string | null;
+  book_cover_image: string | null;
+  book_cover_color: string | null;
+}
+
+export interface NoteWriteFields {
+  type: string;
+  content: string;
+  page_number: number | null;
+  end_page: number | null;
+  color: string;
 }
 
 export const notesApi = {
@@ -24,6 +44,9 @@ export const notesApi = {
     return apiFetch<ApiResponse<Note[]>>(`/api/notes${query}`);
   },
 
+  /** 오늘의 회고 노트 (노트가 없으면 data: null) */
+  daily: () => apiFetch<ApiResponse<DailyNote | null>>('/api/notes/random'),
+
   /** 단일 노트 조회 */
   get: (id: string) =>
     apiFetch<ApiResponse<Note>>(`/api/notes/${id}`),
@@ -34,6 +57,7 @@ export const notesApi = {
     type: string;
     content: string;
     page_number?: number;
+    end_page?: number;
     color?: string;
   }) =>
     apiFetch<ApiResponse<Note>>('/api/notes', {
@@ -42,7 +66,7 @@ export const notesApi = {
     }),
 
   /** 노트 수정 */
-  update: (id: string, data: Partial<{ type: string; content: string; page_number: number; color: string }>) =>
+  update: (id: string, data: Partial<NoteWriteFields>) =>
     apiFetch<ApiResponse<Note>>(`/api/notes/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),

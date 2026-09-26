@@ -270,7 +270,10 @@ export interface BookNote {
   id: string;
   type: "quote" | "memo" | "review";
   content: string;
+  /** 시작 페이지 */
   page?: number;
+  /** 범위 끝 페이지 (notes.end_page) */
+  endPage?: number;
   date: string;
 }
 
@@ -282,6 +285,7 @@ export interface ApiBookNote {
   type: string;
   content: string;
   page_number: number | null;
+  end_page?: number | null;
   color: string | null;
   created_at: string;
   updated_at: string;
@@ -293,6 +297,7 @@ export function normalizeBookNote(api: ApiBookNote): BookNote {
     type: api.type as BookNote['type'],
     content: api.content,
     page: api.page_number ?? undefined,
+    endPage: api.end_page ?? undefined,
     date: api.created_at.slice(0, 10).replace(/-/g, '.'),
   };
 }
