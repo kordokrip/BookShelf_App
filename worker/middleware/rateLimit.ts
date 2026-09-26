@@ -7,6 +7,21 @@ interface RateLimitOptions {
   keyPrefix?: string;
 }
 
+/** KV expirationTtl 최소값(초) */
+const KV_MIN_TTL_SEC = 60;
+
+/**
+ * 현재 시각이 속한 고정 창의 번호와, 그 창이 끝날 때까지 남은 TTL(초).
+ * 창 번호를 키에 넣으므로 창이 바뀌면 카운터가 새 키에서 0부터 시작한다.
+ * (이전 구현은 증가할 때마다 TTL을 다시 설정해 요청이 이어지는 동안 창이 계속 연장됐음)
+ */
+export function computeRateLimitWindow(nowMs: number, windowMs: number) {
+  const windowId = Math.floor(nowMs / windowMs);
+  const remainingMs = (windowId + 1) * windowMs - nowMs;
+  const ttlSec = Math.max(KV_MIN_TTL_SEC, Math.ceil(remainingMs / 1000));
+  return { windowId, ttlSec };
+}
+
 /**
  * KV 기반 Rate Limiting 미들웨어 (고정 창 방식)
  *
@@ -24,7 +39,8 @@ export function rateLimit(
       c.req.header('x-forwarded-for') ??
       'unknown';
     const path = new URL(c.req.url).pathname;
-    const key = `rl:${keyPrefix}:${path}:${ip}`;
+    const { windowId, ttlSec } = computeRateLimitWindow(Date.now(), windowMs);
+    const key = `rl:${keyPrefix}:${path}:${ip}:${windowId}`;
 
     const current = await c.env.KV.get(key);
     const count = current ? parseInt(current, 10) : 0;
@@ -36,9 +52,7 @@ export function rateLimit(
       );
     }
 
-    await c.env.KV.put(key, String(count + 1), {
-      expirationTtl: Math.ceil(windowMs / 1000),
-    });
+    await c.env.KV.put(key, String(count + 1), { expirationTtl: ttlSec });
 
     await next();
   };
