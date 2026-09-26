@@ -5,7 +5,7 @@
  * POST   /api/users/login     — 로그인, JWT + Refresh Token 발급 (Rate Limit: 5회/분)
  * GET    /api/users/profile   — 내 프로필 조회 (인증 필요)
  * PATCH  /api/users/profile   — 프로필 수정 (이름/장르/목표/아바타)
- * DELETE /api/users/me        — 본인 계정 영구 삭제 (비밀번호 재확인, Rate Limit: 3회/분)
+ * DELETE /api/users/me        — 본인 계정 영구 삭제 (비밀번호 재확인, Rate Limit: 5회/분)
  * GET    /api/users/:id       — 사용자 조회 (자신: 전체, 타인: 공개 필드만)
  * POST   /api/users           — 소셜 로그인 upsert (인증 필요)
  * GET    /api/users/:id/stats — 독서 통계 (인증 필요, 프론트 미사용 죽은 코드)
@@ -163,7 +163,7 @@ usersRouter.get('/profile', authMiddleware, async (c) => {
 // 기존 refresh token은 /api/auth/refresh의 사용자 존재 확인에서 401이 된다.
 usersRouter.delete(
   '/me',
-  rateLimit({ limit: 3, windowMs: 60_000, keyPrefix: 'delete_account' }),
+  rateLimit({ limit: 5, windowMs: 60_000, keyPrefix: 'delete_account' }),
   authMiddleware,
   zValidator('json', deleteAccountSchema),
   async (c) => {
