@@ -55,3 +55,7 @@ coverage/
 public/screenshots/
 .dev.vars
 oracleJdk-26.jdk/
+
+# ─── 로컬 MCP 도구 설정·산출물 ───────────────────────────────
+.mcp.json
+.playwright-mcp/
