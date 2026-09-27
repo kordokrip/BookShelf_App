@@ -17,6 +17,7 @@ import { HTTPException } from 'hono/http-exception';
 import type { Bindings, DbReadingSession } from '../types';
 import { authMiddleware } from '../auth';
 import { logActivity } from './admin';
+import { achievementEventFor } from '../lib/achievementsDb';
 
 export const sessionsRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -123,7 +124,12 @@ sessionsRouter.post(
     const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? 'unknown';
     await logActivity(c.env.DB, userId, 'session:log', { bookId: body.book_id, pagesRead: body.pages_read }, ip);
 
-    return c.json({ data: session, new_current_page: newCurrentPage }, 201);
+    // Phase 3: 읽은 페이지 업적 평가 (중복 세션 경로는 위에서 이미 반환되므로 여기는 새 기록만)
+    const achievements = body.pages_read > 0
+      ? await achievementEventFor(c.env.DB, userId, { totalPages: body.pages_read })
+      : undefined;
+
+    return c.json({ data: session, new_current_page: newCurrentPage, ...(achievements ? { achievements } : {}) }, 201);
   },
 );
 

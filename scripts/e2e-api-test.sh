@@ -48,7 +48,7 @@ FAILED_TESTS=()
 if [[ "$READONLY" == true ]]; then
   TOTAL=3
 else
-  TOTAL=57
+  TOTAL=59
 fi
 
 # ── 시작 시각 ────────────────────────────────────────────────────
@@ -579,6 +579,38 @@ if [[ "$HTTP_CODE" == "200" && "$RANDOM_ID" == "$NOTE_ID" && -n "$RANDOM_TITLE" 
   printf "         ${CYAN}↳ note=%s, book_title=%s${NC}\n" "$RANDOM_ID" "$RANDOM_TITLE"
 else
   fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE}, id=${RANDOM_ID} (기대: 200 + 유일한 노트 ${NOTE_ID} + book_title)"
+fi
+
+# ── 업적·캐릭터 (TEST 58~59, Phase 3) ──
+# TEST 06에서 status=done으로 1권 등록 → first_book 달성, 책 부엉이 1단계(아기 부엉이)
+T=58; NAME="GET /api/achievements (first_book 달성 + 부엉이 1단계)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" "${BASE_URL}/api/achievements" \
+  -H "Authorization: Bearer ${TOKEN}")
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+FIRST_AT=$(json_val "$BODY" "[a for a in d['data']['achievements'] if a['id']=='first_book'][0]['unlockedAt'] or ''")
+OWL_STAGE=$(json_val "$BODY" "[c for c in d['data']['characters'] if c['id']=='owl'][0]['stageIndex']")
+if [[ "$HTTP_CODE" == "200" && -n "$FIRST_AT" && "$OWL_STAGE" == "1" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+  printf "         ${CYAN}↳ first_book unlockedAt=%s, owl stage=%s${NC}\n" "$FIRST_AT" "$OWL_STAGE"
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE}, first_book=${FIRST_AT:-없음}, owl=${OWL_STAGE} (기대: 200 + 달성 + 1)"
+fi
+
+T=59; NAME="POST /api/books (2번째 완독 → achievements 필드 없음)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" -X POST "${BASE_URL}/api/books" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"E2E 업적 중복 확인","author":"E2E","status":"done","total_pages":100}')
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+HAS_ACH=$(json_val "$BODY" "'achievements' in d")
+if [[ "$HTTP_CODE" == "201" && "$HAS_ACH" == "False" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE}, achievements 포함=${HAS_ACH} (기대: 201 + 없음 — 이미 달성한 업적은 다시 축하하지 않음)"
 fi
 
 # ================================================================

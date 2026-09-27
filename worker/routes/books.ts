@@ -23,6 +23,7 @@ import type { Bindings, DbBook } from '../types';
 import { authMiddleware } from '../auth';
 import { logActivity } from './admin';
 import { deriveFinishedDate } from '../lib/bookHelpers';
+import { achievementEventFor } from '../lib/achievementsDb';
 
 export const booksRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -294,7 +295,12 @@ booksRouter.post('/', authMiddleware, zValidator('json', createBookSchema), asyn
   const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? 'unknown';
   await logActivity(c.env.DB, userId, 'book:add', { bookId: id, title: body.title, status: body.status }, ip);
 
-  return c.json({ data: created }, 201);
+  // Phase 3: 완독으로 바로 등록하면 업적 평가 (새로 달성한 것이 있을 때만 응답에 포함)
+  const achievements = body.status === 'done'
+    ? await achievementEventFor(c.env.DB, userId, { totalDone: 1 })
+    : undefined;
+
+  return c.json({ data: created, ...(achievements ? { achievements } : {}) }, 201);
 });
 
 // ─── PUT /api/books/:id ───────────────────────────────────────
@@ -304,10 +310,10 @@ booksRouter.put('/:id', authMiddleware, zValidator('json', updateBookSchema), as
   const body = c.req.valid('json');
 
   const existing = await c.env.DB.prepare(
-    'SELECT id, total_pages FROM books WHERE id = ? AND user_id = ?',
+    'SELECT id, total_pages, status FROM books WHERE id = ? AND user_id = ?',
   )
     .bind(id, userId)
-    .first<{ id: string; total_pages: number | null }>();
+    .first<{ id: string; total_pages: number | null; status: string }>();
 
   if (!existing) throw new HTTPException(404, { message: '책을 찾을 수 없습니다.' });
 
@@ -358,7 +364,13 @@ booksRouter.put('/:id', authMiddleware, zValidator('json', updateBookSchema), as
     .bind(id)
     .first<DbBook>();
 
-  return c.json({ data: updated });
+  // Phase 3: 완독으로 "전환"될 때만 업적 평가 (이미 완독인 책의 정보 수정은 제외)
+  const becameDone = body.status === 'done' && existing.status !== 'done';
+  const achievements = becameDone
+    ? await achievementEventFor(c.env.DB, userId, { totalDone: 1 })
+    : undefined;
+
+  return c.json({ data: updated, ...(achievements ? { achievements } : {}) });
 });
 
 // ─── DELETE /api/books/:id ────────────────────────────────────

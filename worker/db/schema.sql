@@ -339,3 +339,11 @@ CREATE INDEX IF NOT EXISTS idx_activity_logs_action
   ON activity_logs(action, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_activity_logs_created
   ON activity_logs(created_at DESC);
+
+-- ─── 업적 (0016, 리뉴얼 Phase 3 — ADR-004) ─────────────────────
+CREATE TABLE IF NOT EXISTS user_achievements (
+  user_id        TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  achievement_id TEXT NOT NULL,
+  unlocked_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (user_id, achievement_id)
+);

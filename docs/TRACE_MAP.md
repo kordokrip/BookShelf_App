@@ -901,6 +901,17 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 
 프론트: `useFeatureFlags()` / `useFlag(name)` (`src/hooks/useFeatureFlags.ts`, 캐시 키 `['flags', userId]`, staleTime 5분, 로딩·오류 시 전부 off)
 
+### 업적 (`/api/achievements`) — Phase 3, ADR-004
+
+| Method | 경로 | 인증 | 요청 | 응답 | Worker 파일 |
+|---|---|---|---|---|---|
+| GET | `/api/achievements` | **authMiddleware** | — | `{data:{progress:{totalDone,totalPages}, achievements:[{id,icon,label,description,threshold,type,tier,unlockedAt\|null}], characters:[{id,name,description,metric,asset,stageIndex,stages:[{name,emoji,crown,threshold}]}]}}` — 조회 시 배포 전 달성분을 조용히 소급 기록 | `routes/achievements.ts` + `lib/achievementsDb.ts` |
+
+변경 API 응답의 `achievements` 필드 (새로 달성한 것이 있을 때만 포함, 없으면 응답 형태 불변):
+`{ newlyUnlocked: [{id,icon,label,description,tier}], evolved: [{characterId,characterName,stageIndex,stageName,emoji,crown}] }`
+- `POST /api/books` (status=done으로 등록), `PUT /api/books/:id` (완독으로 **전환**될 때만), `POST /api/sessions` (새 세션, pages_read>0)
+- "새로 달성" = 이번 행동으로 넘은 임계치만(`newlyCrossed`) — 과거 달성분은 소급 기록만, 축하 없음
+
 ### 책 (`/api/books`)
 
 | Method | 경로 | 인증 | 요청 | 응답 | Worker 파일 |
