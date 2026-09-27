@@ -164,7 +164,7 @@ export function RecommendSection({ wishTitleSet: _wishTitleSet }: { wishTitleSet
                         href={book.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[#94A3B8] hover:text-[#4F46E5] transition-colors flex-shrink-0 mt-0.5"
+                        className="text-[#64748B] hover:text-[#4F46E5] transition-colors flex-shrink-0 p-4 -m-4"
                         aria-label={`${book.title} 상세 보기`}
                       >
                         <ExternalLink size={13} />

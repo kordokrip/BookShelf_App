@@ -33,9 +33,10 @@ export function SharePage() {
         <div className="flex items-center gap-3">
           <button
             onClick={back}
-            className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="뒤로"
+            className="flex items-center justify-center w-11 h-11 -ml-3 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
-            <ChevronLeft size={20} />
+            <ChevronLeft size={22} />
           </button>
           <h1 className="text-xl font-bold text-foreground">공유 보고서 📬</h1>
         </div>

@@ -211,9 +211,10 @@ export function CollectionsPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => navigate(-1)}
-            className="hover:opacity-70 transition-opacity"
+            aria-label="뒤로"
+            className="flex items-center justify-center w-11 h-11 -ml-3 rounded-full hover:bg-[#F1F5F9] transition-colors"
           >
-            <ChevronLeft size={20} className="text-[#1E293B]" />
+            <ChevronLeft size={22} className="text-[#1E293B]" />
           </button>
           <h2 style={{ fontSize: 20, fontWeight: 700, color: "#1E293B" }}>내 컬렉션 📂</h2>
         </div>

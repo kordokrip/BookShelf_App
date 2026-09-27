@@ -35,7 +35,7 @@ export function LifeBooksPage() {
             <button
               onClick={handleRefresh}
               disabled={refreshMutation.isPending}
-              className="flex items-center gap-1.5 mt-1 text-sm text-[#64748B] dark:text-[#94A3B8] hover:text-[#4F46E5] dark:hover:text-[#A5B4FC] transition-colors disabled:opacity-40"
+              className="flex items-center justify-center gap-1.5 min-w-11 min-h-11 px-2 -mr-2 rounded-full text-sm text-[#64748B] dark:text-[#94A3B8] hover:text-[#4F46E5] hover:bg-[#F1F5F9] dark:hover:text-[#A5B4FC] dark:hover:bg-[#334155] transition-colors disabled:opacity-40"
               aria-label="인생책 새로고침"
             >
               <RefreshCw size={15} className={refreshMutation.isPending ? "animate-spin" : ""} />
@@ -141,7 +141,7 @@ export function LifeBooksPage() {
                           href={book.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-[#94A3B8] hover:text-[#4F46E5] dark:hover:text-[#A5B4FC] transition-colors flex-shrink-0 mt-0.5"
+                          className="text-[#64748B] hover:text-[#4F46E5] dark:hover:text-[#A5B4FC] transition-colors flex-shrink-0 p-4 -m-4"
                           aria-label={`${book.title} 상세 보기`}
                         >
                           <ExternalLink size={14} />
