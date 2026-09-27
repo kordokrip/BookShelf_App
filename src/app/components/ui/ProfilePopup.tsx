@@ -219,7 +219,8 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
   const handleLogout = () => {
     logout();
     onClose();
-    window.location.href = "/splash";
+    // 로그아웃한 사용자는 기존 사용자이므로 소개 화면이 아니라 로그인으로
+    window.location.href = "/login";
   };
 
   const saveReminderPrefs = async (prefs: {

@@ -1,8 +1,7 @@
 import { createElement, lazy, Suspense } from "react";
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, Navigate } from "react-router";
 import { Root } from "./Root";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
-import { SplashPage } from "./pages/SplashPage";
 import { EntryGate } from "./components/auth/EntryGate";
 import { RouteErrorFallback } from "./components/RouteErrorFallback";
 
@@ -82,8 +81,9 @@ export const router = createBrowserRouter([
   },
   // ─── 공개 라우트 ─────────────────────────────────────────
   {
+    // 스플래시는 온보딩에 통합됨(2026-09-27) — 옛 링크·북마크 호환용 리다이렉트
     path: "/splash",
-    Component: SplashPage,
+    Component: () => createElement(Navigate, { to: "/onboarding", replace: true }),
     ErrorBoundary: EB,
   },
   {

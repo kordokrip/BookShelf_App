@@ -1,8 +1,7 @@
 import { Link, useLocation } from "react-router";
 
 const pages = [
-  { path: "/splash", label: "소개" },
-  { path: "/onboarding", label: "온보딩" },
+  { path: "/onboarding", label: "소개" },
   { path: "/login", label: "로그인" },
   { path: "/signup", label: "회원가입" },
 ];

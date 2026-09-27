@@ -36,7 +36,7 @@
 - [8. 인증 플로우](#8-인증-플로우)
 - [9. 페이지별 상세 UI/UX (20개)](#9-페이지별-상세-uiux-20개)
   - [9.0 EntryGate (진입 분기)](#90-entrygate-진입-분기)
-  - [9.1 SplashPage](#91-splashpage)
+  - [9.1 SplashPage (온보딩에 통합)](#91-splashpage-온보딩에-통합)
   - [9.2 OnboardingPage](#92-onboardingpage)
   - [9.3 LoginPage](#93-loginpage)
   - [9.4 SignUpPage](#94-signuppage)
@@ -425,12 +425,18 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 ### 8.2 인증 경로 흐름
 
 ```
-/splash → (2800ms 후) → ✅인증 ? "/" : "/onboarding"
-/onboarding → (4슬라이드 완료) → "/login"
+/ (Root, 보호) → 미인증 → /entry
+/entry → 인증 ? "/" : (처음 방문 ? "/onboarding" : "/login")
+         처음 방문 판단: has_visited · onboarding_seen · (옛 키) splash_dismissed · onboarding_dismissed 모두 없음
+/onboarding → 모든 슬라이드에서 [로그인](상단·하단) / [바로 가입하기]·[무료로 시작하기] → "/login" · "/signup"
+/splash → "/onboarding" 리다이렉트 (2026-09-27 통합, 옛 링크 호환)
 /login → (이메일/PW 또는 Google OAuth) → "/"
-/signup → (4단계 위자드 완료) → "/"
+/signup → (4단계 위자드 완료, 장르 선택 포함) → "/"
+로그아웃 → "/login"
 /auth/google/callback → 성공?"/" / 실패?"/login"
 ```
+
+2026-09-27 개편 전에는 새 기기에서 기존 사용자가 스플래시 → 슬라이드 3장 → 장르·목표 선택(필수) → 회원가입 → 로그인 링크까지 6~8번 탭해야 했다. 지금은 첫 화면에서 1번.
 
 ### 8.3 AuthPreviewNav (개발용 하단 네비)
 
@@ -459,7 +465,7 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 | 인증 상태 | 동작 |
 |---------|------|
 | `authenticated` | `<Navigate to="/" replace />` |
-| `unauthenticated` | `<Navigate to="/splash" replace />` |
+| `unauthenticated` | 처음 방문이면 `/onboarding`, 아니면 `/login` (`navigate(..., { replace: true })`) |
 | `idle` / `loading` | 로딩 스피너 표시 |
 
 - **데이터 바인딩**: `useAuthStore(s => s.status)`
@@ -467,96 +473,21 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 
 ---
 
-### 9.1 SplashPage
+### 9.1 SplashPage (온보딩에 통합)
 
-- **파일**: `src/app/pages/SplashPage.tsx` (~120줄)
-- **경로**: `/splash` (eager 로드)
-- **레이아웃**: `min-h-svh`, 풀스크린 흰색 배경, 세로 중앙 정렬
-
-#### UI 요소
-
-| 요소 | 설명 | 스타일 |
-|------|------|--------|
-| **로고 이미지** | `/icons/icon-192.png` | 80px × 80px, `rounded-2xl shadow-lg` |
-| **앱 이름** | "BookShelf" | 28px, weight 800, `#1e1b4b` |
-| **슬로건 1** | "나만의 독서 기록 공간" | 15px, weight 500, `#64748B` |
-| **슬로건 2** | "내 독서의 모든 순간을 기록하세요" | 13px, `#94A3B8` |
-| **로딩 dots** | 3개 원형 | 8px, 순환 scale(1.4) + `#4F46E5`, 400ms interval |
-
-#### 동작 로직
-
-- `dotIndex` 상태: 0→1→2→0 순환 (400ms `setInterval`)
-- `setTimeout(2800ms)`:
-  - `authStore.checkAuth()` → `status === 'authenticated'` → `navigate("/")`
-  - 그 외 → `navigate("/onboarding")`
-- **API 호출**: `authStore.checkAuth()` → 내부적으로 JWT 토큰 검증
-
-#### AuthPreviewNav
-
-- 하단 고정에 AuthPreviewNav 표시 (개발 편의)
+2026-09-27 삭제. 로그인 버튼 없이 [시작하기]만 있어 기존 사용자도 온보딩을 거쳐야 했다. 앱 소개는 9.2 OnboardingPage로 통합했고, `/splash`는 `/onboarding`으로 리다이렉트한다(옛 링크·북마크 호환).
 
 ---
 
 ### 9.2 OnboardingPage
 
-- **파일**: `src/app/pages/OnboardingPage.tsx` (~530줄)
-- **경로**: `/onboarding`
-- **레이아웃**: `min-h-svh`, 세로 플렉스
-
-#### State (5개)
-
-| State | 타입 | 초기값 | 설명 |
-|-------|------|--------|------|
-| `current` | number | 0 | 현재 슬라이드 인덱스 (0–3) |
-| `selectedGenres` | GenreKey[] | [] | 선택된 장르 |
-| `readingGoal` | number | 12 | 연간 목표 |
-| `isSaving` | boolean | false | 저장 중 로딩 |
-| `touchStartX` | number | 0 | 스와이프 시작 X 좌표 |
-
-#### 슬라이드 구성 (4개)
-
-**슬라이드 0–2** (정보 슬라이드):
-
-| 슬라이드 | SVG 일러스트 | 제목 | 설명 |
-|---------|------------|------|------|
-| 0 | `BookshelfIllustration` | "나만의 서재를 만들어보세요" | "읽은 책, 읽는 중인 책, 읽고 싶은 책을 한곳에서 관리하세요" |
-| 1 | `CameraIllustration` | "바코드로 쉽게 등록" | "ISBN 바코드를 스캔하면 책 정보가 자동으로 입력됩니다" |
-| 2 | `StatsIllustration` | "독서 통계를 확인하세요" | "월별 독서량, 장르별 분포, 목표 달성률을 한눈에 볼 수 있어요" |
-
-- 일러스트: 인라인 SVG, viewBox `0 0 200 200`, max-w 180px
-- 제목: 22px, weight 700, `#1e1b4b`
-- 설명: 15px, `#64748B`, lineHeight 1.6
-- "다음" 버튼: `w-full h-48px rounded-2xl`, 인디고→바이올렛 그래디언트
-
-**슬라이드 3** (장르 & 목표):
-
-**장르 칩**:
-- GENRE_CONFIG 기반 19개 (기타 제외)
-- 선택: `bg: cfg.bg`, `color: cfg.text`, `fontWeight: 700`, `border: 1.5px solid ${cfg.text}66`, `boxShadow: 0 2px 8px ${cfg.text}22`
-- 미선택: `bg: #F8FAFC`, `color: #64748B`, `border: 1.5px solid #E2E8F0`
-- `min-height: 44px` (WCAG 터치 타겟 준수)
-- **active:scale-95** 탭 피드백
-
-**독서 목표 슬라이더**:
-- Range input: `1~100권`, linear-gradient 트랙
-- 현재 값 표시: 큰 숫자 + "권" 레이블
-- 프리셋 안내: ≤6 "🌱", ≤15 "📚", ≤30 "🚀", >30 "🌟"
-
-**"시작하기" 버튼**:
-- `h-52px`, `rounded-2xl`, 인디고→바이올렛 그래디언트
-- disabled 시 slate 그래디언트
-- **API**: `usersApi.updateProfile({ favorite_genres, reading_goal })` → `navigate("/login")`
-
-#### Progress Bar
-
-- 4개 세그먼트 (상단)
-- 활성: `#4F46E5` (인디고)
-- 비활성: `#E2E8F0`
-
-#### 스와이프 제스처
-
-- `touchStart`/`touchEnd`, diff > 50px → `goNext()`/`goPrev()`
-- 양방향 스와이프
+- **파일**: `src/app/pages/OnboardingPage.tsx`, 슬라이드 구성 `components/onboarding/onboardingSlides.tsx`, SVG 일러스트 `components/onboarding/Illustrations.tsx`
+- **경로**: `/onboarding` (공개, lazy) — 처음 방문한 미인증 사용자의 첫 화면
+- **레이아웃**: 화면 높이에 고정(`height: var(--vp-h)`), 헤더·하단 버튼은 고정, 소개 영역만 스크롤. 일러스트 높이는 `min(32dvh,300px)`(태블릿 이상 `min(56dvh,360px)`)라 작은 폰(320×568)·가로 모드(844×390)에서도 하단 버튼이 항상 보인다. 태블릿 이상은 일러스트·글 2단 + 이전/다음 화살표.
+- **항상 보이는 행동**: 헤더 [로그인](44px) / 하단 [다음] 또는 마지막 장 [무료로 시작하기] / [바로 가입하기]·[이미 계정이 있어요](마지막 장은 "이미 계정이 있나요? 로그인"). 어느 버튼이든 누르면 `onboarding_seen=1` → 다음 진입부터 로그인으로.
+- **내용**: `GET /api/flags/public`(무인증, 60초 캐시) 기준 — 전체 공개된 기능만 소개. 플래그 없음(현재 프로덕션): 서재 · 기록(문구·메모·독후감) · 성장(통계·배지) 3장. 공개 시: 서재 · 기록(서식·페이지 범위·오늘의 회고) · 몰입(집중 타이머·몰입 메모·AI 태그) · 성장(책 쌓기·캐릭터) 4장.
+- **접근성**: 캐러셀 패턴(`role="region"` + `aria-roledescription="carousel"`, 슬라이드 `aria-roledescription="slide"` + "n / 전체" 라벨), 위치 점은 28px 버튼(`aria-current="step"`), 좌우 화살표 키, 스와이프(50px), `useReducedMotion` 시 전환 애니메이션 생략, 자동 넘김 없음.
+- **제거한 것**: 장르·독서 목표 선택 슬라이드 — 회원가입 위자드에 이미 있고, 가입 전이라 토큰이 없어 저장되지도 않았다(선택값 유실 버그).
 
 ---
 
@@ -1720,7 +1651,7 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 |-----------|--------|----------|-----------|
 | `/api/users/register` | POST | SignUpPage Step 4 | "시작하기" 버튼 |
 | `/api/users/login` | POST | LoginPage | "로그인" 버튼 |
-| `/api/users/profile` | GET | SplashPage (checkAuth), TopBar | 인증 확인 / 프로필 조회 |
+| `/api/users/profile` | GET | EntryGate·ProtectedRoute (checkAuth), TopBar | 인증 확인 / 프로필 조회 |
 | `/api/users/:id` | GET | — | (내부 사용) |
 | `/api/users` | POST | — | Google OAuth upsert |
 | `/api/users/profile` | PATCH | OnboardingPage, SignUpPage, ReadingPage(GoalModal) | 장르/목표 저장 |
@@ -1916,7 +1847,7 @@ stats
 
 | 경로 | 보호 | 로드 방식 |
 |------|------|----------|
-| `/splash` | 공개 | eager |
+| `/splash` | 공개 | `/onboarding`으로 리다이렉트 (2026-09-27 통합) |
 | `/onboarding` | 공개 | lazy |
 | `/login` | 공개 | lazy |
 | `/signup` | 공개 | lazy |

@@ -53,8 +53,8 @@
 
 | 경로 | 컴포넌트 | 보호 여부 | 비고 |
 |---|---|---|---|
-| `/splash` | `SplashPage` | 공개 | 2.8초 후 `authenticated`→`/`, else→`/onboarding` 분기 ✅ |
-| `/onboarding` | `OnboardingPage` | 공개 | 스와이프 제스처(≥50px), 상단 ProgressBar, 장르 칩 44px 터치 타겟, 독서목표 슬라이더(1~100) ✅ |
+| `/splash` | (리다이렉트) | 공개 | `/onboarding`으로 이동 — 스플래시는 2026-09-27 온보딩에 통합 |
+| `/onboarding` | `OnboardingPage` | 공개 | 첫 방문 소개. 모든 슬라이드에 로그인·가입 버튼, 공개 플래그 기준 내용, 스와이프·화살표 키 (장르·목표 선택은 가입 위자드로 일원화) |
 | `/login` | `LoginPage` | 공개 | 로컬 + Google 로그인 (카카오 로그인은 2026-03-29 `c2dbe1e`로 제거됨) |
 | `/signup` | `SignUpPage` | 공개 | 로컬 회원가입 |
 | `/register-flow` | `RegisterFlowPage` | **보호** ✅ | `protected_()` 래핑 (2026-03-28 수정) |
@@ -68,7 +68,7 @@
 | `/collections` | `CollectionsPage` (lazy) | **보호** | 컬렉션 목록/상세 관리 |
 | `/book/:id` | `Root` > `BookDetailPage` | **보호** | |
 | `/design-system` | `DesignSystemPage` (lazy) | **보호** ★ (16차) | `protected_(withSuspense(Lazy))` + 컴포넌트 내부 admin gate (`role==='admin'`) |
-| `/entry` | `EntryGate` | 공개 ★ (16차) | 인증→`/`, 비인증→`/splash` 분기 |
+| `/entry` | `EntryGate` | 공개 ★ (16차) | 인증→`/`, 처음 방문→`/onboarding`, 그 외→`/login` |
 | `/groups` | `GroupsPage` (lazy) | **보호** ★ (21차) | 독서 모임 목록/생성/가입 + GroupDetailView(채팅/일정/피드백/멤버 탭) |
 | `/share` | `SharePage` (lazy) | **보호** | 공유 리포트 inbox/outbox |
 | `/admin` | `AdminPage` (lazy) | **보호** | 관리자 대시보드 |
@@ -132,49 +132,15 @@ done
 
 ## 2. 페이지별 전체 추적 (UI → Hook → API → Worker → DB)
 
-### SplashPage (`/splash`)
+### OnboardingPage (`/onboarding`) — 2026-09-27 개편 (스플래시 통합)
+
 ```
-UI(2.8초 타이머) → useAuthStore(s => s.status) 확인
-  status === 'authenticated' → navigate('/', { replace: true })
-  else (idle / unauthenticated) → navigate('/onboarding', { replace: true })
+OnboardingPage
+  → usePublicFlags() → GET /api/flags/public (무인증, Cache-Control 60s)
+  → buildOnboardingSlides(flags)  // 전체 공개된 기능만 소개
+  → [로그인]/[바로 가입하기]/[무료로 시작하기] 클릭 → localStorage onboarding_seen=1 → /login · /signup
+EntryGate: onboarding_seen 등 방문 흔적 있으면 /login, 없으면 /onboarding
 ```
-- App.tsx 마운트 시 `checkAuth()` 동시 실행 — 2.8초 내 인증 완료되면 `/`로, 미완료 시 `/onboarding` 안전 폴백
-
----
-
-### OnboardingPage (`/onboarding`)
-```
-UI(스와이프 ≥50px 또는 다음/이전 버튼 탭) → 슬라이드 전환 (총 4개 슬라이드)
-
-슬라이드 1: 환영 메시지
-슬라이드 2: 앱 기능 소개
-슬라이드 3: 장르 선택(minHeight:44px 칩) + 독서목표 슬라이더(range input, 1~100권)
-  → UI(슬라이드 3 완료 버튼) → usersApi.updateProfile({ favorite_genres, reading_goal })
-    → PATCH /api/users/profile
-      → D1: UPDATE users SET favorite_genres=?, reading_goal=?
-  → navigate('/login')
-슬라이드 4: 시작하기 안내
-  [handleOnboardingComplete()] ★ (C-3)
-    selectedGenres.length === 0 → showToast("최소 1개의 장르를 선택해주세요 📚", "error") 리턴
-    → usersApi.updateProfile({ favorite_genres, reading_goal }) → navigate('/login')
-
-[건너뛰기 버튼] ★ (C-3)
-  구(13차): navigate('/login') 직접 이동
-  현(14차): setCurrent(TOTAL_SLIDES - 1) → 마지막 슬라이드(시작하기 화면)로 이동
-
-[진행 표시]
-상단 ProgressBar: 현재 슬라이드 번호(1~4) / 전체(4) 비율로 폭 결정
-  - 컬러 바 형식 (점 인디케이터 → ProgressBar로 교체)
-
-[스와이프 감지]
-touchStartX → handleTouchStart(e: React.TouchEvent)
-touchEndX   → handleTouchEnd(e: React.TouchEvent)
-deltaX = touchStartX - touchEndX
-  ≥ 50px  → 다음 슬라이드
-  ≤ -50px → 이전 슬라이드
-```
-
----
 
 ### Root 레이아웃 (`Root.tsx`)
 ```
@@ -284,9 +250,10 @@ useBookCount('reading'|'wish') → 읽는중/위시 배지 카운트
 
 [동작]
 useAuthStore(s => s.status) 구독
-  status === 'authenticated' → <Navigate to="/" replace />
-  status === 'unauthenticated' → <Navigate to="/splash" replace />
+  status === 'authenticated' → navigate("/", { replace: true })
+  status === 'unauthenticated' → 방문 흔적(has_visited·onboarding_seen·옛 splash/onboarding_dismissed) 있으면 "/login", 없으면 "/onboarding"
   status === 'idle' || 'loading' → 로딩 스피너 표시
+(보호 라우트의 미인증 처리는 ProtectedRoute → "/entry". 2026-09-27부터 Root 레이아웃 자체도 보호)
 
 [용도]
 앱 최초 진입점 — 인증 상태에 따라 적절한 페이지로 라우팅
@@ -898,6 +865,7 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 | Method | 경로 | 인증 | 요청 | 응답 | Worker 파일 |
 |---|---|---|---|---|---|
 | GET | `/api/flags` | **authMiddleware** | — | `{data:{flags: FeatureFlag[]}}` — 환경 기본값(`FEATURE_FLAGS` var), 관리자는 전체 | `routes/flags.ts` + `lib/featureFlags.ts` |
+| GET | `/api/flags/public` | 없음 | — | `{data:{flags}}` — 환경 기본값만(관리자 조기 공개분 제외), `Cache-Control: public, max-age=60`. 로그인 전 온보딩 내용 결정용 | `routes/flags.ts` |
 
 프론트: `useFeatureFlags()` / `useFlag(name)` (`src/hooks/useFeatureFlags.ts`, 캐시 키 `['flags', userId]`, staleTime 5분, 로딩·오류 시 전부 off)
 
@@ -1525,7 +1493,7 @@ maxAge: 86400 (24h)
 
 | 항목 | 내용 |
 |---|---|
-| **파일** | [src/app/pages/SplashPage.tsx](../src/app/pages/SplashPage.tsx) |
+| **파일** | `src/app/pages/SplashPage.tsx` (2026-09-27 온보딩 통합으로 삭제 — 과거 기록) |
 | **문제** | 이미 인증된 사용자도 앱 첫 진입 시 무조건 `/onboarding`으로 2.8초 후 이동 |
 | **수정** | `useAuthStore(s => s.status)` 로 상태 구독, timer 콜백에서 `authenticated`→`/`, else→`/onboarding` 분기 |
 | **상태** | ✅ 수정 완료 (2026-03-28) |

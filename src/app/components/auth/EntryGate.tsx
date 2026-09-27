@@ -5,13 +5,10 @@ import { useAuthStore } from "../../../stores/authStore";
 /**
  * EntryGate — 앱 최초 진입 시 사용자 유형에 따라 적절한 페이지로 리다이렉트
  *
- * 판단 로직:
- * 1. 인증된 사용자 (auth_token 유효) → "/" (서재)
- * 2. 재방문자 (has_visited 플래그 존재) → "/login"
- * 3. 신규 사용자:
- *    - splash_dismissed 없으면 → "/splash"
- *    - splash_dismissed 있고 onboarding_dismissed 없으면 → "/onboarding"
- *    - 둘 다 dismissed → "/signup"
+ * 1. 인증된 사용자 → "/" (서재)
+ * 2. 한 번이라도 방문·소개를 본 사용자 → "/login"
+ *    (has_visited: 로그인 이력 / onboarding_seen: 새 온보딩 / splash_dismissed·onboarding_dismissed: 옛 키 호환)
+ * 3. 처음 온 사용자 → "/onboarding" (스플래시는 온보딩에 통합, 로그인·가입 버튼이 모든 슬라이드에 있음)
  */
 export function EntryGate() {
   const navigate = useNavigate();
@@ -27,24 +24,10 @@ export function EntryGate() {
       return;
     }
 
-    // 미인증 상태 — 신규 vs 재방문 판단
-    const hasVisited = localStorage.getItem("has_visited");
-    const splashDismissed = localStorage.getItem("splash_dismissed");
-    const onboardingDismissed = localStorage.getItem("onboarding_dismissed");
-
-    if (hasVisited) {
-      // 재방문자 → 바로 로그인
-      navigate("/login", { replace: true });
-    } else if (!splashDismissed) {
-      // 신규 + 스플래시 안 봄 → 스플래시(앱 소개)
-      navigate("/splash", { replace: true });
-    } else if (!onboardingDismissed) {
-      // 스플래시는 봤지만 온보딩 안 봄
-      navigate("/onboarding", { replace: true });
-    } else {
-      // 둘 다 봤으면 회원가입으로
-      navigate("/signup", { replace: true });
-    }
+    // 미인증 상태 — 처음 온 사용자만 소개, 그 외에는 바로 로그인
+    const seen = ["has_visited", "onboarding_seen", "splash_dismissed", "onboarding_dismissed"]
+      .some((key) => localStorage.getItem(key));
+    navigate(seen ? "/login" : "/onboarding", { replace: true });
   }, [status, isLoading, navigate]);
 
   return (

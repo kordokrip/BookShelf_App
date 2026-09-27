@@ -22,3 +22,13 @@ export function useFlag(name: FeatureFlag): boolean {
   const { data } = useFeatureFlags();
   return data?.includes(name) ?? false;
 }
+
+/** 로그인 전 화면(온보딩)용 — 모든 사용자에게 공개된 기능만. 실패 시 빈 목록(기존 기능만 소개) */
+export function usePublicFlags() {
+  return useQuery({
+    queryKey: ['flags', 'public'],
+    queryFn: async () => (await flagsApi.getPublic()).data.flags,
+    staleTime: 10 * 60_000,
+    retry: false,
+  });
+}

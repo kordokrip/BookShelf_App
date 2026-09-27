@@ -48,7 +48,7 @@ FAILED_TESTS=()
 if [[ "$READONLY" == true ]]; then
   TOTAL=3
 else
-  TOTAL=62
+  TOTAL=63
 fi
 
 # ── 시작 시각 ────────────────────────────────────────────────────
@@ -1277,6 +1277,19 @@ if [[ "$HTTP_CODE" == "200" && "$IS_LIST" == "yes" ]]; then
   printf "         ${CYAN}↳ %s${NC}\n" "$BODY"
 else
   fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE}, flags 배열 여부=${IS_LIST} (기대: 200 + 배열)"
+fi
+
+T=63; NAME="GET /api/flags/public (무인증, 환경 기본 플래그)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" "${BASE_URL}/api/flags/public")
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+IS_LIST=$(json_val "$BODY" "isinstance(d['data']['flags'], list)")
+if [[ "$HTTP_CODE" == "200" && "$IS_LIST" == "True" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+  printf "         ${CYAN}↳ %s${NC}\n" "$BODY"
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE}, flags 배열=${IS_LIST} (기대: 200 + 배열, 인증 없이)"
 fi
 
 # ================================================================
