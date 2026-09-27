@@ -4,6 +4,7 @@ import { BrowserMultiFormatReader } from '@zxing/browser';
 import { BarcodeFormat, DecodeHintType } from '@zxing/library';
 import { searchApi } from '@/lib/api';
 import type { SearchBook } from '@/lib/api';
+import { useBackToClose } from "../../../hooks/useBackToClose";
 
 interface ISBNScannerProps {
   onResult: (book: SearchBook) => void;
@@ -155,6 +156,7 @@ function normalizeBarcode(rawText: string): string {
 }
 
 export default function ISBNScanner({ onResult, onClose }: ISBNScannerProps) {
+  useBackToClose(true, onClose);
   const showDebugPanel = import.meta.env.DEV;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

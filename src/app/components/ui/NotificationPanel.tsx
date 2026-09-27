@@ -6,6 +6,7 @@ import { useEffect, useRef } from 'react';
 import { X, BookPlus, BookOpen, PenLine, RefreshCw, Info, CheckCheck, Trash2, FolderPlus, FolderMinus, Wifi, Trophy } from 'lucide-react';
 import { useUiStore } from '../../../stores/uiStore';
 import type { NotificationItem, NotificationType } from '../../../stores/uiStore';
+import { useBackToClose } from "../../../hooks/useBackToClose";
 
 const TYPE_ICON: Record<NotificationType, React.ReactNode> = {
   book_added:    <BookPlus  size={16} className="text-[#4F46E5]" />,
@@ -48,6 +49,7 @@ interface Props {
 }
 
 export function NotificationPanel({ onClose }: Props) {
+  useBackToClose(true, onClose);
   const notifications = useUiStore((s) => s.notifications);
   const markAllRead   = useUiStore((s) => s.markAllRead);
   const clearNotifications = useUiStore((s) => s.clearNotifications);
@@ -83,7 +85,7 @@ export function NotificationPanel({ onClose }: Props) {
       aria-label="알림 패널"
       className={[
         'absolute right-0 top-full mt-2 z-50',
-        'w-80 sm:w-96 max-h-[70vh] flex flex-col',
+        'w-80 sm:w-96 max-w-[calc(100vw-1rem)] max-h-[calc(var(--vp-h)-var(--topbar-h)-var(--bottomnav-h)-1rem)] md:max-h-[calc(var(--vp-h)-var(--topbar-h)-1.5rem)] flex flex-col',
         'bg-white dark:bg-[#1E293B]',
         'border border-[#E2E8F0] dark:border-[#334155]',
         'rounded-2xl shadow-xl overflow-hidden',

@@ -11,6 +11,7 @@ import { useGroups, useCreateGroup, useJoinGroup } from '../../hooks/useGroups';
 import { useAuthStore } from '../../stores/authStore';
 import { useToast } from '../components/ui/Toast';
 import type { Group } from '../../lib/api';
+import { useBackToClose } from "../../hooks/useBackToClose";
 
 const GroupDetailView = lazy(() => import('../components/groups/GroupDetailView').then(m => ({ default: m.GroupDetailView })));
 
@@ -25,6 +26,9 @@ export function GroupsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [form, setForm] = useState({ name: '', description: '', cover_emoji: '📖' });
+  // 뒤로 가기: 모임 상세 → 목록, 생성 모달 닫기 (상세는 라우트가 아니라 화면 내부 상태)
+  useBackToClose(!!selectedGroupId, () => setSelectedGroupId(null));
+  useBackToClose(showCreate, () => setShowCreate(false));
 
   if (selectedGroupId) {
     return (

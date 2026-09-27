@@ -5,9 +5,18 @@ import * as SheetPrimitive from "@radix-ui/react-dialog";
 import { XIcon } from "lucide-react";
 
 import { cn } from "./utils";
+import { useBackToClose } from "../../../hooks/useBackToClose";
 
-function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
-  return <SheetPrimitive.Root data-slot="sheet" {...props} />;
+/** 뒤로 가기로 닫힘 (useBackToClose) — 제어(open)·비제어(defaultOpen·Trigger) 사용 모두 지원 */
+function Sheet({ open: openProp, defaultOpen, onOpenChange, ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(defaultOpen ?? false);
+  const open = openProp ?? uncontrolledOpen;
+  const setOpen = (next: boolean) => {
+    if (openProp === undefined) setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
+  useBackToClose(open, () => setOpen(false));
+  return <SheetPrimitive.Root data-slot="sheet" open={open} onOpenChange={setOpen} {...props} />;
 }
 
 function SheetTrigger({

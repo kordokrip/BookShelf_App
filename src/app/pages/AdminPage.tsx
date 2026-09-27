@@ -19,6 +19,7 @@ import { adminApi, type AdminUser, type AdminUserDetail } from "../../lib/api";
 import { useAuthStore } from "../../stores/authStore";
 import { useNavigate } from "react-router";
 import { useToast } from "../components/ui/Toast";
+import { useBackToClose } from "../../hooks/useBackToClose";
 
 // ─── 쿼리 키 ─────────────────────────────────────────────────
 const ADMIN_KEYS = {
@@ -87,6 +88,7 @@ function UserDetailModal({
   onClose: () => void;
   onRoleChange: (id: string, role: "admin" | "user") => void;
 }) {
+  useBackToClose(true, onClose);
   const { data, isLoading } = useQuery({
     queryKey: ["admin", "user-detail", userId],
     queryFn:  () => adminApi.getUserDetail(userId),

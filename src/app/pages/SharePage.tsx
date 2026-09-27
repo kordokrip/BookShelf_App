@@ -16,6 +16,7 @@ import {
 } from '../../hooks/useGroups';
 import type { SharedReport } from '../../lib/api';
 import { useToast } from '../components/ui/Toast';
+import { useBackToClose } from "../../hooks/useBackToClose";
 
 type Tab = 'inbox' | 'sent';
 
@@ -217,6 +218,7 @@ function ReportCard({ report, label, isRead, onMarkRead }: {
 
 /* ─── Compose Modal ───────────────────────────────────── */
 function ComposeModal({ onClose }: { onClose: () => void }) {
+  useBackToClose(true, onClose);
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const shareReport = useShareReport();

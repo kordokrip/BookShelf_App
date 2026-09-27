@@ -30,6 +30,7 @@ import { useAuthStore } from "../../stores/authStore";
 import { useStats } from "../../hooks/useStats";
 import { FocusTimer } from "../components/reading/FocusTimer";
 import { useTimerStore } from "../../stores/timerStore";
+import { useBackToClose } from "../../hooks/useBackToClose";
 
 
 
@@ -45,6 +46,7 @@ function PageUpdateModal({
   onSave: (page: number, newTotalPages?: number, goalDate?: string) => void;
   onComplete: (page: number, newTotalPages?: number) => void;
 }) {
+  useBackToClose(true, onClose);
   const [page, setPage] = useState(book.currentPage ?? 0);
   const [localTotalPages, setLocalTotalPages] = useState(book.totalPages ?? 0);
   const [localGoalDate, setLocalGoalDate] = useState(book.goalDate ?? '');
@@ -107,6 +109,7 @@ function PageUpdateModal({
         <div className="px-5 pb-6 pt-4">
           {/* Close (desktop) */}
           <button
+            aria-label="닫기"
             onClick={onClose}
             className="hidden lg:flex absolute top-4 right-4 w-11 h-11 items-center justify-center rounded-full hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors text-[#64748B] dark:text-[#94A3B8]"
           >
@@ -407,6 +410,7 @@ function LogTodayModal({
   /** 타이머 기록 프롬프트에서 열면 타이머의 책 — 첫 번째 책으로 기록되거나 몰입 메모 연결이 빠지지 않도록 */
   initialBookId?: string | null;
 }) {
+  useBackToClose(true, onClose);
   const [selectedBookId, setSelectedBookId] = useState<string>(
     () => (initialBookId && books.some((b) => b.id === initialBookId) ? initialBookId : books[0]?.id ?? ""),
   );
@@ -486,6 +490,7 @@ function LogTodayModal({
         </div>
         <div className="px-5 pb-6 pt-2">
           <button
+            aria-label="닫기"
             onClick={onClose}
             className="hidden lg:flex absolute top-4 right-4 w-11 h-11 items-center justify-center rounded-full hover:bg-[#F1F5F9] transition-colors"
             style={{ color: "#64748B" }}
@@ -617,6 +622,7 @@ function GoalModal({
   currentDone: number;
   onClose: () => void;
 }) {
+  useBackToClose(true, onClose);
   const [goal, setGoal] = useState(currentGoal ?? 12);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { showToast } = useToast();
@@ -655,6 +661,7 @@ function GoalModal({
         </div>
         <div className="px-5 pb-6 pt-2">
           <button
+            aria-label="닫기"
             onClick={onClose}
             className="hidden lg:flex absolute top-4 right-4 w-11 h-11 items-center justify-center rounded-full hover:bg-[#F1F5F9] transition-colors"
             style={{ color: "#64748B" }}
@@ -795,6 +802,8 @@ export function ReadingPage() {
   const [logModalOpen, setLogModalOpen] = useState(false);
   const [goalModalOpen, setGoalModalOpen] = useState(false);
   const [timerPromptMinutes, setTimerPromptMinutes] = useState<number | null>(null);
+  // 뒤로 가기로 타이머 기록 프롬프트 닫기(= 나중에)
+  useBackToClose(timerPromptMinutes !== null, () => setTimerPromptMinutes(null));
   const [logDuration, setLogDuration] = useState<number | undefined>(undefined);
   const [logBookId, setLogBookId] = useState<string | null>(null);
   const { showToast } = useToast();

@@ -1,5 +1,6 @@
 import { useEffect, useId, type ReactNode } from "react";
 import { X } from "lucide-react";
+import { useBackToClose } from "../../../hooks/useBackToClose";
 
 interface ModalProps {
   open: boolean;
@@ -10,6 +11,7 @@ interface ModalProps {
 
 export function Modal({ open, onClose, title, children }: ModalProps) {
   const titleId = useId();
+  useBackToClose(open, onClose);
 
   useEffect(() => {
     if (open) document.body.style.overflow = "hidden";

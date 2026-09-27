@@ -5,6 +5,7 @@ import { ocrApi } from '../../../lib/api';
 import { useAddNote } from '../../../hooks/useNotes';
 import { Textarea } from '../ui/textarea';
 import { useToast } from '../ui/Toast';
+import { useBackToClose } from "../../../hooks/useBackToClose";
 
 type NoteType = 'memo' | 'quote' | 'review';
 
@@ -78,6 +79,7 @@ function resizeAndConvertToJpeg(blob: Blob): Promise<{ file: File; url: string }
 }
 
 export function CameraOCRSheet({ bookId, onClose }: Props) {
+  useBackToClose(true, onClose);
   const [step, setStep] = useState<'camera' | 'review'>('camera');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [extractedText, setExtractedText] = useState('');

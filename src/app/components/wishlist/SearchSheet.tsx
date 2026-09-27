@@ -6,6 +6,7 @@ import { ApiError } from "../../../lib/api";
 import { useAddBook } from "../../../hooks/useBooks";
 import { useBookSearch } from "../../../hooks/useBookSearch";
 import { useToast } from "../ui/Toast";
+import { useBackToClose } from "../../../hooks/useBackToClose";
 
 const RECENT_SEARCHES_KEY = "wishlist_recent_searches";
 const MAX_RECENT = 8;
@@ -33,6 +34,7 @@ export function SearchSheet({
   open: boolean;
   onClose: () => void;
 }) {
+  useBackToClose(open, onClose);
   const [searchQuery, setSearchQuery] = useState("");
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [showScanner, setShowScanner] = useState(false);

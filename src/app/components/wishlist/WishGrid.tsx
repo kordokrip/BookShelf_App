@@ -6,6 +6,7 @@ import { WishBookCard, BookCover } from "../books/BookCard";
 import { GenreFilterBar } from "../books/GenreFilterBar";
 import { EmptyState } from "../ui/EmptyState";
 import { WishBookCardSkeleton, ErrorState } from "../ui/skeleton";
+import { useBackToClose } from "../../../hooks/useBackToClose";
 
 // ─── SortDropdown ────────────────────────────────────────────
 
@@ -73,6 +74,7 @@ function WishBookDetailSheet({
   onDelete: () => void;
   onPriorityChange: (p: number) => void;
 }) {
+  useBackToClose(true, onClose);
   const [priority, setPriority] = useState(book.priority ?? 5);
 
   const prioLabel = priority <= 3 ? "높음" : priority <= 6 ? "중간" : "낮음";

@@ -14,6 +14,7 @@ import {
   useCollectionDetail,
 } from "../../hooks/useCollections";
 import { useToast } from "../components/ui/Toast";
+import { useBackToClose } from "../../hooks/useBackToClose";
 
 /* ─── 컬렉션 생성 모달 ──────────────────────────────────────── */
 function CreateCollectionDialog({
@@ -23,6 +24,7 @@ function CreateCollectionDialog({
   open: boolean;
   onClose: () => void;
 }) {
+  useBackToClose(true, onClose);
   const [name, setName] = useState("");
   const [emoji, setEmoji] = useState("📚");
   const [description, setDescription] = useState("");
@@ -195,6 +197,8 @@ export function CollectionsPage() {
   const { showToast } = useToast();
   const [showCreate, setShowCreate] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // 뒤로 가기: 컬렉션 상세 → 목록 (상세는 라우트가 아니라 화면 내부 상태)
+  useBackToClose(!!selectedId, () => setSelectedId(null));
 
   if (selectedId) {
     return (

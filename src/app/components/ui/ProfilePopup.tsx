@@ -15,6 +15,7 @@ import { usersApi } from "../../../lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { PushNotificationToggle } from "./PushNotificationToggle";
 import { THEME_LABEL } from "../navigation/TopBar";
+import { useBackToClose } from "../../../hooks/useBackToClose";
 
 /* ─── 인사말 생성 ─────────────────────────────────── */
 function getGreeting(name: string): string {
@@ -164,6 +165,7 @@ export function ProfileAvatar({
 
 /* ─── 메인 팝업 ───────────────────────────────────── */
 export function ProfilePopup({ onClose }: { onClose: () => void }) {
+  useBackToClose(true, onClose);
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const themeMode = useUiStore((s) => s.themeMode);
@@ -218,8 +220,8 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
 
   const handleLogout = () => {
     logout();
-    onClose();
-    // 로그아웃한 사용자는 기존 사용자이므로 소개 화면이 아니라 로그인으로
+    // 로그아웃한 사용자는 기존 사용자이므로 소개 화면이 아니라 로그인으로.
+    // 전체 페이지 이동이라 팝업을 따로 닫지 않는다 — 닫으면 뒤로 가기용 기록 정리(history.back)가 이동과 겹칠 수 있음
     window.location.href = "/login";
   };
 
@@ -273,8 +275,9 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -8, scale: 0.96 }}
       transition={{ duration: 0.15, ease: "easeOut" }}
-      className="absolute right-0 top-full mt-2 bg-white dark:bg-[#1E293B] rounded-2xl shadow-2xl border border-[#E2E8F0] dark:border-[#334155] overflow-visible z-50"
-      style={{ width: 320 }}
+      // 화면 높이 안에서 내부 스크롤 — 작은 폰에서 하단 탭바가 로그아웃 버튼을 가리던 문제 (iPhone 15 Pro 에뮬레이션)
+      className="absolute right-0 top-full mt-2 bg-white dark:bg-[#1E293B] rounded-2xl shadow-2xl border border-[#E2E8F0] dark:border-[#334155] overflow-y-auto overscroll-contain z-50 max-h-[calc(var(--vp-h)-var(--topbar-h)-var(--bottomnav-h)-1rem)] md:max-h-[calc(var(--vp-h)-var(--topbar-h)-1.5rem)]"
+      style={{ width: 320, maxWidth: "calc(100vw - 1rem)" }}
       onClick={(e) => e.stopPropagation()}
     >
       {/* 상단: 이메일 + 닫기 */}

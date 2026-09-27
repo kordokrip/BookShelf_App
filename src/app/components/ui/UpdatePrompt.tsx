@@ -19,7 +19,8 @@ export function UpdatePrompt() {
 
   return (
     <div
-      className="fixed left-0 right-0 z-50 flex justify-center px-4"
+      // z-40: 열린 시트·모달(z-50) 아래 — 모달의 저장 버튼을 가리지 않고, 닫히면 다시 보인다
+      className="fixed left-0 right-0 z-40 flex justify-center px-4"
       style={{
         bottom: "var(--install-banner-bottom, env(safe-area-inset-bottom, 0px))",
         animation: "slideUp 0.3s ease",
