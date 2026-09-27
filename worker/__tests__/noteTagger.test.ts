@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { tagNote, DAILY_TAG_QUOTA, type TaggerEnv } from '../lib/noteTagger';
 
-const CONTENT = '주인공이 알을 깨고 나오는 장면에서 성장의 고통과 희망을 함께 느꼈다';
+const CONTENT = '주인공이 알을 깨고 나오는 장면에서 자아를 찾는 성장의 고통과 용기를 함께 느꼈다';
 const NOW = Date.UTC(2026, 8, 27, 3, 0, 0); // KST 2026-09-27
 
 function fakeEnv(opts: { aiResponse?: unknown; aiThrows?: boolean; kv?: Record<string, string>; changes?: number } = {}) {
@@ -38,6 +38,8 @@ describe('tagNote', () => {
     expect(updates[0]).toEqual(['["성장","자아","희망"]', 'n1', 'u1', CONTENT]);
     expect(kv.get('ai_tag_quota:u1:2026-09-27')).toBe('1');
     expect([...kv.keys()].some((k) => k.startsWith('ai_tag:'))).toBe(true);
+    // 분류 작업이라 낮은 temperature로 호출
+    expect(env.AI.run).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ temperature: 0.2 }));
   });
 
   it('비문자열(객체) 응답도 처리', async () => {

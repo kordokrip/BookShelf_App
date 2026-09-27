@@ -12,12 +12,15 @@ import { kstDateString } from './noteHelpers';
 
 export const TAG_MODEL = '@cf/meta/llama-3.1-8b-instruct-fast';
 export const DAILY_TAG_QUOTA = 50;
+/** 분류 작업이라 창의성보다 일관성 — 기본값 0.6은 같은 노트에도 태그가 흔들렸다 */
+const TAG_TEMPERATURE = 0.2;
 const CACHE_TTL_SEC = 7 * 24 * 60 * 60;
 /**
  * 태그 규칙(프롬프트·정규화)이 바뀌면 올린다 — 캐시는 정규화된 결과를 저장하므로, 버전을 올리지 않으면
- * 규칙 변경 전 결과가 최대 7일간 재사용된다(v1 → v2: 일반어 제외 규칙 추가 후 스테이징에서 옛 "메모" 태그 재현).
+ * 규칙 변경 전 결과가 최대 7일간 재사용된다(v1 → v2: 일반어 제외 규칙 추가 후 스테이징에서 옛 "메모" 태그 재현,
+ * v3: 키워드 본문 포함 검사 + 감정 고정 목록 + 예시 1쌍 + temperature 0.2).
  */
-export const TAG_CACHE_VERSION = 'v2';
+export const TAG_CACHE_VERSION = 'v3';
 
 export interface TaggerEnv {
   AI: { run: (model: string, input: unknown) => Promise<unknown> };
@@ -53,8 +56,8 @@ export async function tagNote(
       if (used >= DAILY_TAG_QUOTA) return 'quota-exceeded';
       await env.KV.put(quotaKey, String(used + 1), { expirationTtl: 26 * 60 * 60 });
 
-      const response = await env.AI.run(TAG_MODEL, { messages: buildTagMessages(note.content), max_tokens: 120 });
-      tags = parseTagResponse(extractAiText(response));
+      const response = await env.AI.run(TAG_MODEL, { messages: buildTagMessages(note.content), max_tokens: 120, temperature: TAG_TEMPERATURE });
+      tags = parseTagResponse(extractAiText(response), note.content);
       if (tags.length === 0) return 'empty';
       await env.KV.put(cacheKey, JSON.stringify(tags), { expirationTtl: CACHE_TTL_SEC });
     }
