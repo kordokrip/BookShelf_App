@@ -119,7 +119,9 @@ export const router = createBrowserRouter([
   },
   {
     path: "/",
-    Component: Root,
+    // Root 자체를 보호 — 로그인 전에 레이아웃(내비게이션)이 먼저 렌더링되며 책 목록·알림 API를
+    // 호출해 401 오류가 나던 문제 방지 (자식 라우트도 모두 보호 대상)
+    Component: protected_(Root),
     ErrorBoundary: EB,
     children: [
       { index: true, Component: protected_(withSuspense(LazyLibraryPage, "서재 로딩 중...")), ErrorBoundary: EB },
