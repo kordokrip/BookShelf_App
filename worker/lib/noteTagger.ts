@@ -13,6 +13,11 @@ import { kstDateString } from './noteHelpers';
 export const TAG_MODEL = '@cf/meta/llama-3.1-8b-instruct-fast';
 export const DAILY_TAG_QUOTA = 50;
 const CACHE_TTL_SEC = 7 * 24 * 60 * 60;
+/**
+ * 태그 규칙(프롬프트·정규화)이 바뀌면 올린다 — 캐시는 정규화된 결과를 저장하므로, 버전을 올리지 않으면
+ * 규칙 변경 전 결과가 최대 7일간 재사용된다(v1 → v2: 일반어 제외 규칙 추가 후 스테이징에서 옛 "메모" 태그 재현).
+ */
+export const TAG_CACHE_VERSION = 'v2';
 
 export interface TaggerEnv {
   AI: { run: (model: string, input: unknown) => Promise<unknown> };
@@ -34,7 +39,7 @@ export async function tagNote(
 ): Promise<TagOutcome> {
   if (!shouldTag(note.content)) return 'skipped-short';
   try {
-    const cacheKey = `ai_tag:${await sha256Hex(note.content)}`;
+    const cacheKey = `ai_tag:${TAG_CACHE_VERSION}:${await sha256Hex(note.content)}`;
     let tags: string[] | null = null;
     let outcome: TagOutcome = 'tagged';
 

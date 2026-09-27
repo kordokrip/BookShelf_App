@@ -935,7 +935,7 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 
 노트 컬럼: `page_number`(시작 페이지), `end_page`(0015, 범위 끝 — `page_number` 이상), `session_id`(0015, 몰입 타이머 세션 연결), `tags`(0015, AI 태그 JSON 배열).
 
-**AI 태깅(Phase 4)**: `POST /api/notes`·내용이 바뀐 `PUT /api/notes/:id` 후 `waitUntil`로 비동기 실행(`lib/noteTagger.ts`). 20자 이상 + `ai_tags` 플래그 사용자만(ADR-003 예외). 모델 `@cf/meta/llama-3.1-8b-instruct-fast`, 키워드 3~4 + 감정 1 → 정규화 최대 5개. 사용자별 하루 50회(`ai_tag_quota:{userId}:{KST날짜}`), 같은 내용 캐시 `ai_tag:{sha256}` 7일. 내용 수정 시 `tags=NULL` 후 재태깅, 태깅 중 내용이 바뀌면 덮어쓰지 않음.
+**AI 태깅(Phase 4)**: `POST /api/notes`·내용이 바뀐 `PUT /api/notes/:id` 후 `waitUntil`로 비동기 실행(`lib/noteTagger.ts`). 20자 이상 + `ai_tags` 플래그 사용자만(ADR-003 예외). 모델 `@cf/meta/llama-3.1-8b-instruct-fast`, 키워드 3~4 + 감정 1 → 정규화 최대 5개. 사용자별 하루 50회(`ai_tag_quota:{userId}:{KST날짜}`), 같은 내용 캐시 `ai_tag:{TAG_CACHE_VERSION}:{sha256}` 7일(태그 규칙 변경 시 버전 올림). 내용 수정 시 `tags=NULL` 후 재태깅, 태깅 중 내용이 바뀌면 덮어쓰지 않음.
 
 | Method | 경로 | 인증 | 요청 | 응답 | Worker 파일 |
 |---|---|---|---|---|---|
