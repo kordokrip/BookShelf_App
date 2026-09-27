@@ -69,9 +69,10 @@ crons = ["*/15 * * * *"]
 ENVIRONMENT = "production"
 APP_NAME = "BookShelf"
 FRONTEND_URL = "https://bookshelf-api.kordokrip.workers.dev"
-# 기능 플래그 기본값(쉼표 구분, worker/lib/featureFlags.ts 참고). 프로덕션은 비워 두고
+# 기능 플래그 기본값(쉼표 구분, worker/lib/featureFlags.ts 참고). 새 기능은 비워 둔 채
 # 관리자 계정(전체 on)으로 먼저 검증한 뒤 여기에 추가해 전체 공개한다.
-FEATURE_FLAGS = ""
+# 2026-09-27 5종 전체 공개. 문제 시 해당 이름만 빼고 push하면 CI 배포로 즉시 숨겨진다(데이터는 유지).
+FEATURE_FLAGS = "notes_v2,book_stack,characters,focus_timer,ai_tags"
 # ALLOWED_EMAILS 는 wrangler secret put ALLOWED_EMAILS 로 등록 (vars와 동시 사용 불가)
 
 # ─── 옵저버빌리티 ────────────────────────────────────────────

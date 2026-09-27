@@ -18,4 +18,5 @@
 ## 결과
 - 새 UI를 프로덕션 데이터로 관리자가 먼저 검증할 수 있다.
 - 플래그 제거(전체 공개 후 분기 코드 정리)는 기능별 후속 커밋으로 처리해야 한다. 방치하면 죽은 분기가 쌓인다.
+- **2026-09-27 전체 공개:** 5종(`notes_v2`, `book_stack`, `characters`, `focus_timer`, `ai_tags`) 모두 프로덕션 `[vars]`에 추가했다. 스테이징·관리자 검증과 WebKit·Chromium 기기 에뮬레이션 점검 후 진행. AI 태깅 비용은 사용자당 하루 한도(`worker/lib/noteTagger.ts`의 `DAILY_TAG_QUOTA`)와 KV 캐시로 묶여 있다. 분기 코드 정리는 아직 하지 않았다 — 공개 후 한동안 문제가 없으면 기능별로 제거한다.
 - 구현: `worker/lib/featureFlags.ts`, `worker/routes/flags.ts`, `src/hooks/useFeatureFlags.ts`
