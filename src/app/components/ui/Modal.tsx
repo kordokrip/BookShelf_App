@@ -43,7 +43,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
       />
 
       {/* Sheet (mobile: bottom sheet, desktop: centered modal) */}
-      <div className="relative w-full sm:max-w-md mx-auto xs:mx-3 bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl z-10 overflow-hidden max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom))]">
+      <div className="relative w-full sm:max-w-md mx-auto xs:mx-3 bg-white dark:bg-[#1E293B] rounded-t-3xl sm:rounded-2xl shadow-2xl z-10 overflow-hidden max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom))]">
         {/* Handle (mobile) */}
         <div className="flex justify-center pt-3 pb-1 sm:hidden">
           <div className="w-8 h-1 rounded-full bg-[#CBD5E1]" />
@@ -51,13 +51,13 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
 
         {/* Header */}
         {title && (
-          <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-[#F1F5F9]">
-            <h2 id={titleId} className="text-[#1E293B] text-[17px] sm:text-[18px]" style={{ fontWeight: 700 }}>
+          <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-[#F1F5F9] dark:border-[#334155]">
+            <h2 id={titleId} className="text-[#1E293B] dark:text-[#F8FAFC] text-[17px] sm:text-[18px]" style={{ fontWeight: 700 }}>
               {title}
             </h2>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F1F5F9] transition-colors flex-shrink-0"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors flex-shrink-0"
               aria-label="닫기"
             >
               <X size={18} />

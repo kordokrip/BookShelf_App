@@ -114,7 +114,8 @@
 **판독성 규칙 (2026-09-27 다크·라이트 대비 점검)**
 - 본문·보조 글자는 WCAG AA 4.5:1 이상, 큰 글자(24px 이상 또는 18.66px 굵게)는 3:1 이상. 점검 방법: Playwright로 `.playwright-mcp/dark-audit.js`·`light-audit.js` 실행 (oklch 색은 파싱하지 못해 오탐이 날 수 있음)
 - 글자 크기 최소 11px. 예외: 표지 위 진행률 원형 게이지 숫자(같은 값이 진행률 행에 글자로 따로 표시됨)
-- 라이트 전용 색을 인라인 `style={{ color }}`로 주면 `dark:` 클래스가 먹지 않는다 — 다크 모드가 있는 화면은 `className="text-[#64748B] dark:text-[#94A3B8]"`처럼 클래스로 지정
+- 라이트 전용 색을 인라인 `style={{ color }}`로 주면 `dark:` 클래스가 먹지 않는다 — 다크 모드가 있는 화면은 `className="text-[#64748B] dark:text-[#94A3B8]"`처럼 클래스로 지정하거나, 인라인이 필요하면 아래 1.4의 다크 대응 CSS 변수(`var(--text-primary)` 등)를 쓴다
+- 다크 모드에서 흰 카드·패널이 그대로 남는 "밝은 섬"도 결함으로 본다 (2026-09-27 통계·연간 결산·책 상세·기록 모달에서 발견·수정). 점검: `.playwright-mcp/light-island-audit.js`(화면), `overlay-dark-audit.js`(시트·모달·팝업)
 
 ### 1.2 CTA 그래디언트
 
@@ -145,6 +146,19 @@ background: linear-gradient(135deg, #94A3B8 0%, #CBD5E1 100%)
 | `--bottomnav-h` | `calc(var(--bottomnav-content-h) + var(--safe-bottom))` | — | BottomNav 전체 높이 (safe-area 포함) |
 | `--page-pb` | `calc(var(--bottomnav-h) + 1rem)` | — | 페이지 하단 패딩 (탭바 + 여유) |
 | `--font-pretendard` | `"Pretendard Variable", sans-serif` | — | 한국어 본문 폰트 |
+
+**인라인 style용 다크 대응 색** (2026-09-27, `theme.css` `:root`/`.dark`) — 통계·결산처럼 인라인 style이 많은 컴포넌트는 hex 대신 이 변수를 쓴다(`StatsComponents.tsx`의 `C` 팔레트가 이 변수를 가리킴).
+
+| 변수 | Light | Dark | 용도 |
+|---|---|---|---|
+| `--bg-card` / `--bg-primary` | `#FFFFFF` / `#F8FAFC` | `#1E293B` / `#0F172A` | 카드 / 페이지 배경 |
+| `--bg-muted` | `#F1F5F9` | `#334155` | 칩·트랙·히트맵 빈 칸 |
+| `--bg-accent-soft` / `--text-accent` | `#EEF2FF` / `#4F46E5` | `#312E81` / `#A5B4FC` | 강조 칩 배경 / 카드 위 강조 글자·밑줄 |
+| `--bg-warn-soft` / `--text-warn` | `#FEF3C7` / `#92400E` | `#451A03` / `#FCD34D` | 목표·경고 박스 |
+| `--bg-success-soft(-strong)` / `--text-success` | `#ECFDF5`(`#DCFCE7`) / `#065F46` | `#064E3B`(`#065F46`) / `#6EE7B7` | 타이머 빠른 실행 |
+| `--text-primary` / `--text-body` / `--text-secondary` | `#1E293B` / `#475569` / `#64748B` | `#F8FAFC` / `#CBD5E1` / `#94A3B8` | 제목 / 본문 / 보조 |
+| `--text-sun` / `--text-sat` | `#DC2626` / `#2563EB` | `#F87171` / `#60A5FA` | 달력 일·토요일 |
+| `--border-color` | `#E2E8F0` | `#334155` | 테두리 |
 
 ### 1.5 Cover Gradients (8종)
 
@@ -220,6 +234,17 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 | **Main 최대 너비** | `max-w-2xl` (672px) | `max-w-3xl` (768px) |
 | **하단 패딩** | 페이지 컨테이너별 `pb-[var(--page-pb)]` | 0 |
 
+### 3.3 겹침 순서(z-index)와 뒤로 가기 (2026-09-27 PWA 점검)
+
+| 층 | z | 요소 |
+|---|---|---|
+| 하단 탭바·설치 안내·업데이트 안내 | 40 | 업데이트 안내는 원래 50이었으나 열린 모달의 저장 버튼을 가려 40으로 내림 — 모달이 닫히면 다시 보인다 |
+| TopBar(프로필·알림 팝업 포함) | 45 | 헤더가 `sticky`라 팝업의 z-50이 헤더 층(40)에 갇혀 설치 배너·하단 탭바 아래로 깔렸다 → 헤더 45. 팝업은 화면 높이(상단바·하단 탭바 제외) 안에서 내부 스크롤 |
+| 시트·모달·확인창 | 50 | Radix Sheet·AlertDialog, 페이지 모달 |
+| 토스트 / 공용 Modal | 100 / 200 | |
+
+**뒤로 가기(안드로이드 백 버튼·iOS 스와이프 백)**: 열린 시트·모달·팝업을 먼저 닫는다 — `src/hooks/useBackToClose.ts`. 열릴 때 같은 URL의 기록 항목을 하나 쌓고 popstate에서 닫으며, 화면에서 직접 닫으면 그 항목을 걷는다(한 틱 뒤, 여전히 자기 항목일 때만 — 닫으면서 다른 화면으로 이동했거나 다른 오버레이를 연 경우는 건드리지 않음). 공용 `Sheet`·`AlertDialog`·`Modal`에 내장되어 있고, 페이지가 직접 만든 모달(`fixed inset-0`)은 컴포넌트 첫 줄에서 `useBackToClose(true, onClose)`를 호출한다. 모임·컬렉션 상세처럼 라우트가 아닌 화면 내부 상태 전환도 같은 훅으로 "상세 → 목록"이 된다. **새 오버레이를 만들면 반드시 이 훅을 붙일 것.**
+
 ---
 
 ## 4. 네비게이션 시스템
@@ -234,17 +259,6 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 - **safe-area**: `paddingBottom: env(safe-area-inset-bottom, 0px)`
 
 | 순서 | 아이콘 | 라벨 | 경로 | 동적 배지 |
-### 3.3 겹침 순서(z-index)와 뒤로 가기 (2026-09-27 PWA 점검)
-
-| 층 | z | 요소 |
-|---|---|---|
-| 하단 탭바·설치 안내·업데이트 안내 | 40 | 업데이트 안내는 원래 50이었으나 열린 모달의 저장 버튼을 가려 40으로 내림 — 모달이 닫히면 다시 보인다 |
-| TopBar(프로필·알림 팝업 포함) | 45 | 헤더가 `sticky`라 팝업의 z-50이 헤더 층(40)에 갇혀 설치 배너·하단 탭바 아래로 깔렸다 → 헤더 45. 팝업은 화면 높이(상단바·하단 탭바 제외) 안에서 내부 스크롤 |
-| 시트·모달·확인창 | 50 | Radix Sheet·AlertDialog, 페이지 모달 |
-| 토스트 / 공용 Modal | 100 / 200 | |
-
-**뒤로 가기(안드로이드 백 버튼·iOS 스와이프 백)**: 열린 시트·모달·팝업을 먼저 닫는다 — `src/hooks/useBackToClose.ts`. 열릴 때 같은 URL의 기록 항목을 하나 쌓고 popstate에서 닫으며, 화면에서 직접 닫으면 그 항목을 걷는다(한 틱 뒤, 여전히 자기 항목일 때만 — 닫으면서 다른 화면으로 이동했거나 다른 오버레이를 연 경우는 건드리지 않음). 공용 `Sheet`·`AlertDialog`·`Modal`에 내장되어 있고, 페이지가 직접 만든 모달(`fixed inset-0`)은 컴포넌트 첫 줄에서 `useBackToClose(true, onClose)`를 호출한다. 모임·컬렉션 상세처럼 라우트가 아닌 화면 내부 상태 전환도 같은 훅으로 "상세 → 목록"이 된다. **새 오버레이를 만들면 반드시 이 훅을 붙일 것.**
-
 |------|--------|------|------|----------|
 | 1 | `BookMarked` 22px | 완독 | `/` | — |
 | 2 | `BookOpen` 22px | 읽는중 | `/reading` | `readingCount` (빨강 원형, 10px 폰트) |
@@ -517,6 +531,7 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 
 - **파일**: `src/app/pages/LoginPage.tsx` (~500줄)
 - **경로**: `/login`
+- **자동 채움·접근성 (2026-09-27, 가입 화면 동일)**: 입력에 `autocomplete`(로그인 `username`·`current-password`, 가입 `name`·`email`·`new-password`) — iOS 키체인·안드로이드 비밀번호 관리자 자동 채움·강력한 비밀번호 제안. 라벨은 `htmlFor`로 입력과 연결, 비밀번호 보기 버튼은 44px + `aria-label`·`aria-pressed`, 가입 약관 동의는 `role="checkbox"` + `aria-checked`, 가입 폼은 `<form>`(Enter 제출·저장 제안). Root 밖 독립 화면(로그인·가입·책 등록·노트 검색·404)은 최상위를 `<main>` 랜드마크로.
 
 #### 반응형 레이아웃
 
@@ -542,7 +557,6 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 #### LoginForm
 
 **Google OAuth 버튼**:
-- **자동 채움·접근성 (2026-09-27, 가입 화면 동일)**: 입력에 `autocomplete`(로그인 `username`·`current-password`, 가입 `name`·`email`·`new-password`) — iOS 키체인·안드로이드 비밀번호 관리자 자동 채움·강력한 비밀번호 제안. 라벨은 `htmlFor`로 입력과 연결, 비밀번호 보기 버튼은 44px + `aria-label`·`aria-pressed`, 가입 약관 동의는 `role="checkbox"` + `aria-checked`, 가입 폼은 `<form>`(Enter 제출·저장 제안). Root 밖 독립 화면(로그인·가입·책 등록·노트 검색·404)은 최상위를 `<main>` 랜드마크로.
 - GoogleLogo SVG (18px) + "Google로 계속하기"
 - `h-48px rounded-2xl`, 흰 배경, `border 1.5px #E2E8F0`
 - 클릭 → `accounts.google.com` OAuth 리다이렉트 (외부)

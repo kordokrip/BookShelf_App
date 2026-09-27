@@ -17,14 +17,14 @@ export function AchievementsSection() {
   if (isLoading) {
     return (
       <div className="px-4 mb-3">
-        <div className="rounded-2xl bg-white border border-[#E2E8F0] p-4 h-48 animate-pulse" aria-label="업적 불러오는 중" />
+        <div className="rounded-2xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] p-4 h-48 animate-pulse" aria-label="업적 불러오는 중" />
       </div>
     );
   }
   if (isError || !data) {
     return (
       <div className="px-4 mb-3">
-        <div className="rounded-2xl bg-white border border-[#E2E8F0] p-4 text-center" style={{ fontSize: 13, color: "#64748B" }}>
+        <div className="rounded-2xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] p-4 text-center" style={{ fontSize: 13, color: "var(--text-secondary)" }}>
           업적을 불러오지 못했어요.{" "}
           <button type="button" onClick={() => void refetch()} className="underline text-[#4F46E5]" style={{ minHeight: "unset" }}>
             다시 시도
@@ -41,10 +41,10 @@ export function AchievementsSection() {
 
   return (
     <section className="px-4 mb-3" aria-labelledby="achievements-title">
-      <div className="rounded-2xl bg-white border border-[#E2E8F0] p-4">
+      <div className="rounded-2xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] p-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 id="achievements-title" style={{ fontSize: 15, fontWeight: 700, color: "#1E293B" }}>🏅 업적 · 캐릭터</h3>
-          <span style={{ fontSize: 12, color: "#64748B" }}>
+          <h3 id="achievements-title" style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>🏅 업적 · 캐릭터</h3>
+          <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>
             {unlocked.length} / {achievements.length} 달성
           </span>
         </div>
@@ -55,7 +55,7 @@ export function AchievementsSection() {
             const stage = ch.stages[ch.stageIndex]!;
             const next = nextStageInfo(ch, progress);
             return (
-              <div key={ch.id} className="flex items-center gap-3 rounded-xl p-3 bg-[#F8FAFC] border border-[#E2E8F0]">
+              <div key={ch.id} className="flex items-center gap-3 rounded-xl p-3 bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-[#334155]">
                 <CharacterAvatar
                   emoji={stage.emoji}
                   stageIndex={ch.stageIndex}
@@ -65,8 +65,8 @@ export function AchievementsSection() {
                   label={`${ch.name}, ${stage.name} 단계 (${ch.stageIndex + 1}/${ch.stages.length})`}
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="truncate" style={{ fontSize: 11, color: "#64748B", fontWeight: 600 }}>{ch.name}</p>
-                  <p className="truncate" style={{ fontSize: 14, color: "#1E293B", fontWeight: 700 }}>{stage.name}</p>
+                  <p className="truncate" style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 600 }}>{ch.name}</p>
+                  <p className="truncate" style={{ fontSize: 14, color: "var(--text-primary)", fontWeight: 700 }}>{stage.name}</p>
                   <div
                     className="h-1.5 rounded-full bg-[#E2E8F0] mt-1.5 overflow-hidden"
                     role="progressbar"
@@ -77,7 +77,7 @@ export function AchievementsSection() {
                   >
                     <div className="h-full rounded-full bg-[#4F46E5]" style={{ width: `${next.percent}%` }} />
                   </div>
-                  <p className="mt-1 truncate" style={{ fontSize: 11, color: "#64748B" }}>
+                  <p className="mt-1 truncate" style={{ fontSize: 11, color: "var(--text-secondary)" }}>
                     {next.nextName
                       ? `${next.nextName}까지 ${next.remaining.toLocaleString()}${next.unit}`
                       : "최종 단계 달성 👑"}
@@ -107,7 +107,7 @@ export function AchievementsSection() {
             })}
           </ul>
         ) : (
-          <p style={{ fontSize: 13, color: "#64748B", textAlign: "center", padding: "8px 0 12px" }}>
+          <p style={{ fontSize: 13, color: "var(--text-secondary)", textAlign: "center", padding: "8px 0 12px" }}>
             첫 책을 완독하면 부엉이 알이 깨어나요 🥚
           </p>
         )}
@@ -115,19 +115,19 @@ export function AchievementsSection() {
         {/* 다음 도전 */}
         {locked.length > 0 && (
           <>
-            <p style={{ fontSize: 11, color: "#64748B", fontWeight: 600, marginBottom: 8 }}>다음 도전</p>
+            <p style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 600, marginBottom: 8 }}>다음 도전</p>
             <ul className="flex flex-wrap gap-2" aria-label="아직 달성하지 않은 업적">
               {visibleLocked.map((a) => {
                 const left = a.threshold - (a.type === "books" ? progress.totalDone : progress.totalPages);
                 return (
                   <li
                     key={a.id}
-                    className="flex flex-col items-center gap-1 rounded-xl p-2.5 bg-[#F8FAFC] border-[1.5px] border-[#E2E8F0]"
+                    className="flex flex-col items-center gap-1 rounded-xl p-2.5 bg-[#F8FAFC] dark:bg-[#0F172A] border-[1.5px] border-[#E2E8F0] dark:border-[#334155]"
                     style={{ minWidth: 70 }}
                     title={a.description}
                   >
                     <span style={{ fontSize: 22, filter: "grayscale(1)", opacity: 0.6 }} aria-hidden>{a.icon}</span>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: "#64748B", textAlign: "center" }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", textAlign: "center" }}>
                       {a.label}
                       <br />
                       {Math.max(0, left).toLocaleString()}{a.type === "books" ? "권" : "p"} 남음
@@ -142,7 +142,7 @@ export function AchievementsSection() {
                 onClick={() => setShowAll((v) => !v)}
                 aria-expanded={showAll}
                 className="mt-3 w-full flex items-center justify-center gap-1 py-1.5 rounded-xl"
-                style={{ fontSize: 12, fontWeight: 600, color: "#4F46E5", backgroundColor: "#EEF2FF" }}
+                style={{ fontSize: 12, fontWeight: 600, color: "var(--text-accent)", backgroundColor: "var(--bg-accent-soft)" }}
               >
                 {showAll ? "접기" : `다음 도전 ${locked.length}개 모두 보기`}
                 <ChevronDown size={14} style={{ transform: showAll ? "rotate(180deg)" : undefined }} aria-hidden />

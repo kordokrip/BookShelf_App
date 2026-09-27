@@ -8,17 +8,20 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { UISession } from "../../../types/book";
 
 /* ─── Design Tokens ─────────────────────────────────────────── */
+// 중립색은 CSS 변수(theme.css) — 인라인 style이라 dark: 클래스가 닿지 않아 다크 모드에서 흰 카드로 남던 문제
 const C = {
   indigo: "#4F46E5",
   violet: "#7C3AED",
   green: "#10B981",
   amber: "#F59E0B",
-  slate1: "#1E293B",
-  slate5: "#64748B",
-  slate6: "#64748B", // 흰 카드 위 보조 글자 — #94A3B8(대비 2.56)은 WCAG AA 미달이라 한 단계 진하게
-  slate8: "#E2E8F0",
-  slate9: "#F1F5F9",
-  white: "#FFFFFF",
+  slate1: "var(--text-primary)",
+  slate5: "var(--text-secondary)",
+  slate6: "var(--text-secondary)", // 라이트 #64748B / 다크 #94A3B8 — 흰 카드 위 #94A3B8(2.56)은 AA 미달
+  slate8: "var(--border-color)",
+  slate9: "var(--bg-muted)",
+  white: "var(--bg-card)",
+  /** 카드 위 강조 글자 — 라이트 #4F46E5 / 다크 #A5B4FC (막대·범례 같은 도형 색은 indigo 그대로) */
+  accentText: "var(--text-accent)",
 };
 
 /* ─── Summary Card ─────────────────────────────────────────── */
@@ -140,7 +143,7 @@ export function MonthlyBarChart({ data: monthlyData }: { data: { month: string; 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <h3 style={{ fontSize: 16, fontWeight: 600, color: C.slate1 }}>월별 독서 현황</h3>
         <span style={{
-          fontSize: 13, fontWeight: 600, color: "#475569",
+          fontSize: 13, fontWeight: 600, color: "var(--text-body)",
           border: `1px solid ${C.slate8}`, borderRadius: 8,
           padding: "4px 10px", backgroundColor: C.slate9,
         }}>
@@ -173,7 +176,7 @@ export function MonthlyBarChart({ data: monthlyData }: { data: { month: string; 
             domain={[0, maxY]}
             ticks={Array.from({ length: maxY + 1 }, (_, i) => i)}
           />
-          <Tooltip content={<CustomTooltip />} cursor={{ fill: "#F8FAFC" }} />
+          <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--bg-muted)" }} />
           <Bar dataKey="books" radius={[4, 4, 0, 0]} style={{ cursor: "pointer" }}>
             {monthlyData.map((entry, i) => {
               const isSelected = selectedMonth === entry.month;
@@ -205,7 +208,7 @@ export function MonthlyBarChart({ data: monthlyData }: { data: { month: string; 
               style={{
                 marginTop: 10,
                 borderRadius: 10,
-                backgroundColor: "#EEF2FF",
+                backgroundColor: "var(--bg-accent-soft)",
                 border: `1px solid #C7D2FE`,
                 padding: "10px 14px",
                 display: "flex",
@@ -213,7 +216,7 @@ export function MonthlyBarChart({ data: monthlyData }: { data: { month: string; 
                 justifyContent: "space-between",
               }}
             >
-              <span style={{ fontSize: 13, fontWeight: 600, color: C.indigo }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: C.accentText }}>
                 {currentYear}년 {selectedMonth}
               </span>
               <span style={{ fontSize: 13, fontWeight: 700, color: C.slate1 }}>
@@ -284,7 +287,7 @@ export function GenreDonutChart({ allData, doneData, readingData }: GenreDonutCh
               style={{
                 padding: "4px 12px",
                 fontSize: 13, fontWeight: activeTab === tab ? 600 : 400,
-                color: activeTab === tab ? C.indigo : C.slate5,
+                color: activeTab === tab ? C.accentText : C.slate5,
                 background: "transparent", border: "none", cursor: "pointer",
                 borderBottom: activeTab === tab ? `2px solid ${C.indigo}` : "2px solid transparent",
                 fontFamily: "var(--font-pretendard)",
@@ -377,7 +380,7 @@ export function GenreDonutChart({ allData, doneData, readingData }: GenreDonutCh
 // Stats: "총 독서일: N일" "최장 연속: N일"
 // Legend: 적음 [L0~L4] 많음
 
-const HEATMAP_LEVELS = ["#F1F5F9", "#C7D2FE", "#818CF8", "#4F46E5", "#312E81"];
+const HEATMAP_LEVELS = ["var(--bg-muted)", "#C7D2FE", "#818CF8", "#4F46E5", "#312E81"];
 const WEEK_DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 const MONTH_LABELS = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
 
@@ -509,7 +512,7 @@ export function ReadingHeatmap({ sessions }: ReadingHeatmapProps) {
         {/* 현재 N일 연속 chip */}
         <span style={{
           fontSize: 12, fontWeight: 500,
-          backgroundColor: "#FEF3C7", color: "#92400E",
+          backgroundColor: "var(--bg-warn-soft)", color: "var(--text-warn)",
           padding: "3px 10px", borderRadius: 9999,
         }}>
           {streak > 0 ? `현재 ${streak}일 연속` : "오늘 독서를 시작해보세요!"}
@@ -668,7 +671,7 @@ export function StreakCard({ sessions }: { sessions: UISession[] }) {
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{
             width: 36, height: 36, borderRadius: "50%",
-            backgroundColor: "#FEF3C7",
+            backgroundColor: "var(--bg-warn-soft)",
             display: "flex", alignItems: "center", justifyContent: "center",
             flexShrink: 0,
           }}>
@@ -679,7 +682,7 @@ export function StreakCard({ sessions }: { sessions: UISession[] }) {
         {currentStreak > 0 && (
           <span style={{
             fontSize: 11, fontWeight: 600,
-            backgroundColor: "#FEF3C7", color: "#92400E",
+            backgroundColor: "var(--bg-warn-soft)", color: "var(--text-warn)",
             padding: "3px 10px", borderRadius: 9999,
           }}>
             현재 {currentStreak}일 연속 🔥
@@ -792,23 +795,23 @@ export function ReadingCalendar({ doneBooks, sessionDates = [] }: ReadingCalenda
   const selectedBooks = selectedDate ? (booksByDate[selectedDate] ?? []) : [];
 
   return (
-    <div className="rounded-2xl bg-white border border-[#E2E8F0] overflow-hidden">
+    <div className="rounded-2xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#F1F5F9]">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[#F1F5F9] dark:border-[#334155]">
         <button
           onClick={prevMonth}
-          className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#F1F5F9] transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors"
         >
-          <ChevronLeft size={16} color="#64748B" />
+          <ChevronLeft size={16} color="var(--text-secondary)" />
         </button>
-        <span style={{ fontSize: 15, fontWeight: 700, color: "#1E293B" }}>{monthStr}</span>
+        <span style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>{monthStr}</span>
         <button
           onClick={nextMonth}
-          className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#F1F5F9] transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors"
           disabled={year === now.getFullYear() && month === now.getMonth()}
           style={{ opacity: year === now.getFullYear() && month === now.getMonth() ? 0.35 : 1 }}
         >
-          <ChevronRight size={16} color="#64748B" />
+          <ChevronRight size={16} color="var(--text-secondary)" />
         </button>
       </div>
 
@@ -821,7 +824,7 @@ export function ReadingCalendar({ doneBooks, sessionDates = [] }: ReadingCalenda
               textAlign: "center",
               fontSize: 11,
               fontWeight: 600,
-              color: i === 0 ? "#DC2626" : i === 6 ? "#2563EB" : "#64748B",
+              color: i === 0 ? "var(--text-sun)" : i === 6 ? "var(--text-sat)" : "var(--text-secondary)",
               paddingBottom: 4,
             }}
           >
@@ -854,7 +857,7 @@ export function ReadingCalendar({ doneBooks, sessionDates = [] }: ReadingCalenda
                     paddingTop: 4,
                     paddingBottom: 4,
                     borderRadius: 10,
-                    backgroundColor: isSelected ? "#EEF2FF" : "transparent",
+                    backgroundColor: isSelected ? "var(--bg-accent-soft)" : "transparent",
                     border: isSelected ? "1.5px solid #4F46E5" : "1.5px solid transparent",
                     cursor: "pointer",
                     minHeight: 52,
@@ -868,10 +871,10 @@ export function ReadingCalendar({ doneBooks, sessionDates = [] }: ReadingCalenda
                       color: isToday
                         ? "#FFFFFF"
                         : di === 0
-                        ? "#DC2626"
+                        ? "var(--text-sun)"
                         : di === 6
-                        ? "#2563EB"
-                        : "#1E293B",
+                        ? "var(--text-sat)"
+                        : "var(--text-primary)",
                       backgroundColor: isToday ? "#4F46E5" : "transparent",
                       borderRadius: "50%",
                       width: 22,
@@ -929,13 +932,13 @@ export function ReadingCalendar({ doneBooks, sessionDates = [] }: ReadingCalenda
                             width: 18,
                             height: 24,
                             borderRadius: 3,
-                            backgroundColor: "#F1F5F9",
+                            backgroundColor: "var(--bg-muted)",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
                             fontSize: 11,
                             fontWeight: 700,
-                            color: "#64748B",
+                            color: "var(--text-secondary)",
                           }}
                         >
                           +{booksOnDay.length - 2}
@@ -974,12 +977,12 @@ export function ReadingCalendar({ doneBooks, sessionDates = [] }: ReadingCalenda
             transition={{ duration: 0.2 }}
             style={{ overflow: "hidden" }}
           >
-            <div className="border-t border-[#F1F5F9] px-4 py-3">
-              <p style={{ fontSize: 12, fontWeight: 600, color: "#64748B", marginBottom: 8 }}>
+            <div className="border-t border-[#F1F5F9] dark:border-[#334155] px-4 py-3">
+              <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 8 }}>
                 📅 {selectedDate} 완독한 책
               </p>
               {selectedBooks.length === 0 ? (
-                <p style={{ fontSize: 12, color: "#64748B" }}>완독 기록이 없어요</p>
+                <p style={{ fontSize: 12, color: "var(--text-secondary)" }}>완독 기록이 없어요</p>
               ) : (
                 <div className="flex flex-col gap-2">
                   {selectedBooks.map((b) => (
@@ -1005,8 +1008,8 @@ export function ReadingCalendar({ doneBooks, sessionDates = [] }: ReadingCalenda
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p style={{ fontSize: 13, fontWeight: 700, color: "#1E293B" }} className="truncate">{b.title}</p>
-                        <p style={{ fontSize: 11, color: "#64748B" }}>{b.author}</p>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }} className="truncate">{b.title}</p>
+                        <p style={{ fontSize: 11, color: "var(--text-secondary)" }}>{b.author}</p>
                         {b.rating != null && (
                           <p style={{ fontSize: 11, color: "#F59E0B" }}>
                             {"★".repeat(b.rating)}{"☆".repeat(5 - b.rating)}

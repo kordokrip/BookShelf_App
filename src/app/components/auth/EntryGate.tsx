@@ -31,12 +31,12 @@ export function EntryGate() {
   }, [status, isLoading, navigate]);
 
   return (
-    <div className="flex items-center justify-center min-h-[var(--vp-h)] bg-white">
+    <div className="flex items-center justify-center min-h-[var(--vp-h)] bg-white dark:bg-[#1E293B]">
       <div className="flex flex-col items-center gap-3">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
         <span
           className="text-sm"
-          style={{ color: "#64748B", fontFamily: "var(--font-pretendard)" }}
+          style={{ color: "var(--text-secondary)", fontFamily: "var(--font-pretendard)" }}
         >
           로딩 중...
         </span>

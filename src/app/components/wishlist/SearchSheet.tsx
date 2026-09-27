@@ -95,10 +95,10 @@ export function SearchSheet({
 
   return (
     <>
-      <div className="fixed inset-0 z-50 bg-white flex flex-col">
+      <div className="fixed inset-0 z-50 bg-white dark:bg-[#1E293B] flex flex-col">
         {/* 검색 헤더 */}
-        <div className="flex items-center gap-2 px-4 pt-5 pb-3 border-b border-[#F1F5F9]">
-          <div className="flex-1 flex items-center gap-2 bg-[#F8FAFC] rounded-xl px-3 py-2.5">
+        <div className="flex items-center gap-2 px-4 pt-5 pb-3 border-b border-[#F1F5F9] dark:border-[#334155]">
+          <div className="flex-1 flex items-center gap-2 bg-[#F8FAFC] dark:bg-[#0F172A] rounded-xl px-3 py-2.5">
             <Search size={16} className="text-[#64748B] dark:text-[#94A3B8] shrink-0" />
             <input
               ref={searchInputRef}
@@ -109,7 +109,7 @@ export function SearchSheet({
                 if (e.key === "Enter") handleSearchCommit(searchQuery);
               }}
               placeholder="책 제목, 저자 검색..."
-              className="flex-1 bg-transparent outline-none text-[#1E293B] placeholder-[#94A3B8]"
+              className="flex-1 bg-transparent outline-none text-[#1E293B] dark:text-[#F8FAFC] placeholder-[#94A3B8]"
               style={{ fontSize: 15 }}
             />
             {searchQuery && (
@@ -133,7 +133,7 @@ export function SearchSheet({
           </button>
           <button
             onClick={onClose}
-            className="text-[#64748B] font-medium shrink-0"
+            className="text-[#64748B] dark:text-[#94A3B8] font-medium shrink-0"
             style={{ fontSize: 14 }}
           >
             취소
@@ -146,7 +146,7 @@ export function SearchSheet({
             recentSearches.length > 0 ? (
               <div className="px-4 pt-4">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-[#64748B]" style={{ fontSize: 13, fontWeight: 600 }}>
+                  <span className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 13, fontWeight: 600 }}>
                     최근 검색어
                   </span>
                   <button
@@ -168,7 +168,7 @@ export function SearchSheet({
                         setSearchQuery(q);
                         handleSearchCommit(q);
                       }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#E2E8F0] bg-[#F8FAFC] text-[#475569] hover:bg-[#EEF2FF] hover:border-[#C7D2FE] hover:text-[#4F46E5] transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#E2E8F0] dark:border-[#334155] bg-[#F8FAFC] dark:bg-[#0F172A] text-[#475569] dark:text-[#CBD5E1] hover:bg-[#EEF2FF] hover:border-[#C7D2FE] hover:text-[#4F46E5] transition-colors"
                       style={{ fontSize: 13 }}
                     >
                       <Search size={11} />
@@ -220,10 +220,10 @@ export function SearchSheet({
                   )}
                   {/* 정보 */}
                   <div className="flex-1 min-w-0">
-                    <p className="truncate font-medium text-[#1E293B]" style={{ fontSize: 14 }}>
+                    <p className="truncate font-medium text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 14 }}>
                       {book.title}
                     </p>
-                    <p className="text-[#64748B] truncate" style={{ fontSize: 12 }}>
+                    <p className="text-[#64748B] dark:text-[#94A3B8] truncate" style={{ fontSize: 12 }}>
                       {book.author}
                       {book.publisher ? ` · ${book.publisher}` : ""}
                     </p>

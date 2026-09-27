@@ -159,7 +159,7 @@ function PageUpdateModal({
                 onClick={fetchTotalPagesFromWeb}
                 disabled={isFetchingPages}
                 className="flex items-center gap-1 rounded-xl px-2.5 py-1 transition-colors disabled:opacity-60"
-                style={{ fontSize: 11, fontWeight: 600, color: "#4F46E5", backgroundColor: "#EEF2FF" }}
+                style={{ fontSize: 11, fontWeight: 600, color: "var(--text-accent)", backgroundColor: "var(--bg-accent-soft)" }}
               >
                 <RefreshCw size={11} className={isFetchingPages ? "animate-spin" : ""} />
                 {isFetchingPages ? "조회 중..." : "웹에서 가져오기"}
@@ -221,7 +221,7 @@ function PageUpdateModal({
 
           {/* Date row */}
           <div className="flex items-center justify-between mb-3 px-1">
-            <span style={{ fontSize: 13, color: "#64748B" }}>
+            <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>
               📅 오늘: {dateStr}
             </span>
           </div>
@@ -268,7 +268,7 @@ function PageUpdateModal({
                 <button
                   onClick={() => setShowCompleteConfirm(false)}
                   className="flex-1 rounded-xl border border-[#D1FAE5] py-2.5"
-                  style={{ fontSize: 13, fontWeight: 600, color: "#64748B" }}
+                  style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)" }}
                 >
                   취소
                 </button>
@@ -317,8 +317,8 @@ function PageUpdateModal({
               </button>
               <button
                 onClick={onClose}
-                className="w-full rounded-2xl border border-[#E2E8F0] transition-colors hover:bg-[#F8FAFC]"
-                style={{ height: 48, fontSize: 14, fontWeight: 600, color: "#64748B" }}
+                className="w-full rounded-2xl border border-[#E2E8F0] dark:border-[#334155] transition-colors hover:bg-[#F8FAFC] dark:hover:bg-[#1E293B]"
+                style={{ height: 48, fontSize: 14, fontWeight: 600, color: "var(--text-secondary)" }}
               >
                 취소
               </button>
@@ -464,13 +464,13 @@ function LogTodayModal({
       <div className="fixed inset-0 z-50 flex flex-col justify-end lg:items-center lg:justify-center">
         <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
         <div
-          className="relative bg-white rounded-t-2xl lg:rounded-3xl w-full lg:max-w-md lg:mx-4 z-10 px-5 py-8 text-center"
+          className="relative bg-white dark:bg-[#1E293B] rounded-t-2xl lg:rounded-3xl w-full lg:max-w-md lg:mx-4 z-10 px-5 py-8 text-center"
           style={{ boxShadow: "0 -8px 40px rgba(0,0,0,0.12)" }}
         >
-          <p style={{ fontSize: 15, color: "#64748B" }}>읽는 중인 책이 없어요.<br />먼저 책을 추가해주세요!</p>
+          <p style={{ fontSize: 15, color: "var(--text-secondary)" }}>읽는 중인 책이 없어요.<br />먼저 책을 추가해주세요!</p>
           <button
             onClick={onClose}
-            className="mt-5 w-full py-3 rounded-2xl border border-[#E2E8F0] text-[#64748B]"
+            className="mt-5 w-full py-3 rounded-2xl border border-[#E2E8F0] dark:border-[#334155] text-[#64748B] dark:text-[#94A3B8]"
             style={{ fontSize: 14, fontWeight: 600 }}
           >닫기</button>
         </div>
@@ -492,8 +492,8 @@ function LogTodayModal({
           <button
             aria-label="닫기"
             onClick={onClose}
-            className="hidden lg:flex absolute top-4 right-4 w-11 h-11 items-center justify-center rounded-full hover:bg-[#F1F5F9] transition-colors"
-            style={{ color: "#64748B" }}
+            className="hidden lg:flex absolute top-4 right-4 w-11 h-11 items-center justify-center rounded-full hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors"
+            style={{ color: "var(--text-secondary)" }}
           >
             <X size={18} />
           </button>
@@ -512,7 +512,7 @@ function LogTodayModal({
           {/* Book selector */}
           {books.length > 1 ? (
             <div className="mb-4 relative">
-              <p className="text-[#64748B] mb-1.5" style={{ fontSize: 12, fontWeight: 600 }}>책 선택</p>
+              <p className="text-[#64748B] dark:text-[#94A3B8] mb-1.5" style={{ fontSize: 12, fontWeight: 600 }}>책 선택</p>
               <button
                 onClick={() => setShowBookPicker((v) => !v)}
                 className="w-full flex items-center gap-3 p-3 rounded-2xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-[#334155] text-left transition-colors hover:bg-[#F1F5F9] dark:hover:bg-[#334155]"
@@ -522,7 +522,7 @@ function LogTodayModal({
                   <p className="text-[#1E293B] dark:text-[#F8FAFC] truncate" style={{ fontSize: 13, fontWeight: 700 }}>{selectedBook?.title}</p>
                   <p className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 11 }}>{selectedBook?.currentPage ?? 0}p 읽는 중</p>
                 </div>
-                <ChevronDown size={16} style={{ color: "#64748B", flexShrink: 0, transform: showBookPicker ? "rotate(180deg)" : undefined, transition: "transform 0.2s" }} />
+                <ChevronDown size={16} style={{ color: "var(--text-secondary)", flexShrink: 0, transform: showBookPicker ? "rotate(180deg)" : undefined, transition: "transform 0.2s" }} />
               </button>
               {showBookPicker && (
                 <div
@@ -562,7 +562,7 @@ function LogTodayModal({
           )}
 
           {/* Pages read stepper */}
-          <p className="text-[#64748B] mb-2" style={{ fontSize: 12, fontWeight: 600 }}>오늘 읽은 페이지 수</p>
+          <p className="text-[#64748B] dark:text-[#94A3B8] mb-2" style={{ fontSize: 12, fontWeight: 600 }}>오늘 읽은 페이지 수</p>
           {selectedBook && (selectedBook.currentPage ?? 0) > 0 && (
             <p className="text-[#64748B] dark:text-[#94A3B8] mb-2" style={{ fontSize: 11 }}>
               현재 {selectedBook.currentPage}p 기준으로 기록합니다
@@ -570,7 +570,7 @@ function LogTodayModal({
           )}
           <div className="mb-5">
             {maxPages === 0 ? (
-              <p className="text-center py-3 rounded-2xl bg-[#F8FAFC] text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 13 }}>
+              <p className="text-center py-3 rounded-2xl bg-[#F8FAFC] dark:bg-[#0F172A] text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 13 }}>
                 모든 페이지를 완독했어요! 🎉
               </p>
             ) : (
@@ -600,8 +600,8 @@ function LogTodayModal({
             </button>
             <button
               onClick={onClose}
-              className="w-full rounded-2xl border border-[#E2E8F0] transition-colors hover:bg-[#F8FAFC]"
-              style={{ height: 48, fontSize: 14, fontWeight: 600, color: "#64748B" }}
+              className="w-full rounded-2xl border border-[#E2E8F0] dark:border-[#334155] transition-colors hover:bg-[#F8FAFC] dark:hover:bg-[#1E293B]"
+              style={{ height: 48, fontSize: 14, fontWeight: 600, color: "var(--text-secondary)" }}
             >
               취소
             </button>
@@ -663,8 +663,8 @@ function GoalModal({
           <button
             aria-label="닫기"
             onClick={onClose}
-            className="hidden lg:flex absolute top-4 right-4 w-11 h-11 items-center justify-center rounded-full hover:bg-[#F1F5F9] transition-colors"
-            style={{ color: "#64748B" }}
+            className="hidden lg:flex absolute top-4 right-4 w-11 h-11 items-center justify-center rounded-full hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors"
+            style={{ color: "var(--text-secondary)" }}
           >
             <X size={18} />
           </button>
@@ -672,16 +672,16 @@ function GoalModal({
           <h2 className="text-[#1E293B] dark:text-[#F8FAFC] mb-1" style={{ fontSize: 18, fontWeight: 800 }}>
             올해 독서 목표
           </h2>
-          <p className="text-[#64748B] mb-4" style={{ fontSize: 13 }}>
+          <p className="text-[#64748B] dark:text-[#94A3B8] mb-4" style={{ fontSize: 13 }}>
             완독 {currentDone}권 달성 중
           </p>
 
           {/* Progress bar vs current goal */}
           {(currentGoal ?? 0) > 0 && (
-            <div className="mb-4 p-3 rounded-2xl" style={{ backgroundColor: "#FEF3C7" }}>
+            <div className="mb-4 p-3 rounded-2xl" style={{ backgroundColor: "var(--bg-warn-soft)" }}>
               <div className="flex justify-between mb-1.5">
-                <span style={{ fontSize: 12, fontWeight: 600, color: "#92400E" }}>현재 목표</span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: "#92400E" }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-warn)" }}>현재 목표</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-warn)" }}>
                   {currentDone} / {currentGoal}권 ({achievementRate}%)
                 </span>
               </div>
@@ -698,7 +698,7 @@ function GoalModal({
           )}
 
           {/* Presets */}
-          <p className="text-[#64748B] mb-2" style={{ fontSize: 12, fontWeight: 600 }}>빠른 설정</p>
+          <p className="text-[#64748B] dark:text-[#94A3B8] mb-2" style={{ fontSize: 12, fontWeight: 600 }}>빠른 설정</p>
           <div className="grid grid-cols-4 gap-2 mb-4">
             {PRESETS.map((p) => (
               <button
@@ -718,7 +718,7 @@ function GoalModal({
           </div>
 
           {/* Custom stepper */}
-          <p className="text-[#64748B] mb-2" style={{ fontSize: 12, fontWeight: 600 }}>직접 입력</p>
+          <p className="text-[#64748B] dark:text-[#94A3B8] mb-2" style={{ fontSize: 12, fontWeight: 600 }}>직접 입력</p>
           <div className="mb-5">
             <NumberStepper value={goal} min={1} max={365} onChange={setGoal} unit="권" />
           </div>
@@ -739,8 +739,8 @@ function GoalModal({
             </button>
             <button
               onClick={onClose}
-              className="w-full rounded-2xl border border-[#E2E8F0] transition-colors hover:bg-[#F8FAFC]"
-              style={{ height: 48, fontSize: 14, fontWeight: 600, color: "#64748B" }}
+              className="w-full rounded-2xl border border-[#E2E8F0] dark:border-[#334155] transition-colors hover:bg-[#F8FAFC] dark:hover:bg-[#1E293B]"
+              style={{ height: 48, fontSize: 14, fontWeight: 600, color: "var(--text-secondary)" }}
             >
               취소
             </button>
@@ -767,9 +767,9 @@ function QuickActions({
 }) {
   const timerLabel = timerRunning && timerDisplay ? `타이머 ${timerDisplay}` : "독서 타이머";
   const actions = [
-    { icon: <BookOpen size={18} />, label: "오늘 독서 기록", bg: "#EEF2FF", color: "#4F46E5", onClick: onLogToday },
-    { icon: <Target size={18} />, label: "목표 설정", bg: "#FEF3C7", color: "#92400E", onClick: onSetGoal },
-    { icon: <Timer size={18} />, label: timerLabel, bg: timerRunning ? "#DCFCE7" : "#ECFDF5", color: "#065F46", onClick: onTimer },
+    { icon: <BookOpen size={18} />, label: "오늘 독서 기록", bg: "var(--bg-accent-soft)", color: "var(--text-accent)", onClick: onLogToday },
+    { icon: <Target size={18} />, label: "목표 설정", bg: "var(--bg-warn-soft)", color: "var(--text-warn)", onClick: onSetGoal },
+    { icon: <Timer size={18} />, label: timerLabel, bg: timerRunning ? "var(--bg-success-soft-strong)" : "var(--bg-success-soft)", color: "var(--text-success)", onClick: onTimer },
   ];
   return (
     <div className="px-4 mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -1110,7 +1110,7 @@ export function ReadingPage() {
             <h3 className="text-[#1E293B] dark:text-[#F8FAFC] mb-2" style={{ fontSize: 17, fontWeight: 800 }}>
               독서 {timerPromptMinutes}분을 기록할까요?
             </h3>
-            <p className="text-[#64748B] mb-6" style={{ fontSize: 13 }}>
+            <p className="text-[#64748B] dark:text-[#94A3B8] mb-6" style={{ fontSize: 13 }}>
               타이머 기록을 독서 세션에 자동으로 반영합니다
             </p>
             <div className="flex flex-col gap-2.5">
@@ -1128,8 +1128,8 @@ export function ReadingPage() {
               </button>
               <button
                 onClick={handleTimerPromptSkip}
-                className="w-full rounded-2xl border border-[#E2E8F0] transition-colors hover:bg-[#F8FAFC]"
-                style={{ height: 44, fontSize: 14, fontWeight: 600, color: "#64748B" }}
+                className="w-full rounded-2xl border border-[#E2E8F0] dark:border-[#334155] transition-colors hover:bg-[#F8FAFC] dark:hover:bg-[#1E293B]"
+                style={{ height: 44, fontSize: 14, fontWeight: 600, color: "var(--text-secondary)" }}
               >
                 건너뛰기
               </button>

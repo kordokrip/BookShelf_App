@@ -55,24 +55,24 @@ function CreateCollectionDialog({
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white rounded-2xl p-5 mx-4 w-full max-w-sm shadow-xl"
+        className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 mx-4 w-full max-w-sm shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 style={{ fontSize: 16, fontWeight: 700, color: "#1E293B", marginBottom: 16 }}>
+        <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 16 }}>
           새 컬렉션 만들기
         </h3>
         <div className="flex gap-3 mb-3">
           <input
             value={emoji}
             onChange={(e) => setEmoji(e.target.value)}
-            className="w-12 h-12 text-center rounded-xl border border-[#E2E8F0] text-2xl"
+            className="w-12 h-12 text-center rounded-xl border border-[#E2E8F0] dark:border-[#334155] text-2xl"
             maxLength={4}
           />
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="컬렉션 이름"
-            className="flex-1 rounded-xl border border-[#E2E8F0] px-3 py-2"
+            className="flex-1 rounded-xl border border-[#E2E8F0] dark:border-[#334155] px-3 py-2"
             style={{ fontSize: 14 }}
             maxLength={100}
           />
@@ -81,7 +81,7 @@ function CreateCollectionDialog({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="설명 (선택)"
-          className="w-full rounded-xl border border-[#E2E8F0] px-3 py-2 mb-4 resize-none"
+          className="w-full rounded-xl border border-[#E2E8F0] dark:border-[#334155] px-3 py-2 mb-4 resize-none"
           style={{ fontSize: 13 }}
           rows={2}
           maxLength={500}
@@ -89,7 +89,7 @@ function CreateCollectionDialog({
         <div className="flex gap-2">
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border border-[#E2E8F0] text-[#64748B]"
+            className="flex-1 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-[#334155] text-[#64748B] dark:text-[#94A3B8]"
             style={{ fontSize: 13, fontWeight: 600 }}
           >
             취소
@@ -128,7 +128,7 @@ function CollectionDetailView({ id, onBack }: { id: string; onBack: () => void }
       <button
         onClick={onBack}
         className="flex items-center gap-1.5 mb-4 hover:opacity-70 transition-opacity"
-        style={{ color: "#1E293B", fontSize: 14, fontWeight: 600 }}
+        style={{ color: "var(--text-primary)", fontSize: 14, fontWeight: 600 }}
       >
         <ChevronLeft size={18} />
         뒤로
@@ -136,16 +136,16 @@ function CollectionDetailView({ id, onBack }: { id: string; onBack: () => void }
       <div className="flex items-center gap-3 mb-4">
         <span style={{ fontSize: 32 }}>{detail.emoji}</span>
         <div>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1E293B" }}>{detail.name}</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)" }}>{detail.name}</h2>
           {detail.description && (
-            <p style={{ fontSize: 13, color: "#64748B", marginTop: 2 }}>{detail.description}</p>
+            <p style={{ fontSize: 13, color: "var(--text-secondary)", marginTop: 2 }}>{detail.description}</p>
           )}
         </div>
       </div>
       {detail.books.length === 0 ? (
         <div className="text-center py-12">
           <BookOpen size={40} className="text-[#CBD5E1] mx-auto mb-3" />
-          <p style={{ fontSize: 14, color: "#64748B", fontWeight: 500 }}>아직 도서가 없습니다</p>
+          <p style={{ fontSize: 14, color: "var(--text-secondary)", fontWeight: 500 }}>아직 도서가 없습니다</p>
           <p style={{ fontSize: 12, color: "#CBD5E1", marginTop: 4 }}>
             도서 상세 페이지에서 컬렉션에 추가해보세요
           </p>
@@ -156,7 +156,7 @@ function CollectionDetailView({ id, onBack }: { id: string; onBack: () => void }
             <button
               key={book.id}
               onClick={() => navigate(`/book/${book.id}`)}
-              className="flex items-center gap-3 p-3 rounded-xl bg-white border border-[#E2E8F0] hover:border-[#4F46E5] transition-colors text-left"
+              className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] hover:border-[#4F46E5] transition-colors text-left"
             >
               <div
                 className="w-10 h-14 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -165,10 +165,10 @@ function CollectionDetailView({ id, onBack }: { id: string; onBack: () => void }
                 <span style={{ fontSize: 18 }}>{book.cover_emoji}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="truncate" style={{ fontSize: 14, fontWeight: 600, color: "#1E293B" }}>
+                <p className="truncate" style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>
                   {book.title}
                 </p>
-                <p className="truncate" style={{ fontSize: 12, color: "#64748B" }}>
+                <p className="truncate" style={{ fontSize: 12, color: "var(--text-secondary)" }}>
                   {book.author}
                 </p>
               </div>
@@ -243,8 +243,8 @@ export function CollectionsPage() {
       {!isLoading && collections.length === 0 && (
         <div className="text-center py-16 px-4">
           <FolderOpen size={48} className="text-[#CBD5E1] mx-auto mb-3" />
-          <p style={{ fontSize: 16, fontWeight: 600, color: "#64748B" }}>컬렉션이 없습니다</p>
-          <p style={{ fontSize: 13, color: "#64748B", marginTop: 4 }}>
+          <p style={{ fontSize: 16, fontWeight: 600, color: "var(--text-secondary)" }}>컬렉션이 없습니다</p>
+          <p style={{ fontSize: 13, color: "var(--text-secondary)", marginTop: 4 }}>
             시리즈, 주제, 무드별로 책을 모아보세요
           </p>
           <button
@@ -269,20 +269,20 @@ export function CollectionsPage() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, x: -100 }}
-                className="flex items-center gap-3 p-4 rounded-2xl bg-white border border-[#E2E8F0] hover:border-[#C7D2FE] transition-colors cursor-pointer"
+                className="flex items-center gap-3 p-4 rounded-2xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] hover:border-[#C7D2FE] transition-colors cursor-pointer"
                 onClick={() => setSelectedId(col.id)}
               >
                 <div
                   className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: "#EEF2FF" }}
+                  style={{ backgroundColor: "var(--bg-accent-soft)" }}
                 >
                   <span style={{ fontSize: 24 }}>{col.emoji}</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="truncate" style={{ fontSize: 15, fontWeight: 700, color: "#1E293B" }}>
+                  <p className="truncate" style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>
                     {col.name}
                   </p>
-                  <p style={{ fontSize: 12, color: "#64748B", marginTop: 2 }}>
+                  <p style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 2 }}>
                     {col.book_count}권
                     {col.description ? ` · ${col.description}` : ""}
                   </p>

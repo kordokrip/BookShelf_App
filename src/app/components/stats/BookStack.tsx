@@ -45,18 +45,18 @@ export function BookStack({ books, title, maxVisible = 40 }: BookStackProps) {
 
   return (
     <section
-      className="rounded-2xl p-4 border bg-white border-[#E2E8F0]"
+      className="rounded-2xl p-4 border bg-white dark:bg-[#1E293B] border-[#E2E8F0] dark:border-[#334155]"
       aria-labelledby="book-stack-title"
     >
       <div className="flex items-baseline justify-between gap-2 mb-1">
-        <h2 id="book-stack-title" className="text-[#1E293B]" style={{ fontSize: 14, fontWeight: 700 }}>
+        <h2 id="book-stack-title" className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 14, fontWeight: 700 }}>
           📚 {title}
         </h2>
-        <span className="text-[#4F46E5] whitespace-nowrap" style={{ fontSize: 13, fontWeight: 700 }}>
+        <span className="text-[#4F46E5] dark:text-[#A5B4FC] whitespace-nowrap" style={{ fontSize: 13, fontWeight: 700 }}>
           {books.length}권 · 약 {formatStackHeight(totalMm)}
         </span>
       </div>
-      <p className="text-[#64748B] mb-3" style={{ fontSize: 11 }}>
+      <p className="text-[#64748B] dark:text-[#94A3B8] mb-3" style={{ fontSize: 11 }}>
         두께는 페이지 수로 추정했어요 · 책을 누르면 상세로 이동해요
       </p>
 
@@ -103,7 +103,7 @@ export function BookStack({ books, title, maxVisible = 40 }: BookStackProps) {
       </div>
 
       {hiddenCount > 0 && (
-        <p className="text-center text-[#64748B] mt-2" style={{ fontSize: 11 }}>
+        <p className="text-center text-[#64748B] dark:text-[#94A3B8] mt-2" style={{ fontSize: 11 }}>
           아래에 이전에 완독한 {hiddenCount}권이 더 쌓여 있어요 (높이에는 포함)
         </p>
       )}

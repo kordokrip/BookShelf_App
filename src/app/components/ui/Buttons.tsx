@@ -24,7 +24,7 @@ export function Button({
 
   const variants: Record<string, string> = {
     primary:   "bg-[#4F46E5] text-white hover:bg-[#4338CA] shadow-sm hover:shadow-md",
-    secondary: "bg-white text-[#4F46E5] border border-[#4F46E5] hover:bg-[#EEF2FF]",
+    secondary: "bg-white text-[#4F46E5] border border-[#4F46E5] hover:bg-[#EEF2FF] dark:bg-[#1E293B] dark:text-[#A5B4FC] dark:border-[#A5B4FC] dark:hover:bg-[#312E81]",
     ghost:     "bg-transparent text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#1E293B]",
     danger:    "bg-[#EF4444] text-white hover:bg-[#DC2626] shadow-sm",
   };

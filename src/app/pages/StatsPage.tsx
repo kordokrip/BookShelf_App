@@ -341,8 +341,8 @@ export function StatsPage() {
                   alert("CSV 내보내기에 실패했습니다. 다시 시도해주세요.");
                 }
               }}
-              className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 border border-[#E2E8F0] bg-white hover:bg-[#F8FAFC] transition-colors"
-              style={{ fontSize: 14, fontWeight: 600, color: "#4F46E5" }}
+              className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 border border-[#E2E8F0] dark:border-[#334155] bg-white dark:bg-[#1E293B] hover:bg-[#F8FAFC] dark:hover:bg-[#1E293B] transition-colors"
+              style={{ fontSize: 14, fontWeight: 600, color: "var(--text-accent)" }}
             >
               <Download size={16} />
               독서 데이터 CSV 내보내기

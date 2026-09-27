@@ -85,7 +85,7 @@ function WishBookDetailSheet({
     <div className="fixed inset-0 z-50 flex flex-col justify-end">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div
-        className="relative bg-white rounded-t-2xl w-full z-10"
+        className="relative bg-white dark:bg-[#1E293B] rounded-t-2xl w-full z-10"
         style={{ boxShadow: "0 -8px 40px rgba(0,0,0,0.12)" }}
       >
         {/* Handle */}
@@ -98,10 +98,10 @@ function WishBookDetailSheet({
           <div className="flex gap-3 mb-5">
             <BookCover book={book} size="md" />
             <div className="flex-1 min-w-0">
-              <h3 className="text-[#1E293B] line-clamp-2" style={{ fontSize: 16, fontWeight: 700 }}>
+              <h3 className="text-[#1E293B] dark:text-[#F8FAFC] line-clamp-2" style={{ fontSize: 16, fontWeight: 700 }}>
                 {book.title}
               </h3>
-              <p className="text-[#64748B] truncate" style={{ fontSize: 13 }}>
+              <p className="text-[#64748B] dark:text-[#94A3B8] truncate" style={{ fontSize: 13 }}>
                 {book.author}
               </p>
               {book.publisher && (
@@ -121,7 +121,7 @@ function WishBookDetailSheet({
           {/* 우선순위 슬라이더 */}
           <div className="mb-5">
             <div className="flex items-center justify-between mb-2">
-              <label className="text-[#374151]" style={{ fontSize: 13, fontWeight: 600 }}>
+              <label className="text-[#374151] dark:text-[#CBD5E1]" style={{ fontSize: 13, fontWeight: 600 }}>
                 우선순위
               </label>
               <div className="flex items-center gap-1">
@@ -160,8 +160,8 @@ function WishBookDetailSheet({
               }}
             />
             <div className="flex justify-between mt-1">
-              <span style={{ fontSize: 11, color: "#64748B" }}>낮음</span>
-              <span style={{ fontSize: 11, color: "#64748B" }}>높음</span>
+              <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>낮음</span>
+              <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>높음</span>
             </div>
           </div>
 
@@ -295,7 +295,7 @@ export function WishGrid({
             style={{
               fontSize: 12,
               fontWeight: 500,
-              backgroundColor: "#EEF2FF",
+              backgroundColor: "var(--bg-accent-soft)",
               color: "#4F46E5",
               padding: "2px 8px",
             }}

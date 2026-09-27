@@ -59,7 +59,7 @@ function StarRow({ value, onRate }: { value: number; onRate?: (n: number) => voi
           >★</span>
         );
       })}
-      <span className="ml-1 text-[#64748B]" style={{ fontSize: 14, fontWeight: 600 }}>
+      <span className="ml-1 text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 14, fontWeight: 600 }}>
         {value.toFixed(1)}
       </span>
     </div>
@@ -93,8 +93,8 @@ function QuoteCard({ note }: { note: BookNote }) {
               // Spec: bg #F1F5F9, text #64748B, 11px, border-radius 4px
               fontSize: 11,
               fontWeight: 700,
-              color: "#475569",
-              backgroundColor: "#F1F5F9",
+              color: "var(--text-body)",
+              backgroundColor: "var(--bg-muted)",
               borderRadius: 4,
             }}
           >
@@ -111,10 +111,10 @@ function QuoteCard({ note }: { note: BookNote }) {
 function MemoCard({ note }: { note: BookNote }) {
   return (
     <div
-      className="rounded-2xl p-4 border border-[#E2E8F0]"
+      className="rounded-2xl p-4 border border-[#E2E8F0] dark:border-[#334155]"
       style={{ backgroundColor: "#FAFAFA" }}
     >
-      <p className="text-[#374151] leading-relaxed" style={{ fontSize: 14 }}>
+      <p className="text-[#374151] dark:text-[#CBD5E1] leading-relaxed" style={{ fontSize: 14 }}>
         <NoteContent content={note.content} />
       </p>
       <div className="flex items-center gap-2 mt-3">
@@ -136,20 +136,20 @@ function MemoCard({ note }: { note: BookNote }) {
 function ReviewCard({ note, expanded, onToggle }: { note: BookNote; expanded: boolean; onToggle: () => void }) {
   const preview = note.content.slice(0, 120) + (note.content.length > 120 ? "..." : "");
   return (
-    <div className="rounded-2xl p-4 border border-[#F1F5F9] bg-white" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-      <p className="text-[#374151] leading-relaxed" style={{ fontSize: 14 }}>
+    <div className="rounded-2xl p-4 border border-[#F1F5F9] dark:border-[#334155] bg-white dark:bg-[#1E293B]" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+      <p className="text-[#374151] dark:text-[#CBD5E1] leading-relaxed" style={{ fontSize: 14 }}>
         <NoteContent content={expanded ? note.content : preview} />
       </p>
       {note.content.length > 120 && (
         <button
           onClick={onToggle}
           className="mt-2"
-          style={{ fontSize: 13, fontWeight: 600, color: "#4F46E5" }}
+          style={{ fontSize: 13, fontWeight: 600, color: "var(--text-accent)" }}
         >
           {expanded ? "접기" : "전체 보기"}
         </button>
       )}
-      <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[#F1F5F9]">
+      <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[#F1F5F9] dark:border-[#334155]">
         <span className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 11 }}>✍️ {note.date}</span>
       </div>
     </div>
@@ -309,7 +309,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
       <div className="flex items-center justify-end gap-1 mt-2">
         <button
           onClick={() => openEdit(note)}
-          className="p-1.5 rounded-lg hover:bg-[#F1F5F9] transition-colors"
+          className="p-1.5 rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors"
           aria-label="편집"
         >
           <Pencil size={13} className="text-[#64748B] dark:text-[#94A3B8]" />
@@ -348,8 +348,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
 
         {/* ── 빠른 노트 캡처 바 ── */}
         <div
-          className="rounded-2xl p-3 border"
-          style={{ backgroundColor: "#FAFBFF", borderColor: "#C7D2FE" }}
+          className="rounded-2xl p-3 border bg-[#FAFBFF] border-[#C7D2FE] dark:bg-[#1E293B] dark:border-[#3730A3]"
         >
           {/* 타입 칩 */}
           <div className="flex gap-1.5 mb-2">
@@ -365,8 +364,8 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
                 style={{
                   fontSize: 11,
                   fontWeight: 600,
-                  backgroundColor: quickType === t.value ? "#4F46E5" : "#EEF2FF",
-                  color: quickType === t.value ? "white" : "#4F46E5",
+                  backgroundColor: quickType === t.value ? "#4F46E5" : "var(--bg-accent-soft)",
+                  color: quickType === t.value ? "white" : "var(--text-accent)",
                 }}
               >
                 {t.label}
@@ -380,12 +379,12 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
             onChange={setQuickText}
             onKeyDown={handleQuickKeyDown}
             placeholder="빠른 노트를 입력하세요... (⌘+Enter로 저장)"
-            className="w-full bg-white rounded-xl border border-[#E2E8F0] outline-none focus:border-[#4F46E5] resize-none px-3 py-2 transition-colors"
-            style={{ fontSize: 13, color: "#1E293B" }}
+            className="w-full bg-white dark:bg-[#1E293B] rounded-xl border border-[#E2E8F0] dark:border-[#334155] outline-none focus:border-[#4F46E5] resize-none px-3 py-2 transition-colors"
+            style={{ fontSize: 13, color: "var(--text-primary)" }}
           />
           <div className="flex items-center justify-between mt-2">
             {currentPage && currentPage > 0 ? (
-              <span style={{ fontSize: 11, color: "#64748B" }}>📄 현재 {currentPage}p 자동 반영</span>
+              <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>📄 현재 {currentPage}p 자동 반영</span>
             ) : (
               <span />
             )}
@@ -403,7 +402,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
         {/* OCR 노트 추가 버튼 */}
         <button
           onClick={() => setShowOCR(true)}
-          className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50 text-emerald-700 transition-colors hover:bg-emerald-100 active:bg-emerald-100"
+          className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50 text-emerald-700 transition-colors hover:bg-emerald-100 active:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/40"
           style={{ fontSize: 13, fontWeight: 600 }}
         >
           <ScanLine size={16} />
@@ -420,7 +419,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
                 "flex-shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border transition-all",
                 noteFilter === tab.value
                   ? "bg-[#4F46E5] text-white border-[#4F46E5]"
-                  : "border-[#E2E8F0] text-[#64748B] bg-white"
+                  : "border-[#E2E8F0] text-[#64748B] bg-white dark:border-[#334155] dark:text-[#94A3B8] dark:bg-[#1E293B]"
               )}
               style={{ fontSize: 12, fontWeight: 600 }}
             >
@@ -446,7 +445,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
             aria-pressed={focusOnly}
             className={cn(
               "self-start inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border transition-all",
-              focusOnly ? "bg-[#3730A3] text-white border-[#3730A3]" : "border-[#C7D2FE] text-[#3730A3] bg-white",
+              focusOnly ? "bg-[#3730A3] text-white border-[#3730A3]" : "border-[#C7D2FE] text-[#3730A3] bg-white dark:border-[#3730A3] dark:text-[#C7D2FE] dark:bg-[#1E293B]",
             )}
             style={{ fontSize: 12, fontWeight: 600 }}
           >
@@ -462,7 +461,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
             value={noteSearch}
             onChange={(e) => setNoteSearch(e.target.value)}
             placeholder="노트 내용 검색..."
-            className="w-full pl-8 pr-4 py-2 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] outline-none focus:border-[#4F46E5] transition-colors"
+            className="w-full pl-8 pr-4 py-2 rounded-xl border border-[#E2E8F0] dark:border-[#334155] bg-[#F8FAFC] dark:bg-[#0F172A] outline-none focus:border-[#4F46E5] transition-colors"
             style={{ fontSize: 13 }}
           />
         </div>
@@ -480,7 +479,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2, delay: idx * 0.05 }}
-                className="flex gap-0 overflow-hidden rounded-2xl border border-[#E2E8F0]"
+                className="flex gap-0 overflow-hidden rounded-2xl border border-[#E2E8F0] dark:border-[#334155]"
               >
                 {/* 좌측 색상 바 */}
                 <div
@@ -691,7 +690,7 @@ function BookInfoTab({ book }: { book: UIBook }) {
   return (
     <div className="px-4 py-4 flex flex-col gap-4">
       {/* 기본 정보 */}
-      <div className="rounded-2xl border border-[#F1F5F9] overflow-hidden" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+      <div className="rounded-2xl border border-[#F1F5F9] dark:border-[#334155] overflow-hidden" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
         {rows.map((row, i) => (
           <div
             key={row.label}
@@ -705,14 +704,14 @@ function BookInfoTab({ book }: { book: UIBook }) {
       </div>
 
       {/* 별점 입력 */}
-      <div className="rounded-2xl border border-[#F1F5F9] px-4 py-3.5 flex items-center justify-between" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+      <div className="rounded-2xl border border-[#F1F5F9] dark:border-[#334155] px-4 py-3.5 flex items-center justify-between" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
         <span className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 13 }}>별점</span>
         <StarRow value={book.rating ?? 0} onRate={handleRate} />
       </div>
 
       {/* 목표 날짜 */}
       {(book.status === "reading" || book.goalDate) && (
-        <div className="rounded-2xl border border-[#F1F5F9] px-4 py-3" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+        <div className="rounded-2xl border border-[#F1F5F9] dark:border-[#334155] px-4 py-3" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
           <p className="text-[#64748B] dark:text-[#94A3B8] mb-2" style={{ fontSize: 12, fontWeight: 600 }}>완독 목표일</p>
           <div className="flex items-center gap-2">
             <input
@@ -737,7 +736,7 @@ function BookInfoTab({ book }: { book: UIBook }) {
       {/* 한 줄 감상 */}
       {book.note && (
         <div className="p-4 rounded-2xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-[#334155]">
-          <p className="text-[#64748B] mb-1" style={{ fontSize: 12, fontWeight: 600 }}>한 줄 감상</p>
+          <p className="text-[#64748B] dark:text-[#94A3B8] mb-1" style={{ fontSize: 12, fontWeight: 600 }}>한 줄 감상</p>
           <p className="text-[#1E293B] dark:text-[#F8FAFC] leading-relaxed" style={{ fontSize: 14 }}>{book.note}</p>
         </div>
       )}
@@ -745,7 +744,7 @@ function BookInfoTab({ book }: { book: UIBook }) {
       {/* 독서 세션 기록 */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <Clock size={14} className="text-[#64748B]" />
+          <Clock size={14} className="text-[#64748B] dark:text-[#94A3B8]" />
           <h3 className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 14, fontWeight: 700 }}>독서 기록</h3>
           <span className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 12 }}>({sessions.length}건)</span>
         </div>
@@ -983,7 +982,7 @@ export function BookDetailPage() {
   if (isError || !book) {
     return (
       <div className="min-h-svh bg-[#F8FAFC] dark:bg-[#0F172A] flex items-center justify-center">
-        <p className="text-[#64748B]">책을 찾을 수 없습니다.</p>
+        <p className="text-[#64748B] dark:text-[#94A3B8]">책을 찾을 수 없습니다.</p>
       </div>
     );
   }
@@ -1096,7 +1095,7 @@ export function BookDetailPage() {
               {book.title}
             </h1>
             {/* Author: 14px Regular #64748B */}
-            <p className="text-[#64748B]" style={{ fontSize: 14 }}>{book.author}</p>
+            <p className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 14 }}>{book.author}</p>
             {/* 출판사 · 연도 · 페이지수: 12px #94A3B8, · separator */}
             <p className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 12 }}>
               {book.publisher} · {book.finishedDate?.slice(0, 4) ?? book.addedDate.slice(0, 4)}{book.totalPages ? ` · ${book.totalPages}p` : ''}
@@ -1134,7 +1133,7 @@ export function BookDetailPage() {
 
         {/* ── Tabs: [독서 노트] [책 정보], 2px underline #4F46E5 ── */}
         {/* top: --topbar-h (56px + safe-area-inset-top) */}
-        <div className="bg-white border-b border-[#F1F5F9] sticky z-20" style={{ top: "var(--topbar-h)" }}>
+        <div className="bg-white dark:bg-[#1E293B] border-b border-[#F1F5F9] dark:border-[#334155] sticky z-20" style={{ top: "var(--topbar-h)" }}>
           <div className="flex px-4">
             {tabs.map((tab) => (
               <button
@@ -1143,7 +1142,7 @@ export function BookDetailPage() {
                 className="flex items-center gap-1.5 px-4 py-3.5 relative transition-colors"
                 style={{
                   // Spec: 14px Medium, inactive #64748B, active #4F46E5
-                  color: activeTab === tab.key ? "#4F46E5" : "#64748B",
+                  color: activeTab === tab.key ? "var(--text-accent)" : "var(--text-secondary)",
                   fontWeight: activeTab === tab.key ? 600 : 500,
                   fontSize: 14,
                 }}
@@ -1154,7 +1153,7 @@ export function BookDetailPage() {
                   // Spec: 2px underline indicator #4F46E5
                   <div
                     className="absolute bottom-0 left-0 right-0 rounded-full"
-                    style={{ height: 2, backgroundColor: "#4F46E5" }}
+                    style={{ height: 2, backgroundColor: "var(--text-accent)" }}
                   />
                 )}
               </button>

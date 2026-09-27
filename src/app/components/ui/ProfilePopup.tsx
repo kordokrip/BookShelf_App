@@ -63,12 +63,12 @@ function EmojiPicker({
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className="absolute left-1/2 -translate-x-1/2 top-full mt-2 bg-white rounded-2xl border border-[#E2E8F0] shadow-xl p-3 z-10"
+      className="absolute left-1/2 -translate-x-1/2 top-full mt-2 bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-[#334155] shadow-xl p-3 z-10"
       style={{ width: 240 }}
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-between mb-2">
-        <p style={{ fontSize: 12, fontWeight: 700, color: "#64748B" }}>프로필 이모지 선택</p>
+        <p style={{ fontSize: 12, fontWeight: 700, color: "var(--text-secondary)" }}>프로필 이모지 선택</p>
         <button onClick={onClose} aria-label="이모지 피커 닫기" className="text-[#64748B] dark:text-[#94A3B8] hover:text-[#64748B]">
           <X size={14} />
         </button>
@@ -87,7 +87,7 @@ function EmojiPicker({
       </div>
       <button
         onClick={() => onSelect("")}
-        className="w-full mt-2 py-1.5 rounded-lg text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F8FAFC] transition-colors"
+        className="w-full mt-2 py-1.5 rounded-lg text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F8FAFC] dark:hover:bg-[#1E293B] transition-colors"
         style={{ fontSize: 11, fontWeight: 600 }}
       >
         이모지 제거 (이니셜로 복원)
@@ -142,7 +142,7 @@ export function ProfileAvatar({
         style={{
           width: size,
           height: size,
-          backgroundColor: "#EEF2FF",
+          backgroundColor: "var(--bg-accent-soft)",
           border: "2px solid #C7D2FE",
         }}
       >
@@ -307,7 +307,7 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
             disabled={saving}
             className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-white dark:bg-[#334155] border border-[#E2E8F0] dark:border-[#475569] shadow-sm flex items-center justify-center hover:bg-[#F8FAFC] dark:hover:bg-[#475569] transition-colors"
           >
-            <Camera size={13} className="text-[#64748B]" />
+            <Camera size={13} className="text-[#64748B] dark:text-[#94A3B8]" />
           </button>
 
           {/* 이모지 피커 */}
@@ -366,7 +366,7 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
               className={`relative w-10 h-5 rounded-full transition-colors ${reminderEnabled ? "bg-[#4F46E5]" : "bg-[#CBD5E1] dark:bg-[#475569]"}`}
             >
               <span
-                className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${reminderEnabled ? "translate-x-5" : "translate-x-0.5"}`}
+                className={`absolute top-0.5 w-4 h-4 rounded-full bg-white dark:bg-[#1E293B] shadow transition-transform ${reminderEnabled ? "translate-x-5" : "translate-x-0.5"}`}
               />
             </button>
           </div>
@@ -396,7 +396,7 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
               className={`relative w-10 h-5 rounded-full transition-colors ${weeklyReportEnabled ? "bg-[#4F46E5]" : "bg-[#CBD5E1] dark:bg-[#475569]"}`}
             >
               <span
-                className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${weeklyReportEnabled ? "translate-x-5" : "translate-x-0.5"}`}
+                className={`absolute top-0.5 w-4 h-4 rounded-full bg-white dark:bg-[#1E293B] shadow transition-transform ${weeklyReportEnabled ? "translate-x-5" : "translate-x-0.5"}`}
               />
             </button>
           </div>

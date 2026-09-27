@@ -39,7 +39,7 @@ function MonthlyMiniChart({ monthly }: { monthly: { month: string; count: number
                 : "#F1F5F9",
             }}
           />
-          <span style={{ fontSize: 11, color: "#64748B" }}>{d.label.replace("월", "")}</span>
+          <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>{d.label.replace("월", "")}</span>
         </div>
       ))}
     </div>
@@ -62,8 +62,8 @@ function GenreSummary({ genres }: { genres: { genre: string; count: number }[] }
             <span style={{ fontSize: 14 }}>{cfg?.emoji ?? "📚"}</span>
             <div className="flex-1">
               <div className="flex justify-between mb-1">
-                <span style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>{genre}</span>
-                <span style={{ fontSize: 12, color: "#64748B" }}>{count}권 ({pct}%)</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-body)" }}>{genre}</span>
+                <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>{count}권 ({pct}%)</span>
               </div>
               <div className="h-1.5 rounded-full bg-[#F1F5F9] overflow-hidden">
                 <div
@@ -126,13 +126,13 @@ export function YearlyReviewPage() {
   };
 
   return (
-    <div className="min-h-svh bg-[#F8FAFC] pb-[var(--page-pb)] lg:pb-8">
+    <div className="min-h-svh bg-[#F8FAFC] dark:bg-[#0F172A] pb-[var(--page-pb)] lg:pb-8">
       {/* 헤더 */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <button
           onClick={back}
           className="flex items-center gap-1.5 hover:opacity-70 transition-opacity"
-          style={{ color: "#1E293B", fontSize: 14, fontWeight: 600 }}
+          style={{ color: "var(--text-primary)", fontSize: 14, fontWeight: 600 }}
         >
           <ChevronLeft size={20} />
           뒤로
@@ -197,11 +197,11 @@ export function YearlyReviewPage() {
 
           {/* 목표 달성률 */}
           {goalRate !== null && (
-            <div className="bg-white rounded-2xl p-4 mb-3 border border-[#E2E8F0]">
+            <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-3 border border-[#E2E8F0] dark:border-[#334155]">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Flame size={16} className="text-[#F59E0B]" />
-                  <span style={{ fontSize: 14, fontWeight: 700, color: "#1E293B" }}>목표 달성률</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>목표 달성률</span>
                 </div>
                 <span
                   className="rounded-full px-2.5 py-0.5 text-white"
@@ -216,7 +216,7 @@ export function YearlyReviewPage() {
                   style={{ width: `${goalRate}%`, background: "linear-gradient(90deg, #F59E0B, #D97706)" }}
                 />
               </div>
-              <p style={{ fontSize: 12, color: "#64748B" }}>
+              <p style={{ fontSize: 12, color: "var(--text-secondary)" }}>
                 {totalDone} / {readingGoal}권 완독
               </p>
             </div>
@@ -224,10 +224,10 @@ export function YearlyReviewPage() {
 
           {/* 월별 독서량 */}
           {stats?.monthly && (
-            <div className="bg-white rounded-2xl p-4 mb-3 border border-[#E2E8F0]">
+            <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-3 border border-[#E2E8F0] dark:border-[#334155]">
               <div className="flex items-center gap-2 mb-3">
                 <BookMarked size={16} className="text-[#4F46E5]" />
-                <span style={{ fontSize: 14, fontWeight: 700, color: "#1E293B" }}>월별 독서량</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>월별 독서량</span>
               </div>
               <MonthlyMiniChart monthly={stats.monthly} />
             </div>
@@ -235,10 +235,10 @@ export function YearlyReviewPage() {
 
           {/* 좋아하는 장르 */}
           {stats?.genres && stats.genres.length > 0 && (
-            <div className="bg-white rounded-2xl p-4 mb-3 border border-[#E2E8F0]">
+            <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-3 border border-[#E2E8F0] dark:border-[#334155]">
               <div className="flex items-center gap-2 mb-3">
                 <FileText size={16} className="text-[#8B5CF6]" />
-                <span style={{ fontSize: 14, fontWeight: 700, color: "#1E293B" }}>좋아하는 장르 TOP 3</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>좋아하는 장르 TOP 3</span>
               </div>
               <GenreSummary genres={stats.genres} />
             </div>
@@ -248,7 +248,7 @@ export function YearlyReviewPage() {
           {!bestBook && totalDone > 0 && (
             <div className="bg-gray-50 rounded-xl p-6 text-center mb-3" style={{ border: "1px solid #E2E8F0" }}>
               <p style={{ fontSize: 24, marginBottom: 8 }}>⭐</p>
-              <p style={{ fontSize: 13, color: "#64748B" }}>아직 별점을 매긴 완독 책이 없어요 ⭐</p>
+              <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>아직 별점을 매긴 완독 책이 없어요 ⭐</p>
             </div>
           )}
           {bestBook && (
@@ -293,8 +293,8 @@ export function YearlyReviewPage() {
           {thisYearDone.length === 0 && totalDone > 0 && (
             <div className="bg-gray-50 rounded-xl p-6 text-center mb-3" style={{ border: "1px solid #E2E8F0" }}>
               <p style={{ fontSize: 24, marginBottom: 8 }}>📚</p>
-              <p style={{ fontSize: 14, fontWeight: 700, color: "#374151", marginBottom: 4 }}>올해 완독한 책이 없어요</p>
-              <p style={{ fontSize: 12, color: "#64748B", marginBottom: 16 }}>새로운 책을 시작해보세요!</p>
+              <p style={{ fontSize: 14, fontWeight: 700, color: "var(--text-body)", marginBottom: 4 }}>올해 완독한 책이 없어요</p>
+              <p style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 16 }}>새로운 책을 시작해보세요!</p>
               <button
                 onClick={() => navigate("/reading")}
                 className="px-5 py-2 rounded-full text-white"
@@ -305,10 +305,10 @@ export function YearlyReviewPage() {
             </div>
           )}
           {thisYearDone.length > 0 && (
-            <div className="bg-white rounded-2xl p-4 mb-3 border border-[#E2E8F0]">
+            <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-3 border border-[#E2E8F0] dark:border-[#334155]">
               <div className="flex items-center gap-2 mb-3">
                 <Clock size={16} className="text-[#10B981]" />
-                <span style={{ fontSize: 14, fontWeight: 700, color: "#1E293B" }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>
                   올해 완독한 책 ({thisYearDone.length}권)
                 </span>
               </div>
@@ -317,17 +317,17 @@ export function YearlyReviewPage() {
                   <div key={b.id} className="flex items-center gap-2">
                     <span style={{ fontSize: 12 }}>✅</span>
                     <div className="flex-1 min-w-0">
-                      <p className="truncate" style={{ fontSize: 13, fontWeight: 600, color: "#1E293B" }}>
+                      <p className="truncate" style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>
                         {b.title}
                       </p>
-                      <p className="truncate" style={{ fontSize: 11, color: "#64748B" }}>
+                      <p className="truncate" style={{ fontSize: 11, color: "var(--text-secondary)" }}>
                         {b.author} · {b.finishedDate?.replace(/-/g, ".")}
                       </p>
                     </div>
                   </div>
                 ))}
                 {thisYearDone.length > 5 && (
-                  <p style={{ fontSize: 12, color: "#64748B", textAlign: "center" }}>
+                  <p style={{ fontSize: 12, color: "var(--text-secondary)", textAlign: "center" }}>
                     외 {thisYearDone.length - 5}권 더...
                   </p>
                 )}
@@ -338,10 +338,10 @@ export function YearlyReviewPage() {
           {totalDone === 0 && !isLoading && (
             <div className="text-center py-12">
               <p style={{ fontSize: 40 }}>📚</p>
-              <p style={{ fontSize: 16, fontWeight: 700, color: "#1E293B", marginTop: 12 }}>
+              <p style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginTop: 12 }}>
                 아직 완독한 책이 없어요
               </p>
-              <p style={{ fontSize: 13, color: "#64748B", marginTop: 4 }}>
+              <p style={{ fontSize: 13, color: "var(--text-secondary)", marginTop: 4 }}>
                 책을 읽고 독서 결산을 완성해보세요!
               </p>
             </div>

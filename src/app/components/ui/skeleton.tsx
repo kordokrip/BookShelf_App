@@ -13,7 +13,7 @@ function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
 /** 책 카드 로딩 스켈레톤 */
 function BookCardSkeleton({ className }: { className?: string }) {
   return (
-    <div className={cn("flex gap-3 p-4 rounded-2xl bg-white", className)}>
+    <div className={cn("flex gap-3 p-4 rounded-2xl bg-white dark:bg-[#1E293B]", className)}>
       {/* 표지 */}
       <Skeleton className="w-16 h-20 rounded-xl flex-shrink-0" />
       {/* 텍스트 */}
@@ -60,7 +60,7 @@ function ErrorState({
 /** 읽는 중 책 카드 스켈레톤 (진행 바 포함) */
 function ReadingBookCardSkeleton({ className }: { className?: string }) {
   return (
-    <div className={cn("flex gap-3 p-4 rounded-2xl bg-white", className)}>
+    <div className={cn("flex gap-3 p-4 rounded-2xl bg-white dark:bg-[#1E293B]", className)}>
       <Skeleton className="w-16 h-20 rounded-xl flex-shrink-0" />
       <div className="flex-1 flex flex-col justify-center gap-2">
         <Skeleton className="h-4 w-3/4 rounded" />
@@ -76,7 +76,7 @@ function ReadingBookCardSkeleton({ className }: { className?: string }) {
 /** 위시리스트 카드 스켈레톤 */
 function WishBookCardSkeleton({ className }: { className?: string }) {
   return (
-    <div className={cn("flex gap-3 p-4 rounded-2xl bg-white", className)}>
+    <div className={cn("flex gap-3 p-4 rounded-2xl bg-white dark:bg-[#1E293B]", className)}>
       <Skeleton className="w-14 h-18 rounded-xl flex-shrink-0" />
       <div className="flex-1 flex flex-col justify-center gap-2">
         <Skeleton className="h-4 w-2/3 rounded" />
@@ -90,7 +90,7 @@ function WishBookCardSkeleton({ className }: { className?: string }) {
 /** 통계 요약 카드 스켈레톤 */
 function StatCardSkeleton({ className }: { className?: string }) {
   return (
-    <div className={cn("p-4 rounded-2xl bg-white flex flex-col gap-3", className)}>
+    <div className={cn("p-4 rounded-2xl bg-white dark:bg-[#1E293B] flex flex-col gap-3", className)}>
       <Skeleton className="h-3 w-1/3 rounded" />
       <Skeleton className="h-8 w-1/2 rounded" />
       <Skeleton className="h-3 w-2/3 rounded" />
@@ -101,7 +101,7 @@ function StatCardSkeleton({ className }: { className?: string }) {
 /** 차트 스켈레톤 */
 function ChartSkeleton({ className, height }: { className?: string; height?: number }) {
   return (
-    <div className={cn("p-4 rounded-2xl bg-white", className)} style={height ? { height } : undefined}>
+    <div className={cn("p-4 rounded-2xl bg-white dark:bg-[#1E293B]", className)} style={height ? { height } : undefined}>
       <Skeleton className="h-4 w-1/3 rounded mb-4" />
       <div className="flex items-end gap-2 h-32">
         {[60, 80, 45, 90, 70, 55, 85, 40, 75, 65, 50, 95].map((h, i) => (

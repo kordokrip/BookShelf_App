@@ -47,9 +47,9 @@ export function NumberStepper({ value, min = 0, max = 9999, onChange, unit = "�
   return (
     <div
       style={{
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "var(--bg-card)",
         borderRadius: 12,
-        border: "1.5px solid #E2E8F0",
+        border: "1.5px solid var(--border-color)",
         padding: "12px 16px",
         display: "flex",
         alignItems: "center",
@@ -63,20 +63,20 @@ export function NumberStepper({ value, min = 0, max = 9999, onChange, unit = "�
         aria-label="감소"
         style={{
           width: 40, height: 40, borderRadius: "50%",
-          border: "2px solid #E2E8F0", background: "#FFFFFF",
+          border: "2px solid var(--border-color)", background: "var(--bg-card)",
           cursor: value <= min ? "default" : "pointer",
           opacity: value <= min ? 0.4 : 1,
           display: "flex", alignItems: "center", justifyContent: "center",
           flexShrink: 0,
         }}
       >
-        <Minus size={18} color="#4F46E5" strokeWidth={2.5} />
+        <Minus size={18} color="var(--text-accent)" strokeWidth={2.5} />
       </button>
 
       {/* Center number + unit — 클릭 시 직접 입력 모드 */}
       <div style={{ textAlign: "center", flex: 1 }}>
         {label && (
-          <p style={{ fontSize: 13, fontWeight: 400, color: "#64748B", marginBottom: 2 }}>{label}</p>
+          <p style={{ fontSize: 13, fontWeight: 400, color: "var(--text-secondary)", marginBottom: 2 }}>{label}</p>
         )}
         {inputMode ? (
           <input
@@ -95,7 +95,7 @@ export function NumberStepper({ value, min = 0, max = 9999, onChange, unit = "�
               width: 80,
               fontSize: 32,
               fontWeight: 700,
-              color: "#1E293B",
+              color: "var(--text-primary)",
               lineHeight: 1,
               fontFamily: "var(--font-pretendard)",
               textAlign: "center",
@@ -103,7 +103,7 @@ export function NumberStepper({ value, min = 0, max = 9999, onChange, unit = "�
               borderRadius: 8,
               outline: "none",
               padding: "2px 4px",
-              background: "#F8FAFC",
+              background: "var(--bg-primary)",
               // input[type=number] 화살표 제거
               MozAppearance: "textfield" as never,
             }}
@@ -116,7 +116,7 @@ export function NumberStepper({ value, min = 0, max = 9999, onChange, unit = "�
             style={{
               fontSize: 32,
               fontWeight: 700,
-              color: "#1E293B",
+              color: "var(--text-primary)",
               lineHeight: 1,
               fontFamily: "var(--font-pretendard)",
               background: "none",
@@ -129,7 +129,7 @@ export function NumberStepper({ value, min = 0, max = 9999, onChange, unit = "�
           </button>
         )}
         {unit && (
-          <p style={{ fontSize: 14, color: "#64748B", marginTop: 4 }}>{unit}</p>
+          <p style={{ fontSize: 14, color: "var(--text-secondary)", marginTop: 4 }}>{unit}</p>
         )}
       </div>
 
@@ -140,14 +140,14 @@ export function NumberStepper({ value, min = 0, max = 9999, onChange, unit = "�
         aria-label="증가"
         style={{
           width: 40, height: 40, borderRadius: "50%",
-          border: "2px solid #E2E8F0", background: "#FFFFFF",
+          border: "2px solid var(--border-color)", background: "var(--bg-card)",
           cursor: value >= max ? "default" : "pointer",
           opacity: value >= max ? 0.4 : 1,
           display: "flex", alignItems: "center", justifyContent: "center",
           flexShrink: 0,
         }}
       >
-        <Plus size={18} color="#4F46E5" strokeWidth={2.5} />
+        <Plus size={18} color="var(--text-accent)" strokeWidth={2.5} />
       </button>
     </div>
   );

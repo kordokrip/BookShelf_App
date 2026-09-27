@@ -23,7 +23,7 @@ export function TextInput({ label, error, helper, id, disabled, ...props }: Text
   return (
     <div className="flex flex-col gap-1">
       <div
-        className="relative rounded-xl border bg-white transition-all"
+        className="relative rounded-xl border bg-white dark:bg-[#1E293B] transition-all"
         style={{ borderColor, boxShadow: focused ? `0 0 0 3px ${error ? "#FEE2E2" : "#EEF2FF"}` : undefined }}
       >
         <label
@@ -47,7 +47,7 @@ export function TextInput({ label, error, helper, id, disabled, ...props }: Text
           onBlur={() => setFocused(false)}
           {...props}
           className="w-full h-12 px-4 pt-4 pb-1 bg-transparent outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{ fontSize: 14, color: "#1E293B" }}
+          style={{ fontSize: 14, color: "var(--text-primary)" }}
         />
       </div>
       {error && (
@@ -80,7 +80,7 @@ export function GenreSelect({ value, onChange, label = "장르 선택" }: GenreS
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full h-12 px-4 rounded-xl border border-[#E2E8F0] bg-white flex items-center justify-between transition-all hover:border-[#4F46E5]"
+        className="w-full h-12 px-4 rounded-xl border border-[#E2E8F0] dark:border-[#334155] bg-white dark:bg-[#1E293B] flex items-center justify-between transition-all hover:border-[#4F46E5]"
       >
         <div className="flex items-center gap-2">
           {config ? (
@@ -100,16 +100,16 @@ export function GenreSelect({ value, onChange, label = "장르 선택" }: GenreS
       </button>
 
       {open && (
-        <div className="absolute top-full mt-1 left-0 right-0 z-50 bg-white rounded-xl border border-[#E2E8F0] shadow-xl overflow-hidden">
-          <div className="p-2 border-b border-[#F1F5F9]">
-            <div className="flex items-center gap-2 bg-[#F8FAFC] rounded-lg px-3 h-9">
+        <div className="absolute top-full mt-1 left-0 right-0 z-50 bg-white dark:bg-[#1E293B] rounded-xl border border-[#E2E8F0] dark:border-[#334155] shadow-xl overflow-hidden">
+          <div className="p-2 border-b border-[#F1F5F9] dark:border-[#334155]">
+            <div className="flex items-center gap-2 bg-[#F8FAFC] dark:bg-[#0F172A] rounded-lg px-3 h-9">
               <Search size={14} className="text-[#64748B] dark:text-[#94A3B8]" />
               <input
                 autoFocus
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="장르 검색…"
-                className="flex-1 bg-transparent outline-none text-[#1E293B]"
+                className="flex-1 bg-transparent outline-none text-[#1E293B] dark:text-[#F8FAFC]"
                 style={{ fontSize: 13 }}
               />
             </div>
@@ -122,7 +122,7 @@ export function GenreSelect({ value, onChange, label = "장르 선택" }: GenreS
                   key={g}
                   type="button"
                   onClick={() => { onChange(g); setOpen(false); setSearch(""); }}
-                  className="w-full px-3 py-2 flex items-center gap-2 hover:bg-[#F8FAFC] transition-colors"
+                  className="w-full px-3 py-2 flex items-center gap-2 hover:bg-[#F8FAFC] dark:hover:bg-[#1E293B] transition-colors"
                 >
                   <span
                     className="px-2 py-0.5 rounded-full"
@@ -153,18 +153,18 @@ interface NumberStepperProps {
 export function NumberStepper({ value, onChange, min = 0, max = 9999, step = 1, label }: NumberStepperProps) {
   return (
     <div className="flex flex-col gap-1">
-      {label && <span className="text-[#64748B]" style={{ fontSize: 12, fontWeight: 500 }}>{label}</span>}
-      <div className="flex items-center gap-0 rounded-xl border border-[#E2E8F0] overflow-hidden h-12 bg-white">
+      {label && <span className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 12, fontWeight: 500 }}>{label}</span>}
+      <div className="flex items-center gap-0 rounded-xl border border-[#E2E8F0] dark:border-[#334155] overflow-hidden h-12 bg-white dark:bg-[#1E293B]">
         <button
           type="button"
           onClick={() => onChange(Math.max(min, value - step))}
           disabled={value <= min}
-          className="w-12 h-full flex items-center justify-center text-[#64748B] hover:bg-[#F1F5F9] disabled:opacity-30 transition-colors border-r border-[#E2E8F0]"
+          className="w-12 h-full flex items-center justify-center text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F1F5F9] dark:hover:bg-[#334155] disabled:opacity-30 transition-colors border-r border-[#E2E8F0] dark:border-[#334155]"
         >
           <Minus size={16} />
         </button>
         <span
-          className="flex-1 text-center text-[#1E293B] tabular-nums"
+          className="flex-1 text-center text-[#1E293B] dark:text-[#F8FAFC] tabular-nums"
           style={{ fontSize: 16, fontWeight: 600 }}
         >
           {value}
@@ -173,7 +173,7 @@ export function NumberStepper({ value, onChange, min = 0, max = 9999, step = 1, 
           type="button"
           onClick={() => onChange(Math.min(max, value + step))}
           disabled={value >= max}
-          className="w-12 h-full flex items-center justify-center text-[#64748B] hover:bg-[#F1F5F9] disabled:opacity-30 transition-colors border-l border-[#E2E8F0]"
+          className="w-12 h-full flex items-center justify-center text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F1F5F9] dark:hover:bg-[#334155] disabled:opacity-30 transition-colors border-l border-[#E2E8F0] dark:border-[#334155]"
         >
           <Plus size={16} />
         </button>
@@ -196,7 +196,7 @@ export function SearchBar({ value, onChange, placeholder = "책 제목, 저자 �
 
   return (
     <div
-      className="flex items-center gap-2 rounded-full border bg-white px-4 h-11 transition-all"
+      className="flex items-center gap-2 rounded-full border bg-white dark:bg-[#1E293B] px-4 h-11 transition-all"
       style={{
         borderColor: focused ? "#4F46E5" : "#E2E8F0",
         boxShadow: focused ? "0 0 0 3px #EEF2FF" : undefined,
@@ -211,7 +211,7 @@ export function SearchBar({ value, onChange, placeholder = "책 제목, 저자 �
         placeholder={placeholder}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        className="flex-1 bg-transparent outline-none text-[#1E293B] placeholder:text-[#CBD5E1]"
+        className="flex-1 bg-transparent outline-none text-[#1E293B] dark:text-[#F8FAFC] placeholder:text-[#CBD5E1]"
         style={{ fontSize: 14 }}
       />
       {value && (
@@ -241,9 +241,9 @@ export function DatePicker({ value, onChange, label, min, max }: DatePickerProps
 
   return (
     <div className="flex flex-col gap-1">
-      {label && <span className="text-[#64748B]" style={{ fontSize: 12, fontWeight: 500 }}>{label}</span>}
+      {label && <span className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 12, fontWeight: 500 }}>{label}</span>}
       <div
-        className="relative rounded-xl border bg-white h-12 flex items-center px-4 transition-all"
+        className="relative rounded-xl border bg-white dark:bg-[#1E293B] h-12 flex items-center px-4 transition-all"
         style={{
           borderColor: focused ? "#4F46E5" : "#E2E8F0",
           boxShadow: focused ? "0 0 0 3px #EEF2FF" : undefined,
@@ -257,7 +257,7 @@ export function DatePicker({ value, onChange, label, min, max }: DatePickerProps
           max={max}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          className="w-full bg-transparent outline-none text-[#1E293B]"
+          className="w-full bg-transparent outline-none text-[#1E293B] dark:text-[#F8FAFC]"
           style={{ fontSize: 14 }}
         />
       </div>

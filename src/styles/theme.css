@@ -10,6 +10,18 @@
   --text-secondary: #64748B;
   --border-color: #E2E8F0;
   --nav-bg: rgba(255, 255, 255, 0.95);
+  /* 인라인 style에서 쓰는 다크 대응 색 — 인라인 hex는 dark: 클래스가 닿지 않아 통계·결산 카드가 다크에서 흰색으로 남았다 */
+  --text-body: #475569;
+  --bg-muted: #F1F5F9;
+  --bg-accent-soft: #EEF2FF;
+  --bg-warn-soft: #FEF3C7;
+  --text-warn: #92400E;
+  --text-sun: #DC2626; /* 달력 일요일 */
+  --text-sat: #2563EB; /* 달력 토요일 */
+  --text-accent: #4F46E5;
+  --bg-success-soft: #ECFDF5;
+  --bg-success-soft-strong: #DCFCE7;
+  --text-success: #065F46;
 }
 
 /* ── Dark mode CSS variables ─────────────────────────────────── */
@@ -21,6 +33,17 @@
   --text-secondary: #94A3B8;
   --border-color: #334155;
   --nav-bg: rgba(15, 23, 42, 0.95);
+  --text-body: #CBD5E1;
+  --bg-muted: #334155;
+  --bg-accent-soft: #312E81;
+  --bg-warn-soft: #451A03;
+  --text-warn: #FCD34D;
+  --text-sun: #F87171;
+  --text-sat: #60A5FA;
+  --text-accent: #A5B4FC;
+  --bg-success-soft: #064E3B;
+  --bg-success-soft-strong: #065F46;
+  --text-success: #6EE7B7;
   color-scheme: dark;
 }
 
