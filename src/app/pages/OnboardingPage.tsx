@@ -110,14 +110,15 @@ export function OnboardingPage() {
               aria-label={`${current + 1} / ${slides.length}: ${slide.headline}`}
               {...motionProps}
             >
-              {/* 일러스트는 화면 높이에 비례 — 세로가 짧은 기기에서 글과 버튼 자리를 남긴다 */}
-              <div className="mx-auto w-full max-w-[360px] md:max-w-[440px] h-[min(32dvh,300px)] md:h-[min(56dvh,360px)] overflow-hidden">{slide.illustration}</div>
+              {/* 일러스트는 화면 높이에 비례 — 세로가 짧은 기기에서 글과 버튼 자리를 남긴다.
+                  높이 500px 이하(폰 가로 모드)는 일러스트·제목을 줄여 소개 문장이 중간에 잘려 보이지 않게 (WebKit 에뮬레이션 점검 2026-09-27) */}
+              <div className="mx-auto w-full max-w-[360px] md:max-w-[440px] h-[min(32dvh,300px)] md:h-[min(56dvh,360px)] [@media(max-height:500px)]:h-[min(50dvh,180px)] [@media(max-height:420px)_and_(max-width:767px)]:hidden overflow-hidden">{slide.illustration}</div>
               <div className="text-center md:text-left">
                 <p style={{ fontSize: 13, fontWeight: 700, color: "#4F46E5", letterSpacing: "0.04em" }}>{slide.eyebrow}</p>
-                <h1 className="mt-2 text-[24px] md:text-[34px]" style={{ fontWeight: 800, color: "#0F172A", lineHeight: 1.3 }}>
+                <h1 className="mt-2 text-[24px] md:text-[34px] [@media(max-height:500px)]:text-[22px]" style={{ fontWeight: 800, color: "#0F172A", lineHeight: 1.3 }}>
                   {slide.headline}
                 </h1>
-                <p className="mt-3 mx-auto md:mx-0 max-w-[420px] text-[15px] md:text-[17px]" style={{ color: "#475569", lineHeight: 1.7 }}>
+                <p className="mt-3 mx-auto md:mx-0 max-w-[420px] text-[15px] md:text-[17px] [@media(max-height:500px)]:text-[15px]" style={{ color: "#475569", lineHeight: 1.7 }}>
                   {slide.body}
                 </p>
               </div>
