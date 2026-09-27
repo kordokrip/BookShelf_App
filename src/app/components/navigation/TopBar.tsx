@@ -54,7 +54,11 @@ export function TopBar() {
   const markAllServerRead = useMarkAllNotificationsRead();
 
   const [notifOpen, setNotifOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
+  // SideNav 설정 버튼도 같은 팝업을 열 수 있도록 전역 상태 사용
+  const profileOpen = useUiStore((s) => s.profilePopupOpen);
+  const setProfilePopupOpen = useUiStore((s) => s.setProfilePopupOpen);
+  const setProfileOpen = (next: boolean | ((v: boolean) => boolean)) =>
+    setProfilePopupOpen(typeof next === 'function' ? next(profileOpen) : next);
   const bellRef = useRef<HTMLDivElement>(null);
 
   return (

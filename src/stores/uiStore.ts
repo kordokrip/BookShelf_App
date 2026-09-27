@@ -106,6 +106,10 @@ interface UiState {
   themeMode: 'auto' | 'light' | 'dark';
   cycleThemeMode: () => void;
 
+  // 프로필 팝업 (TopBar 아바타·SideNav 설정 버튼이 공유)
+  profilePopupOpen: boolean;
+  setProfilePopupOpen: (open: boolean) => void;
+
   // 인앱 알림
   notifications: NotificationItem[];
   unreadCount: number;
@@ -194,6 +198,9 @@ export const useUiStore = create<UiState>()(
           localStorage.setItem('themeMode', next);
           return { themeMode: next };
         }, false, 'ui/cycleThemeMode'),
+
+      profilePopupOpen: false,
+      setProfilePopupOpen: (open) => set({ profilePopupOpen: open }, false, 'ui/setProfilePopupOpen'),
 
       // 인앱 알림
       notifications: loadNotifications(),

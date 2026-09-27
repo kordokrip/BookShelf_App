@@ -20,6 +20,7 @@ export function SideNav() {
   const user = useAuthStore((s) => s.user);
   const sidebarOpen = useUiStore((s) => s.sidebarOpen);
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
+  const setProfilePopupOpen = useUiStore((s) => s.setProfilePopupOpen);
 
   const isAdmin = user?.role === 'admin';
 
@@ -197,8 +198,14 @@ export function SideNav() {
                   올해 읽은 책 {yearDoneCount}권
                 </p>
               </div>
-              <button aria-label="프로필 설정" className="text-[#94A3B8] hover:text-[#64748B] dark:hover:text-[#CBD5E1] transition-colors">
-                <Settings size={16} />
+              {/* 이전: 크기 미지정으로 태블릿에서 폭 3px로 찌그러지고 onClick도 없던 버튼 → 44px 고정 + 프로필 팝업 열기 */}
+              <button
+                type="button"
+                aria-label="프로필 설정"
+                onClick={() => setProfilePopupOpen(true)}
+                className="hidden lg:flex md:max-lg:group-hover/sidebar:flex w-11 h-11 flex-shrink-0 items-center justify-center rounded-full text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#1E293B] dark:text-[#94A3B8] dark:hover:bg-[#334155] dark:hover:text-[#CBD5E1] transition-colors"
+              >
+                <Settings size={18} />
               </button>
             </>
           ) : (
