@@ -286,9 +286,10 @@ svg {
   .xs-ultra-compact { padding-left: 0.5rem; padding-right: 0.5rem; }
 }
 
-/* 소형 폰 대응 (320px – 374px: 구형 iPhone SE 등) */
+/* 소형 폰 대응 (320px – 374px: 구형 iPhone SE 등)
+   루트 글자 크기를 14px로 줄이던 규칙은 제거(2026-09-27) — 12px 글자가 10.5px, 10px가 8.8px까지 작아져
+   판독이 어려웠다. 네이티브 앱처럼 작은 폰에서도 글자 크기는 유지하고 여백·배치로 대응한다. */
 @media (max-width: 374px) {
-  html { font-size: 14px; }
   .xs-compact { padding-left: 0.75rem; padding-right: 0.75rem; }
   /* 모달 최적화 */
   .modal-sheet { width: calc(100% - 1.5rem); }

@@ -239,12 +239,15 @@ export function ReadingBookCard({
         <div className="relative flex-shrink-0">
           <BookCover book={book} size="md" />
           {/* SVG circle gauge — bottom-right corner of cover */}
+          {/* 28px 안의 6px 글자는 판독 불가(반응형 점검 2026-09-27) → 32px 게이지 + 글자 약 8.5px, 라벨 제공 */}
           <svg
-            width="28"
-            height="28"
+            width="32"
+            height="32"
             viewBox="0 0 28 28"
-            className="absolute -bottom-1 -right-1 drop-shadow-sm"
+            className="absolute -bottom-1.5 -right-1.5 drop-shadow-sm"
             style={{ pointerEvents: "none" }}
+            role="img"
+            aria-label={`진행률 ${progress}%`}
           >
             {/* Track circle */}
             <circle
@@ -270,8 +273,8 @@ export function ReadingBookCard({
               textAnchor="middle"
               dominantBaseline="central"
               style={{
-                fontSize: 6,
-                fontWeight: 700,
+                fontSize: progress >= 100 ? 6.5 : 7.5,
+                fontWeight: 800,
                 fill: isOverdue ? "#EF4444" : "#4F46E5",
                 fontFamily: "system-ui, sans-serif",
               }}

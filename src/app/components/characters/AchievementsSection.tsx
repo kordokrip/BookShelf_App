@@ -101,7 +101,7 @@ export function AchievementsSection() {
                   title={`${a.description} · ${a.unlockedAt!.slice(0, 10)} 달성`}
                 >
                   <span style={{ fontSize: 22 }} aria-hidden>{a.icon}</span>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: tier.label, textAlign: "center" }}>{a.label}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: tier.label, textAlign: "center" }}>{a.label}</span>
                 </li>
               );
             })}
@@ -127,7 +127,7 @@ export function AchievementsSection() {
                     title={a.description}
                   >
                     <span style={{ fontSize: 22, filter: "grayscale(1)", opacity: 0.6 }} aria-hidden>{a.icon}</span>
-                    <span style={{ fontSize: 10, fontWeight: 600, color: "#64748B", textAlign: "center" }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "#64748B", textAlign: "center" }}>
                       {a.label}
                       <br />
                       {Math.max(0, left).toLocaleString()}{a.type === "books" ? "권" : "p"} 남음

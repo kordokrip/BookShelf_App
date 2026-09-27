@@ -447,7 +447,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
                   "rounded-full px-1.5 py-0.5",
                   noteFilter === tab.value ? "bg-white/20 text-white" : "bg-[#F1F5F9] text-[#64748B]"
                 )}
-                style={{ fontSize: 10, fontWeight: 700 }}
+                style={{ fontSize: 11, fontWeight: 700 }}
               >
                 {tab.count}
               </span>

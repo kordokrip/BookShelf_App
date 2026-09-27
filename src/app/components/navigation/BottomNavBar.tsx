@@ -88,8 +88,8 @@ export function BottomNavBar() {
                 {/* 동적 배지 */}
                 {item.badge != null && item.badge > 0 && (
                   <span
-                    className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 rounded-full bg-[#EF4444] text-white flex items-center justify-center"
-                    style={{ fontSize: 10, fontWeight: 700, lineHeight: 1 }}
+                    className="absolute -top-2 -right-3 min-w-[18px] h-[18px] px-1 rounded-full bg-[#EF4444] text-white flex items-center justify-center"
+                    style={{ fontSize: 11, fontWeight: 700, lineHeight: 1 }}
                     aria-label={`${item.badge}개`}
                   >
                     {item.badge > 99 ? "99+" : item.badge}

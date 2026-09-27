@@ -40,7 +40,7 @@ function MonthlyMiniChart({ monthly }: { monthly: { month: string; count: number
                 : "#F1F5F9",
             }}
           />
-          <span style={{ fontSize: 9, color: "#94A3B8" }}>{d.label.replace("월", "")}</span>
+          <span style={{ fontSize: 11, color: "#64748B" }}>{d.label.replace("월", "")}</span>
         </div>
       ))}
     </div>
