@@ -1653,11 +1653,11 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 
 | 컴포넌트 | 파일 | 설명 |
 |---------|------|------|
-| **NoteContent** | `notes/NoteContent.tsx` | 노트 본문 렌더러. `**굵게**` → `<strong>`, `==하이라이트==` → `<mark>`(노랑, 다크: `yellow-400/30`). `src/lib/noteMarkup.ts`의 파서 결과를 React 요소로 그림(HTML 주입 없음). 서식이 든 노트는 v2 에디터로만 만들어지므로 **플래그와 무관하게** 항상 적용 |
+| **NoteContent** | `notes/NoteContent.tsx` | 노트 본문 렌더러. `**굵게**` → `<strong>`, `==하이라이트==` → `<mark>`(노랑, 다크: `yellow-400/30`). `src/lib/noteMarkup.ts`의 파서 결과를 React 요소로 그림(HTML 주입 없음). **`notes_v2` 플래그가 켜진 사용자에게만** 서식 적용(꺼져 있으면 원문 그대로 — 별표·등호를 글자로 쓴 기존 노트 보호) |
 | **NoteEditor** | `notes/NoteEditor.tsx` | textarea + 서식 툴바(굵게·하이라이트). 단축키 ⌘/Ctrl+B, ⌘/Ctrl+Shift+H. 서식 적용 후 선택 영역을 기호 안쪽으로 유지. 툴바 아이콘은 밝은/어두운 배경 모두 대응하도록 `#64748B` 고정. BookDetailPage 빠른 입력·편집 시트에서 `notes_v2`일 때만 사용 |
 | **DailyRecallCard** | `notes/DailyRecallCard.tsx` | LibraryPage 상단 "오늘의 회고" 카드(앰버 그라데이션, 다크 대응). `GET /api/notes/random`(사용자·KST 날짜별 고정), 본문 140자 미리보기 + 3줄 클램프, 탭 → 해당 책 상세. 플래그 off·노트 없음이면 렌더링 안 함 |
 
-페이지 범위: 편집 시트에 "시작 페이지 ~ 끝 페이지" 입력(`notes_v2`), 카드·검색 결과 표기는 `formatNotePages()` → `p.12` / `p.12–15`. 끝 페이지 < 시작 페이지면 토스트 오류 후 시트 유지. NotesSearchPage는 검색어 하이라이트와 겹치지 않도록 서식 기호를 걷어 낸 평문(`stripNoteMarkup`)으로 표시.
+페이지 범위: 편집 시트에 "시작 페이지 ~ 끝 페이지" 입력(`notes_v2`), 카드·검색 결과 표기는 `formatNotePages()` → `p.12` / `p.12–15`. 끝 페이지 < 시작 페이지면 토스트 오류 후 시트 유지. NotesSearchPage는 `notes_v2`일 때 검색어 하이라이트와 겹치지 않도록 서식 기호를 걷어 낸 평문(`stripNoteMarkup`)으로 표시(꺼져 있으면 원문).
 
 ### 10.7 잔존 UI 컴포넌트 (21개) ★ 17차 정리
 
