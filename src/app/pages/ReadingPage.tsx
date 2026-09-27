@@ -28,6 +28,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { usersApi, queryKeys, searchApi } from "../../lib/api";
 import { useAuthStore } from "../../stores/authStore";
 import { useStats } from "../../hooks/useStats";
+import { useFlag } from "../../hooks/useFeatureFlags";
+import { FocusTimer } from "../components/reading/FocusTimer";
 import { useTimerStore } from "../../stores/timerStore";
 
 
@@ -866,6 +868,8 @@ export function ReadingPage() {
   const [deleteTarget, setDeleteTarget] = useState<UIBook | null>(null);
   const [selectedGenre, setSelectedGenre] = useState<GenreKey | null>(null);
   const [timerBook, setTimerBook] = useState<UIBook | null>(null);
+  const focusTimerEnabled = useFlag("focus_timer");
+  const timerStoreBookId = useTimerStore((s) => s.bookId);
   const [logModalOpen, setLogModalOpen] = useState(false);
   const [goalModalOpen, setGoalModalOpen] = useState(false);
   const [timerPromptMinutes, setTimerPromptMinutes] = useState<number | null>(null);
@@ -975,8 +979,18 @@ export function ReadingPage() {
     setSelectedBook(book);
     if (!timer.isRunning && timer.elapsed === 0) {
       setTimerBook(book);
+      // 전역 스토어에도 연결 — 책 상세에서 쓴 메모를 이 타이머 구간에 모으기 위해 (Phase 4)
+      useTimerStore.getState().setBookId(book.id);
     }
   }
+
+  // 다른 화면에 다녀와도 타이머에 연결된 책 표시 유지 (타이머 상태는 전역 스토어에 있음)
+  useEffect(() => {
+    if (!timerBook && timerStoreBookId) {
+      const book = books.find((b) => b.id === timerStoreBookId);
+      if (book) setTimerBook(book);
+    }
+  }, [timerBook, timerStoreBookId, books]);
 
   // Genre counts for filter bar
   const genreCounts = books.reduce((acc, b) => {
@@ -1023,8 +1037,11 @@ export function ReadingPage() {
         timerDisplay={timer.displayTime}
       />
 
-      {/* 독서 타이머 위젯 */}
+      {/* 독서 타이머 위젯 — focus_timer 플래그: 몰입 타이머(Phase 4) */}
       <div ref={timerRef}>
+        {focusTimerEnabled ? (
+          <FocusTimer timer={timer} timerBook={timerBook} />
+        ) : (
         <ReadingTimerWidget
           displayTime={timer.displayTime}
           isRunning={timer.isRunning}
@@ -1034,6 +1051,7 @@ export function ReadingPage() {
           timerBook={timerBook}
           elapsedMinutes={timer.minutes}
         />
+        )}
       </div>
 
       {/* Section header row */}

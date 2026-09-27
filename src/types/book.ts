@@ -274,6 +274,10 @@ export interface BookNote {
   page?: number;
   /** 범위 끝 페이지 (notes.end_page) */
   endPage?: number;
+  /** Phase 4: 몰입 타이머 세션에서 작성 (notes.session_id) */
+  sessionId?: string;
+  /** Phase 4: AI 태그 (notes.tags JSON 배열) */
+  tags: string[];
   date: string;
 }
 
@@ -286,9 +290,22 @@ export interface ApiBookNote {
   content: string;
   page_number: number | null;
   end_page?: number | null;
+  session_id?: string | null;
+  tags?: string | null;
   color: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** notes.tags(JSON 배열 문자열) → 배열, 손상된 값은 빈 배열 (worker/lib/noteTags.readTags와 동일 규칙) */
+export function parseNoteTags(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  try {
+    const value: unknown = JSON.parse(raw);
+    return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [];
+  } catch {
+    return [];
+  }
 }
 
 export function normalizeBookNote(api: ApiBookNote): BookNote {
@@ -298,6 +315,8 @@ export function normalizeBookNote(api: ApiBookNote): BookNote {
     content: api.content,
     page: api.page_number ?? undefined,
     endPage: api.end_page ?? undefined,
+    sessionId: api.session_id ?? undefined,
+    tags: parseNoteTags(api.tags),
     date: api.created_at.slice(0, 10).replace(/-/g, '.'),
   };
 }

@@ -33,6 +33,8 @@ import { cn } from "../components/ui/utils";
 import { CameraOCRSheet } from "../components/books/CameraOCRSheet";
 import { NoteContent } from "../components/notes/NoteContent";
 import { NoteEditor } from "../components/notes/NoteEditor";
+import { NoteMeta } from "../components/notes/NoteMeta";
+import { useTimerStore } from "../../stores/timerStore";
 import { useFlag } from "../../hooks/useFeatureFlags";
 import { formatNotePages } from "../../lib/noteMarkup";
 import {
@@ -175,6 +177,10 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
   const [editingNote, setEditingNote] = useState<BookNote | null>(null);
   const [form, setForm] = useState<NoteForm>({ type: "memo", content: "", page: "", endPage: "" });
   const notesV2 = useFlag("notes_v2");
+  // Phase 4: 이 책으로 몰입 타이머가 진행 중이면 지금 쓰는 메모가 그 구간에 모인다
+  const focusTimerEnabled = useFlag("focus_timer");
+  const timerActiveForBook = useTimerStore((st) => st.bookId === bookId && (st.isRunning || st.accumulatedSec > 0));
+  const [focusOnly, setFocusOnly] = useState(false);
   const { showToast } = useToast();
 
   // 빠른 노트 캡처 바 상태
@@ -289,8 +295,10 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
     review: "#0891B2",
   };
 
+  const hasFocusNotes = focusTimerEnabled && notes.some((n) => n.sessionId);
   const filteredNotes = notes
     .filter((n) => noteFilter === "all" || n.type === noteFilter)
+    .filter((n) => !focusOnly || !!n.sessionId)
     .filter((n) => !noteSearch || n.content.toLowerCase().includes(noteSearch.toLowerCase()));
 
   const NOTE_TAB_ITEMS: { value: "all" | NoteFormType; label: string; count: number }[] = [
@@ -331,6 +339,17 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
   return (
     <>
       <div className="flex flex-col gap-4 px-4 py-4">
+        {/* Phase 4: 몰입 타이머 진행 중 안내 */}
+        {focusTimerEnabled && timerActiveForBook && (
+          <div
+            className="flex items-center gap-2 rounded-xl px-3 py-2 bg-[#EEF2FF] text-[#3730A3]"
+            role="status"
+            style={{ fontSize: 12, fontWeight: 600 }}
+          >
+            ⏱ 몰입 타이머 진행 중 · 지금 쓰는 메모는 이 구간에 함께 기록돼요
+          </div>
+        )}
+
         {/* ── 빠른 노트 캡처 바 ── */}
         <div
           className="rounded-2xl p-3 border"
@@ -436,6 +455,22 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
           ))}
         </div>
 
+        {/* Phase 4: 몰입 구간 메모만 보기 */}
+        {hasFocusNotes && (
+          <button
+            type="button"
+            onClick={() => setFocusOnly((v) => !v)}
+            aria-pressed={focusOnly}
+            className={cn(
+              "self-start inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border transition-all",
+              focusOnly ? "bg-[#3730A3] text-white border-[#3730A3]" : "border-[#C7D2FE] text-[#3730A3] bg-white",
+            )}
+            style={{ fontSize: 12, fontWeight: 600 }}
+          >
+            ⏱ 몰입 메모만 {notes.filter((n) => n.sessionId).length}
+          </button>
+        )}
+
         {/* UX-106: 인라인 검색 */}
         <div className="relative">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
@@ -481,6 +516,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
                   ) : (
                     <MemoCard note={n} />
                   )}
+                  <NoteMeta note={n} className="px-4 pt-2" />
                   <NoteActions note={n} />
                 </div>
               </motion.div>

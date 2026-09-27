@@ -8,6 +8,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { usersApi, ApiError } from '../lib/api';
+import { useTimerStore } from './timerStore';
 
 export interface AuthUser {
   id: string;
@@ -128,6 +129,9 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(REFRESH_TOKEN_KEY);
+        // 타이머는 기기에 저장되므로(persist) 로그아웃 시 비워 다음 사용자에게 넘어가지 않게 한다
+        useTimerStore.setState({ bookId: null, isRunning: false, accumulatedSec: 0, startedAt: null, sessionNoteIds: [] });
+        useTimerStore.persist.clearStorage();
         set(
           { user: null, status: 'unauthenticated', error: null },
           false,

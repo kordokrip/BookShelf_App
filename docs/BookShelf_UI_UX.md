@@ -1669,6 +1669,17 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 
 이벤트 흐름: 변경 API 응답 `achievements` → `useAchievementCelebration()`(useAddBook·useUpdateBook·useAddSession) → 플래그 on이면 `celebrationStore.push` + 인앱 알림(`achievement` 타입, 🏆) / 항상 업적 캐시 무효화. `/register-flow`(Root 밖)에서 달성해도 Root로 돌아오면 표시된다. 등급 색 `TIER_STYLE`은 `characters/tierStyle.ts`로 추출해 기존 배지와 공유.
 
+### 10.6d 몰입 타이머·노트 태그 (Phase 4, 플래그 `focus_timer`·`ai_tags`)
+
+| 컴포넌트 | 파일 | 설명 |
+|---------|------|------|
+| **FocusTimer** | `reading/FocusTimer.tsx` | ReadingPage 타이머 위젯 대체(`focus_timer`). 자유/집중 모드 `role="radiogroup"`, 집중 프리셋 15·25·45·60분(정지·0초일 때만 변경), 집중 모드 원형 진행 링, 남은 시간 `role="timer"`, "이 구간 메모 n개" 표시, 버튼 44px. 목표 도달 시 자동 정지 + 진동 → 기존 "기록할까요?" 프롬프트 |
+| **NoteMeta** | `notes/NoteMeta.tsx` | 노트 부가 정보 줄: `⏱ 몰입` 배지(`session_id` 있음, `focus_timer`) + AI 태그 칩(`ai_tags`) → `/notes-search?tag=`. 전역 `a:not([role]) { min-height: unset }`을 인라인 `minHeight: 24`로 덮어 WCAG 2.5.8 충족. BookDetailPage 노트 카드·NotesSearchPage 결과에 사용 |
+
+- **타이머 상태 영속화**: `timerStore`를 localStorage(`bookshelf_timer`)에 저장 — iOS가 백그라운드 PWA를 종료하거나 새로고침해도 시작 시각 기준으로 경과 시간이 이어진다. 로그아웃 시 비움.
+- **몰입 메모 흐름**: 타이머가 책 X로 진행/일시정지 중일 때 책 X에 쓴 노트 id를 수집(`useAddNote`) → 세션 저장 시 `note_ids`로 전송(`useAddSession`) → 성공 시 비움. BookDetailPage: 진행 중 안내 배너(`role="status"`), "⏱ 몰입 메모만 n" 토글(`aria-pressed`).
+- **태그 표시**: 저장 후 서버가 비동기로 붙이므로 8초 뒤 노트 목록 재조회. NotesSearchPage는 `?tag=` 필터 + 해제 버튼 칩.
+
 ### 10.7 잔존 UI 컴포넌트 (21개) ★ 17차 정리
 
 17차 코드 정리에서 **40개 미사용 shadcn/ui 래퍼를 삭제**하여, `src/app/components/ui/` 디렉토리에 **21개 핵심 컴포넌트만 잔존**:

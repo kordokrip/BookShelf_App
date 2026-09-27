@@ -6,12 +6,18 @@
  */
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTimerStore } from '../stores/timerStore';
+import { countdownProgress, countdownRemaining, formatClock, isCountdownComplete, type TimerMode } from '../lib/focusTimer';
 
 export interface UseReadingTimerReturn {
   isRunning: boolean;
   elapsed: number;       // 총 경과 초
   minutes: number;       // Math.floor(elapsed / 60)
-  displayTime: string;   // "MM:SS" 형식
+  displayTime: string;   // "MM:SS" 형식 (countdown이면 남은 시간)
+  /** Phase 4 */
+  mode: TimerMode;
+  targetSec: number;
+  /** countdown 진행률 0~1 */
+  progress: number;
   start: () => void;
   pause: () => void;
   reset: () => void;
@@ -35,7 +41,17 @@ export function useReadingTimer(onStop?: (elapsedMinutes: number) => void): UseR
       // 마운트 시 즉시 동기화
       setDisplayElapsed(store.getElapsed());
       intervalRef.current = setInterval(() => {
-        setDisplayElapsed(useTimerStore.getState().getElapsed());
+        const state = useTimerStore.getState();
+        const elapsed = state.getElapsed();
+        setDisplayElapsed(elapsed);
+        // Phase 4: 집중(countdown) 목표 도달 → 자동 정지 + 기존 "기록할까요?" 흐름
+        if (isCountdownComplete(state.mode, elapsed, state.targetSec)) {
+          const totalSec = state.pause();
+          setDisplayElapsed(totalSec);
+          if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate?.([200, 100, 200]);
+          const minutes = Math.floor(totalSec / 60);
+          if (minutes >= 1) onStopRef.current?.(minutes);
+        }
       }, 1000);
     } else {
       setDisplayElapsed(store.getElapsed());
@@ -67,8 +83,19 @@ export function useReadingTimer(onStop?: (elapsedMinutes: number) => void): UseR
   }, [store]);
 
   const minutes = Math.floor(displayElapsed / 60);
-  const seconds = displayElapsed % 60;
-  const displayTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  const isCountdown = store.mode === 'countdown';
+  const displayTime = formatClock(isCountdown ? countdownRemaining(displayElapsed, store.targetSec) : displayElapsed);
 
-  return { isRunning: store.isRunning, elapsed: displayElapsed, minutes, displayTime, start, pause, reset };
+  return {
+    isRunning: store.isRunning,
+    elapsed: displayElapsed,
+    minutes,
+    displayTime,
+    mode: store.mode,
+    targetSec: store.targetSec,
+    progress: isCountdown ? countdownProgress(displayElapsed, store.targetSec) : 0,
+    start,
+    pause,
+    reset,
+  };
 }

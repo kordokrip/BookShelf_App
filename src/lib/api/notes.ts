@@ -35,11 +35,12 @@ export interface NoteWriteFields {
 
 export const notesApi = {
   /** 노트 목록 조회 */
-  list: (params: { book_id?: string; type?: string; search?: string } = {}) => {
+  list: (params: { book_id?: string; type?: string; search?: string; tag?: string } = {}) => {
     const qs = new URLSearchParams();
     if (params.book_id) qs.set('book_id', params.book_id);
     if (params.type) qs.set('type', params.type);
     if (params.search) qs.set('search', params.search);
+    if (params.tag) qs.set('tag', params.tag);
     const query = qs.toString() ? `?${qs.toString()}` : '';
     return apiFetch<ApiResponse<Note[]>>(`/api/notes${query}`);
   },

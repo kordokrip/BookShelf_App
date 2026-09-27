@@ -8,13 +8,16 @@ import { notesApi, queryKeys, type NoteWriteFields } from '../lib/api';
 import { formatNotePages } from '../lib/noteMarkup';
 import { normalizeBookNote } from '../types/book';
 import { useUiStore } from '../stores/uiStore';
+import { useTimerStore } from '../stores/timerStore';
+import { useFlag } from './useFeatureFlags';
 
 /** 노트 목록 조회 (필터: bookId / type / search) */
-export function useNotes(filters?: { bookId?: string; type?: string; search?: string }) {
+export function useNotes(filters?: { bookId?: string; type?: string; search?: string; tag?: string }) {
   const params = {
     book_id: filters?.bookId,
     type: filters?.type,
     search: filters?.search,
+    tag: filters?.tag,
   };
   return useQuery({
     queryKey: queryKeys.notes.list(params),
@@ -52,9 +55,14 @@ export function useDailyNote(enabled = true) {
 }
 
 /** 노트 생성 */
+/** AI 태그는 저장 응답 후 서버에서 비동기로 붙으므로, 잠시 뒤 노트 목록을 다시 불러와 반영 */
+const TAG_REFRESH_DELAY_MS = 8000;
+
 export function useAddNote() {
   const qc = useQueryClient();
   const addNotification = useUiStore((s) => s.addNotification);
+  const focusTimerEnabled = useFlag('focus_timer');
+  const aiTagsEnabled = useFlag('ai_tags');
   return useMutation({
     // mutationKey: queryClient.setMutationDefaults와 연결 →
     //   오프라인 pause 후 페이지 재실행 시 resumePausedMutations가 이 key로 함수 조회
@@ -67,8 +75,11 @@ export function useAddNote() {
       end_page?: number;
       color?: string;
     }) => notesApi.create(data),
-    onSuccess: (_, variables) => {
+    onSuccess: (res, variables) => {
       qc.invalidateQueries({ queryKey: queryKeys.notes.all });
+      // Phase 4: 몰입 타이머가 이 책으로 진행 중이면 이 메모를 구간에 수집
+      if (focusTimerEnabled && res?.data?.id) useTimerStore.getState().addSessionNote(variables.book_id, res.data.id);
+      if (aiTagsEnabled) setTimeout(() => void qc.invalidateQueries({ queryKey: queryKeys.notes.all }), TAG_REFRESH_DELAY_MS);
       const typeLabel: Record<string, string> = {
         quote: '인용구',
         memo: '메모',
@@ -82,12 +93,19 @@ export function useAddNote() {
 /** 노트 수정 */
 export function useUpdateNote() {
   const qc = useQueryClient();
+  const aiTagsEnabled = useFlag('ai_tags');
   return useMutation({
     mutationFn: ({ id, data }: {
       id: string;
       data: Partial<NoteWriteFields>;
     }) => notesApi.update(id, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.notes.all }),
+    onSuccess: (_, { data }) => {
+      qc.invalidateQueries({ queryKey: queryKeys.notes.all });
+      // 내용이 바뀌면 서버가 태그를 다시 붙임 (비동기)
+      if (aiTagsEnabled && typeof data.content === 'string') {
+        setTimeout(() => void qc.invalidateQueries({ queryKey: queryKeys.notes.all }), TAG_REFRESH_DELAY_MS);
+      }
+    },
   });
 }
 

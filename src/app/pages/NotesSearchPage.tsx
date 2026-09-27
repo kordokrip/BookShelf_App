@@ -5,6 +5,7 @@
  * - 검색결과 노트 수정·삭제
  */
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router";
 import { ArrowLeft, Search, X, Clock, Pencil, Trash2 } from "lucide-react";
 import { useBack } from "../../hooks/useBack";
 import { useNotes, useUpdateNote, useDeleteNote } from "../../hooks/useNotes";
@@ -12,6 +13,7 @@ import { useRecentSearches } from "../../hooks/useRecentSearches";
 import { useToast } from "../components/ui/Toast";
 import { stripNoteMarkup, formatNotePages } from "../../lib/noteMarkup";
 import { useFlag } from "../../hooks/useFeatureFlags";
+import { NoteMeta } from "../components/notes/NoteMeta";
 
 const NOTES_RECENT_KEY = "notes_recent_searches";
 import type { BookNote } from "../../types/book";
@@ -91,9 +93,20 @@ export function NotesSearchPage() {
     }
   }, [debouncedQuery, addSearch]);
 
+  // Phase 4: AI 태그 필터 (?tag=, NoteMeta 칩에서 진입) — ai_tags 플래그 사용자만
+  const [searchParams, setSearchParams] = useSearchParams();
+  const aiTagsEnabled = useFlag("ai_tags");
+  const activeTag = aiTagsEnabled ? searchParams.get("tag")?.trim() || null : null;
+  const clearTag = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("tag");
+    setSearchParams(next, { replace: true });
+  };
+
   const notesFilter = {
     ...(debouncedQuery.trim().length >= 2 && { search: debouncedQuery.trim() }),
     ...(activeType !== "all"              && { type: activeType }),
+    ...(activeTag                          && { tag: activeTag }),
   };
   const { data: notes = [], isLoading, isError } = useNotes(notesFilter);
   const updateNoteMutation = useUpdateNote();
@@ -158,6 +171,24 @@ export function NotesSearchPage() {
             </button>
           ))}
         </div>
+
+        {activeTag && (
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-xs text-muted-foreground">태그</span>
+            <span className="inline-flex items-center gap-1 rounded-full pl-2.5 pr-1 min-h-7 bg-primary/10 text-primary text-sm font-semibold">
+              #{activeTag}
+              <button
+                type="button"
+                onClick={clearTag}
+                className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-primary/20"
+                style={{ minHeight: 24 }}
+                aria-label={`태그 ${activeTag} 필터 해제`}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </span>
+          </div>
+        )}
 
         {!isLoading && (
           <p className="text-xs text-muted-foreground mt-2">
@@ -263,6 +294,8 @@ export function NotesSearchPage() {
                   {/* notes_v2: 검색어 하이라이트와 겹치지 않도록 서식 기호는 걷어 내고 표시 */}
                   {highlightText(notesV2 ? stripNoteMarkup(note.content) : note.content, debouncedQuery)}
                 </p>
+
+                <NoteMeta note={note} className="mb-2" />
 
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">{note.date}</span>

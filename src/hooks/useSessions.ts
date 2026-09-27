@@ -8,6 +8,7 @@ import { sessionsApi, queryKeys } from '../lib/api';
 import { normalizeSession, type UISession } from '../types/book';
 import { useUiStore } from '../stores/uiStore';
 import { useAchievementCelebration } from './useAchievements';
+import { useTimerStore } from '../stores/timerStore';
 
 /** 독서 세션 목록 조회 */
 export function useSessions(params?: { bookId?: string; limit?: number }) {
@@ -46,9 +47,18 @@ export function useAddSession() {
         book_id: data.bookId,
         pages_read: data.endPage - data.startPage,
         duration_min: data.durationMinutes,
+        // Phase 4: 이 책으로 타이머가 도는 동안 작성한 메모를 이 세션에 연결 (없으면 생략)
+        ...(() => {
+          const ids = useTimerStore.getState().getSessionNoteIds(data.bookId);
+          return ids.length > 0 ? { note_ids: ids } : {};
+        })(),
       }),
     onSuccess: (res, variables) => {
       celebrate(res.achievements);
+      if (useTimerStore.getState().getSessionNoteIds(variables.bookId).length > 0) {
+        useTimerStore.getState().clearSessionNotes();
+        qc.invalidateQueries({ queryKey: queryKeys.notes.all });
+      }
       qc.invalidateQueries({ queryKey: queryKeys.sessions.all });
       qc.invalidateQueries({ queryKey: queryKeys.books.all });
       qc.invalidateQueries({ queryKey: queryKeys.stats.all });

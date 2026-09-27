@@ -18,6 +18,8 @@ export const sessionsApi = {
     pages_read: number;
     session_date?: string;
     duration_min?: number;
+    /** Phase 4: 몰입 구간 메모 연결 */
+    note_ids?: string[];
   }) =>
     apiFetch<WithAchievementEvent<{ data: ReadingSession; new_current_page: number }>>('/api/sessions', {
       method: 'POST',
