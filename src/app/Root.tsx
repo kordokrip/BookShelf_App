@@ -50,7 +50,7 @@ export function Root() {
              주 CTA(로그인 버튼, FAB 등)와 겹치지 않도록 여기서만 마운트 */}
         <InstallBanner />
 
-        {/* 업적 달성·캐릭터 진화 축하 (characters 플래그 사용자에게만 이벤트가 쌓임) */}
+        {/* 업적 달성·캐릭터 진화 축하 */}
         <AchievementCelebration />
 
         {/* DEV only: layout 계산값 실시간 패널 */}

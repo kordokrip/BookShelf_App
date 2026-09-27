@@ -4,15 +4,14 @@
  * 이전: 스플래시 → 슬라이드 3장 → 장르·목표 선택(필수) → 회원가입 → 로그인 링크 (로그인까지 6~8번 탭)
  * 지금: 모든 슬라이드에서 [무료로 시작하기]·[로그인]이 항상 보이고, 상단에도 [로그인]이 있다 (1번 탭)
  *  - 장르·목표 선택 제거: 회원가입 단계에 이미 있고, 가입 전이라 저장되지도 않았다(토큰 없음)
- *  - 내용은 공개 플래그 기준 (onboardingSlides.tsx)
+ *  - 내용: 서재 · 기록 · 몰입 · 성장 4장 (onboardingSlides.tsx)
  *  - 접근성: 캐러셀 패턴(aria-roledescription), 좌우 화살표 키, 점 버튼 24px+, 모션 줄이기 대응
  */
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { usePublicFlags } from "../../hooks/useFeatureFlags";
-import { buildOnboardingSlides } from "../components/onboarding/onboardingSlides";
+import { ONBOARDING_SLIDES as slides } from "../components/onboarding/onboardingSlides";
 import { AuthPreviewNav } from "../components/auth/AuthPreviewNav";
 
 /** 한 번이라도 소개를 봤으면 다음 진입부터는 로그인 화면으로 (EntryGate) */
@@ -27,8 +26,6 @@ function markSeen() {
 }
 
 export function OnboardingPage() {
-  const { data: flags = [] } = usePublicFlags();
-  const slides = buildOnboardingSlides(flags);
   const [index, setIndex] = useState(0);
   const [direction, setDirection] = useState(1);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
@@ -41,7 +38,7 @@ export function OnboardingPage() {
     const clamped = Math.max(0, Math.min(slides.length - 1, next));
     setDirection(clamped >= current ? 1 : -1);
     setIndex(clamped);
-  }, [current, slides.length]);
+  }, [current]);
 
   // 좌우 화살표 키로 이동 (데스크톱·키보드 사용자)
   useEffect(() => {

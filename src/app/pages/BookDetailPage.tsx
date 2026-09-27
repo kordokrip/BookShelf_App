@@ -26,7 +26,6 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu";
-import { Textarea } from "../components/ui/textarea";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { cn } from "../components/ui/utils";
@@ -35,7 +34,6 @@ import { NoteContent } from "../components/notes/NoteContent";
 import { NoteEditor } from "../components/notes/NoteEditor";
 import { NoteMeta } from "../components/notes/NoteMeta";
 import { useTimerStore } from "../../stores/timerStore";
-import { useFlag } from "../../hooks/useFeatureFlags";
 import { formatNotePages } from "../../lib/noteMarkup";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -165,7 +163,7 @@ interface NoteForm {
   type: NoteFormType;
   content: string;
   page: string;
-  /** 범위 끝 페이지 (notes_v2) */
+  /** 범위 끝 페이지 (선택) */
   endPage: string;
 }
 
@@ -176,9 +174,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
   const [showOCR, setShowOCR] = useState(false);
   const [editingNote, setEditingNote] = useState<BookNote | null>(null);
   const [form, setForm] = useState<NoteForm>({ type: "memo", content: "", page: "", endPage: "" });
-  const notesV2 = useFlag("notes_v2");
   // Phase 4: 이 책으로 몰입 타이머가 진행 중이면 지금 쓰는 메모가 그 구간에 모인다
-  const focusTimerEnabled = useFlag("focus_timer");
   const timerActiveForBook = useTimerStore((st) => st.bookId === bookId && (st.isRunning || st.accumulatedSec > 0));
   const [focusOnly, setFocusOnly] = useState(false);
   const { showToast } = useToast();
@@ -218,7 +214,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
   const handleSave = async () => {
     if (!form.content.trim()) return;
     const startPage = form.page ? parseInt(form.page, 10) : undefined;
-    const endPage = notesV2 && form.endPage ? parseInt(form.endPage, 10) : undefined;
+    const endPage = form.endPage ? parseInt(form.endPage, 10) : undefined;
     if (endPage !== undefined && (startPage === undefined || endPage < startPage)) {
       showToast("끝 페이지는 시작 페이지 이상이어야 해요.", "error");
       return;
@@ -231,10 +227,10 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
     };
     try {
       if (editingNote) {
-        // v2에서는 끝 페이지를 지운 경우도 반영되도록 null을 명시적으로 보냄
+        // 끝 페이지를 지운 경우도 반영되도록 null을 명시적으로 보냄
         await updateMutation.mutateAsync({
           id: editingNote.id,
-          data: notesV2 ? { ...payload, end_page: endPage ?? null } : payload,
+          data: { ...payload, end_page: endPage ?? null },
         });
       } else {
         await addMutation.mutateAsync({ ...payload, end_page: endPage });
@@ -295,7 +291,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
     review: "#0891B2",
   };
 
-  const hasFocusNotes = focusTimerEnabled && notes.some((n) => n.sessionId);
+  const hasFocusNotes = notes.some((n) => n.sessionId);
   const filteredNotes = notes
     .filter((n) => noteFilter === "all" || n.type === noteFilter)
     .filter((n) => !focusOnly || !!n.sessionId)
@@ -340,7 +336,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
     <>
       <div className="flex flex-col gap-4 px-4 py-4">
         {/* Phase 4: 몰입 타이머 진행 중 안내 */}
-        {focusTimerEnabled && timerActiveForBook && (
+        {timerActiveForBook && (
           <div
             className="flex items-center gap-2 rounded-xl px-3 py-2 bg-[#EEF2FF] text-[#3730A3]"
             role="status"
@@ -377,29 +373,16 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
               </button>
             ))}
           </div>
-          {notesV2 ? (
-            <NoteEditor
-              ref={quickTextareaRef}
-              rows={2}
-              value={quickText}
-              onChange={setQuickText}
-              onKeyDown={handleQuickKeyDown}
-              placeholder="빠른 노트를 입력하세요... (⌘+Enter로 저장)"
-              className="w-full bg-white rounded-xl border border-[#E2E8F0] outline-none focus:border-[#4F46E5] resize-none px-3 py-2 transition-colors"
-              style={{ fontSize: 13, color: "#1E293B" }}
-            />
-          ) : (
-            <textarea
-              ref={quickTextareaRef}
-              rows={2}
-              value={quickText}
-              onChange={(e) => setQuickText(e.target.value)}
-              onKeyDown={handleQuickKeyDown}
-              placeholder="빠른 노트를 입력하세요... (⌘+Enter로 저장)"
-              className="w-full bg-white rounded-xl border border-[#E2E8F0] outline-none focus:border-[#4F46E5] resize-none px-3 py-2 transition-colors"
-              style={{ fontSize: 13, color: "#1E293B" }}
-            />
-          )}
+          <NoteEditor
+            ref={quickTextareaRef}
+            rows={2}
+            value={quickText}
+            onChange={setQuickText}
+            onKeyDown={handleQuickKeyDown}
+            placeholder="빠른 노트를 입력하세요... (⌘+Enter로 저장)"
+            className="w-full bg-white rounded-xl border border-[#E2E8F0] outline-none focus:border-[#4F46E5] resize-none px-3 py-2 transition-colors"
+            style={{ fontSize: 13, color: "#1E293B" }}
+          />
           <div className="flex items-center justify-between mt-2">
             {currentPage && currentPage > 0 ? (
               <span style={{ fontSize: 11, color: "#64748B" }}>📄 현재 {currentPage}p 자동 반영</span>
@@ -572,63 +555,38 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
             </div>
 
             {/* 내용 */}
-            {notesV2 ? (
-              <NoteEditor
-                value={form.content}
-                onChange={(content) => setForm((f) => ({ ...f, content }))}
-                placeholder={
-                  form.type === "quote" ? "인용할 구절을 입력하세요" :
-                  form.type === "review" ? "독후감을 작성하세요" :
-                  "메모 내용을 입력하세요"
-                }
-                rows={5}
-                autoFocus
-              />
-            ) : (
-              <Textarea
-                value={form.content}
-                onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
-                placeholder={
-                  form.type === "quote" ? "인용할 구절을 입력하세요" :
-                  form.type === "review" ? "독후감을 작성하세요" :
-                  "메모 내용을 입력하세요"
-                }
-                rows={5}
-                className="resize-none"
-                autoFocus
-              />
-            )}
+            <NoteEditor
+              value={form.content}
+              onChange={(content) => setForm((f) => ({ ...f, content }))}
+              placeholder={
+                form.type === "quote" ? "인용할 구절을 입력하세요" :
+                form.type === "review" ? "독후감을 작성하세요" :
+                "메모 내용을 입력하세요"
+              }
+              rows={5}
+              autoFocus
+            />
 
-            {/* 페이지 번호 (v2: 시작~끝 범위) */}
-            {notesV2 ? (
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  min={1}
-                  value={form.page}
-                  onChange={(e) => setForm((f) => ({ ...f, page: e.target.value }))}
-                  placeholder="시작 페이지"
-                  aria-label="시작 페이지"
-                />
-                <span className="text-[#64748B] dark:text-[#94A3B8]" aria-hidden>~</span>
-                <Input
-                  type="number"
-                  min={1}
-                  value={form.endPage}
-                  onChange={(e) => setForm((f) => ({ ...f, endPage: e.target.value }))}
-                  placeholder="끝 페이지 (선택)"
-                  aria-label="끝 페이지"
-                />
-              </div>
-            ) : (
+            {/* 페이지 번호 (시작~끝 범위) */}
+            <div className="flex items-center gap-2">
               <Input
                 type="number"
                 min={1}
                 value={form.page}
                 onChange={(e) => setForm((f) => ({ ...f, page: e.target.value }))}
-                placeholder="페이지 번호 (선택)"
+                placeholder="시작 페이지"
+                aria-label="시작 페이지"
               />
-            )}
+              <span className="text-[#64748B] dark:text-[#94A3B8]" aria-hidden>~</span>
+              <Input
+                type="number"
+                min={1}
+                value={form.endPage}
+                onChange={(e) => setForm((f) => ({ ...f, endPage: e.target.value }))}
+                placeholder="끝 페이지 (선택)"
+                aria-label="끝 페이지"
+              />
+            </div>
 
             {/* 저장 버튼 */}
             <Button

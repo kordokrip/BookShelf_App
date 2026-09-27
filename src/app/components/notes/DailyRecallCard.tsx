@@ -1,12 +1,11 @@
 /**
- * 오늘의 회고 카드 — 과거에 쓴 노트 한 편을 하루에 하나씩 다시 보여준다 (notes_v2).
+ * 오늘의 회고 카드 — 과거에 쓴 노트 한 편을 하루에 하나씩 다시 보여준다.
  * 서버(GET /api/notes/random)가 사용자·KST 날짜별로 같은 노트를 고르므로 하루 동안 고정된다.
  * 노트가 없거나 불러오지 못하면 아무것도 그리지 않는다(서재 화면을 방해하지 않음).
  */
 import { Link } from "react-router";
 import { Sparkles, ChevronRight } from "lucide-react";
 import { useDailyNote } from "../../../hooks/useNotes";
-import { useFlag } from "../../../hooks/useFeatureFlags";
 import { NoteContent } from "./NoteContent";
 import { formatNotePages } from "../../../lib/noteMarkup";
 
@@ -21,10 +20,9 @@ const TYPE_LABEL: Record<string, string> = {
 const PREVIEW_CHARS = 140;
 
 export function DailyRecallCard() {
-  const enabled = useFlag("notes_v2");
-  const { data: note } = useDailyNote(enabled);
+  const { data: note } = useDailyNote();
 
-  if (!enabled || !note) return null;
+  if (!note) return null;
 
   const pages = formatNotePages(note.page_number ?? undefined, note.end_page ?? undefined);
   const preview = note.content.length > PREVIEW_CHARS ? `${note.content.slice(0, PREVIEW_CHARS)}…` : note.content;

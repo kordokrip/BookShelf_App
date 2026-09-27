@@ -1,16 +1,13 @@
 /**
- * 노트 부가 정보 줄 — 몰입 구간 배지(focus_timer) + AI 태그 칩(ai_tags). Phase 4.
+ * 노트 부가 정보 줄 — 몰입 구간 배지 + AI 태그 칩.
  * 태그 칩은 노트 검색 화면의 태그 필터로 이동한다. 둘 다 없으면 아무것도 그리지 않는다.
  */
 import { Link } from "react-router";
-import { useFlag } from "../../../hooks/useFeatureFlags";
 import type { BookNote } from "../../../types/book";
 
 export function NoteMeta({ note, className = "" }: { note: Pick<BookNote, "sessionId" | "tags">; className?: string }) {
-  const focusEnabled = useFlag("focus_timer");
-  const tagsEnabled = useFlag("ai_tags");
-  const showFocus = focusEnabled && !!note.sessionId;
-  const tags = tagsEnabled ? note.tags : [];
+  const showFocus = !!note.sessionId;
+  const tags = note.tags;
   if (!showFocus && tags.length === 0) return null;
 
   return (

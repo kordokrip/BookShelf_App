@@ -118,7 +118,7 @@ DO(Durable Objects)를 포함한 기능(채팅룸)을 테스트할 때는 `npx w
 
 **AI 바인딩 주의:** `wrangler dev --local`에서도 Workers AI는 원격 호출만 가능하며, 현재 설정에서는 `Binding AI needs to be run remotely` 오류로 실패한다. 그래서 로컬 e2e(`bash scripts/e2e-api-test.sh --url http://localhost:8787`)에서는 TEST 22(AI 요약)가 FAIL로 나오는 것이 정상이다. AI 경로는 스테이징이나 프로덕션 e2e로 검증한다.
 
-**기능 플래그:** 리뉴얼 기능은 `FEATURE_FLAGS` var(쉼표 구분, `worker/lib/featureFlags.ts`)로 UI 노출을 제어한다. 새 플래그는 프로덕션 `[vars]`에 넣지 않은 채 관리자 계정(항상 전체 on)으로 먼저 검증하고, 문제가 없으면 `[vars] FEATURE_FLAGS`에 추가해 전체 공개한다. 현재 공개된 플래그는 `wrangler.toml`의 `[vars] FEATURE_FLAGS` 또는 `curl https://bookshelf-api.kordokrip.workers.dev/api/flags/public`으로 확인한다. 스테이징 `[env.staging.vars]`는 전체 on이다. 로컬에서 일반 계정으로 확인하려면 `.dev.vars`에 `FEATURE_FLAGS=notes_v2,book_stack,...`를 추가한다(`.dev.vars`가 `[vars]`를 덮어씀). 공개 절차는 `docs/adr/ADR-003-feature-flags-staging.md`를 참고한다.
+**기능 플래그:** 새 기능은 `FEATURE_FLAGS` var(쉼표 구분, 등록 목록은 `worker/lib/featureFlags.ts`의 `ALL_FEATURE_FLAGS`)로 UI 노출을 제어한다. 새 플래그는 프로덕션 `[vars]`에 넣지 않은 채 관리자 계정(항상 전체 on)으로 먼저 검증하고, 문제가 없으면 `[vars] FEATURE_FLAGS`에 추가해 전체 공개한다. 현재 공개된 플래그는 `wrangler.toml`의 `[vars] FEATURE_FLAGS` 또는 `curl https://bookshelf-api.kordokrip.workers.dev/api/flags/public`으로 확인한다. 스테이징 `[env.staging.vars]`에는 단계 공개 중인 플래그를 모두 켠다. 로컬에서 일반 계정으로 확인하려면 `.dev.vars`에 `FEATURE_FLAGS=이름1,이름2`를 추가한다(`.dev.vars`가 `[vars]`를 덮어씀). 리뉴얼 5종은 2026-09-27 전체 공개 후 분기 코드와 함께 제거되어 현재 등록된 플래그가 없다. 공개 절차는 `docs/adr/ADR-003-feature-flags-staging.md`를 참고한다.
 
 **로컬 개발 서버 검증까지가 이 저장소에서 허용되는 배포 검증의 전부다.** `wrangler dev --local`은 배포가 아니므로 자유롭게 실행해도 되지만, `wrangler deploy`(env 유무 무관)는 로컬에서 절대 실행하지 않는다.
 

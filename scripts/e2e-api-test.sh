@@ -615,27 +615,22 @@ else
   fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE}, count=${TAG_COUNT} (기대: 200 + 0)"
 fi
 
-# AI 태깅은 응답 후 비동기(waitUntil) + ai_tags 플래그 사용자만 → 플래그가 꺼진 환경은 건너뜀
-T=62; NAME="AI 태그 비동기 생성 (ai_tags 플래그 환경만)"; START=$(now_ms)
-FLAGS_BODY=$(curl -s "${BASE_URL}/api/flags" -H "Authorization: Bearer ${TOKEN}")
-HAS_AI_TAGS=$(json_val "$FLAGS_BODY" "'ai_tags' in d['data']['flags']")
-if [[ "$HAS_AI_TAGS" != "True" ]]; then
-  pass_test $T "$NAME (flag off — 건너뜀)" $(( $(now_ms) - START ))
+# AI 태깅은 응답 후 비동기(waitUntil) — 모든 사용자 (2026-09-27 전체 공개).
+# 로컬 wrangler dev는 Workers AI가 없어 실패한다 → 스테이징·프로덕션(--url)으로 확인
+T=62; NAME="AI 태그 비동기 생성"; START=$(now_ms)
+NOTE_TAGS=""
+for i in $(seq 1 10); do
+  sleep 2
+  NOTE_BODY=$(curl -s "${BASE_URL}/api/notes/${FOCUS_NOTE_ID}" -H "Authorization: Bearer ${TOKEN}")
+  NOTE_TAGS=$(json_val "$NOTE_BODY" "d['data']['tags'] or ''")
+  [[ -n "$NOTE_TAGS" ]] && break
+done
+ELAPSED=$(( $(now_ms) - START ))
+if [[ -n "$NOTE_TAGS" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+  printf "         ${CYAN}↳ tags=%s${NC}\n" "$NOTE_TAGS"
 else
-  NOTE_TAGS=""
-  for i in $(seq 1 10); do
-    sleep 2
-    NOTE_BODY=$(curl -s "${BASE_URL}/api/notes/${FOCUS_NOTE_ID}" -H "Authorization: Bearer ${TOKEN}")
-    NOTE_TAGS=$(json_val "$NOTE_BODY" "d['data']['tags'] or ''")
-    [[ -n "$NOTE_TAGS" ]] && break
-  done
-  ELAPSED=$(( $(now_ms) - START ))
-  if [[ -n "$NOTE_TAGS" ]]; then
-    pass_test $T "$NAME" $ELAPSED
-    printf "         ${CYAN}↳ tags=%s${NC}\n" "$NOTE_TAGS"
-  else
-    fail_test $T "$NAME" $ELAPSED "$NOTE_BODY" "20초 내 tags 미생성 (AI 오류·쿼터 확인: wrangler tail)"
-  fi
+  fail_test $T "$NAME" $ELAPSED "$NOTE_BODY" "20초 내 tags 미생성 (AI 오류·쿼터 확인: wrangler tail)"
 fi
 
 # ── 업적·캐릭터 (TEST 58~59, Phase 3) ──

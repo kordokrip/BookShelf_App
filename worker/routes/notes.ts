@@ -21,7 +21,6 @@ import { logActivity } from './admin';
 import { validatePageRange, formatPageRange, kstDateString, pickDailyIndex } from '../lib/noteHelpers';
 import { shouldTag } from '../lib/noteTags';
 import { tagNote } from '../lib/noteTagger';
-import { userHasFlag } from '../lib/featureFlags';
 
 export const notesRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -306,8 +305,8 @@ notesRouter.post('/', authMiddleware, zValidator('json', createNoteSchema), asyn
   const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? 'unknown';
   await logActivity(c.env.DB, userId, 'note:create', { noteId: id, type: body.type }, ip);
 
-  // Phase 4: AI 태깅은 응답 후 비동기 (ai_tags 플래그 사용자만 — ADR-003 예외, 비용·데이터 전송)
-  if (shouldTag(body.content) && await userHasFlag(c.env.DB, c.env.FEATURE_FLAGS, userId, 'ai_tags')) {
+  // AI 태깅은 응답 후 비동기 — 비용은 사용자당 일일 한도(DAILY_TAG_QUOTA)와 KV 캐시로 제한
+  if (shouldTag(body.content)) {
     c.executionCtx.waitUntil(tagNote(c.env, { id, userId, content: body.content }));
   }
 
@@ -375,8 +374,7 @@ notesRouter.put('/:id', authMiddleware, zValidator('json', updateNoteSchema), as
     .bind(id)
     .first<DbNote>();
 
-  if (contentChanged && updated && shouldTag(updated.content)
-    && await userHasFlag(c.env.DB, c.env.FEATURE_FLAGS, userId, 'ai_tags')) {
+  if (contentChanged && updated && shouldTag(updated.content)) {
     c.executionCtx.waitUntil(tagNote(c.env, { id, userId, content: updated.content }));
   }
 

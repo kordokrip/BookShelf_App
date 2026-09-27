@@ -382,7 +382,7 @@ export function LibraryPage() {
       {/* CV-7: Success state — book list */}
       {loadState === "success" && (
         <>
-          {/* ── 오늘의 회고 (notes_v2 플래그, 노트 없으면 숨김) ── */}
+          {/* ── 오늘의 회고 (노트 없으면 숨김) ── */}
           <DailyRecallCard />
 
           {/* ── 컬렉션 바로가기 ── */}

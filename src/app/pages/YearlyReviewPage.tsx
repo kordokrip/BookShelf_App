@@ -10,7 +10,6 @@ import { useBack } from "../../hooks/useBack";
 import { ChevronLeft, Share2, BookMarked, FileText, Clock, Flame } from "lucide-react";
 import { useStats } from "../../hooks/useStats";
 import { useBooks } from "../../hooks/useBooks";
-import { useFlag } from "../../hooks/useFeatureFlags";
 import { BookStack } from "../components/stats/BookStack";
 import { useAuthStore } from "../../stores/authStore";
 import { GENRE_CONFIG } from "../../types/book";
@@ -87,7 +86,6 @@ export function YearlyReviewPage() {
   const { data: stats, isLoading } = useStats();
   const { data: allBooks = [] } = useBooks({});
   const user = useAuthStore((s) => s.user);
-  const bookStackEnabled = useFlag("book_stack");
 
   // 완독 도서 중 올해 완독한 것만
   const thisYearDone = useMemo(
@@ -284,8 +282,8 @@ export function YearlyReviewPage() {
             </div>
           )}
 
-          {/* 올해 쌓은 책 (book_stack 플래그) */}
-          {bookStackEnabled && thisYearDone.length > 0 && (
+          {/* 올해 쌓은 책 */}
+          {thisYearDone.length > 0 && (
             <div className="mb-3">
               <BookStack books={thisYearDone} title={`${YEAR}년에 쌓은 책`} />
             </div>

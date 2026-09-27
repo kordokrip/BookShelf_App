@@ -1,8 +1,11 @@
 import type { ApiResponse } from './types';
 import { apiFetch } from './client';
 
-/** worker/lib/featureFlags.ts의 ALL_FEATURE_FLAGS와 동일하게 유지 */
-export type FeatureFlag = 'notes_v2' | 'book_stack' | 'characters' | 'focus_timer' | 'ai_tags';
+/**
+ * worker/lib/featureFlags.ts의 ALL_FEATURE_FLAGS와 동일하게 유지.
+ * 현재 등록된 플래그 없음(2026-09-27 리뉴얼 5종 전체 공개 후 제거) — 새 플래그는 `'이름' | ...`으로 추가.
+ */
+export type FeatureFlag = never;
 
 export const flagsApi = {
   /** 현재 사용자에게 켜진 기능 플래그 목록 */

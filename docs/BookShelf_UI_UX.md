@@ -496,7 +496,7 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 - **경로**: `/onboarding` (공개, lazy) — 처음 방문한 미인증 사용자의 첫 화면
 - **레이아웃**: 화면 높이에 고정(`height: var(--vp-h)`), 헤더·하단 버튼은 고정, 소개 영역만 스크롤. 일러스트 높이는 `min(32dvh,300px)`(태블릿 이상 `min(56dvh,360px)`)라 작은 폰(320×568)·가로 모드(844×390)에서도 하단 버튼이 항상 보인다. 태블릿 이상은 일러스트·글 2단 + 이전/다음 화살표.
 - **항상 보이는 행동**: 헤더 [로그인](44px) / 하단 [다음] 또는 마지막 장 [무료로 시작하기] / [바로 가입하기]·[이미 계정이 있어요](마지막 장은 "이미 계정이 있나요? 로그인"). 어느 버튼이든 누르면 `onboarding_seen=1` → 다음 진입부터 로그인으로.
-- **내용**: `GET /api/flags/public`(무인증, 60초 캐시) 기준 — 전체 공개된 기능만 소개. 플래그 없음: 서재 · 기록(문구·메모·독후감) · 성장(통계·배지) 3장. 공개 시(2026-09-27 프로덕션 전체 공개): 서재 · 기록(서식·페이지 범위·오늘의 회고) · 몰입(집중 타이머·몰입 메모·AI 태그) · 성장(책 쌓기·캐릭터) 4장.
+- **내용**: 서재 · 기록(서식·페이지 범위·오늘의 회고) · 몰입(집중 타이머·몰입 메모·AI 태그) · 성장(책 쌓기·캐릭터) 4장 고정(`ONBOARDING_SLIDES`). 2026-09-27 리뉴얼 전체 공개 후 공개 플래그 분기를 제거했다 — 새 기능을 단계 공개할 때는 미공개 기능을 약속하지 않도록 `GET /api/flags/public`으로 다시 분기한다.
 - **접근성**: 캐러셀 패턴(`role="region"` + `aria-roledescription="carousel"`, 슬라이드 `aria-roledescription="slide"` + "n / 전체" 라벨), 위치 점은 28px 버튼(`aria-current="step"`), 좌우 화살표 키, 스와이프(50px), `useReducedMotion` 시 전환 애니메이션 생략, 자동 넘김 없음.
 - **제거한 것**: 장르·독서 목표 선택 슬라이드 — 회원가입 위자드에 이미 있고, 가입 전이라 토큰이 없어 저장되지도 않았다(선택값 유실 버그).
 
@@ -1589,34 +1589,34 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 | **MonthlyBarChart** | `stats/StatsComponents.tsx` | 월별 바 차트 (recharts), 클릭→상세 카드(AnimatePresence) |
 | **GenreDonutChart** | `stats/StatsComponents.tsx` | 장르 파이 차트 (recharts) |
 | **ReadingHeatmap** | `stats/StatsComponents.tsx` | 독서 히트맵 |
-| **BookStack** ★ 리뉴얼 Phase 2 (`book_stack`) | `stats/BookStack.tsx` | 완독 책을 페이지 수 비례 두께로 쌓은 시각화. 아래=오래된 책, 위=최근 완독(완독일 미상은 맨 아래). 두께 14쪽당 1px(12~32px), 총 높이는 쪽당 0.06mm+표지 1mm로 **추정**해 "약 n cm" 표기(`src/lib/bookStack.ts`). 책등 색은 사용자가 고른 표지 색, 기본값이면 id 기반 팔레트(등록 흐름이 대부분 기본값이라 단색 방지). 폭 78~96%·좌우 ±8px 어긋남을 id로 고정. 최대 40권 표시 + "이전 n권" 요약(높이에는 포함), 쌓기 영역 최대 폭 360px. 배치 화면(StatsPage·YearlyReviewPage) 카드가 다크 모드에서도 흰색이라 밝은 톤 고정. `useReducedMotion` 시 낙하 애니메이션 생략. 책등 제목은 흰 글씨 + `bg-black/40` 배경(모든 책등 색에서 대비 5.07:1 이상). 책등은 전역 버튼 `min-height: 44px`를 인라인 `minHeight`로 덮어써 두께를 표현 — **얇은 책등(12~23px)은 WCAG 2.5.8 권장 24px 미만**(절충 사항) |
+| **BookStack** ★ 리뉴얼 Phase 2 | `stats/BookStack.tsx` | 완독 책을 페이지 수 비례 두께로 쌓은 시각화. 아래=오래된 책, 위=최근 완독(완독일 미상은 맨 아래). 두께 14쪽당 1px(12~32px), 총 높이는 쪽당 0.06mm+표지 1mm로 **추정**해 "약 n cm" 표기(`src/lib/bookStack.ts`). 책등 색은 사용자가 고른 표지 색, 기본값이면 id 기반 팔레트(등록 흐름이 대부분 기본값이라 단색 방지). 폭 78~96%·좌우 ±8px 어긋남을 id로 고정. 최대 40권 표시 + "이전 n권" 요약(높이에는 포함), 쌓기 영역 최대 폭 360px. 배치 화면(StatsPage·YearlyReviewPage) 카드가 다크 모드에서도 흰색이라 밝은 톤 고정. `useReducedMotion` 시 낙하 애니메이션 생략. 책등 제목은 흰 글씨 + `bg-black/40` 배경(모든 책등 색에서 대비 5.07:1 이상). 책등은 전역 버튼 `min-height: 44px`를 인라인 `minHeight`로 덮어써 두께를 표현 — **얇은 책등(12~23px)은 WCAG 2.5.8 권장 24px 미만**(절충 사항) |
 
-### 10.6b Notes 컴포넌트 (`components/notes/`) ★ 리뉴얼 Phase 1 (플래그 `notes_v2`)
-
-| 컴포넌트 | 파일 | 설명 |
-|---------|------|------|
-| **NoteContent** | `notes/NoteContent.tsx` | 노트 본문 렌더러. `**굵게**` → `<strong>`, `==하이라이트==` → `<mark>`(노랑, 다크: `yellow-400/30`). `src/lib/noteMarkup.ts`의 파서 결과를 React 요소로 그림(HTML 주입 없음). **`notes_v2` 플래그가 켜진 사용자에게만** 서식 적용(꺼져 있으면 원문 그대로 — 별표·등호를 글자로 쓴 기존 노트 보호) |
-| **NoteEditor** | `notes/NoteEditor.tsx` | textarea + 서식 툴바(굵게·하이라이트). 단축키 ⌘/Ctrl+B, ⌘/Ctrl+Shift+H. 서식 적용 후 선택 영역을 기호 안쪽으로 유지. 툴바 아이콘은 밝은/어두운 배경 모두 대응하도록 `#64748B` 고정. BookDetailPage 빠른 입력·편집 시트에서 `notes_v2`일 때만 사용 |
-| **DailyRecallCard** | `notes/DailyRecallCard.tsx` | LibraryPage 상단 "오늘의 회고" 카드(앰버 그라데이션, 다크 대응). `GET /api/notes/random`(사용자·KST 날짜별 고정), 본문 140자 미리보기 + 3줄 클램프, 탭 → 해당 책 상세. 플래그 off·노트 없음이면 렌더링 안 함 |
-
-페이지 범위: 편집 시트에 "시작 페이지 ~ 끝 페이지" 입력(`notes_v2`), 카드·검색 결과 표기는 `formatNotePages()` → `p.12` / `p.12–15`. 끝 페이지 < 시작 페이지면 토스트 오류 후 시트 유지. NotesSearchPage는 `notes_v2`일 때 검색어 하이라이트와 겹치지 않도록 서식 기호를 걷어 낸 평문(`stripNoteMarkup`)으로 표시(꺼져 있으면 원문).
-
-### 10.6c Characters 컴포넌트 (`components/characters/`) ★ 리뉴얼 Phase 3 (플래그 `characters`, ADR-004)
+### 10.6b Notes 컴포넌트 (`components/notes/`) ★ 리뉴얼 Phase 1
 
 | 컴포넌트 | 파일 | 설명 |
 |---------|------|------|
-| **AchievementsSection** | `characters/AchievementsSection.tsx` | StatsPage 성취 배지 자리(플래그 on일 때 기존 `AchievementBadges` 대체). 캐릭터 카드 2장(책 부엉이·페이지 드래곤: 아바타, 현재 단계, 다음 진화까지 진행 바 `role="progressbar"`), 달성 업적(등급 색), 다음 도전(기본 2개, "모두 보기" `aria-expanded`). 데이터는 `useAchievements()`(GET /api/achievements) |
+| **NoteContent** | `notes/NoteContent.tsx` | 노트 본문 렌더러. `**굵게**` → `<strong>`, `==하이라이트==` → `<mark>`(노랑, 다크: `yellow-400/30`). `src/lib/noteMarkup.ts`의 파서 결과를 React 요소로 그림(HTML 주입 없음). 2026-09-27 전체 공개 후 모든 노트에 서식 적용(별표·등호를 글자로 쓴 옛 노트도 서식으로 보임) |
+| **NoteEditor** | `notes/NoteEditor.tsx` | textarea + 서식 툴바(굵게·하이라이트). 단축키 ⌘/Ctrl+B, ⌘/Ctrl+Shift+H. 서식 적용 후 선택 영역을 기호 안쪽으로 유지. 툴바 아이콘은 밝은/어두운 배경 모두 대응하도록 `#64748B` 고정. BookDetailPage 빠른 입력·편집 시트에서 사용 |
+| **DailyRecallCard** | `notes/DailyRecallCard.tsx` | LibraryPage 상단 "오늘의 회고" 카드(앰버 그라데이션, 다크 대응). `GET /api/notes/random`(사용자·KST 날짜별 고정), 본문 140자 미리보기 + 3줄 클램프, 탭 → 해당 책 상세. 노트가 없으면 렌더링 안 함 |
+
+페이지 범위: 편집 시트에 "시작 페이지 ~ 끝 페이지" 입력, 카드·검색 결과 표기는 `formatNotePages()` → `p.12` / `p.12–15`. 끝 페이지 < 시작 페이지면 토스트 오류 후 시트 유지. NotesSearchPage는 검색어 하이라이트와 겹치지 않도록 서식 기호를 걷어 낸 평문(`stripNoteMarkup`)으로 표시.
+
+### 10.6c Characters 컴포넌트 (`components/characters/`) ★ 리뉴얼 Phase 3 (ADR-004)
+
+| 컴포넌트 | 파일 | 설명 |
+|---------|------|------|
+| **AchievementsSection** | `characters/AchievementsSection.tsx` | StatsPage 성취 배지 자리(옛 화면 계산 `AchievementBadges`는 2026-09-27 제거). 캐릭터 카드 2장(책 부엉이·페이지 드래곤: 아바타, 현재 단계, 다음 진화까지 진행 바 `role="progressbar"`), 달성 업적(등급 색), 다음 도전(기본 2개, "모두 보기" `aria-expanded`). 데이터는 `useAchievements()`(GET /api/achievements) |
 | **CharacterAvatar** | `characters/CharacterAvatar.tsx` | 이모지 + SVG 원형 프레임(단계별 색: 회색→동→은→금→보라) + 단계 눈금 + 최종 단계 👑. `role="img"` + 캐릭터·단계 aria-label. 일러스트 교체 시 이 컴포넌트에서 `asset`으로 분기 |
 | **AchievementCelebration** | `characters/AchievementCelebration.tsx` | Root에 1회 마운트되는 축하 모달(`ui/Modal`). `celebrationStore` 큐를 하나씩 표시(여러 개면 "확인 (n개 더)"). 진화 아바타 스프링 등장(모션 줄이기 시 생략), 새 업적 배지. 드롭다운 메뉴가 닫히며 포커스를 되돌리는 경우에 대비해 200ms 후 [확인]으로 포커스 재이동. 조사는 `lib/koreanParticle.ts`로 받침에 맞춤("드래곤이", "어린 용이에요") |
 
-이벤트 흐름: 변경 API 응답 `achievements` → `useAchievementCelebration()`(useAddBook·useUpdateBook·useAddSession) → 플래그 on이면 `celebrationStore.push` + 인앱 알림(`achievement` 타입, 🏆) / 항상 업적 캐시 무효화. `/register-flow`(Root 밖)에서 달성해도 Root로 돌아오면 표시된다. 등급 색 `TIER_STYLE`은 `characters/tierStyle.ts`로 추출해 기존 배지와 공유.
+이벤트 흐름: 변경 API 응답 `achievements` → `useAchievementCelebration()`(useAddBook·useUpdateBook·useAddSession) → `celebrationStore.push` + 인앱 알림(`achievement` 타입, 🏆) + 업적 캐시 무효화. `/register-flow`(Root 밖)에서 달성해도 Root로 돌아오면 표시된다. 등급 색 `TIER_STYLE`은 `characters/tierStyle.ts`(업적 섹션·축하 모달·아바타 공유).
 
-### 10.6d 몰입 타이머·노트 태그 (Phase 4, 플래그 `focus_timer`·`ai_tags`)
+### 10.6d 몰입 타이머·노트 태그 (Phase 4)
 
 | 컴포넌트 | 파일 | 설명 |
 |---------|------|------|
-| **FocusTimer** | `reading/FocusTimer.tsx` | ReadingPage 타이머 위젯 대체(`focus_timer`). 자유/집중 모드 `role="radiogroup"`, 집중 프리셋 15·25·45·60분(정지·0초일 때만 변경), 집중 모드 원형 진행 링, 남은 시간 `role="timer"`, "이 구간 메모 n개" 표시, 버튼 44px. 목표 도달 시 자동 정지 + 진동 → 기존 "기록할까요?" 프롬프트 |
-| **NoteMeta** | `notes/NoteMeta.tsx` | 노트 부가 정보 줄: `⏱ 몰입` 배지(`session_id` 있음, `focus_timer`) + AI 태그 칩(`ai_tags`) → `/notes-search?tag=`. 전역 `a:not([role]) { min-height: unset }`을 인라인 `minHeight: 24`로 덮어 WCAG 2.5.8 충족. BookDetailPage 노트 카드·NotesSearchPage 결과에 사용 |
+| **FocusTimer** | `reading/FocusTimer.tsx` | ReadingPage 타이머 위젯(옛 `ReadingTimerWidget`은 2026-09-27 제거). 자유/집중 모드 `role="radiogroup"`, 집중 프리셋 15·25·45·60분(정지·0초일 때만 변경), 집중 모드 원형 진행 링, 남은 시간 `role="timer"`, "이 구간 메모 n개" 표시, 버튼 44px. 목표 도달 시 자동 정지 + 진동 → 기존 "기록할까요?" 프롬프트 |
+| **NoteMeta** | `notes/NoteMeta.tsx` | 노트 부가 정보 줄: `⏱ 몰입` 배지(`session_id` 있음) + AI 태그 칩 → `/notes-search?tag=`. 전역 `a:not([role]) { min-height: unset }`을 인라인 `minHeight: 24`로 덮어 WCAG 2.5.8 충족. BookDetailPage 노트 카드·NotesSearchPage 결과에 사용 |
 
 - **타이머 상태 영속화**: `timerStore`를 localStorage(`bookshelf_timer`)에 저장 — iOS가 백그라운드 PWA를 종료하거나 새로고침해도 시작 시각 기준으로 경과 시간이 이어진다. 로그아웃 시 비움.
 - **몰입 메모 흐름**: 타이머가 책 X로 진행/일시정지 중일 때 책 X에 쓴 노트 id를 수집(`useAddNote`) → 세션 저장 시 `note_ids`로 전송(`useAddSession`) → 성공 시 비움. BookDetailPage: 진행 중 안내 배너(`role="status"`), "⏱ 몰입 메모만 n" 토글(`aria-pressed`).
@@ -1686,7 +1686,7 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 | `/api/notes/:id` | PUT | BookDetailPage, NotesSearchPage | "수정 완료" 버튼 |
 | `/api/notes/:id` | DELETE | BookDetailPage, NotesSearchPage | 삭제 버튼 |
 | `/api/notes/export?book_id=` | GET | — | (Markdown 내보내기) |
-| `/api/notes/random` | GET | LibraryPage DailyRecallCard (`notes_v2`) | 서재 진입 (`useDailyNote`, staleTime 1h) |
+| `/api/notes/random` | GET | LibraryPage DailyRecallCard | 서재 진입 (`useDailyNote`, staleTime 1h) |
 | `/api/achievements` | GET | StatsPage AchievementsSection, AchievementCelebration (`characters`) | 통계 진입 (`useAchievements`, staleTime 60s) — 업적 이벤트 수신 시 무효화 |
 
 ### 11.5 Search API

@@ -5,7 +5,7 @@
  * - 읽기 목표(읽는 중 도서 제한) 설정
  */
 import { useState, useEffect, useRef } from "react";
-import { X, Target, BookOpen, Play, Pause, RotateCcw, Timer, ChevronDown, RefreshCw, CheckCircle2 } from "lucide-react";
+import { X, Target, BookOpen, Timer, ChevronDown, RefreshCw, CheckCircle2 } from "lucide-react";
 import type { UIBook, GenreKey } from "../../types/book";
 import { ALL_GENRES } from "../../types/book";
 import { ReadingBookCard, BookCover } from "../components/books/BookCard";
@@ -28,7 +28,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { usersApi, queryKeys, searchApi } from "../../lib/api";
 import { useAuthStore } from "../../stores/authStore";
 import { useStats } from "../../hooks/useStats";
-import { useFlag } from "../../hooks/useFeatureFlags";
 import { FocusTimer } from "../components/reading/FocusTimer";
 import { useTimerStore } from "../../stores/timerStore";
 
@@ -777,87 +776,6 @@ function QuickActions({
   );
 }
 
-/* ─── Reading Timer Widget ─────────────────────────────────── */
-interface ReadingTimerWidgetProps {
-  displayTime: string;
-  isRunning: boolean;
-  onStart: () => void;
-  onPause: () => void;
-  onReset: () => void;
-  timerBook?: UIBook | null;
-  elapsedMinutes?: number;
-}
-
-function ReadingTimerWidget({
-  displayTime,
-  isRunning,
-  onStart,
-  onPause,
-  onReset,
-  timerBook,
-  elapsedMinutes = 0,
-}: ReadingTimerWidgetProps) {
-  return (
-    <div
-      className="mx-4 mb-4 rounded-2xl px-5 py-4"
-      style={{ background: "linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)" }}
-    >
-      {/* Top row: book title LEFT, accumulated time RIGHT */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <Timer size={14} style={{ color: "rgba(255,255,255,0.55)", flexShrink: 0 }} />
-          {timerBook && (
-            <p className="truncate" style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", fontWeight: 600 }}>
-              {timerBook.title}
-            </p>
-          )}
-        </div>
-        {elapsedMinutes > 0 && (
-          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", fontWeight: 500, flexShrink: 0, marginLeft: 8 }}>
-            오늘 {elapsedMinutes}분 독서
-          </span>
-        )}
-      </div>
-      {/* Bottom row: large timer LEFT, control buttons RIGHT */}
-      <div className="flex items-center justify-between">
-        <span
-          className="font-mono"
-          style={{
-            fontSize: 48,
-            fontWeight: 800,
-            letterSpacing: "0.02em",
-            color: isRunning ? "white" : "rgba(255,255,255,0.45)",
-            lineHeight: 1,
-          }}
-        >
-          {displayTime}
-        </span>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={isRunning ? onPause : onStart}
-            className="w-11 h-11 rounded-full flex items-center justify-center transition-all hover:opacity-90 active:scale-95"
-            style={{ background: "rgba(255,255,255,0.2)" }}
-            aria-label={isRunning ? "일시정지" : "시작"}
-          >
-            {isRunning
-              ? <Pause size={18} color="white" fill="white" />
-              : <Play size={18} color="white" fill="white" />
-            }
-          </button>
-          <button
-            onClick={onReset}
-            className="w-9 h-9 rounded-full flex items-center justify-center transition-all hover:opacity-90 active:scale-95"
-            style={{ background: "rgba(255,255,255,0.1)" }}
-            aria-label="초기화"
-          >
-            <RotateCcw size={14} style={{ color: "rgba(255,255,255,0.6)" }} />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ─── Page ─────────────────────────────────────────────────── */
 export function ReadingPage() {
   const { data: books = [], isLoading, isError, refetch } = useBooks({ status: 'reading' });
@@ -868,7 +786,6 @@ export function ReadingPage() {
   const [deleteTarget, setDeleteTarget] = useState<UIBook | null>(null);
   const [selectedGenre, setSelectedGenre] = useState<GenreKey | null>(null);
   const [timerBook, setTimerBook] = useState<UIBook | null>(null);
-  const focusTimerEnabled = useFlag("focus_timer");
   const timerStoreBookId = useTimerStore((s) => s.bookId);
   const [logModalOpen, setLogModalOpen] = useState(false);
   const [goalModalOpen, setGoalModalOpen] = useState(false);
@@ -1037,21 +954,9 @@ export function ReadingPage() {
         timerDisplay={timer.displayTime}
       />
 
-      {/* 독서 타이머 위젯 — focus_timer 플래그: 몰입 타이머(Phase 4) */}
+      {/* 독서 타이머 위젯 — 몰입 타이머(스톱워치·집중 카운트다운) */}
       <div ref={timerRef}>
-        {focusTimerEnabled ? (
-          <FocusTimer timer={timer} timerBook={timerBook} />
-        ) : (
-        <ReadingTimerWidget
-          displayTime={timer.displayTime}
-          isRunning={timer.isRunning}
-          onStart={timer.start}
-          onPause={timer.pause}
-          onReset={timer.reset}
-          timerBook={timerBook}
-          elapsedMinutes={timer.minutes}
-        />
-        )}
+        <FocusTimer timer={timer} timerBook={timerBook} />
       </div>
 
       {/* Section header row */}

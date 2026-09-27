@@ -4,18 +4,15 @@
  * - 장르 분포도넛, 연속 읽기 스트릭
  * - 연간 리뷰 페이지 링크
  */
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Link } from "react-router";
-import { BookMarked, BookOpen, Sparkles, FileText, Target, ChevronRight, ChevronDown, Download } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { BookMarked, BookOpen, Sparkles, FileText, Target, ChevronRight, Download } from "lucide-react";
 import { SummaryCard, MonthlyBarChart, GenreDonutChart, ReadingHeatmap, StreakCard, ReadingCalendar } from "../components/stats/StatsComponents";
 import { StatCardSkeleton, ChartSkeleton } from "../components/ui/skeleton";
 import { useStats } from "../../hooks/useStats";
 import { useBooks } from "../../hooks/useBooks";
-import { useFlag } from "../../hooks/useFeatureFlags";
 import { BookStack } from "../components/stats/BookStack";
 import { AchievementsSection } from "../components/characters/AchievementsSection";
-import { TIER_STYLE, DEFAULT_TIER_STYLE } from "../components/characters/tierStyle";
 import type { UISession } from "../../types/book";
 import { GENRE_CONFIG } from "../../types/book";
 import { useAuthStore } from "../../stores/authStore";
@@ -67,149 +64,9 @@ function buildSyntheticSessions(sessionDates: string[]): UISession[] {
   }));
 }
 
-/* ─── FEAT-101: 성취 배지 ────────────────────────────────────── */
-interface Badge {
-  id: string;
-  icon: string;
-  label: string;
-  description: string;
-  threshold: number;
-  type: "books" | "pages";
-  tier: "bronze" | "silver" | "gold" | "platinum";
-}
-
-const BADGES: Badge[] = [
-  { id: "first_book",  icon: "📖", label: "첫 완독",    description: "첫 번째 책을 완독했어요",   threshold: 1,   type: "books",  tier: "bronze"   },
-  { id: "5books",      icon: "📚", label: "독서 시작",  description: "책 5권을 완독했어요",        threshold: 5,   type: "books",  tier: "bronze"   },
-  { id: "10books",     icon: "🥈", label: "독서가",     description: "책 10권을 완독했어요",       threshold: 10,  type: "books",  tier: "silver"   },
-  { id: "25books",     icon: "🥇", label: "열독가",     description: "책 25권을 완독했어요",       threshold: 25,  type: "books",  tier: "gold"     },
-  { id: "50books",     icon: "🏆", label: "북마스터",   description: "책 50권을 완독했어요",       threshold: 50,  type: "books",  tier: "platinum" },
-  { id: "100pages",    icon: "✨", label: "100p 달성",  description: "100페이지를 읽었어요",       threshold: 100, type: "pages",  tier: "bronze"   },
-  { id: "1000pages",   icon: "⭐", label: "1000p 달성", description: "1,000 페이지를 읽었어요",    threshold: 1000, type: "pages", tier: "silver"   },
-  { id: "5000pages",   icon: "🌟", label: "5000p 달성", description: "5,000 페이지를 읽었어요",    threshold: 5000, type: "pages", tier: "gold"     },
-];
-
-// 등급 색은 Phase 3 업적 섹션과 공유 (components/characters/tierStyle.ts)
-
-function AchievementBadges({ totalDone, totalPages }: { totalDone: number; totalPages: number }) {
-  const [expanded, setExpanded] = useState(false);
-
-  const unlocked = BADGES.filter((b) =>
-    b.type === "books" ? totalDone >= b.threshold : totalPages >= b.threshold
-  );
-  const locked = BADGES.filter((b) =>
-    b.type === "books" ? totalDone < b.threshold : totalPages < b.threshold
-  );
-
-  // Collapsed: show up to 3 unlocked badges only
-  const visibleUnlocked = expanded ? unlocked : unlocked.slice(0, 3);
-  const visibleLocked = expanded ? locked.slice(0, 3) : [];
-  const hasMore = !expanded && (unlocked.length > 3 || locked.length > 0);
-
-  return (
-    <div className="px-4 mb-3">
-      <div className="rounded-2xl bg-white border border-[#E2E8F0] p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: "#1E293B" }}>🏅 성취 배지</h3>
-          <span style={{ fontSize: 12, color: "#64748B" }}>
-            {unlocked.length} / {BADGES.length} 달성
-          </span>
-        </div>
-
-        {/* 해금된 배지 */}
-        {unlocked.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-3">
-            {visibleUnlocked.map((b) => {
-              const tierStyle = TIER_STYLE[b.tier] ?? DEFAULT_TIER_STYLE;
-              return (
-                <div
-                  key={b.id}
-                  className="flex flex-col items-center gap-1 rounded-xl p-2.5"
-                  style={{ backgroundColor: tierStyle.bg, border: `1.5px solid ${tierStyle.border}`, minWidth: 70 }}
-                  title={b.description}
-                >
-                  <span style={{ fontSize: 22 }}>{b.icon}</span>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: tierStyle.label, textAlign: "center" }}>
-                    {b.label}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {unlocked.length === 0 && (
-          <p style={{ fontSize: 13, color: "#64748B", textAlign: "center", padding: "16px 0" }}>
-            아직 달성한 배지가 없어요. 책을 읽어보세요! 📚
-          </p>
-        )}
-
-        {/* 다음 도전 배지 — expanded 시에만 */}
-        <AnimatePresence>
-          {expanded && visibleLocked.length > 0 && (
-            <motion.div
-              key="locked-badges"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-              style={{ overflow: "hidden" }}
-            >
-              <div>
-                <p style={{ fontSize: 11, color: "#64748B", fontWeight: 600, marginBottom: 8 }}>다음 도전</p>
-                <div className="flex flex-wrap gap-2">
-                  {visibleLocked.map((b) => (
-                    <div
-                      key={b.id}
-                      className="flex flex-col items-center gap-1 rounded-xl p-2.5"
-                      style={{ backgroundColor: "#F8FAFC", border: "1.5px solid #E2E8F0", minWidth: 70, opacity: 0.5 }}
-                      title={b.description}
-                    >
-                      <span style={{ fontSize: 22, filter: "grayscale(1)" }}>{b.icon}</span>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: "#64748B", textAlign: "center" }}>
-                        {b.label}
-                        <br />
-                        <span style={{ fontSize: 11 }}>
-                          {b.type === "books"
-                            ? `${b.threshold - totalDone}권 남음`
-                            : `${(b.threshold - totalPages).toLocaleString()}p 남음`}
-                        </span>
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Expand / collapse toggle */}
-        {(hasMore || expanded) && (
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="mt-3 w-full flex items-center justify-center gap-1 py-1.5 rounded-xl"
-            style={{ fontSize: 12, fontWeight: 600, color: "#4F46E5", backgroundColor: "#EEF2FF" }}
-          >
-            {expanded ? "접기" : `전체 보기 ${BADGES.length}개`}
-            <motion.span
-              animate={{ rotate: expanded ? 180 : 0 }}
-              transition={{ duration: 0.2 }}
-              style={{ display: "flex" }}
-            >
-              <ChevronDown size={14} />
-            </motion.span>
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
 export function StatsPage() {
   const { data: stats, isLoading, isError } = useStats();
   const { data: doneBooks = [] } = useBooks({ status: "done" });
-  const bookStackEnabled = useFlag("book_stack");
-  const charactersEnabled = useFlag("characters");
   const user = useAuthStore((s) => s.user);
   const readingGoal = user?.reading_goal;
 
@@ -413,15 +270,11 @@ export function StatsPage() {
             <StreakCard sessions={syntheticSessions} />
           </div>
 
-          {/* 성취 배지 — characters 플래그: 서버 저장 업적 + 캐릭터(ADR-004), 아니면 기존 화면 계산 배지(FEAT-101) */}
-          {charactersEnabled ? (
-            <AchievementsSection />
-          ) : (
-            <AchievementBadges totalDone={totalDone} totalPages={totalPages} />
-          )}
+          {/* 업적 + 캐릭터 (서버 저장, ADR-004) */}
+          <AchievementsSection />
 
-          {/* 지금까지 쌓은 책 (book_stack 플래그) */}
-          {bookStackEnabled && doneBooks.length > 0 && (
+          {/* 지금까지 쌓은 책 */}
+          {doneBooks.length > 0 && (
             <div className="px-4 mb-3">
               <BookStack books={doneBooks} title="지금까지 쌓은 책" />
             </div>

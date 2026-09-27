@@ -1,6 +1,6 @@
 /**
  * 업적 달성·캐릭터 진화 축하 모달 — Root에 한 번 마운트, celebrationStore 큐를 하나씩 보여준다.
- * 이벤트는 useAchievementCelebration이 `characters` 플래그가 켜진 사용자에게만 쌓는다.
+ * 이벤트는 useAchievementCelebration이 변경 API 응답의 achievements 필드로 쌓는다.
  * 모션 줄이기 설정 시 등장 애니메이션을 생략한다.
  */
 import { useEffect, useRef } from "react";

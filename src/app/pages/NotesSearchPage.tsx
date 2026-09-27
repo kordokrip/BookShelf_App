@@ -12,7 +12,6 @@ import { useNotes, useUpdateNote, useDeleteNote } from "../../hooks/useNotes";
 import { useRecentSearches } from "../../hooks/useRecentSearches";
 import { useToast } from "../components/ui/Toast";
 import { stripNoteMarkup, formatNotePages } from "../../lib/noteMarkup";
-import { useFlag } from "../../hooks/useFeatureFlags";
 import { NoteMeta } from "../components/notes/NoteMeta";
 
 const NOTES_RECENT_KEY = "notes_recent_searches";
@@ -93,10 +92,9 @@ export function NotesSearchPage() {
     }
   }, [debouncedQuery, addSearch]);
 
-  // Phase 4: AI 태그 필터 (?tag=, NoteMeta 칩에서 진입) — ai_tags 플래그 사용자만
+  // AI 태그 필터 (?tag=, NoteMeta 칩에서 진입)
   const [searchParams, setSearchParams] = useSearchParams();
-  const aiTagsEnabled = useFlag("ai_tags");
-  const activeTag = aiTagsEnabled ? searchParams.get("tag")?.trim() || null : null;
+  const activeTag = searchParams.get("tag")?.trim() || null;
   const clearTag = () => {
     const next = new URLSearchParams(searchParams);
     next.delete("tag");
@@ -112,7 +110,6 @@ export function NotesSearchPage() {
   const updateNoteMutation = useUpdateNote();
   const deleteNoteMutation = useDeleteNote();
   const { showToast } = useToast();
-  const notesV2 = useFlag("notes_v2");
 
   return (
     <div className="flex flex-col min-h-[var(--vp-h)] bg-background">
@@ -291,8 +288,8 @@ export function NotesSearchPage() {
                 </div>
 
                 <p className="text-sm text-foreground leading-relaxed mb-3">
-                  {/* notes_v2: 검색어 하이라이트와 겹치지 않도록 서식 기호는 걷어 내고 표시 */}
-                  {highlightText(notesV2 ? stripNoteMarkup(note.content) : note.content, debouncedQuery)}
+                  {/* 검색어 하이라이트와 겹치지 않도록 서식 기호는 걷어 내고 표시 */}
+                  {highlightText(stripNoteMarkup(note.content), debouncedQuery)}
                 </p>
 
                 <NoteMeta note={note} className="mb-2" />

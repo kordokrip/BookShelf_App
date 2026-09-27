@@ -1,5 +1,5 @@
 /**
- * 업적 등급(tier)별 배지 색 — StatsPage 기존 배지와 Phase 3 업적 섹션이 공유.
+ * 업적 등급(tier)별 배지 색 — 업적 섹션·축하 모달이 공유.
  * 글자색은 각 배경 위에서 WCAG AA(4.5:1) 이상.
  */
 import type { AchievementTier } from "../../../lib/api/achievements";
