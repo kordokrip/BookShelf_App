@@ -13,11 +13,19 @@ import type { UIBook } from '../types/book';
 import { useUiStore } from '../stores/uiStore';
 
 /** 도서 목록 조회 (status / genre / sort 필터) */
+/**
+ * 목록 조회 상한 — API 최댓값(worker/routes/books.ts SEC-04, 500).
+ * 기본값(100)이면 완독 100권을 넘는 사용자의 서재·책 쌓기·개수 뱃지가 잘려 보인다.
+ * 서버 응답의 count는 전체 개수가 아니라 반환 행 수이므로, 500권 초과는 별도 페이지네이션이 필요.
+ */
+export const BOOK_LIST_LIMIT = 500;
+
 export function useBooks(filters?: { status?: BookStatus; genre?: string; sort?: 'created_at_desc' | 'title_asc' | 'author_asc' | 'rating_desc' | 'finished_date_desc' }) {
   return useQuery({
+    // limit은 모든 호출에서 같으므로 캐시 키에 넣지 않는다 (useBookCount와 키 공유 유지)
     queryKey: queryKeys.books.list(filters ?? {}),
     queryFn: async () => {
-      const res = await booksApi.list(filters ?? {});
+      const res = await booksApi.list({ ...(filters ?? {}), limit: BOOK_LIST_LIMIT });
       return res.data.map(normalizeBook);
     },
     staleTime: 5 * 60 * 1000, // 5분
@@ -32,7 +40,7 @@ export function useBookCount(status: BookStatus) {
   return useQuery({
     queryKey: queryKeys.books.list({ status }),
     queryFn: async () => {
-      const res = await booksApi.list({ status });
+      const res = await booksApi.list({ status, limit: BOOK_LIST_LIMIT });
       return res.data.map(normalizeBook);
     },
     select: (data: UIBook[]) => data.length,
