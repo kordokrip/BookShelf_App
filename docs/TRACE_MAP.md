@@ -929,15 +929,17 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 | Method | 경로 | 인증 | 요청 | 응답 | Worker 파일 |
 |---|---|---|---|---|---|
 | GET | `/api/sessions` | optionalAuth | `?book_id=&limit=` | `{data: Session[]}` | `routes/sessions.ts` |
-| POST | `/api/sessions` | **authMiddleware** ✅ | `{book_id, pages_read, session_date?, duration_min?}` | `{data: Session, new_current_page}` 201 | `routes/sessions.ts` |
+| POST | `/api/sessions` | **authMiddleware** ✅ | `{book_id, pages_read, session_date?, duration_min?, note_ids?}` — `note_ids`(Phase 4, uuid 최대 50): 이 세션(몰입 타이머) 중 작성한 노트를 `notes.session_id`로 연결, 본인·같은 책 노트만 적용 | `{data: Session, new_current_page, achievements?}` 201 | `routes/sessions.ts` |
 
 ### 노트 (`/api/notes`)
 
-노트 컬럼: `page_number`(시작 페이지), `end_page`(0015, 범위 끝 — `page_number` 이상), `session_id`·`tags`(0015, Phase 4 예정).
+노트 컬럼: `page_number`(시작 페이지), `end_page`(0015, 범위 끝 — `page_number` 이상), `session_id`(0015, 몰입 타이머 세션 연결), `tags`(0015, AI 태그 JSON 배열).
+
+**AI 태깅(Phase 4)**: `POST /api/notes`·내용이 바뀐 `PUT /api/notes/:id` 후 `waitUntil`로 비동기 실행(`lib/noteTagger.ts`). 20자 이상 + `ai_tags` 플래그 사용자만(ADR-003 예외). 모델 `@cf/meta/llama-3.1-8b-instruct-fast`, 키워드 3~4 + 감정 1 → 정규화 최대 5개. 사용자별 하루 50회(`ai_tag_quota:{userId}:{KST날짜}`), 같은 내용 캐시 `ai_tag:{sha256}` 7일. 내용 수정 시 `tags=NULL` 후 재태깅, 태깅 중 내용이 바뀌면 덮어쓰지 않음.
 
 | Method | 경로 | 인증 | 요청 | 응답 | Worker 파일 |
 |---|---|---|---|---|---|
-| GET | `/api/notes` | **authMiddleware** | `?book_id=&type=&search=&limit=&offset=` | `{data: Note[], count}` | `routes/notes.ts` |
+| GET | `/api/notes` | **authMiddleware** | `?book_id=&type=&search=&tag=&limit=&offset=` — `tag`(Phase 4): AI 태그 정확 일치(`json_each(tags)`) | `{data: Note[], count}` | `routes/notes.ts` |
 | GET | `/api/notes/export` | **authMiddleware** | `?book_id=` | Markdown 파일 (페이지 범위는 `(p.12–15)` 표기) | `routes/notes.ts` |
 | GET | `/api/notes/random` | **authMiddleware** | — | `{data: Note & {book_title, book_author, book_cover_image, book_cover_color} \| null}` — 오늘의 회고. 사용자·KST 날짜별 결정적 선택(`pickDailyIndex`), 노트가 없으면 `null` | `routes/notes.ts` + `lib/noteHelpers.ts` |
 | GET | `/api/notes/:id` | **authMiddleware** | — | `{data: Note}` | `routes/notes.ts` |

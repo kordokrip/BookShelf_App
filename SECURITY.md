@@ -60,6 +60,7 @@ OWASP 권장 반복 횟수는 600,000+ 이지만, Cloudflare Workers의 CPU 시�
 | GET /api/ai/recommend | 10회 | 60초 |
 | GET /api/ai/lifebooks | 3회 | 600초(10분) |
 | POST /api/ai/ocr | 3회 | 60초 |
+| (노트 AI 태깅, 내부 비동기) | 사용자별 50회 | 하루(KST) — `ai_tag_quota` KV, 플래그 `ai_tags` 사용자만 |
 | GET /api/search/books | 20회 | 60초 |
 | GET /api/search/books/isbn | 10회 | 60초 |
 | GET /api/search/pagecount | 15회 | 60초 |

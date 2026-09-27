@@ -48,7 +48,7 @@ FAILED_TESTS=()
 if [[ "$READONLY" == true ]]; then
   TOTAL=3
 else
-  TOTAL=59
+  TOTAL=62
 fi
 
 # ── 시작 시각 ────────────────────────────────────────────────────
@@ -579,6 +579,63 @@ if [[ "$HTTP_CODE" == "200" && "$RANDOM_ID" == "$NOTE_ID" && -n "$RANDOM_TITLE" 
   printf "         ${CYAN}↳ note=%s, book_title=%s${NC}\n" "$RANDOM_ID" "$RANDOM_TITLE"
 else
   fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE}, id=${RANDOM_ID} (기대: 200 + 유일한 노트 ${NOTE_ID} + book_title)"
+fi
+
+# ── 몰입 메모 연결 + AI 태그 (TEST 60~62, Phase 4) ──
+T=60; NAME="POST /api/sessions (note_ids → 몰입 메모 연결)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+curl -s -o "$TMPF" -X POST "${BASE_URL}/api/notes" \
+  -H "Authorization: Bearer ${TOKEN}" -H "Content-Type: application/json" \
+  -d "{\"book_id\":\"${BOOK_ID_READING}\",\"type\":\"memo\",\"content\":\"E2E 몰입 구간에서 적은 메모입니다. 주인공의 선택이 오래 기억에 남는다.\"}"
+FOCUS_NOTE_ID=$(json_val "$(cat "$TMPF")" "d['data']['id']")
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" -X POST "${BASE_URL}/api/sessions" \
+  -H "Authorization: Bearer ${TOKEN}" -H "Content-Type: application/json" \
+  -d "{\"book_id\":\"${BOOK_ID_READING}\",\"pages_read\":7,\"duration_min\":25,\"note_ids\":[\"${FOCUS_NOTE_ID}\"]}")
+FOCUS_SESSION_ID=$(json_val "$(cat "$TMPF")" "d['data']['id']")
+curl -s -o "$TMPF" "${BASE_URL}/api/notes/${FOCUS_NOTE_ID}" -H "Authorization: Bearer ${TOKEN}"
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+LINKED=$(json_val "$BODY" "d['data']['session_id']")
+if [[ "$HTTP_CODE" == "201" && -n "$FOCUS_SESSION_ID" && "$LINKED" == "$FOCUS_SESSION_ID" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE}, session=${FOCUS_SESSION_ID}, note.session_id=${LINKED}"
+fi
+
+T=61; NAME="GET /api/notes?tag= (없는 태그 → 0건)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" --get --data-urlencode "tag=존재하지않는태그" \
+  "${BASE_URL}/api/notes" -H "Authorization: Bearer ${TOKEN}")
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+TAG_COUNT=$(json_val "$BODY" "len(d['data'])")
+if [[ "$HTTP_CODE" == "200" && "$TAG_COUNT" == "0" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE}, count=${TAG_COUNT} (기대: 200 + 0)"
+fi
+
+# AI 태깅은 응답 후 비동기(waitUntil) + ai_tags 플래그 사용자만 → 플래그가 꺼진 환경은 건너뜀
+T=62; NAME="AI 태그 비동기 생성 (ai_tags 플래그 환경만)"; START=$(now_ms)
+FLAGS_BODY=$(curl -s "${BASE_URL}/api/flags" -H "Authorization: Bearer ${TOKEN}")
+HAS_AI_TAGS=$(json_val "$FLAGS_BODY" "'ai_tags' in d['data']['flags']")
+if [[ "$HAS_AI_TAGS" != "True" ]]; then
+  pass_test $T "$NAME (flag off — 건너뜀)" $(( $(now_ms) - START ))
+else
+  NOTE_TAGS=""
+  for i in $(seq 1 10); do
+    sleep 2
+    NOTE_BODY=$(curl -s "${BASE_URL}/api/notes/${FOCUS_NOTE_ID}" -H "Authorization: Bearer ${TOKEN}")
+    NOTE_TAGS=$(json_val "$NOTE_BODY" "d['data']['tags'] or ''")
+    [[ -n "$NOTE_TAGS" ]] && break
+  done
+  ELAPSED=$(( $(now_ms) - START ))
+  if [[ -n "$NOTE_TAGS" ]]; then
+    pass_test $T "$NAME" $ELAPSED
+    printf "         ${CYAN}↳ tags=%s${NC}\n" "$NOTE_TAGS"
+  else
+    fail_test $T "$NAME" $ELAPSED "$NOTE_BODY" "20초 내 tags 미생성 (AI 오류·쿼터 확인: wrangler tail)"
+  fi
 fi
 
 # ── 업적·캐릭터 (TEST 58~59, Phase 3) ──

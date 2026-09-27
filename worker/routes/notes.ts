@@ -2,7 +2,7 @@
  * notes 라우터 — 독서 노트/하이라이트/인용/리뷰 CRUD
  *
  * GET    /api/notes/export    — 노트 마크다운 파일 내보내기 (book_id 필터 가능)
- * GET    /api/notes           — 노트 목록 조회 (book_id, type, search 필터 + FTS5 전문검색)
+ * GET    /api/notes           — 노트 목록 조회 (book_id, type, search, tag 필터 + FTS5 전문검색)
  * GET    /api/notes/random    — 오늘의 회고 노트 1건 (사용자·KST 날짜별 결정적 선택, 없으면 null)
  * POST   /api/notes           — 노트 생성
  * PUT    /api/notes/:id       — 노트 수정 (end_page는 page_number 이상)
@@ -19,6 +19,9 @@ import type { Bindings, DbNote } from '../types';
 import { authMiddleware } from '../auth';
 import { logActivity } from './admin';
 import { validatePageRange, formatPageRange, kstDateString, pickDailyIndex } from '../lib/noteHelpers';
+import { shouldTag } from '../lib/noteTags';
+import { tagNote } from '../lib/noteTagger';
+import { userHasFlag } from '../lib/featureFlags';
 
 export const notesRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -146,6 +149,9 @@ notesRouter.get('/', authMiddleware, async (c) => {
   const bookId = c.req.query('book_id');
   const type = c.req.query('type');
   const search = c.req.query('search');
+  // Phase 4: AI 태그 필터 — tags(JSON 배열)에 정확히 일치하는 값이 있는 노트
+  const tag = c.req.query('tag')?.trim() || undefined;
+  const TAG_SQL = 'EXISTS (SELECT 1 FROM json_each(COALESCE(tags, \'[]\')) WHERE value = ?)';
   const limit = parseInt(c.req.query('limit') ?? '100');
   const offset = parseInt(c.req.query('offset') ?? '0');
 
@@ -157,6 +163,7 @@ notesRouter.get('/', authMiddleware, async (c) => {
     let filterSql = 'AND n.user_id = ?';
     if (bookId) { filterSql += ' AND n.book_id = ?'; baseFilters.push(bookId); }
     if (type)   { filterSql += ' AND n.type = ?';   baseFilters.push(type); }
+    if (tag)    { filterSql += ` AND ${TAG_SQL.replace('COALESCE(tags', 'COALESCE(n.tags')}`; baseFilters.push(tag); }
 
     try {
       const countResult = await c.env.DB.prepare(
@@ -180,6 +187,7 @@ notesRouter.get('/', authMiddleware, async (c) => {
       let fallbackSql = 'SELECT * FROM notes WHERE user_id = ? AND content LIKE ?';
       if (bookId) { fallbackSql += ' AND book_id = ?'; fallbackParams.push(bookId); }
       if (type)   { fallbackSql += ' AND type = ?';   fallbackParams.push(type); }
+      if (tag)    { fallbackSql += ` AND ${TAG_SQL}`; fallbackParams.push(tag); }
 
       const countSql = fallbackSql.replace('SELECT *', 'SELECT COUNT(*) as total');
       const countResult = await c.env.DB.prepare(countSql)
@@ -204,6 +212,10 @@ notesRouter.get('/', authMiddleware, async (c) => {
   if (type) {
     query += ' AND type = ?';
     params.push(type);
+  }
+  if (tag) {
+    query += ` AND ${TAG_SQL}`;
+    params.push(tag);
   }
 
   // 전체 카운트
@@ -294,6 +306,11 @@ notesRouter.post('/', authMiddleware, zValidator('json', createNoteSchema), asyn
   const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? 'unknown';
   await logActivity(c.env.DB, userId, 'note:create', { noteId: id, type: body.type }, ip);
 
+  // Phase 4: AI 태깅은 응답 후 비동기 (ai_tags 플래그 사용자만 — ADR-003 예외, 비용·데이터 전송)
+  if (shouldTag(body.content) && await userHasFlag(c.env.DB, c.env.FEATURE_FLAGS, userId, 'ai_tags')) {
+    c.executionCtx.waitUntil(tagNote(c.env, { id, userId, content: body.content }));
+  }
+
   return c.json({ data: created }, 201);
 });
 
@@ -336,6 +353,10 @@ notesRouter.put('/:id', authMiddleware, zValidator('json', updateNoteSchema), as
     }
   }
 
+  // 내용이 바뀌면 옛 태그는 더 이상 맞지 않으므로 비우고 다시 태깅
+  const contentChanged = typeof body.content === 'string';
+  if (contentChanged) setClauses.push('tags = NULL');
+
   if (setClauses.length === 0) {
     const note = await c.env.DB.prepare('SELECT * FROM notes WHERE id = ?')
       .bind(id)
@@ -353,6 +374,11 @@ notesRouter.put('/:id', authMiddleware, zValidator('json', updateNoteSchema), as
   const updated = await c.env.DB.prepare('SELECT * FROM notes WHERE id = ?')
     .bind(id)
     .first<DbNote>();
+
+  if (contentChanged && updated && shouldTag(updated.content)
+    && await userHasFlag(c.env.DB, c.env.FEATURE_FLAGS, userId, 'ai_tags')) {
+    c.executionCtx.waitUntil(tagNote(c.env, { id, userId, content: updated.content }));
+  }
 
   return c.json({ data: updated });
 });

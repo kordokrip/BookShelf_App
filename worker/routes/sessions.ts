@@ -27,6 +27,8 @@ const createSessionSchema = z.object({
   pages_read: z.number().int().positive(),
   session_date: z.string().optional(),
   duration_min: z.number().int().positive().optional(),
+  /** Phase 4: 이 세션(몰입 타이머) 동안 작성한 노트 — 같은 책·본인 노트만 연결된다 */
+  note_ids: z.array(z.string().uuid()).max(50).optional(),
 });
 
 // ─── GET /api/sessions?book_id=&limit= ───────────────────────
@@ -113,6 +115,13 @@ sessionsRouter.post(
       c.env.DB.prepare(
         'UPDATE books SET current_page = ? WHERE id = ?',
       ).bind(newCurrentPage, body.book_id),
+      // Phase 4: 몰입 구간 메모 연결 (소유·같은 책 조건으로 타인·다른 책 노트는 무시)
+      ...(body.note_ids && body.note_ids.length > 0
+        ? [c.env.DB.prepare(
+            `UPDATE notes SET session_id = ?
+             WHERE user_id = ? AND book_id = ? AND id IN (${body.note_ids.map(() => '?').join(', ')})`,
+          ).bind(id, userId, body.book_id, ...body.note_ids)]
+        : []),
     ]);
 
     const session = await c.env.DB.prepare(
