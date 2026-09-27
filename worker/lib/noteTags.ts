@@ -7,6 +7,8 @@
 export const MIN_TAG_CONTENT_LENGTH = 20;
 export const MAX_TAGS = 5;
 const MAX_TAG_LENGTH = 12;
+/** 모든 노트에 해당해 분류에 쓸모없는 일반어 (스테이징 실측: "메모"가 태그로 나옴) */
+const GENERIC_TAGS = new Set(['메모', '노트', '책', '독서', '내용', '생각', '느낌', '감정', '키워드', '문장']);
 
 export function shouldTag(content: string): boolean {
   return content.trim().length >= MIN_TAG_CONTENT_LENGTH;
@@ -20,6 +22,7 @@ export function buildTagMessages(content: string) {
       role: 'system' as const,
       content:
         '당신은 독서 노트를 분류하는 도우미입니다. 노트의 핵심 키워드 3~4개와 노트에 담긴 감정 1개를 한국어 명사로 뽑으세요. ' +
+        '"메모", "노트", "책", "독서"처럼 모든 노트에 해당하는 일반 단어는 제외하세요. ' +
         '반드시 JSON 한 개로만 응답하세요(다른 텍스트 금지): {"keywords":["키워드1","키워드2"],"emotion":"감정"}',
     },
     { role: 'user' as const, content: `노트:\n${text}` },
@@ -32,6 +35,7 @@ function normalizeTag(raw: unknown): string | null {
   if (!tag || tag.length > MAX_TAG_LENGTH) return null;
   // 한글·영문·숫자만 허용 (기호로만 된 값, 문장 조각 배제)
   if (!/^[0-9A-Za-z가-힣]+$/.test(tag)) return null;
+  if (GENERIC_TAGS.has(tag)) return null;
   return tag;
 }
 

@@ -15,6 +15,10 @@ describe('parseTagResponse', () => {
     expect(parseTagResponse('{"keywords":["#성장"," 성장 ","우정"],"emotion":"우정"}')).toEqual(['성장', '우정']);
   });
 
+  it('모든 노트에 해당하는 일반어(메모·책 등)는 버림 — 스테이징 실측 사례', () => {
+    expect(parseTagResponse('{"keywords":["몰입","메모","선택","기억"],"emotion":"감정"}')).toEqual(['몰입', '선택', '기억']);
+  });
+
   it('너무 길거나 문장·기호뿐인 값은 버림', () => {
     expect(parseTagResponse('{"keywords":["아주아주아주아주긴키워드입니다","!!!","알","a b"],"emotion":"기쁨"}'))
       .toEqual(['알', 'ab', '기쁨']);
