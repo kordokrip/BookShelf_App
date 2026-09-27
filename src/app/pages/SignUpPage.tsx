@@ -81,14 +81,22 @@ function FormContent({ onSubmit }: { onSubmit: (name: string, email: string, pas
     if (valid) onSubmit(name, email, password);
   };
 
+  // <form>으로 감싸야 Enter 제출·비밀번호 관리자 저장 제안이 동작한다
   return (
-    <div className="flex flex-col gap-4">
+    <form
+      className="flex flex-col gap-4"
+      noValidate
+      onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}
+    >
       {/* Name */}
       <div>
-        <label className="block text-[13px] mb-1.5" style={{ color: "#374151", fontFamily: "var(--font-pretendard)", fontWeight: 600 }}>
+        <label htmlFor="signup-name" className="block text-[13px] mb-1.5" style={{ color: "#374151", fontFamily: "var(--font-pretendard)", fontWeight: 600 }}>
           이름
         </label>
         <input
+          id="signup-name"
+          name="name"
+          autoComplete="name"
           type="text"
           placeholder="이름을 입력해주세요"
           value={name}
@@ -108,10 +116,15 @@ function FormContent({ onSubmit }: { onSubmit: (name: string, email: string, pas
 
       {/* Email */}
       <div>
-        <label className="block text-[13px] mb-1.5" style={{ color: "#374151", fontFamily: "var(--font-pretendard)", fontWeight: 600 }}>
+        <label htmlFor="signup-email" className="block text-[13px] mb-1.5" style={{ color: "#374151", fontFamily: "var(--font-pretendard)", fontWeight: 600 }}>
           이메일
         </label>
         <input
+          id="signup-email"
+          name="email"
+          autoComplete="email"
+          autoCapitalize="none"
+          spellCheck={false}
           type="email"
           placeholder="이메일 주소를 입력해주세요"
           value={email}
@@ -131,11 +144,15 @@ function FormContent({ onSubmit }: { onSubmit: (name: string, email: string, pas
 
       {/* Password */}
       <div>
-        <label className="block text-[13px] mb-1.5" style={{ color: "#374151", fontFamily: "var(--font-pretendard)", fontWeight: 600 }}>
+        <label htmlFor="signup-password" className="block text-[13px] mb-1.5" style={{ color: "#374151", fontFamily: "var(--font-pretendard)", fontWeight: 600 }}>
           비밀번호
         </label>
         <div className="relative">
+          {/* new-password: 브라우저·키체인이 강력한 비밀번호를 제안하고 가입 후 저장을 묻는다 */}
           <input
+            id="signup-password"
+            name="new-password"
+            autoComplete="new-password"
             type={showPw ? "text" : "password"}
             placeholder="비밀번호 (8자 이상)"
             value={password}
@@ -148,7 +165,7 @@ function FormContent({ onSubmit }: { onSubmit: (name: string, email: string, pas
               color: "#1F2937",
             }}
           />
-          <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-4 top-1/2 -translate-y-1/2" style={{ color: "#9CA3AF" }}>
+          <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-full" style={{ color: "#64748B" }} aria-label={showPw ? "비밀번호 숨기기" : "비밀번호 보기"} aria-pressed={showPw}>
             <EyeIcon show={showPw} />
           </button>
         </div>
@@ -159,11 +176,14 @@ function FormContent({ onSubmit }: { onSubmit: (name: string, email: string, pas
 
       {/* Confirm Password */}
       <div>
-        <label className="block text-[13px] mb-1.5" style={{ color: "#374151", fontFamily: "var(--font-pretendard)", fontWeight: 600 }}>
+        <label htmlFor="signup-confirm" className="block text-[13px] mb-1.5" style={{ color: "#374151", fontFamily: "var(--font-pretendard)", fontWeight: 600 }}>
           비밀번호 확인
         </label>
         <div className="relative">
           <input
+            id="signup-confirm"
+            name="confirm-password"
+            autoComplete="new-password"
             type={showCf ? "text" : "password"}
             placeholder="비밀번호를 다시 입력해주세요"
             value={confirm}
@@ -176,7 +196,7 @@ function FormContent({ onSubmit }: { onSubmit: (name: string, email: string, pas
               color: "#1F2937",
             }}
           />
-          <button type="button" onClick={() => setShowCf(!showCf)} className="absolute right-4 top-1/2 -translate-y-1/2" style={{ color: "#9CA3AF" }}>
+          <button type="button" onClick={() => setShowCf(!showCf)} className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-full" style={{ color: "#64748B" }} aria-label={showCf ? "비밀번호 확인 숨기기" : "비밀번호 확인 보기"} aria-pressed={showCf}>
             <EyeIcon show={showCf} />
           </button>
         </div>
@@ -212,8 +232,12 @@ function FormContent({ onSubmit }: { onSubmit: (name: string, email: string, pas
 
       {/* Terms checkbox */}
       <div className="flex items-start gap-3 py-1">
+        {/* 체크 상태를 스크린리더에 전달 (일반 버튼이면 체크 여부를 알 수 없음) */}
         <button
           type="button"
+          role="checkbox"
+          aria-checked={terms}
+          aria-labelledby="signup-terms-label"
           onClick={() => setTerms(!terms)}
           className="mt-0.5 flex-shrink-0 w-5 h-5 rounded flex items-center justify-center transition-colors"
           style={{
@@ -228,6 +252,7 @@ function FormContent({ onSubmit }: { onSubmit: (name: string, email: string, pas
           )}
         </button>
         <label
+          id="signup-terms-label"
           className="text-[13px] leading-relaxed cursor-pointer"
           style={{ color: "#374151", fontFamily: "var(--font-pretendard)" }}
           onClick={() => setTerms(!terms)}
@@ -241,7 +266,7 @@ function FormContent({ onSubmit }: { onSubmit: (name: string, email: string, pas
       )}
 
       <button
-        onClick={handleSubmit}
+        type="submit"
         disabled={isDisabled}
         className="w-full rounded-2xl text-white text-[15px] mt-1 transition-opacity active:opacity-80 disabled:cursor-not-allowed"
         style={{
@@ -263,7 +288,7 @@ function FormContent({ onSubmit }: { onSubmit: (name: string, email: string, pas
           로그인
         </Link>
       </p>
-    </div>
+    </form>
   );
 }
 
@@ -664,7 +689,7 @@ function MultiStepForm() {
 export function SignUpPage() {
 
   return (
-    <div className="min-h-svh flex">
+    <main className="min-h-svh flex">
       {/* ── MOBILE ── */}
       <div className="flex flex-col w-full lg:hidden relative">
         {/* Gradient top */}
@@ -755,6 +780,6 @@ export function SignUpPage() {
       </div>
 
       <AuthPreviewNav />
-    </div>
+    </main>
   );
 }

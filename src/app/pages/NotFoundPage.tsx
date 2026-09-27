@@ -7,7 +7,7 @@ export function NotFoundPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-svh flex items-center justify-center bg-background">
+    <main className="min-h-svh flex items-center justify-center bg-background">
       <div className="text-center px-6">
         <p
           style={{
@@ -64,6 +64,6 @@ export function NotFoundPage() {
           홈으로 돌아가기
         </button>
       </div>
-    </div>
+    </main>
   );
 }

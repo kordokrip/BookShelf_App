@@ -774,7 +774,7 @@ export function RegisterFlowPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-[var(--vp-h)] bg-background">
+    <main className="flex flex-col min-h-[var(--vp-h)] bg-background">
       {/* iOS 노치 / Dynamic Island / PWA standalone 상단 안전 영역 */}
       <div aria-hidden style={{ height: 'var(--safe-top)', flexShrink: 0 }} />
 
@@ -817,6 +817,6 @@ export function RegisterFlowPage() {
           />
         )}
       </div>
-    </div>
+    </main>
   );
 }

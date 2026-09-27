@@ -51,12 +51,14 @@ function GoogleLogo() {
 
 function EyeToggle({ show, onToggle }: { show: boolean; onToggle: () => void }) {
   return (
+    // 44px 터치 영역 + 이름·상태 전달 (아이콘만 있으면 스크린리더가 "버튼"으로만 읽음)
     <button
       type="button"
       onClick={onToggle}
-      className="absolute right-4 top-1/2 -translate-y-1/2"
-      style={{ color: "#9CA3AF" }}
-      tabIndex={-1}
+      className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-full"
+      style={{ color: "#64748B" }}
+      aria-label={show ? "비밀번호 숨기기" : "비밀번호 보기"}
+      aria-pressed={show}
     >
       {show ? (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -169,13 +171,20 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
       {/* Email */}
       <div>
         <label
+          htmlFor="login-email"
           className="block mb-1.5"
           style={{ fontSize: 13, color: "#374151", fontFamily: "var(--font-pretendard)", fontWeight: 600 }}
         >
           이메일
         </label>
+        {/* autocomplete: iOS 키체인·안드로이드 비밀번호 관리자 자동 채움 (username + current-password 쌍) */}
         <input
+          id="login-email"
+          name="email"
           type="email"
+          autoComplete="username"
+          autoCapitalize="none"
+          spellCheck={false}
           placeholder="이메일 주소를 입력해주세요"
           value={email}
           disabled={isLoading}
@@ -203,6 +212,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
       {/* Password */}
       <div>
         <label
+          htmlFor="login-password"
           className="block mb-1.5"
           style={{ fontSize: 13, color: "#374151", fontFamily: "var(--font-pretendard)", fontWeight: 600 }}
         >
@@ -210,6 +220,9 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
         </label>
         <div className="relative">
           <input
+            id="login-password"
+            name="password"
+            autoComplete="current-password"
             type={showPassword ? "text" : "password"}
             placeholder="비밀번호를 입력해주세요"
             value={password}
@@ -282,7 +295,7 @@ export function LoginPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-svh flex">
+    <main className="min-h-svh flex">
       {/* ── MOBILE (< lg) ── */}
       <div className="flex flex-col w-full lg:hidden relative">
         {/* Gradient header — top 35% */}
@@ -459,6 +472,6 @@ export function LoginPage() {
       </div>
 
       <AuthPreviewNav />
-    </div>
+    </main>
   );
 }

@@ -531,6 +531,7 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 #### LoginForm
 
 **Google OAuth 버튼**:
+- **자동 채움·접근성 (2026-09-27, 가입 화면 동일)**: 입력에 `autocomplete`(로그인 `username`·`current-password`, 가입 `name`·`email`·`new-password`) — iOS 키체인·안드로이드 비밀번호 관리자 자동 채움·강력한 비밀번호 제안. 라벨은 `htmlFor`로 입력과 연결, 비밀번호 보기 버튼은 44px + `aria-label`·`aria-pressed`, 가입 약관 동의는 `role="checkbox"` + `aria-checked`, 가입 폼은 `<form>`(Enter 제출·저장 제안). Root 밖 독립 화면(로그인·가입·책 등록·노트 검색·404)은 최상위를 `<main>` 랜드마크로.
 - GoogleLogo SVG (18px) + "Google로 계속하기"
 - `h-48px rounded-2xl`, 흰 배경, `border 1.5px #E2E8F0`
 - 클릭 → `accounts.google.com` OAuth 리다이렉트 (외부)
