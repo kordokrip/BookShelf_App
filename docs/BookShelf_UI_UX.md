@@ -170,7 +170,12 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 | **Body** | 14–15 | 400–500 | 1.5–1.6 | 본문, 설명문 |
 | **Caption** | 12–13 | 400–500 | 1.4 | 날짜, 힌트, 배지 텍스트 |
 | **Overline** | 11 | 600–700 | 1.2 | 배지 카운트, BottomNav 레이블 |
-| **Hero** | 28–52 | 800 | 1.2 | 스플래시 로고, 연간 결산 숫자 |
+| **Hero** | 28–52 | 800 | 1.2 | 온보딩 제목, 연간 결산 숫자 |
+
+**최소 글자 규칙 (2026-09-27 반응형 점검)**: 화면에 보이는 글자는 11px 이상.
+- `theme.css` 유동 토큰 중 `--text-xs`를 10–11px → **11–12px**, `--text-sm`을 12–13px → **13–14px**로 상향(폰에서 가장 작아지는 구조라 320px에서 10px까지 내려갔음).
+- `index.css`의 "320–374px 폭에서 `html { font-size: 14px }`" 규칙 제거 — 작은 폰에서 모든 rem 글자가 12.5% 작아져 8.8px까지 내려갔다. 네이티브 앱처럼 글자 크기는 유지하고 여백·배치로 대응(제거 후 104개 페이지×기기 조합 가로 넘침 0건 확인).
+- 예외: 책등 제목(BookStack, 10px — 책 두께가 곧 정보), 원형 진행 게이지 안의 퍼센트(32px 게이지, `aria-label`로 값 제공).
 
 ---
 
@@ -1535,7 +1540,7 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 | **EmptyState** | `ui/EmptyState.tsx` | emoji, heading, subtext, ctaLabel, onCta | 빈 상태 안내 + CTA |
 | **OfflineBanner** | `ui/OfflineBanner.tsx` | — | 오프라인 시 앰버 배너, `📡`, `sticky top-0` |
 | **NotificationPanel** | `ui/NotificationPanel.tsx` | onClose | TopBar에서 열리는 알림 패널 |
-| **InstallBanner** | `ui/InstallBanner.tsx` | — | PWA 설치 프롬프트 배너, `#1E293B` 다크배경 |
+| **InstallBanner** | `ui/InstallBanner.tsx` | — | PWA 설치 프롬프트 배너, `#1E293B` 다크배경. FAB 위(`--floating-bottom + 3.5rem + 0.75rem`)에 전체 폭으로 표시 — 이전의 FAB 옆 좁은 배치는 320px에서 약 190px로 눌려 한두 글자씩 줄바꿈되었음. 닫기 40px |
 
 ### 10.2 Toast (Context)
 

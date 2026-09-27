@@ -52,6 +52,12 @@ export function InstallBanner() {
     });
   }
 
+  /**
+   * 배너는 FAB(+) "위"에 전체 폭으로 띄운다. 이전에는 FAB 옆에 폭을 줄여 배치해 320px 폭에서 약 190px로
+   * 눌려 한두 글자씩 줄바꿈되고 FAB와도 겹쳤다(반응형 점검 2026-09-27). FAB 높이 3.5rem + 간격 0.75rem.
+   */
+  const BANNER_BOTTOM = "calc(var(--floating-bottom) + 3.5rem + 0.75rem)";
+
   function handleDismiss() {
     sessionStorage.setItem("install_banner_dismissed", "1");
     setVisible(false);
@@ -62,12 +68,9 @@ export function InstallBanner() {
   if (!promptEvent && iosEligible) {
     return (
       <div
-        className="fixed left-0 z-40 flex justify-center px-4"
+        className="fixed left-0 right-0 z-40 flex justify-center px-4"
         style={{
-          bottom: "var(--install-banner-bottom)",
-          // right: FAB(--floating-right 지점에서 w-14=3.5rem 폭)와 겹쳐 클릭을
-          // 가로채지 않도록 그만큼 여유를 두고 배너 폭을 줄임
-          right: "calc(var(--floating-right) + 4.5rem)",
+          bottom: BANNER_BOTTOM,
           transform: iosVisible ? "translateY(0)" : "translateY(100%)",
           opacity: iosVisible ? 1 : 0,
           transition: "transform 0.3s ease, opacity 0.3s ease",
@@ -85,7 +88,7 @@ export function InstallBanner() {
           </div>
           <button
             onClick={handleDismiss}
-            className="shrink-0 rounded-full p-1 transition-colors hover:bg-amber-500/10"
+            className="shrink-0 w-10 h-10 -m-2 flex items-center justify-center rounded-full transition-colors hover:bg-amber-500/10"
             aria-label="닫기"
           >
             <X size={16} className="text-amber-500" />
@@ -99,11 +102,9 @@ export function InstallBanner() {
 
   return (
     <div
-      className="fixed left-0 z-40 flex justify-center px-4"
+      className="fixed left-0 right-0 z-40 flex justify-center px-4"
       style={{
-        bottom: "var(--install-banner-bottom)",
-        // right: FAB와 겹쳐 클릭을 가로채지 않도록 여유를 둠 (iOS 분기와 동일 이유)
-        right: "calc(var(--floating-right) + 4.5rem)",
+        bottom: BANNER_BOTTOM,
         transform: visible ? "translateY(0)" : "translateY(100%)",
         opacity: visible ? 1 : 0,
         transition: "transform 0.3s ease, opacity 0.3s ease",
@@ -122,7 +123,7 @@ export function InstallBanner() {
         </p>
         <button
           onClick={handleInstall}
-          className="shrink-0 rounded-xl px-3 py-1.5 text-white font-semibold transition-opacity hover:opacity-80"
+          className="shrink-0 rounded-xl px-4 min-h-10 text-white font-semibold transition-opacity hover:opacity-80"
           style={{
             fontSize: 13,
             background: "linear-gradient(135deg, #4F46E5, #7C3AED)",
@@ -132,7 +133,7 @@ export function InstallBanner() {
         </button>
         <button
           onClick={handleDismiss}
-          className="shrink-0 rounded-full p-1 transition-colors hover:bg-white/10"
+          className="shrink-0 w-10 h-10 -mr-2 flex items-center justify-center rounded-full transition-colors hover:bg-white/10"
           aria-label="닫기"
           style={{ color: "#94A3B8" }}
         >
