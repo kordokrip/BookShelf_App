@@ -169,12 +169,12 @@ export function ChatTab({
       <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-4 py-3 space-y-1">
         {isFetchingNextPage && (
           <div className="flex justify-center py-2">
-            <Loader2 size={18} className="animate-spin text-[#94A3B8]" />
+            <Loader2 size={18} className="animate-spin text-[#64748B] dark:text-[#94A3B8]" />
           </div>
         )}
-        {isLoading && <p className="text-center text-[#94A3B8] text-sm py-8">메시지 로딩 중...</p>}
+        {isLoading && <p className="text-center text-[#64748B] dark:text-[#94A3B8] text-sm py-8">메시지 로딩 중...</p>}
         {!isLoading && messages.length === 0 && (
-          <p className="text-center text-[#94A3B8] text-sm py-8">아직 대화가 없습니다. 첫 메시지를 보내보세요!</p>
+          <p className="text-center text-[#64748B] dark:text-[#94A3B8] text-sm py-8">아직 대화가 없습니다. 첫 메시지를 보내보세요!</p>
         )}
         {messages.map((msg: GroupMessage, idx: number) => {
           const isMine = msg.user_id === user?.id;
@@ -189,7 +189,7 @@ export function ChatTab({
               {showDate && (
                 <div className="flex items-center gap-3 my-4">
                   <div className="flex-1 h-px bg-[#E2E8F0] dark:bg-[#334155]" />
-                  <span className="text-[11px] text-[#94A3B8] font-medium whitespace-nowrap">
+                  <span className="text-[11px] text-[#64748B] dark:text-[#94A3B8] font-medium whitespace-nowrap">
                     {formatDateLabel(msg.created_at)}
                   </span>
                   <div className="flex-1 h-px bg-[#E2E8F0] dark:bg-[#334155]" />
@@ -198,11 +198,11 @@ export function ChatTab({
               <div className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[75%] group/msg ${isMine ? 'order-1' : ''}`}>
                   {!isMine && (!prevMsg || prevMsg.user_id !== msg.user_id || showDate) && (
-                    <p className="text-xs text-[#94A3B8] mb-0.5 ml-1">{msg.user_name ?? '알 수 없음'}</p>
+                    <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mb-0.5 ml-1">{msg.user_name ?? '알 수 없음'}</p>
                   )}
                   <div className={`px-3.5 py-2 rounded-2xl text-sm break-words ${
                     msg.deleted_at
-                      ? 'bg-[#F1F5F9] dark:bg-[#1E293B] text-[#94A3B8] dark:text-[#64748B] italic'
+                      ? 'bg-[#F1F5F9] dark:bg-[#1E293B] text-[#475569] dark:text-[#94A3B8] italic'
                       : isMine
                         ? 'bg-[#4F46E5] text-white rounded-br-md'
                         : 'bg-[#F1F5F9] dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F8FAFC] rounded-bl-md'
@@ -211,13 +211,13 @@ export function ChatTab({
                   </div>
                   <div className={`flex items-center gap-1 ${isMine ? 'justify-end' : ''}`}>
                     {showTime && (
-                      <p className={`text-[10px] text-[#CBD5E1] mt-0.5 ${isMine ? 'mr-1' : 'ml-1'}`}>
+                      <p className={`text-[11px] text-[#CBD5E1] mt-0.5 ${isMine ? 'mr-1' : 'ml-1'}`}>
                         {new Date(msg.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     )}
                     {/* 읽음 n 표시 (내 메시지, 비삭제) */}
                     {isMine && readCount > 0 && (
-                      <p className="text-[10px] text-emerald-500 dark:text-emerald-400 mt-0.5 mr-1">
+                      <p className="text-[11px] text-emerald-500 dark:text-emerald-400 mt-0.5 mr-1">
                         읽음 {readCount}
                       </p>
                     )}
@@ -226,7 +226,7 @@ export function ChatTab({
                         onClick={() => { if (confirm('이 메시지를 삭제하시겠습니까?')) deleteMessage.mutate(msg.id, {
                           onError: () => showToast('삭제에 실패했어요. 다시 시도해주세요.', 'error'),
                         }); }}
-                        className="text-[10px] text-red-400 hover:text-red-500 mt-0.5 ml-1 opacity-0 group-hover/msg:opacity-100 transition-opacity"
+                        className="text-[11px] text-red-400 hover:text-red-500 mt-0.5 ml-1 opacity-0 group-hover/msg:opacity-100 transition-opacity"
                         aria-label="메시지 삭제"
                       >
                         <Trash2 size={11} />
@@ -245,15 +245,15 @@ export function ChatTab({
                 {pm.content}
               </div>
               <div className="flex items-center justify-end gap-1 mt-0.5">
-                {pm.status === 'sending' && <Loader2 size={10} className="animate-spin text-[#94A3B8]" />}
+                {pm.status === 'sending' && <Loader2 size={10} className="animate-spin text-[#64748B] dark:text-[#94A3B8]" />}
                 {pm.status === 'failed' && (
                   <>
                     <AlertCircle size={10} className="text-red-400" />
-                    <span className="text-[10px] text-red-400">전송 실패</span>
+                    <span className="text-[11px] text-red-400">전송 실패</span>
                     <button
                       type="button"
                       onClick={() => sendWithRetry(pm.content, pm.tempId)}
-                      className="flex items-center gap-0.5 text-[10px] text-[#4F46E5] hover:underline ml-1"
+                      className="flex items-center gap-0.5 text-[11px] text-[#4F46E5] hover:underline ml-1"
                     >
                       <RotateCcw size={9} /> 재전송
                     </button>

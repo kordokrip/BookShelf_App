@@ -364,7 +364,7 @@ function GenreScreen({
       </div>
 
       {/* Selected count */}
-      <p className="text-[13px]" style={{ color: "#94A3B8", fontFamily: "var(--font-pretendard)" }}>
+      <p className="text-[13px]" style={{ color: "#64748B", fontFamily: "var(--font-pretendard)" }}>
         {selected.length > 0
           ? `${selected.length}개 선택됨`
           : "장르를 선택해주세요"}

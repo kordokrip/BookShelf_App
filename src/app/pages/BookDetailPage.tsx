@@ -95,7 +95,7 @@ function QuoteCard({ note }: { note: BookNote }) {
               // Spec: bg #F1F5F9, text #64748B, 11px, border-radius 4px
               fontSize: 11,
               fontWeight: 700,
-              color: "#64748B",
+              color: "#475569",
               backgroundColor: "#F1F5F9",
               borderRadius: 4,
             }}
@@ -128,7 +128,7 @@ function MemoCard({ note }: { note: BookNote }) {
             {formatNotePages(note.page, note.endPage)}
           </span>
         )}
-        <span className="text-[#94A3B8]" style={{ fontSize: 11 }}>{note.date}</span>
+        <span className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 11 }}>{note.date}</span>
       </div>
     </div>
   );
@@ -152,7 +152,7 @@ function ReviewCard({ note, expanded, onToggle }: { note: BookNote; expanded: bo
         </button>
       )}
       <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[#F1F5F9]">
-        <span className="text-[#94A3B8]" style={{ fontSize: 11 }}>✍️ {note.date}</span>
+        <span className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 11 }}>✍️ {note.date}</span>
       </div>
     </div>
   );
@@ -316,7 +316,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
           className="p-1.5 rounded-lg hover:bg-[#F1F5F9] transition-colors"
           aria-label="편집"
         >
-          <Pencil size={13} className="text-[#94A3B8]" />
+          <Pencil size={13} className="text-[#64748B] dark:text-[#94A3B8]" />
         </button>
         <button
           onClick={() => handleDelete(note.id)}
@@ -402,7 +402,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
           )}
           <div className="flex items-center justify-between mt-2">
             {currentPage && currentPage > 0 ? (
-              <span style={{ fontSize: 11, color: "#94A3B8" }}>📄 현재 {currentPage}p 자동 반영</span>
+              <span style={{ fontSize: 11, color: "#64748B" }}>📄 현재 {currentPage}p 자동 반영</span>
             ) : (
               <span />
             )}
@@ -445,7 +445,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
               <span
                 className={cn(
                   "rounded-full px-1.5 py-0.5",
-                  noteFilter === tab.value ? "bg-white/20 text-white" : "bg-[#F1F5F9] text-[#64748B]"
+                  noteFilter === tab.value ? "bg-white/20 text-white" : "bg-[#F1F5F9] text-[#475569] dark:bg-[#334155] dark:text-[#CBD5E1]"
                 )}
                 style={{ fontSize: 11, fontWeight: 700 }}
               >
@@ -473,7 +473,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
 
         {/* UX-106: 인라인 검색 */}
         <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B] dark:text-[#94A3B8]" />
           <input
             type="search"
             value={noteSearch}
@@ -486,7 +486,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
 
         {/* UX-106: 통합 노트 목록 (좌측 색상 바 포함) */}
         {filteredNotes.length === 0 ? (
-          <p className="text-center text-[#94A3B8] py-8" style={{ fontSize: 14 }}>
+          <p className="text-center text-[#64748B] dark:text-[#94A3B8] py-8" style={{ fontSize: 14 }}>
             {noteSearch ? `"${noteSearch}" 검색 결과가 없어요` : "노트를 추가해 보세요 ✍️"}
           </p>
         ) : (
@@ -530,7 +530,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
             <button
               key={t.value}
               onClick={() => openAdd(t.value)}
-              className="flex-1 py-2.5 rounded-2xl border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC] transition-colors"
+              className="flex-1 py-2.5 rounded-2xl border border-[#E2E8F0] dark:border-[#334155] text-[#475569] dark:text-[#CBD5E1] hover:bg-[#F8FAFC] dark:hover:bg-[#1E293B] transition-colors"
               style={{ fontSize: 12, fontWeight: 600 }}
             >
               + {t.label}
@@ -610,7 +610,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
                   placeholder="시작 페이지"
                   aria-label="시작 페이지"
                 />
-                <span className="text-[#94A3B8]" aria-hidden>~</span>
+                <span className="text-[#64748B] dark:text-[#94A3B8]" aria-hidden>~</span>
                 <Input
                   type="number"
                   min={1}
@@ -740,7 +740,7 @@ function BookInfoTab({ book }: { book: UIBook }) {
             className="flex items-center justify-between px-4 py-3.5"
             style={{ borderBottom: i < rows.length - 1 ? "1px solid #F1F5F9" : "none" }}
           >
-            <span className="text-[#94A3B8]" style={{ fontSize: 13 }}>{row.label}</span>
+            <span className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 13 }}>{row.label}</span>
             <span className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 13, fontWeight: 600 }}>{row.value}</span>
           </div>
         ))}
@@ -748,14 +748,14 @@ function BookInfoTab({ book }: { book: UIBook }) {
 
       {/* 별점 입력 */}
       <div className="rounded-2xl border border-[#F1F5F9] px-4 py-3.5 flex items-center justify-between" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-        <span className="text-[#94A3B8]" style={{ fontSize: 13 }}>별점</span>
+        <span className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 13 }}>별점</span>
         <StarRow value={book.rating ?? 0} onRate={handleRate} />
       </div>
 
       {/* 목표 날짜 */}
       {(book.status === "reading" || book.goalDate) && (
         <div className="rounded-2xl border border-[#F1F5F9] px-4 py-3" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-          <p className="text-[#94A3B8] mb-2" style={{ fontSize: 12, fontWeight: 600 }}>완독 목표일</p>
+          <p className="text-[#64748B] dark:text-[#94A3B8] mb-2" style={{ fontSize: 12, fontWeight: 600 }}>완독 목표일</p>
           <div className="flex items-center gap-2">
             <input
               type="date"
@@ -789,12 +789,12 @@ function BookInfoTab({ book }: { book: UIBook }) {
         <div className="flex items-center gap-2">
           <Clock size={14} className="text-[#64748B]" />
           <h3 className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 14, fontWeight: 700 }}>독서 기록</h3>
-          <span className="text-[#94A3B8]" style={{ fontSize: 12 }}>({sessions.length}건)</span>
+          <span className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 12 }}>({sessions.length}건)</span>
         </div>
         {sessionsLoading ? (
           <div className="h-16 rounded-xl bg-[#F1F5F9] animate-pulse" />
         ) : sessions.length === 0 ? (
-          <p className="text-[#94A3B8] text-center py-4" style={{ fontSize: 14 }}>
+          <p className="text-[#64748B] dark:text-[#94A3B8] text-center py-4" style={{ fontSize: 14 }}>
             아직 독서 기록이 없어요 📖
           </p>
         ) : (
@@ -809,7 +809,7 @@ function BookInfoTab({ book }: { book: UIBook }) {
                   <span className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 13, fontWeight: 600 }}>
                     +{s.pagesRead}p
                   </span>
-                  <span className="text-[#94A3B8]" style={{ fontSize: 11 }}>
+                  <span className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 11 }}>
                     {s.sessionDate.replace(/-/g, ".")}
                     {s.durationMin ? ` · ${s.durationMin}분` : ""}
                   </span>
@@ -1140,7 +1140,7 @@ export function BookDetailPage() {
             {/* Author: 14px Regular #64748B */}
             <p className="text-[#64748B]" style={{ fontSize: 14 }}>{book.author}</p>
             {/* 출판사 · 연도 · 페이지수: 12px #94A3B8, · separator */}
-            <p className="text-[#94A3B8]" style={{ fontSize: 12 }}>
+            <p className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 12 }}>
               {book.publisher} · {book.finishedDate?.slice(0, 4) ?? book.addedDate.slice(0, 4)}{book.totalPages ? ` · ${book.totalPages}p` : ''}
             </p>
             {/* Genre badge: centered, md variant (28px height) */}

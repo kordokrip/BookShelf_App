@@ -314,7 +314,7 @@ export function CameraOCRSheet({ bookId, onClose }: Props) {
               <div className="w-11 h-11 rounded-full border border-white/30 flex items-center justify-center">
                 <ImagePlus size={20} />
               </div>
-              <span className="text-[10px]">갤러리</span>
+              <span className="text-[11px]">갤러리</span>
             </button>
 
             {/* 셔터 버튼 */}

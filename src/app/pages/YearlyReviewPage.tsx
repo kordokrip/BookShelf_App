@@ -250,7 +250,7 @@ export function YearlyReviewPage() {
           {!bestBook && totalDone > 0 && (
             <div className="bg-gray-50 rounded-xl p-6 text-center mb-3" style={{ border: "1px solid #E2E8F0" }}>
               <p style={{ fontSize: 24, marginBottom: 8 }}>⭐</p>
-              <p style={{ fontSize: 13, color: "#94A3B8" }}>아직 별점을 매긴 완독 책이 없어요 ⭐</p>
+              <p style={{ fontSize: 13, color: "#64748B" }}>아직 별점을 매긴 완독 책이 없어요 ⭐</p>
             </div>
           )}
           {bestBook && (
@@ -296,7 +296,7 @@ export function YearlyReviewPage() {
             <div className="bg-gray-50 rounded-xl p-6 text-center mb-3" style={{ border: "1px solid #E2E8F0" }}>
               <p style={{ fontSize: 24, marginBottom: 8 }}>📚</p>
               <p style={{ fontSize: 14, fontWeight: 700, color: "#374151", marginBottom: 4 }}>올해 완독한 책이 없어요</p>
-              <p style={{ fontSize: 12, color: "#94A3B8", marginBottom: 16 }}>새로운 책을 시작해보세요!</p>
+              <p style={{ fontSize: 12, color: "#64748B", marginBottom: 16 }}>새로운 책을 시작해보세요!</p>
               <button
                 onClick={() => navigate("/reading")}
                 className="px-5 py-2 rounded-full text-white"
@@ -329,7 +329,7 @@ export function YearlyReviewPage() {
                   </div>
                 ))}
                 {thisYearDone.length > 5 && (
-                  <p style={{ fontSize: 12, color: "#94A3B8", textAlign: "center" }}>
+                  <p style={{ fontSize: 12, color: "#64748B", textAlign: "center" }}>
                     외 {thisYearDone.length - 5}권 더...
                   </p>
                 )}

@@ -88,7 +88,7 @@ function TabButton({ active, onClick, badge, children }: {
     >
       {children}
       {!!badge && badge > 0 && (
-        <span className="ml-1 px-1.5 py-0.5 bg-red-500 text-white text-[10px] rounded-full font-bold">{badge}</span>
+        <span className="ml-1 px-1.5 py-0.5 bg-red-500 text-white text-[11px] rounded-full font-bold">{badge}</span>
       )}
     </button>
   );

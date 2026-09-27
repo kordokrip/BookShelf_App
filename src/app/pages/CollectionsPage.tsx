@@ -143,7 +143,7 @@ function CollectionDetailView({ id, onBack }: { id: string; onBack: () => void }
       {detail.books.length === 0 ? (
         <div className="text-center py-12">
           <BookOpen size={40} className="text-[#CBD5E1] mx-auto mb-3" />
-          <p style={{ fontSize: 14, color: "#94A3B8", fontWeight: 500 }}>아직 도서가 없습니다</p>
+          <p style={{ fontSize: 14, color: "#64748B", fontWeight: 500 }}>아직 도서가 없습니다</p>
           <p style={{ fontSize: 12, color: "#CBD5E1", marginTop: 4 }}>
             도서 상세 페이지에서 컬렉션에 추가해보세요
           </p>
@@ -212,11 +212,11 @@ export function CollectionsPage() {
           <button
             onClick={() => navigate(-1)}
             aria-label="뒤로"
-            className="flex items-center justify-center w-11 h-11 -ml-3 rounded-full hover:bg-[#F1F5F9] transition-colors"
+            className="flex items-center justify-center w-11 h-11 -ml-3 rounded-full hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors"
           >
-            <ChevronLeft size={22} className="text-[#1E293B]" />
+            <ChevronLeft size={22} className="text-[#1E293B] dark:text-[#F8FAFC]" />
           </button>
-          <h2 style={{ fontSize: 20, fontWeight: 700, color: "#1E293B" }}>내 컬렉션 📂</h2>
+          <h2 className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 20, fontWeight: 700 }}>내 컬렉션 📂</h2>
         </div>
         <button
           onClick={() => setShowCreate(true)}
@@ -240,7 +240,7 @@ export function CollectionsPage() {
         <div className="text-center py-16 px-4">
           <FolderOpen size={48} className="text-[#CBD5E1] mx-auto mb-3" />
           <p style={{ fontSize: 16, fontWeight: 600, color: "#64748B" }}>컬렉션이 없습니다</p>
-          <p style={{ fontSize: 13, color: "#94A3B8", marginTop: 4 }}>
+          <p style={{ fontSize: 13, color: "#64748B", marginTop: 4 }}>
             시리즈, 주제, 무드별로 책을 모아보세요
           </p>
           <button
@@ -278,7 +278,7 @@ export function CollectionsPage() {
                   <p className="truncate" style={{ fontSize: 15, fontWeight: 700, color: "#1E293B" }}>
                     {col.name}
                   </p>
-                  <p style={{ fontSize: 12, color: "#94A3B8", marginTop: 2 }}>
+                  <p style={{ fontSize: 12, color: "#64748B", marginTop: 2 }}>
                     {col.book_count}권
                     {col.description ? ` · ${col.description}` : ""}
                   </p>
@@ -294,7 +294,7 @@ export function CollectionsPage() {
                   }}
                   className="p-2 rounded-lg hover:bg-red-50 transition-colors flex-shrink-0"
                 >
-                  <Trash2 size={16} className="text-[#94A3B8] hover:text-red-500" />
+                  <Trash2 size={16} className="text-[#64748B] dark:text-[#94A3B8] hover:text-red-500" />
                 </button>
               </motion.div>
             ))}

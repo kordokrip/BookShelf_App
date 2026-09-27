@@ -54,7 +54,7 @@ export function TextInput({ label, error, helper, id, disabled, ...props }: Text
         <p className="text-[#EF4444] px-1" style={{ fontSize: 12 }}>{error}</p>
       )}
       {helper && !error && (
-        <p className="text-[#94A3B8] px-1" style={{ fontSize: 12 }}>{helper}</p>
+        <p className="text-[#64748B] dark:text-[#94A3B8] px-1" style={{ fontSize: 12 }}>{helper}</p>
       )}
     </div>
   );
@@ -93,17 +93,17 @@ export function GenreSelect({ value, onChange, label = "장르 선택" }: GenreS
               </span>
             </>
           ) : (
-            <span className="text-[#94A3B8]" style={{ fontSize: 14 }}>{label}</span>
+            <span className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 14 }}>{label}</span>
           )}
         </div>
-        <ChevronDown size={16} className="text-[#94A3B8]" />
+        <ChevronDown size={16} className="text-[#64748B] dark:text-[#94A3B8]" />
       </button>
 
       {open && (
         <div className="absolute top-full mt-1 left-0 right-0 z-50 bg-white rounded-xl border border-[#E2E8F0] shadow-xl overflow-hidden">
           <div className="p-2 border-b border-[#F1F5F9]">
             <div className="flex items-center gap-2 bg-[#F8FAFC] rounded-lg px-3 h-9">
-              <Search size={14} className="text-[#94A3B8]" />
+              <Search size={14} className="text-[#64748B] dark:text-[#94A3B8]" />
               <input
                 autoFocus
                 value={search}
@@ -202,7 +202,7 @@ export function SearchBar({ value, onChange, placeholder = "책 제목, 저자 �
         boxShadow: focused ? "0 0 0 3px #EEF2FF" : undefined,
       }}
     >
-      <Search size={16} className="text-[#94A3B8] flex-shrink-0" />
+      <Search size={16} className="text-[#64748B] dark:text-[#94A3B8] flex-shrink-0" />
       <input
         ref={ref}
         type="search"
@@ -218,7 +218,7 @@ export function SearchBar({ value, onChange, placeholder = "책 제목, 저자 �
         <button
           type="button"
           onClick={() => { onChange(""); onClear?.(); ref.current?.focus(); }}
-          className="text-[#94A3B8] hover:text-[#64748B] transition-colors"
+          className="text-[#64748B] dark:text-[#94A3B8] hover:text-[#64748B] transition-colors"
         >
           <X size={16} />
         </button>

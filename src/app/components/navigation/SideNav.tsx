@@ -79,7 +79,7 @@ export function SideNav() {
               <TooltipTrigger asChild>
                 <button
                   onClick={toggleSidebar}
-                  className="hidden lg:flex w-8 h-8 rounded-lg items-center justify-center text-[#94A3B8] hover:text-[#4F46E5] dark:hover:text-[#A5B4FC] hover:bg-[#EEF2FF] dark:hover:bg-[#312E81] transition-colors flex-shrink-0"
+                  className="hidden lg:flex w-8 h-8 rounded-lg items-center justify-center text-[#64748B] dark:text-[#94A3B8] hover:text-[#4F46E5] dark:hover:text-[#A5B4FC] hover:bg-[#EEF2FF] dark:hover:bg-[#312E81] transition-colors flex-shrink-0"
                 >
                   <ChevronsLeft size={18} />
                 </button>
@@ -145,7 +145,7 @@ export function SideNav() {
               {item.badge != null && (
                 <span
                   className={`min-w-[20px] h-5 px-1.5 rounded-full items-center justify-center ${
-                    isActive ? "bg-[#4F46E5] text-white" : "bg-[#E2E8F0] dark:bg-[#334155] text-[#64748B] dark:text-[#94A3B8]"
+                    isActive ? "bg-[#4F46E5] text-white" : "bg-[#E2E8F0] dark:bg-[#334155] text-[#475569] dark:text-[#CBD5E1]"
                   } ${showLabelsOnDesktop ? "lg:flex" : "lg:hidden"} md:hidden md:max-lg:group-hover/sidebar:flex`}
                   style={{ fontSize: 11, fontWeight: 700 }}
                 >
@@ -189,7 +189,7 @@ export function SideNav() {
                     {displayName}
                   </p>
                   {isAdmin && (
-                    <span className="text-[9px] font-bold text-[#4F46E5] dark:text-[#A5B4FC] bg-[#EEF2FF] dark:bg-[#312E81] px-1.5 py-0.5 rounded-full">
+                    <span className="text-[11px] font-bold text-[#4F46E5] dark:text-[#A5B4FC] bg-[#EEF2FF] dark:bg-[#312E81] px-1.5 py-0.5 rounded-full">
                       ADMIN
                     </span>
                   )}

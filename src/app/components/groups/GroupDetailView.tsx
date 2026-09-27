@@ -33,13 +33,13 @@ export function GroupDetailView({ groupId, onBack }: { groupId: string; onBack: 
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64 text-[#94A3B8]">로딩 중...</div>
+      <div className="flex items-center justify-center h-64 text-[#64748B] dark:text-[#94A3B8]">로딩 중...</div>
     );
   }
   if (!group) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
-        <p className="text-[#94A3B8]">모임을 찾을 수 없습니다.</p>
+        <p className="text-[#64748B] dark:text-[#94A3B8]">모임을 찾을 수 없습니다.</p>
         <button onClick={onBack} className="text-[#4F46E5] text-sm font-medium">돌아가기</button>
       </div>
     );
@@ -65,7 +65,7 @@ export function GroupDetailView({ groupId, onBack }: { groupId: string; onBack: 
         </div>
         <div className="flex-1 min-w-0">
           <h2 className="text-base font-bold text-[#1E293B] dark:text-[#F8FAFC] truncate">{group.name}</h2>
-          <p className="text-xs text-[#94A3B8]">멤버 {group.members?.length ?? 0}명</p>
+          <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">멤버 {group.members?.length ?? 0}명</p>
         </div>
       </div>
 
@@ -80,7 +80,7 @@ export function GroupDetailView({ groupId, onBack }: { groupId: string; onBack: 
               className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-medium transition-colors ${
                 activeTab === t.key
                   ? 'text-[#4F46E5] border-b-2 border-[#4F46E5]'
-                  : 'text-[#94A3B8] hover:text-[#64748B]'
+                  : 'text-[#64748B] dark:text-[#94A3B8] hover:text-[#64748B]'
               }`}
             >
               <Icon size={16} />

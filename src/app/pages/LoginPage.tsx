@@ -162,7 +162,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
       {/* Divider */}
       <div className="flex items-center gap-3">
         <div className="flex-1 h-px bg-[#E2E8F0]" />
-        <span style={{ fontSize: 13, color: "#94A3B8", fontFamily: "var(--font-pretendard)" }}>이메일로 로그인</span>
+        <span style={{ fontSize: 13, color: "#64748B", fontFamily: "var(--font-pretendard)" }}>이메일로 로그인</span>
         <div className="flex-1 h-px bg-[#E2E8F0]" />
       </div>
 

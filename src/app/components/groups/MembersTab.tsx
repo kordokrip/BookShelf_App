@@ -92,7 +92,7 @@ export function MembersTab({ groupId, members, isLeader, onBack, onlineSet }: {
                 </div>
                 <div className="flex-1 min-w-0">
                   <span className="text-sm font-medium text-[#1E293B] dark:text-[#F8FAFC] truncate block">{m.name}</span>
-                  <p className="text-xs text-[#94A3B8]">신청일: {new Date(m.joined_at).toLocaleDateString('ko-KR')}</p>
+                  <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">신청일: {new Date(m.joined_at).toLocaleDateString('ko-KR')}</p>
                 </div>
                 <div className="flex items-center gap-1">
                   <button
@@ -151,7 +151,7 @@ export function MembersTab({ groupId, members, isLeader, onBack, onlineSet }: {
                   <span className="text-sm font-medium text-[#1E293B] dark:text-[#F8FAFC] truncate">{m.name}</span>
                   {m.role === 'leader' && <Crown size={12} className="text-amber-500 flex-shrink-0" />}
                 </div>
-                <p className="text-xs text-[#94A3B8]">{new Date(m.joined_at).toLocaleDateString('ko-KR')}</p>
+                <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">{new Date(m.joined_at).toLocaleDateString('ko-KR')}</p>
               </div>
               {/* UX-02: 모임장 위임 버튼 */}
               {isLeader && m.user_id !== user?.id && (

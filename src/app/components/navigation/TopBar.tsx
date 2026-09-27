@@ -184,8 +184,8 @@ export function TopBar() {
                   <Bell size={19} />
                   {unreadCount > 0 && (
                     <span
-                      className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 bg-[#EF4444] rounded-full border-2 border-white dark:border-[#0F172A] text-white flex items-center justify-center"
-                      style={{ fontSize: 9, fontWeight: 700, lineHeight: 1 }}
+                      className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 bg-[#EF4444] rounded-full border-2 border-white dark:border-[#0F172A] text-white flex items-center justify-center"
+                      style={{ fontSize: 11, fontWeight: 700, lineHeight: 1 }}
                       aria-hidden
                     >
                       {unreadCount > 9 ? '9+' : unreadCount}

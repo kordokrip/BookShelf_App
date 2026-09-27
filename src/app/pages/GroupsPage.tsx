@@ -102,7 +102,7 @@ export function GroupsPage() {
           </div>
           {pendingGroups.length > 0 && (
             <>
-              <h3 className="text-sm font-medium text-[#94A3B8] mt-4 mb-2 flex items-center gap-1.5">
+              <h3 className="text-sm font-medium text-[#64748B] dark:text-[#94A3B8] mt-4 mb-2 flex items-center gap-1.5">
                 <Clock size={14} /> 승인 대기 중
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -144,7 +144,7 @@ export function GroupsPage() {
           공개 모임 탐색
         </h2>
         <div className="relative mb-3">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8] pointer-events-none" />
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B] dark:text-[#94A3B8] pointer-events-none" />
           <input
             type="text"
             placeholder="모임 이름으로 검색..."
@@ -154,9 +154,9 @@ export function GroupsPage() {
           />
         </div>
         {isLoading ? (
-          <div className="text-center py-12 text-[#94A3B8]">로딩 중...</div>
+          <div className="text-center py-12 text-[#64748B] dark:text-[#94A3B8]">로딩 중...</div>
         ) : filteredPublic.length === 0 ? (
-          <div className="text-center py-12 text-[#94A3B8]">
+          <div className="text-center py-12 text-[#64748B] dark:text-[#94A3B8]">
             {searchQuery ? '검색 결과가 없습니다.' : '참여 가능한 공개 모임이 없습니다.'}
           </div>
         ) : (
@@ -283,7 +283,7 @@ function GroupCard({ group, userId, onClick, onJoin, showJoin, isPending }: {
             </h3>
             {isOwner && <Crown size={14} className="text-amber-500 flex-shrink-0" />}
             {isPending && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 font-medium flex-shrink-0">
+              <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 font-medium flex-shrink-0">
                 대기중
               </span>
             )}
@@ -293,7 +293,7 @@ function GroupCard({ group, userId, onClick, onJoin, showJoin, isPending }: {
               {group.description}
             </p>
           )}
-          <div className="flex items-center gap-3 mt-2 text-xs text-[#94A3B8]">
+          <div className="flex items-center gap-3 mt-2 text-xs text-[#64748B] dark:text-[#94A3B8]">
             <span className="flex items-center gap-1">
               <Users size={12} />
               {group.member_count ?? 0}/{group.max_members}
@@ -311,7 +311,7 @@ function GroupCard({ group, userId, onClick, onJoin, showJoin, isPending }: {
               가입
             </button>
           ) : (
-            <ChevronRight size={16} className="text-[#94A3B8]" />
+            <ChevronRight size={16} className="text-[#64748B] dark:text-[#94A3B8]" />
           )}
         </div>
       </div>

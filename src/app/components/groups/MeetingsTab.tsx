@@ -39,7 +39,7 @@ export function MeetingsTab({ groupId, isLeader }: { groupId: string; isLeader: 
         <Plus size={16} />
         모임 일정 추가
       </button>
-      <p className="text-xs text-[#94A3B8] text-center">모든 멤버가 일정을 등록할 수 있습니다 (하루 최대 2개)</p>
+      <p className="text-xs text-[#64748B] dark:text-[#94A3B8] text-center">모든 멤버가 일정을 등록할 수 있습니다 (하루 최대 2개)</p>
       <AnimatePresence>
         {showCreate && (
           <motion.div
@@ -87,9 +87,9 @@ export function MeetingsTab({ groupId, isLeader }: { groupId: string; isLeader: 
         )}
       </AnimatePresence>
 
-      {isLoading && <p className="text-center text-[#94A3B8] text-sm py-8">일정 로딩 중...</p>}
+      {isLoading && <p className="text-center text-[#64748B] dark:text-[#94A3B8] text-sm py-8">일정 로딩 중...</p>}
       {!isLoading && meetings.length === 0 && (
-        <p className="text-center text-[#94A3B8] text-sm py-8">예정된 모임 일정이 없습니다.</p>
+        <p className="text-center text-[#64748B] dark:text-[#94A3B8] text-sm py-8">예정된 모임 일정이 없습니다.</p>
       )}
       {meetings.map((meeting: GroupMeeting) => (
         <MeetingCard

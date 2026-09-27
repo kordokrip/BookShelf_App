@@ -78,8 +78,8 @@ export function BottomNavBar() {
                 <span
                   className={`block transition-colors duration-200 ${
                     isActive
-                      ? "text-[#4F46E5]"
-                      : "text-[#64748B]"
+                      ? "text-[#4F46E5] dark:text-[#A5B4FC]"
+                      : "text-[#64748B] dark:text-[#94A3B8]"
                   }`}
                 >
                   {isActive ? item.activeIcon : item.icon}
@@ -88,7 +88,7 @@ export function BottomNavBar() {
                 {/* 동적 배지 */}
                 {item.badge != null && item.badge > 0 && (
                   <span
-                    className="absolute -top-2 -right-3 min-w-[18px] h-[18px] px-1 rounded-full bg-[#EF4444] text-white flex items-center justify-center"
+                    className="absolute -top-2 -right-3 min-w-[18px] h-[18px] px-1 rounded-full bg-[#DC2626] text-white flex items-center justify-center"
                     style={{ fontSize: 11, fontWeight: 700, lineHeight: 1 }}
                     aria-label={`${item.badge}개`}
                   >
@@ -101,8 +101,8 @@ export function BottomNavBar() {
               <span
                 className={`transition-colors duration-200 ${
                   isActive
-                    ? "text-[#4F46E5]"
-                    : "text-[#64748B]"
+                    ? "text-[#4F46E5] dark:text-[#A5B4FC]"
+                    : "text-[#64748B] dark:text-[#94A3B8]"
                 }`}
                 style={{ fontSize: 11, fontWeight: isActive ? 600 : 400 }}
               >

@@ -68,8 +68,8 @@ export function WishlistPage() {
           className="w-full flex items-center gap-2 bg-[#F1F5F9] dark:bg-[#1E293B] rounded-xl px-3 py-2.5 text-left"
           aria-label="책 검색"
         >
-          <Search size={15} className="text-[#94A3B8] shrink-0" />
-          <span className="text-[#94A3B8]" style={{ fontSize: 14 }}>도서명, 저자, 출판사, ISBN</span>
+          <Search size={15} className="text-[#64748B] dark:text-[#94A3B8] shrink-0" />
+          <span className="text-[#475569] dark:text-[#94A3B8]" style={{ fontSize: 14 }}>도서명, 저자, 출판사, ISBN</span>
         </button>
       </div>
 
@@ -82,7 +82,7 @@ export function WishlistPage() {
             className={`shrink-0 mr-5 pb-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
               activeTab === tab.key
                 ? 'border-[#4F46E5] text-[#4F46E5] dark:text-[#A5B4FC] dark:border-[#A5B4FC]'
-                : 'border-transparent text-[#94A3B8] hover:text-[#64748B] dark:hover:text-[#CBD5E1]'
+                : 'border-transparent text-[#64748B] dark:text-[#94A3B8] hover:text-[#475569] dark:hover:text-[#CBD5E1]'
             }`}
           >
             {tab.label}

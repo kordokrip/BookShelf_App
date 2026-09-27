@@ -164,15 +164,15 @@ function BookshelfView({ books, onBookClick }: { books: UIBook[]; onBookClick: (
                   {/* 저자 */}
                   <p
                     className="text-center text-[#64748B] dark:text-[#94A3B8] truncate w-full"
-                    style={{ fontSize: 10 }}
+                    style={{ fontSize: 11 }}
                   >
                     {book.author}
                   </p>
                   {/* 완독일 */}
                   {book.finishedDate && (
                     <p
-                      className="text-center text-[#94A3B8] dark:text-[#CBD5E1]"
-                      style={{ fontSize: 9 }}
+                      className="text-center text-[#64748B] dark:text-[#CBD5E1]"
+                      style={{ fontSize: 11 }}
                     >
                       {book.finishedDate.replace(/-/g, ".")}
                     </p>
@@ -329,9 +329,8 @@ export function LibraryPage() {
           </h1>
           {/* Count badge */}
           <span
-            className="rounded-full bg-[#EEF2FF] dark:bg-[#312E81] flex-shrink-0"
+            className="rounded-full bg-[#EEF2FF] dark:bg-[#312E81] flex-shrink-0 text-[#4F46E5] dark:text-[#C7D2FE]"
             style={{
-              color: "#4F46E5",
               fontSize: 12,
               fontWeight: 500,
               padding: "2px 8px",
@@ -354,7 +353,7 @@ export function LibraryPage() {
                 onClick={() => setViewMode(v)}
                 aria-label={label}
                 title={label}
-                className={`flex items-center justify-center rounded-lg transition-all ${viewMode === v ? 'bg-white dark:bg-[#1E293B] shadow-sm text-[#4F46E5]' : 'text-[#94A3B8]'}`}
+                className={`flex items-center justify-center rounded-lg transition-all ${viewMode === v ? 'bg-white dark:bg-[#1E293B] shadow-sm text-[#4F46E5]' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
                 style={{ width: 30, height: 28 }}
               >
                 {icon}
@@ -399,16 +398,16 @@ export function LibraryPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 13, fontWeight: 700 }}>내 컬렉션</p>
-                <p className="text-[#94A3B8] dark:text-[#CBD5E1]" style={{ fontSize: 11 }}>시리즈, 주제별로 책을 모아보세요</p>
+                <p className="text-[#64748B] dark:text-[#CBD5E1]" style={{ fontSize: 11 }}>시리즈, 주제별로 책을 모아보세요</p>
               </div>
-              <ChevronRight size={16} className="text-[#94A3B8] dark:text-[#CBD5E1] flex-shrink-0" />
+              <ChevronRight size={16} className="text-[#64748B] dark:text-[#CBD5E1] flex-shrink-0" />
             </Link>
           </div>
 
           {/* ── 인라인 검색 바 ── */}
           <div className="px-4 mb-3">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8] dark:text-[#CBD5E1] pointer-events-none" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748B] dark:text-[#CBD5E1] pointer-events-none" />
               <input
                 type="text"
                 placeholder="제목 또는 저자로 검색..."
@@ -422,7 +421,7 @@ export function LibraryPage() {
                   className="absolute right-3 top-1/2 -translate-y-1/2"
                   aria-label="검색어 지우기"
                 >
-                  <X className="h-4 w-4 text-[#94A3B8]" />
+                  <X className="h-4 w-4 text-[#64748B] dark:text-[#94A3B8]" />
                 </button>
               )}
             </div>

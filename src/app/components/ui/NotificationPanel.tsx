@@ -98,7 +98,7 @@ export function NotificationPanel({ onClose }: Props) {
               onClick={clearNotifications}
               aria-label="전체 삭제"
               title="전체 삭제"
-              className="w-8 h-8 flex items-center justify-center rounded-full text-[#94A3B8] hover:text-[#EF4444] hover:bg-[#FEF2F2] transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-full text-[#64748B] dark:text-[#94A3B8] hover:text-[#EF4444] hover:bg-[#FEF2F2] transition-colors"
             >
               <Trash2 size={15} />
             </button>
@@ -106,7 +106,7 @@ export function NotificationPanel({ onClose }: Props) {
           <button
             onClick={onClose}
             aria-label="닫기"
-            className="w-8 h-8 flex items-center justify-center rounded-full text-[#94A3B8] hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-full text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors"
           >
             <X size={16} />
           </button>
@@ -116,7 +116,7 @@ export function NotificationPanel({ onClose }: Props) {
       {/* Body */}
       <div className="overflow-y-auto flex-1">
         {notifications.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-2 text-[#94A3B8]">
+          <div className="flex flex-col items-center justify-center py-12 gap-2 text-[#64748B] dark:text-[#94A3B8]">
             <CheckCheck size={32} strokeWidth={1.5} />
             <p className="text-sm">새로운 알림이 없습니다</p>
           </div>
@@ -132,7 +132,7 @@ export function NotificationPanel({ onClose }: Props) {
                   {n.detail && (
                     <p className="text-xs text-[#64748B] dark:text-[#94A3B8] truncate mt-0.5">{n.detail}</p>
                   )}
-                  <p className="text-xs text-[#94A3B8] mt-1">{timeAgo(n.createdAt)}</p>
+                  <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-1">{timeAgo(n.createdAt)}</p>
                 </div>
                 {!n.read && (
                   <span className="w-2 h-2 bg-[#4F46E5] rounded-full flex-shrink-0 mt-2" aria-hidden />

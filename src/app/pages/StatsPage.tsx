@@ -129,7 +129,7 @@ function AchievementBadges({ totalDone, totalPages }: { totalDone: number; total
                   title={b.description}
                 >
                   <span style={{ fontSize: 22 }}>{b.icon}</span>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: tierStyle.label, textAlign: "center" }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: tierStyle.label, textAlign: "center" }}>
                     {b.label}
                   </span>
                 </div>
@@ -139,7 +139,7 @@ function AchievementBadges({ totalDone, totalPages }: { totalDone: number; total
         )}
 
         {unlocked.length === 0 && (
-          <p style={{ fontSize: 13, color: "#94A3B8", textAlign: "center", padding: "16px 0" }}>
+          <p style={{ fontSize: 13, color: "#64748B", textAlign: "center", padding: "16px 0" }}>
             아직 달성한 배지가 없어요. 책을 읽어보세요! 📚
           </p>
         )}
@@ -156,7 +156,7 @@ function AchievementBadges({ totalDone, totalPages }: { totalDone: number; total
               style={{ overflow: "hidden" }}
             >
               <div>
-                <p style={{ fontSize: 11, color: "#94A3B8", fontWeight: 600, marginBottom: 8 }}>다음 도전</p>
+                <p style={{ fontSize: 11, color: "#64748B", fontWeight: 600, marginBottom: 8 }}>다음 도전</p>
                 <div className="flex flex-wrap gap-2">
                   {visibleLocked.map((b) => (
                     <div
@@ -166,10 +166,10 @@ function AchievementBadges({ totalDone, totalPages }: { totalDone: number; total
                       title={b.description}
                     >
                       <span style={{ fontSize: 22, filter: "grayscale(1)" }}>{b.icon}</span>
-                      <span style={{ fontSize: 10, fontWeight: 600, color: "#94A3B8", textAlign: "center" }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: "#64748B", textAlign: "center" }}>
                         {b.label}
                         <br />
-                        <span style={{ fontSize: 9 }}>
+                        <span style={{ fontSize: 11 }}>
                           {b.type === "books"
                             ? `${b.threshold - totalDone}권 남음`
                             : `${(b.threshold - totalPages).toLocaleString()}p 남음`}
@@ -251,7 +251,7 @@ export function StatsPage() {
       {/* Header */}
       <div className="px-4 pt-4 pb-3">
         <h2 className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 20, fontWeight: 700 }}>나의 독서 통계 📊</h2>
-        <p className="text-[#64748B]" style={{ fontSize: 13, marginTop: 2 }}>
+        <p className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 13, marginTop: 2 }}>
           {stats ? `완독 ${totalDone}권 · 읽는 중 ${totalReading}권 · Wish ${totalWish}권` : "통계를 불러오는 중..."}
         </p>
       </div>
@@ -464,7 +464,7 @@ export function StatsPage() {
           {/* 독서 달력 */}
           <div className="px-4 mt-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 style={{ fontSize: 15, fontWeight: 700, color: "#1E293B" }}>📅 독서 달력</h3>
+              <h3 className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 15, fontWeight: 700 }}>📅 독서 달력</h3>
             </div>
             <ReadingCalendar
               doneBooks={doneBooks}

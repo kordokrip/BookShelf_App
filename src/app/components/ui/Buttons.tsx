@@ -60,7 +60,7 @@ interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 export function IconButton({ icon, label, variant = "default", className = "", ...props }: IconButtonProps) {
   const variants: Record<string, string> = {
-    default: "bg-[#F1F5F9] text-[#64748B] hover:bg-[#E2E8F0] hover:text-[#1E293B]",
+    default: "bg-[#F1F5F9] text-[#475569] hover:bg-[#E2E8F0] hover:text-[#1E293B]",
     primary: "bg-[#4F46E5] text-white hover:bg-[#4338CA] shadow-sm",
     ghost:   "bg-transparent text-[#64748B] hover:bg-[#F1F5F9]",
   };

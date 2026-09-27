@@ -97,7 +97,7 @@ export function SearchSheet({
         {/* 검색 헤더 */}
         <div className="flex items-center gap-2 px-4 pt-5 pb-3 border-b border-[#F1F5F9]">
           <div className="flex-1 flex items-center gap-2 bg-[#F8FAFC] rounded-xl px-3 py-2.5">
-            <Search size={16} className="text-[#94A3B8] shrink-0" />
+            <Search size={16} className="text-[#64748B] dark:text-[#94A3B8] shrink-0" />
             <input
               ref={searchInputRef}
               type="text"
@@ -114,7 +114,7 @@ export function SearchSheet({
               <button
                 onClick={() => setSearchQuery("")}
                 aria-label="검색어 지우기"
-                className="text-[#94A3B8] hover:text-[#475569]"
+                className="text-[#64748B] dark:text-[#94A3B8] hover:text-[#475569]"
               >
                 <X size={14} />
               </button>
@@ -152,7 +152,7 @@ export function SearchSheet({
                       localStorage.removeItem(RECENT_SEARCHES_KEY);
                       setRecentSearches([]);
                     }}
-                    className="text-[#94A3B8] hover:text-[#64748B]"
+                    className="text-[#64748B] dark:text-[#94A3B8] hover:text-[#64748B]"
                     style={{ fontSize: 12 }}
                   >
                     전체 삭제
@@ -176,7 +176,7 @@ export function SearchSheet({
                 </div>
               </div>
             ) : (
-              <p className="text-center text-[#94A3B8] mt-16" style={{ fontSize: 14 }}>
+              <p className="text-center text-[#64748B] dark:text-[#94A3B8] mt-16" style={{ fontSize: 14 }}>
                 검색어를 2글자 이상 입력하세요
               </p>
             )
@@ -193,7 +193,7 @@ export function SearchSheet({
               ))}
             </div>
           ) : searchResults.length === 0 ? (
-            <p className="text-center text-[#94A3B8] mt-16" style={{ fontSize: 14 }}>
+            <p className="text-center text-[#64748B] dark:text-[#94A3B8] mt-16" style={{ fontSize: 14 }}>
               검색 결과가 없어요
             </p>
           ) : (

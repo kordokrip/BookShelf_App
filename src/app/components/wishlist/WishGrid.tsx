@@ -103,7 +103,7 @@ function WishBookDetailSheet({
                 {book.author}
               </p>
               {book.publisher && (
-                <p className="text-[#94A3B8] truncate" style={{ fontSize: 12 }}>
+                <p className="text-[#64748B] dark:text-[#94A3B8] truncate" style={{ fontSize: 12 }}>
                   {book.publisher}
                 </p>
               )}
@@ -158,13 +158,13 @@ function WishBookDetailSheet({
               }}
             />
             <div className="flex justify-between mt-1">
-              <span style={{ fontSize: 11, color: "#94A3B8" }}>낮음</span>
-              <span style={{ fontSize: 11, color: "#94A3B8" }}>높음</span>
+              <span style={{ fontSize: 11, color: "#64748B" }}>낮음</span>
+              <span style={{ fontSize: 11, color: "#64748B" }}>높음</span>
             </div>
           </div>
 
           {/* 추가일 */}
-          <p className="text-[#94A3B8] mb-5" style={{ fontSize: 12 }}>
+          <p className="text-[#64748B] dark:text-[#94A3B8] mb-5" style={{ fontSize: 12 }}>
             추가일: {book.addedDate.replace(/-/g, ".")}
           </p>
 

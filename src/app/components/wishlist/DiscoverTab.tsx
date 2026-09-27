@@ -65,7 +65,7 @@ function NewBooksTab({ wishTitleSet }: { wishTitleSet: Set<string> }) {
               {book.author}{book.publisher ? ` · ${book.publisher}` : ""}
             </p>
             {book.publishedDate && (
-              <p className="text-[#94A3B8] mt-0.5" style={{ fontSize: 11 }}>{book.publishedDate.slice(0, 7)}</p>
+              <p className="text-[#64748B] dark:text-[#94A3B8] mt-0.5" style={{ fontSize: 11 }}>{book.publishedDate.slice(0, 7)}</p>
             )}
           </div>
           <button
@@ -128,7 +128,7 @@ function PopularBooksTab({ wishTitleSet }: { wishTitleSet: Set<string> }) {
             <p className="text-[#64748B] dark:text-[#94A3B8] truncate mt-0.5" style={{ fontSize: 12 }}>
               {book.author}{book.publisher ? ` · ${book.publisher}` : ""}
             </p>
-            <p className="text-[#94A3B8] mt-0.5" style={{ fontSize: 11 }}>
+            <p className="text-[#64748B] dark:text-[#94A3B8] mt-0.5" style={{ fontSize: 11 }}>
               서재 {book.library_count}명{book.avg_rating ? ` · ★ ${book.avg_rating.toFixed(1)}` : ""}
             </p>
           </div>
@@ -165,7 +165,7 @@ function SkeletonList() {
 function ErrorEmpty({ label }: { label: string }) {
   return (
     <div className="px-4 py-16 text-center">
-      <p className="text-[#94A3B8] dark:text-[#64748B]" style={{ fontSize: 14 }}>{label}</p>
+      <p className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 14 }}>{label}</p>
     </div>
   );
 }

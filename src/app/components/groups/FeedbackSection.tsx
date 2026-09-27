@@ -32,9 +32,9 @@ export function FeedbackSection({ groupId, meetingId }: { groupId: string; meeti
         피드백 ({feedbacks.length})
       </h5>
       {isLoading ? (
-        <p className="text-xs text-[#94A3B8]">로딩 중...</p>
+        <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">로딩 중...</p>
       ) : feedbacks.length === 0 ? (
-        <p className="text-xs text-[#94A3B8]">아직 피드백이 없습니다.</p>
+        <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">아직 피드백이 없습니다.</p>
       ) : (
         <div className="space-y-2">
           {feedbacks.map((fb: MeetingFeedback) => (

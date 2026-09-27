@@ -35,7 +35,7 @@ export function RecommendSection({ wishTitleSet: _wishTitleSet }: { wishTitleSet
           >
             ✦ AI 추천
           </p>
-          <p style={{ fontSize: 12, color: "#94A3B8", marginTop: 2 }}>
+          <p className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 12, marginTop: 2 }}>
             {data?.cached ? "캐시된 결과 · 24시간 유지" : "완독 이력 기반 인생책 추천"}
           </p>
         </div>
@@ -156,7 +156,8 @@ export function RecommendSection({ wishTitleSet: _wishTitleSet }: { wishTitleSet
                 {/* 정보 */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-1">
-                    <p style={{ fontSize: 14, fontWeight: 700, color: "#1E293B" }} className="dark:text-[#F8FAFC] leading-snug">
+                    {/* 인라인 color가 dark: 클래스를 이겨 다크 모드에서 제목이 배경과 같은 색(대비 1.00)이던 문제 */}
+                    <p style={{ fontSize: 14, fontWeight: 700 }} className="text-[#1E293B] dark:text-[#F8FAFC] leading-snug">
                       {book.title}
                     </p>
                     {book.url && (
@@ -164,21 +165,20 @@ export function RecommendSection({ wishTitleSet: _wishTitleSet }: { wishTitleSet
                         href={book.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[#64748B] hover:text-[#4F46E5] transition-colors flex-shrink-0 p-4 -m-4"
+                        className="text-[#64748B] dark:text-[#94A3B8] hover:text-[#4F46E5] dark:hover:text-[#A5B4FC] transition-colors flex-shrink-0 p-4 -m-4"
                         aria-label={`${book.title} 상세 보기`}
                       >
                         <ExternalLink size={13} />
                       </a>
                     )}
                   </div>
-                  <p className="mt-0.5 truncate" style={{ fontSize: 12, color: "#64748B" }}>
+                  <p className="mt-0.5 truncate text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 12 }}>
                     {book.author}{book.publisher ? ` · ${book.publisher}` : ''}
                   </p>
                   <p
-                    className="mt-2"
+                    className="mt-2 text-[#475569] dark:text-[#CBD5E1]"
                     style={{
                       fontSize: 12,
-                      color: "#475569",
                       fontStyle: "italic",
                       borderLeft: "3px solid #7C3AED",
                       paddingLeft: 8,

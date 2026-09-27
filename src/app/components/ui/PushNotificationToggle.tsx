@@ -45,7 +45,7 @@ export function PushNotificationToggle() {
   // ── 브라우저 미지원 ─────────────────────────────────────
   if (!isSupported) {
     return (
-      <div className="flex items-center gap-2 text-[#94A3B8]" style={{ fontSize: 13 }}>
+      <div className="flex items-center gap-2 text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 13 }}>
         <BellOff size={15} className="flex-shrink-0" />
         <span>이 브라우저는 푸시 알림을 지원하지 않습니다.</span>
       </div>

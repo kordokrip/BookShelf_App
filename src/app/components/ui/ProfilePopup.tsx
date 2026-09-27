@@ -68,7 +68,7 @@ function EmojiPicker({
     >
       <div className="flex items-center justify-between mb-2">
         <p style={{ fontSize: 12, fontWeight: 700, color: "#64748B" }}>프로필 이모지 선택</p>
-        <button onClick={onClose} aria-label="이모지 피커 닫기" className="text-[#94A3B8] hover:text-[#64748B]">
+        <button onClick={onClose} aria-label="이모지 피커 닫기" className="text-[#64748B] dark:text-[#94A3B8] hover:text-[#64748B]">
           <X size={14} />
         </button>
       </div>
@@ -86,7 +86,7 @@ function EmojiPicker({
       </div>
       <button
         onClick={() => onSelect("")}
-        className="w-full mt-2 py-1.5 rounded-lg text-[#94A3B8] hover:bg-[#F8FAFC] transition-colors"
+        className="w-full mt-2 py-1.5 rounded-lg text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F8FAFC] transition-colors"
         style={{ fontSize: 11, fontWeight: 600 }}
       >
         이모지 제거 (이니셜로 복원)
@@ -284,7 +284,7 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
         </p>
         <button
           onClick={onClose}
-          className="w-7 h-7 rounded-full flex items-center justify-center text-[#94A3B8] hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors"
+          className="w-7 h-7 rounded-full flex items-center justify-center text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors"
         >
           <X size={16} />
         </button>
@@ -324,7 +324,7 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
         </p>
 
         {/* 가입일 */}
-        <p className="text-[#94A3B8] dark:text-[#64748B]" style={{ fontSize: 11 }}>
+        <p className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 11 }}>
           가입일: {user.created_at ? formatDate(user.created_at) : "정보 없음"}
         </p>
       </div>

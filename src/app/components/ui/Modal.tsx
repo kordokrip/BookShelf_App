@@ -55,7 +55,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
             </h2>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-[#94A3B8] hover:bg-[#F1F5F9] transition-colors flex-shrink-0"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F1F5F9] transition-colors flex-shrink-0"
               aria-label="닫기"
             >
               <X size={18} />

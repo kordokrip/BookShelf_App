@@ -16,7 +16,7 @@ const MIN_SPINE_PX = 12;
 const MAX_SPINE_PX = 32;
 const PAGES_PER_PX = 14;
 /** 이 높이 이상이면 책등에 제목을 쓴다 */
-export const SPINE_TITLE_MIN_PX = 14;
+export const SPINE_TITLE_MIN_PX = 15; // 11px 제목(줄높이 1.1 + 위아래 1px)이 잘리지 않는 최소 두께
 /** DB 기본 표지 색 — 등록 흐름이 대부분 이 값을 그대로 저장한다 */
 const DEFAULT_COVER = 'from-indigo-500 to-violet-600';
 

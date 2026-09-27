@@ -44,7 +44,7 @@ export function LifeBooksPage() {
           )}
         </div>
         {data?.cached && (
-          <p className="mt-1.5 text-xs text-[#94A3B8] dark:text-[#64748B]">캐시된 결과 · 24시간 유지</p>
+          <p className="mt-1.5 text-xs text-[#64748B] dark:text-[#94A3B8]">캐시된 결과 · 24시간 유지</p>
         )}
       </div>
 

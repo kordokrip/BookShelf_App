@@ -160,7 +160,7 @@ export function DoneBookCard({
         <div className="flex items-center justify-between mt-auto pt-1">
           {book.finishedDate && (
             <span
-              className="flex items-center gap-1 text-[#94A3B8] dark:text-[#CBD5E1]"
+              className="flex items-center gap-1 text-[#64748B] dark:text-[#CBD5E1]"
               style={{ fontSize: 12 }}
             >
               <Calendar size={11} />
@@ -300,16 +300,14 @@ export function ReadingBookCard({
 
       {/* ── Progress text row (pages + %) ── */}
       <div className="flex items-center justify-between">
+        {/* 인라인 color는 다크 모드를 못 따라가 #4F46E5 on #1E293B(2.33)가 됐음 → 클래스로 라이트·다크 지정 */}
         <span
-          style={{
-            fontSize: 12,
-            fontWeight: 600,
-            color: isOverdue ? "#EF4444" : "#4F46E5",
-          }}
+          className={isOverdue ? "text-[#DC2626] dark:text-[#FCA5A5]" : "text-[#4F46E5] dark:text-[#A5B4FC]"}
+          style={{ fontSize: 12, fontWeight: 600 }}
         >
           {book.currentPage ?? 0}p{book.totalPages ? ` / ${book.totalPages}p` : ''}
         </span>
-        <span style={{ fontSize: 12, fontWeight: 700, color: "#64748B" }}>
+        <span className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 12, fontWeight: 700 }}>
           {progress}%
         </span>
       </div>
@@ -411,7 +409,7 @@ export function WishBookCard({
 
           {/* 추가일: YYYY.MM.DD — spec format */}
           <span
-            className="flex items-center gap-1 text-[#94A3B8] dark:text-[#CBD5E1]"
+            className="flex items-center gap-1 text-[#64748B] dark:text-[#CBD5E1]"
             style={{ fontSize: 12 }}
           >
             <Calendar size={11} />

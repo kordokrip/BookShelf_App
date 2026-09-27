@@ -88,7 +88,7 @@ export function BookStack({ books, title, maxVisible = 40 }: BookStackProps) {
                   {height >= SPINE_TITLE_MIN_PX && (
                     // 흰 글씨가 밝은 책등색(연두·주황 등)에서 대비 1.98:1까지 떨어져, 반투명 검정 배경으로
                     // 16개 그라데이션 끝색 모두 5.07:1 이상 확보 (WCAG AA 4.5:1)
-                    <span className="truncate text-white bg-black/40 rounded-sm px-1 py-px" style={{ fontSize: 10, fontWeight: 700, lineHeight: 1.1 }}>
+                    <span className="truncate text-white bg-black/40 rounded-sm px-1 py-px" style={{ fontSize: 11, fontWeight: 700, lineHeight: 1.1 }}>
                       {book.title}
                     </span>
                   )}

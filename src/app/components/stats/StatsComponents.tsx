@@ -15,7 +15,7 @@ const C = {
   amber: "#F59E0B",
   slate1: "#1E293B",
   slate5: "#64748B",
-  slate6: "#94A3B8",
+  slate6: "#64748B", // 흰 카드 위 보조 글자 — #94A3B8(대비 2.56)은 WCAG AA 미달이라 한 단계 진하게
   slate8: "#E2E8F0",
   slate9: "#F1F5F9",
   white: "#FFFFFF",
@@ -90,7 +90,7 @@ export function SummaryCard({ icon, iconBg, borderColor, label, value, trend, tr
 // Spec:
 // Heading "월별 독서 현황" 16px SemiBold + "[2025년 ▼]" right-aligned
 // Past bars: #4F46E5, Current (March): #F59E0B, Future: #F1F5F9
-// Y-axis: 0,1,2,3,4; X-axis: "1월"~"12월" 11px #94A3B8
+// Y-axis: 0,1,2,3,4; X-axis: "1월"~"12월" 11px #64748B
 // Tooltip: "3월: 3권 완독 중"
 // CRITICAL: March bar (idx=2) must be tallest
 
@@ -140,7 +140,7 @@ export function MonthlyBarChart({ data: monthlyData }: { data: { month: string; 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <h3 style={{ fontSize: 16, fontWeight: 600, color: C.slate1 }}>월별 독서 현황</h3>
         <span style={{
-          fontSize: 13, fontWeight: 600, color: C.slate5,
+          fontSize: 13, fontWeight: 600, color: "#475569",
           border: `1px solid ${C.slate8}`, borderRadius: 8,
           padding: "4px 10px", backgroundColor: C.slate9,
         }}>
@@ -246,7 +246,7 @@ export function MonthlyBarChart({ data: monthlyData }: { data: { month: string; 
 // Tabs: [전체] [완독] [읽는중], active = "전체" underlined #4F46E5 2px
 // Donut: innerRadius = 40% of outerRadius
 // Center text: "23권" 20px Bold + "전체" 12px Regular #64748B below
-// Custom legend: ● dot 10px + name 13px + "N권" 12px + "XX%" 12px #94A3B8
+// Custom legend: ● dot 10px + name 13px + "N권" 12px + "XX%" 12px #64748B
 // Sorted descending
 
 const DONUT_OUTER = 80;
@@ -357,7 +357,7 @@ export function GenreDonutChart({ allData, doneData, readingData }: GenreDonutCh
               </span>
               {/* N권 12px #64748B */}
               <span style={{ fontSize: 12, color: C.slate5, flexShrink: 0 }}>{g.count}권</span>
-              {/* XX% 12px #94A3B8 */}
+              {/* XX% 12px #64748B */}
               <span style={{ fontSize: 12, color: C.slate6, flexShrink: 0, minWidth: 32, textAlign: "right" }}>{pct}%</span>
             </div>
           );
@@ -372,7 +372,7 @@ export function GenreDonutChart({ allData, doneData, readingData }: GenreDonutCh
 // Heading "독서 스트릭 🔥" + "현재 N일 연속" chip bg #FEF3C7 text #92400E
 // 52 cols × 7 rows, cell 10×10px, gap 2px
 // 5 color levels: L0=#F1F5F9, L1=#C7D2FE, L2=#818CF8, L3=#4F46E5, L4=#312E81
-// Month labels above: Korean (N월), 10px #94A3B8
+// Month labels above: Korean (N월), 11px #64748B
 // Day labels left: 월 수 금 only (idx 1,3,5 in 일월화수목금토)
 // Stats: "총 독서일: N일" "최장 연속: N일"
 // Legend: 적음 [L0~L4] 많음
@@ -524,7 +524,7 @@ export function ReadingHeatmap({ sessions }: ReadingHeatmapProps) {
             {WEEK_DAYS.map((d, i) => (
               <div key={d} style={{
                 width: 14, height: 10,
-                fontSize: 9, color: C.slate6,
+                fontSize: 11, lineHeight: "10px", color: C.slate6,
                 display: "flex", alignItems: "center", justifyContent: "flex-end",
                 // Show only 월(1), 수(3), 금(5)
                 visibility: (i === 1 || i === 3 || i === 5) ? "visible" : "hidden",
@@ -542,7 +542,7 @@ export function ReadingHeatmap({ sessions }: ReadingHeatmapProps) {
                 <div key={weekIndex} style={{
                   position: "absolute",
                   left: weekIndex * (10 + 2),
-                  fontSize: 10, color: C.slate6,
+                  fontSize: 11, color: C.slate6,
                   whiteSpace: "nowrap",
                 }}>
                   {label}
@@ -821,7 +821,7 @@ export function ReadingCalendar({ doneBooks, sessionDates = [] }: ReadingCalenda
               textAlign: "center",
               fontSize: 11,
               fontWeight: 600,
-              color: i === 0 ? "#EF4444" : i === 6 ? "#3B82F6" : "#94A3B8",
+              color: i === 0 ? "#DC2626" : i === 6 ? "#2563EB" : "#64748B",
               paddingBottom: 4,
             }}
           >
@@ -868,9 +868,9 @@ export function ReadingCalendar({ doneBooks, sessionDates = [] }: ReadingCalenda
                       color: isToday
                         ? "#FFFFFF"
                         : di === 0
-                        ? "#EF4444"
+                        ? "#DC2626"
                         : di === 6
-                        ? "#3B82F6"
+                        ? "#2563EB"
                         : "#1E293B",
                       backgroundColor: isToday ? "#4F46E5" : "transparent",
                       borderRadius: "50%",
@@ -915,7 +915,7 @@ export function ReadingCalendar({ doneBooks, sessionDates = [] }: ReadingCalenda
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                fontSize: 9,
+                                fontSize: 11,
                               }}
                             >
                               {b.coverEmoji}
@@ -933,7 +933,7 @@ export function ReadingCalendar({ doneBooks, sessionDates = [] }: ReadingCalenda
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            fontSize: 8,
+                            fontSize: 11,
                             fontWeight: 700,
                             color: "#64748B",
                           }}
@@ -979,7 +979,7 @@ export function ReadingCalendar({ doneBooks, sessionDates = [] }: ReadingCalenda
                 📅 {selectedDate} 완독한 책
               </p>
               {selectedBooks.length === 0 ? (
-                <p style={{ fontSize: 12, color: "#94A3B8" }}>완독 기록이 없어요</p>
+                <p style={{ fontSize: 12, color: "#64748B" }}>완독 기록이 없어요</p>
               ) : (
                 <div className="flex flex-col gap-2">
                   {selectedBooks.map((b) => (
@@ -1006,7 +1006,7 @@ export function ReadingCalendar({ doneBooks, sessionDates = [] }: ReadingCalenda
                       </div>
                       <div className="flex-1 min-w-0">
                         <p style={{ fontSize: 13, fontWeight: 700, color: "#1E293B" }} className="truncate">{b.title}</p>
-                        <p style={{ fontSize: 11, color: "#94A3B8" }}>{b.author}</p>
+                        <p style={{ fontSize: 11, color: "#64748B" }}>{b.author}</p>
                         {b.rating != null && (
                           <p style={{ fontSize: 11, color: "#F59E0B" }}>
                             {"★".repeat(b.rating)}{"☆".repeat(5 - b.rating)}

@@ -72,7 +72,7 @@ function StatCard({
       </div>
       <p className="mt-3 text-2xl font-bold text-[#0F172A] dark:text-white">{formatNum(Number(value))}</p>
       <p className="text-sm text-[#64748B] dark:text-[#94A3B8] mt-0.5">{label}</p>
-      {sub && <p className="text-xs text-[#94A3B8] dark:text-[#64748B] mt-1">{sub}</p>}
+      {sub && <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-1">{sub}</p>}
     </div>
   );
 }
@@ -134,11 +134,11 @@ function UserDetailModal({
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                     detail.user.role === "admin"
                       ? "bg-[#EEF2FF] text-[#4F46E5] dark:bg-[#312E81]/30 dark:text-[#818CF8]"
-                      : "bg-[#F1F5F9] text-[#64748B] dark:bg-[#334155] dark:text-[#94A3B8]"
+                      : "bg-[#F1F5F9] text-[#475569] dark:bg-[#334155] dark:text-[#94A3B8]"
                   }`}>
                     {detail.user.role === "admin" ? "관리자" : "회원"}
                   </span>
-                  <span className="text-xs text-[#94A3B8]">{detail.user.auth_provider}</span>
+                  <span className="text-xs text-[#64748B] dark:text-[#94A3B8]">{detail.user.auth_provider}</span>
                 </div>
               </div>
               {/* 역할 변경 버튼 */}
@@ -164,7 +164,7 @@ function UserDetailModal({
                 ].map(({ label, value }) => (
                   <div key={label} className="bg-[#F8FAFC] dark:bg-[#0F172A] rounded-xl p-3 text-center">
                     <p className="text-lg font-bold text-[#0F172A] dark:text-white">{value}</p>
-                    <p className="text-xs text-[#94A3B8]">{label}</p>
+                    <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">{label}</p>
                   </div>
                 ))}
               </div>
@@ -185,7 +185,7 @@ function UserDetailModal({
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-[#0F172A] dark:text-white truncate">{b.title}</p>
-                        <p className="text-xs text-[#94A3B8] truncate">{b.author}</p>
+                        <p className="text-xs text-[#64748B] dark:text-[#94A3B8] truncate">{b.author}</p>
                       </div>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
                         b.status === "done"    ? "bg-green-100  text-green-700  dark:bg-green-900/30 dark:text-green-400" :
@@ -207,9 +207,9 @@ function UserDetailModal({
                 <div className="space-y-1.5">
                   {detail.recentActivity.slice(0, 6).map((a, i) => (
                     <div key={i} className="flex items-center gap-2 text-sm text-[#475569] dark:text-[#94A3B8]">
-                      <Clock size={13} className="shrink-0 text-[#94A3B8]" />
+                      <Clock size={13} className="shrink-0 text-[#64748B] dark:text-[#94A3B8]" />
                       <span className="font-medium text-[#0F172A] dark:text-white">{actionLabel(a.action)}</span>
-                      <span className="text-[#94A3B8]">·</span>
+                      <span className="text-[#64748B] dark:text-[#94A3B8]">·</span>
                       <span className="text-xs">{formatDate(a.created_at)}</span>
                     </div>
                   ))}
@@ -218,7 +218,7 @@ function UserDetailModal({
             )}
 
             {/* 가입 정보 */}
-            <div className="text-xs text-[#94A3B8] border-t border-[#E2E8F0] dark:border-[#334155] pt-3">
+            <div className="text-xs text-[#64748B] dark:text-[#94A3B8] border-t border-[#E2E8F0] dark:border-[#334155] pt-3">
               가입일: {formatDate(detail.user.created_at)}
             </div>
           </div>
@@ -285,12 +285,12 @@ function DashboardTab() {
                 const maxVal = Math.max(...stats.charts.monthlySignups.map((d) => d.cnt), 1);
                 return stats.charts.monthlySignups.map((d) => (
                   <div key={d.month} className="flex-1 flex flex-col items-center gap-1">
-                    <span className="text-[10px] text-[#94A3B8] font-medium">{d.cnt}</span>
+                    <span className="text-[11px] text-[#64748B] dark:text-[#94A3B8] font-medium">{d.cnt}</span>
                     <div
                       className="w-full rounded-t-md bg-indigo-500 transition-all"
                       style={{ height: `${Math.round((d.cnt / maxVal) * 80)}px`, minHeight: 4 }}
                     />
-                    <span className="text-[9px] text-[#94A3B8] text-center leading-tight">
+                    <span className="text-[11px] text-[#64748B] dark:text-[#94A3B8] text-center leading-tight">
                       {d.month.slice(5)}월
                     </span>
                   </div>
@@ -308,7 +308,7 @@ function DashboardTab() {
           <div className="bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-[#334155] overflow-hidden">
             {stats.topUsers.map((u, idx) => (
               <div key={u.id} className="flex items-center gap-3 px-4 py-3 border-b last:border-b-0 border-[#E2E8F0] dark:border-[#334155]">
-                <span className="w-6 text-center text-sm font-bold text-[#94A3B8]">{idx + 1}</span>
+                <span className="w-6 text-center text-sm font-bold text-[#64748B] dark:text-[#94A3B8]">{idx + 1}</span>
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-violet-600 flex items-center justify-center overflow-hidden shrink-0">
                   {u.avatar_url
                     ? <img src={u.avatar_url} alt="" loading="lazy" className="w-full h-full object-cover" />
@@ -317,7 +317,7 @@ function DashboardTab() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-[#0F172A] dark:text-white truncate">{u.name}</p>
-                  <p className="text-xs text-[#94A3B8] truncate">{u.email}</p>
+                  <p className="text-xs text-[#64748B] dark:text-[#94A3B8] truncate">{u.email}</p>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   {u.role === "admin" && <Crown size={12} className="text-amber-500" />}
@@ -375,7 +375,7 @@ function UsersTab() {
       {/* 검색 + 필터 */}
       <div className="flex gap-2">
         <div className="flex-1 relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B] dark:text-[#94A3B8]" />
           <input
             type="text"
             value={q}
@@ -413,7 +413,7 @@ function UsersTab() {
             className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
               sort === v
                 ? "bg-[#4F46E5] text-white"
-                : "bg-[#F1F5F9] dark:bg-[#334155] text-[#64748B] dark:text-[#94A3B8]"
+                : "bg-[#F1F5F9] dark:bg-[#334155] text-[#475569] dark:text-[#94A3B8]"
             }`}
           >
             {l}
@@ -433,7 +433,7 @@ function UsersTab() {
       {!isLoading && (
         <div className="bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-[#334155] overflow-hidden">
           {users.length === 0 ? (
-            <div className="py-12 text-center text-sm text-[#94A3B8]">검색 결과가 없습니다.</div>
+            <div className="py-12 text-center text-sm text-[#64748B] dark:text-[#94A3B8]">검색 결과가 없습니다.</div>
           ) : (
             users.map((u: AdminUser) => (
               <div
@@ -455,11 +455,11 @@ function UsersTab() {
                     <p className="text-sm font-medium text-[#0F172A] dark:text-white truncate">{u.name}</p>
                     {u.role === "admin" && <Crown size={12} className="text-amber-500 shrink-0" />}
                   </div>
-                  <p className="text-xs text-[#94A3B8] truncate">{u.email}</p>
+                  <p className="text-xs text-[#64748B] dark:text-[#94A3B8] truncate">{u.email}</p>
                 </div>
 
                 {/* 통계 뱃지들 */}
-                <div className="flex items-center gap-2 shrink-0 text-xs text-[#94A3B8]">
+                <div className="flex items-center gap-2 shrink-0 text-xs text-[#64748B] dark:text-[#94A3B8]">
                   <span className="hidden sm:flex items-center gap-0.5">
                     <BookOpen size={11} /> {u.book_count}
                   </span>
@@ -556,7 +556,7 @@ function SendNotifTab() {
             className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors ${
               type === t
                 ? "bg-[#4F46E5] text-white"
-                : "bg-[#F1F5F9] dark:bg-[#334155] text-[#64748B] dark:text-[#94A3B8]"
+                : "bg-[#F1F5F9] dark:bg-[#334155] text-[#475569] dark:text-[#94A3B8]"
             }`}
           >
             {t === "broadcast" ? "📢 전체 공지" : "✉️ 개별 메시지"}
@@ -569,7 +569,7 @@ function SendNotifTab() {
         <div className="space-y-2">
           <label className="text-sm font-medium text-[#64748B] dark:text-[#94A3B8]">수신자 검색</label>
           <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B] dark:text-[#94A3B8]" />
             <input
               type="text"
               value={targetSearch}
@@ -594,7 +594,7 @@ function SendNotifTab() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-[#0F172A] dark:text-white truncate">{u.name}</p>
-                    <p className="text-xs text-[#94A3B8] truncate">{u.email}</p>
+                    <p className="text-xs text-[#64748B] dark:text-[#94A3B8] truncate">{u.email}</p>
                   </div>
                 </button>
               ))}
@@ -636,7 +636,7 @@ function SendNotifTab() {
           placeholder="알림 내용을 입력하세요."
           className="w-full px-4 py-3 rounded-xl border border-[#E2E8F0] dark:border-[#334155] bg-white dark:bg-[#1E293B] text-sm resize-none outline-none focus:border-[#4F46E5]"
         />
-        <p className="text-xs text-right text-[#94A3B8]">{body.length}/500</p>
+        <p className="text-xs text-right text-[#64748B] dark:text-[#94A3B8]">{body.length}/500</p>
       </div>
 
       {/* 성공 메시지 */}
@@ -669,7 +669,7 @@ function SendNotifTab() {
       </button>
 
       {type === "broadcast" && (
-        <p className="text-xs text-center text-[#94A3B8]">
+        <p className="text-xs text-center text-[#64748B] dark:text-[#94A3B8]">
           ⚠️ 전체 공지는 모든 회원의 알림함에 표시됩니다.
         </p>
       )}
@@ -711,7 +711,7 @@ function MessagesHistoryTab() {
         </p>
         <button
           onClick={() => qc.invalidateQueries({ queryKey: ["admin", "messages"] })}
-          className="p-2 rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#334155] text-[#94A3B8]"
+          className="p-2 rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#334155] text-[#64748B] dark:text-[#94A3B8]"
         >
           <RefreshCw size={15} />
         </button>
@@ -724,7 +724,7 @@ function MessagesHistoryTab() {
       )}
 
       {!isLoading && messages.length === 0 && (
-        <div className="py-12 text-center text-sm text-[#94A3B8]">발송 내역이 없습니다.</div>
+        <div className="py-12 text-center text-sm text-[#64748B] dark:text-[#94A3B8]">발송 내역이 없습니다.</div>
       )}
 
       {!isLoading && messages.length > 0 && (
@@ -749,12 +749,12 @@ function MessagesHistoryTab() {
                     }`}>
                       {m.type === "broadcast" ? "전체 공지" : "개별"}
                     </span>
-                    <span className="text-xs text-[#94A3B8]">{formatDate(m.created_at)}</span>
+                    <span className="text-xs text-[#64748B] dark:text-[#94A3B8]">{formatDate(m.created_at)}</span>
                   </div>
                   <p className="font-semibold text-sm text-[#0F172A] dark:text-white mb-1">{m.title}</p>
                   <p className="text-xs text-[#64748B] dark:text-[#94A3B8] line-clamp-2">{m.body}</p>
                   {m.type === "individual" && m.target_name && (
-                    <p className="text-xs text-[#94A3B8] mt-1">수신자: {m.target_name} ({m.target_email})</p>
+                    <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-1">수신자: {m.target_name} ({m.target_email})</p>
                   )}
                 </div>
                 <button

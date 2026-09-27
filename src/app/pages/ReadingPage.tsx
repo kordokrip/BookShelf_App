@@ -109,7 +109,7 @@ function PageUpdateModal({
           {/* Close (desktop) */}
           <button
             onClick={onClose}
-            className="hidden lg:flex absolute top-4 right-4 w-11 h-11 items-center justify-center rounded-full hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors text-[#94A3B8]"
+            className="hidden lg:flex absolute top-4 right-4 w-11 h-11 items-center justify-center rounded-full hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors text-[#64748B] dark:text-[#94A3B8]"
           >
             <X size={18} />
           </button>
@@ -121,7 +121,7 @@ function PageUpdateModal({
               <p className="text-[#1E293B] dark:text-[#F8FAFC] truncate" style={{ fontSize: 14, fontWeight: 700 }}>
                 {book.title}
               </p>
-              <p className="text-[#94A3B8] dark:text-[#CBD5E1]" style={{ fontSize: 12 }}>{book.author}</p>
+              <p className="text-[#64748B] dark:text-[#CBD5E1]" style={{ fontSize: 12 }}>{book.author}</p>
             </div>
             <span
               className="px-2.5 py-1 rounded-full text-white"
@@ -187,7 +187,7 @@ function PageUpdateModal({
                   type="button"
                   onClick={() => setLocalGoalDate('')}
                   title="완독 목표일 삭제"
-                  className="text-xs text-[#94A3B8] hover:text-[#EF4444] transition-colors"
+                  className="text-xs text-[#64748B] dark:text-[#94A3B8] hover:text-[#EF4444] transition-colors"
                 >
                   삭제
                 </button>
@@ -484,7 +484,7 @@ function LogTodayModal({
           <button
             onClick={onClose}
             className="hidden lg:flex absolute top-4 right-4 w-11 h-11 items-center justify-center rounded-full hover:bg-[#F1F5F9] transition-colors"
-            style={{ color: "#94A3B8" }}
+            style={{ color: "#64748B" }}
           >
             <X size={18} />
           </button>
@@ -511,9 +511,9 @@ function LogTodayModal({
                 {selectedBook && <BookCover book={selectedBook} size="sm" />}
                 <div className="flex-1 min-w-0">
                   <p className="text-[#1E293B] dark:text-[#F8FAFC] truncate" style={{ fontSize: 13, fontWeight: 700 }}>{selectedBook?.title}</p>
-                  <p className="text-[#94A3B8]" style={{ fontSize: 11 }}>{selectedBook?.currentPage ?? 0}p 읽는 중</p>
+                  <p className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 11 }}>{selectedBook?.currentPage ?? 0}p 읽는 중</p>
                 </div>
-                <ChevronDown size={16} style={{ color: "#94A3B8", flexShrink: 0, transform: showBookPicker ? "rotate(180deg)" : undefined, transition: "transform 0.2s" }} />
+                <ChevronDown size={16} style={{ color: "#64748B", flexShrink: 0, transform: showBookPicker ? "rotate(180deg)" : undefined, transition: "transform 0.2s" }} />
               </button>
               {showBookPicker && (
                 <div
@@ -530,7 +530,7 @@ function LogTodayModal({
                       <BookCover book={b} size="sm" />
                       <div className="flex-1 min-w-0">
                         <p className="text-[#1E293B] dark:text-[#F8FAFC] truncate" style={{ fontSize: 13, fontWeight: 600 }}>{b.title}</p>
-                        <p className="text-[#94A3B8]" style={{ fontSize: 11 }}>{b.currentPage ?? 0}p 읽는 중</p>
+                        <p className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 11 }}>{b.currentPage ?? 0}p 읽는 중</p>
                       </div>
                       {b.id === selectedBookId && (
                         <span className="text-[#4F46E5]" style={{ fontSize: 11, fontWeight: 700 }}>✓</span>
@@ -546,7 +546,7 @@ function LogTodayModal({
                 <BookCover book={selectedBook} size="sm" />
                 <div className="flex-1 min-w-0">
                   <p className="text-[#1E293B] dark:text-[#F8FAFC] truncate" style={{ fontSize: 13, fontWeight: 700 }}>{selectedBook.title}</p>
-                  <p className="text-[#94A3B8]" style={{ fontSize: 11 }}>{selectedBook.currentPage ?? 0}p 까지 읽음</p>
+                  <p className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 11 }}>{selectedBook.currentPage ?? 0}p 까지 읽음</p>
                 </div>
               </div>
             )
@@ -555,13 +555,13 @@ function LogTodayModal({
           {/* Pages read stepper */}
           <p className="text-[#64748B] mb-2" style={{ fontSize: 12, fontWeight: 600 }}>오늘 읽은 페이지 수</p>
           {selectedBook && (selectedBook.currentPage ?? 0) > 0 && (
-            <p className="text-[#94A3B8] mb-2" style={{ fontSize: 11 }}>
+            <p className="text-[#64748B] dark:text-[#94A3B8] mb-2" style={{ fontSize: 11 }}>
               현재 {selectedBook.currentPage}p 기준으로 기록합니다
             </p>
           )}
           <div className="mb-5">
             {maxPages === 0 ? (
-              <p className="text-center py-3 rounded-2xl bg-[#F8FAFC] text-[#94A3B8]" style={{ fontSize: 13 }}>
+              <p className="text-center py-3 rounded-2xl bg-[#F8FAFC] text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 13 }}>
                 모든 페이지를 완독했어요! 🎉
               </p>
             ) : (
@@ -653,7 +653,7 @@ function GoalModal({
           <button
             onClick={onClose}
             className="hidden lg:flex absolute top-4 right-4 w-11 h-11 items-center justify-center rounded-full hover:bg-[#F1F5F9] transition-colors"
-            style={{ color: "#94A3B8" }}
+            style={{ color: "#64748B" }}
           >
             <X size={18} />
           </button>
@@ -1060,8 +1060,8 @@ export function ReadingPage() {
           읽고 있는 책
         </h2>
         <span
-          className="rounded-full bg-[#EEF2FF] dark:bg-[#312E81]"
-          style={{ fontSize: 12, fontWeight: 500, color: "#4F46E5", padding: "2px 8px" }}
+          className="rounded-full bg-[#EEF2FF] dark:bg-[#312E81] text-[#4F46E5] dark:text-[#C7D2FE]"
+          style={{ fontSize: 12, fontWeight: 500, padding: "2px 8px" }}
         >
           {books.length}권
         </span>

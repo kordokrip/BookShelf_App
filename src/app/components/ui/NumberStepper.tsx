@@ -129,7 +129,7 @@ export function NumberStepper({ value, min = 0, max = 9999, onChange, unit = "íŽ
           </button>
         )}
         {unit && (
-          <p style={{ fontSize: 14, color: "#94A3B8", marginTop: 4 }}>{unit}</p>
+          <p style={{ fontSize: 14, color: "#64748B", marginTop: 4 }}>{unit}</p>
         )}
       </div>
 
