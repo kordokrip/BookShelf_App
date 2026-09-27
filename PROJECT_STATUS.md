@@ -1,9 +1,10 @@
 # BookShelf App — 현재 상태 스냅샷
 
-> **최종 업데이트:** 2026-09-26 (2026-09-14~16 QA 버그 수정 세션 사후 정리)
+> **최종 업데이트:** 2026-09-27 (리뉴얼 Phase 0~4 + 온보딩 개편 + 반응형·다크 대비 점검, 기능 5종 전체 공개)
 > **Git 브랜치:** `main` (kordokrip/BookShelf_App)
-> **E2E 테스트:** `bash scripts/e2e-api-test.sh` → **전체 PASS** ✅ (2026-09-26 확인, 테스트 개수는 `grep -n '^  TOTAL=' scripts/e2e-api-test.sh`로 확인)
-> **상세 세션 리포트:** `docs/sessions/2026-09-14-qa-bugfix-ai-library.md`
+> **E2E 테스트:** `bash scripts/e2e-api-test.sh` → **전체 PASS** ✅ (2026-09-27 스테이징·프로덕션 확인, 테스트 개수는 `grep -n '^  TOTAL=' scripts/e2e-api-test.sh`로 확인)
+> **상세 세션 리포트:** `docs/sessions/2026-09-27-renewal-onboarding-responsive.md`
+> **기능 플래그:** 공개 상태는 `wrangler.toml` `[vars] FEATURE_FLAGS` 또는 `GET /api/flags/public`으로 확인 (ADR-003)
 
 ---
 
@@ -45,8 +46,8 @@
 | 라우트 | 페이지 |
 |--------|--------|
 | `/entry` | EntryGate (로그인 상태에 따른 진입 분기) |
-| `/splash` | SplashPage |
-| `/onboarding` | OnboardingPage |
+| `/splash` | `/onboarding`으로 리다이렉트 (2026-09-27 스플래시를 온보딩에 통합) |
+| `/onboarding` | OnboardingPage (처음 방문한 미인증 사용자의 첫 화면, 모든 슬라이드에 로그인·가입 버튼) |
 | `/login` | LoginPage |
 | `/signup` | SignUpPage |
 | `/register-flow` | RegisterFlowPage (Root 레이아웃 **외부** 독립 라우트) |
@@ -73,7 +74,7 @@
 
 ## 4. Worker API 엔드포인트
 
-### 라우터 목록 (`worker/index.ts`, 17개)
+### 라우터 목록 (`worker/index.ts`, 개수는 `grep -c app.route worker/index.ts`로 확인)
 ```
 /api/auth          → Google OAuth, refresh token
 /api/users         → 회원가입·로그인·프로필
@@ -92,6 +93,8 @@
 /api/presence      → 온라인 상태(heartbeat)
 /api/vitals        → Web Vitals 수집
 /api/ai            → 요약·추천·OCR·인생책 (Workers AI)
+/api/flags         → 기능 플래그 (GET /, 무인증 GET /public) — ADR-003
+/api/achievements  → 업적·캐릭터 진화 (서버 저장) — ADR-004
 GET *              → ASSETS.fetch() SPA 폴백
 ```
 
@@ -167,11 +170,14 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 | `useOfflineQueue.ts` | @deprecated — TanStack Query `PersistQueryClientProvider`(`src/lib/queryClient.ts`)로 대체됨. 하위 호환용 dedup 가드만 남음 |
 | `usePushNotification.ts` | usePushNotification (웹 푸시 구독/해제), `detectPlatform`은 `src/lib/platform.ts`로 분리됨 |
 | `useViewport.ts` | useViewport (CSS 변수 --vp-h/w 동기화) |
+| `useFeatureFlags.ts` | useFeatureFlags, useFlag(name), usePublicFlags (로그인 전 온보딩용) |
+| `useAchievements.ts` | useAchievements + 변경 응답의 `achievements` 이벤트를 축하 모달로 연결 |
 
 ### KV 캐시 키 패턴
 - AI 요약: `ai:summary:{isbn}` / `ai:summary:nod:{title}:{author}` (24h)
 - AI 추천: `ai_recommend:{userId}:{topGenres}` (1h)
-- Rate Limit: `rl:{prefix}:{path}:{ip}`
+- AI 노트 태그: `ai_tag:{규칙버전}:{내용 해시}` (7일), 일일 한도 `ai_tag_quota:{userId}:{KST 날짜}`
+- Rate Limit: `rl:{prefix}:{path}:{ip}:{창 번호}` (고정 창 — 창 번호 = `floor(now / windowMs)`)
 - Rate limit prefix `ai_sum`(요약)과 `ai_rec`(추천)는 별도 버킷 — 공유 금지
 
 ---
@@ -217,9 +223,13 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 | PWA + 오프라인 지원 | ✅ 완료 |
 | **접근성 (WCAG 2.1 AA)** | 1차 감사 완료(`docs/A11Y_AUDIT_2026-07.md`, 2026-07) + **다크모드 대비 위반 16곳 후속 발견·수정 완료**(2026-08-14) — 감사 문서 자체의 "미해결" 섹션은 계속 정직하게 유지할 것, 상위 문서에서 "100% 완료"로 과장 인용하지 말 것 |
 | "책 등록" 진입점 통일 | ✅ 완료(9개 진입점 → FAB 중심 단일화, 2026-08-15) |
+| 스테이징 환경 + 기능 플래그 | ✅ 완료(2026-09-27, `staging` 브랜치 → `bookshelf-api-staging`, ADR-003) |
+| 리뉴얼: 노트 v2(서식·페이지 범위·오늘의 회고) / 책 쌓기 / 업적·캐릭터 / 몰입 타이머·AI 태그 | ✅ 2026-09-27 전체 공개. AI 태그 품질은 8B 모델 한계로 어색한 단어가 섞일 수 있음(세션 리포트 참고) |
+| 온보딩 개편 (스플래시 통합, 로그인까지 1탭) | ✅ 완료(2026-09-27) |
+| 반응형·다크/라이트 대비 | ✅ 2026-09-27 Playwright 점검(8개 뷰포트·13개 화면, WebKit·Chromium 기기 에뮬레이션). **실기기(iOS 홈 화면 설치 모드·노치·진동)는 미확인** |
 
 > 상세 변경 이력: `docs/CHANGELOG.md`
-> 마지막 세션 상세 리포트: `docs/sessions/2026-09-14-qa-bugfix-ai-library.md`
+> 마지막 세션 상세 리포트: `docs/sessions/2026-09-27-renewal-onboarding-responsive.md`
 > 아키텍처 결정 기록: `docs/adr/README.md`
 > API 스펙: `docs/TRACE_MAP.md`
 > QA 절차: `docs/QA_가이드.md`
