@@ -399,12 +399,17 @@ function LogTodayModal({
   books,
   onClose,
   initialDuration,
+  initialBookId,
 }: {
   books: UIBook[];
   onClose: () => void;
   initialDuration?: number;
+  /** 타이머 기록 프롬프트에서 열면 타이머의 책 — 첫 번째 책으로 기록되거나 몰입 메모 연결이 빠지지 않도록 */
+  initialBookId?: string | null;
 }) {
-  const [selectedBookId, setSelectedBookId] = useState<string>(books[0]?.id ?? "");
+  const [selectedBookId, setSelectedBookId] = useState<string>(
+    () => (initialBookId && books.some((b) => b.id === initialBookId) ? initialBookId : books[0]?.id ?? ""),
+  );
   const [showBookPicker, setShowBookPicker] = useState(false);
   const addSession = useAddSession();
   const { showToast } = useToast();
@@ -791,6 +796,7 @@ export function ReadingPage() {
   const [goalModalOpen, setGoalModalOpen] = useState(false);
   const [timerPromptMinutes, setTimerPromptMinutes] = useState<number | null>(null);
   const [logDuration, setLogDuration] = useState<number | undefined>(undefined);
+  const [logBookId, setLogBookId] = useState<string | null>(null);
   const { showToast } = useToast();
   const navigate = useNavigate();
   const timer = useReadingTimer((elapsedMinutes) => {
@@ -929,6 +935,7 @@ export function ReadingPage() {
   function handleTimerPromptRecord() {
     if (timerPromptMinutes == null) return;
     setLogDuration(timerPromptMinutes);
+    setLogBookId(timerStoreBookId);
     setTimerPromptMinutes(null);
     timer.reset();
     setLogModalOpen(true);
@@ -1062,8 +1069,9 @@ export function ReadingPage() {
       {logModalOpen && (
         <LogTodayModal
           books={books}
-          onClose={() => { setLogModalOpen(false); setLogDuration(undefined); }}
+          onClose={() => { setLogModalOpen(false); setLogDuration(undefined); setLogBookId(null); }}
           initialDuration={logDuration}
+          initialBookId={logBookId}
         />
       )}
 
