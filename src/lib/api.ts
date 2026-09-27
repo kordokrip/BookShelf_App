@@ -14,6 +14,7 @@ export * from './api/collections';
 export * from './api/stats-search-ai';
 export * from './api/push-share-admin';
 export * from './api/flags';
+export * from './api/achievements';
 
 import type { booksApi } from './api/books';
 import type { sessionsApi } from './api/sessions';
@@ -58,6 +59,9 @@ export const queryKeys = {
     recommendations: () => [...queryKeys.ai.all, 'recommendations'] as const,
     summary: (isbn: string) => [...queryKeys.ai.all, 'summary', isbn] as const,
     lifeBooks: () => [...queryKeys.ai.all, 'lifeBooks'] as const,
+  },
+  achievements: {
+    all: ['achievements'] as const,
   },
   stats: {
     all: ['stats'] as const,

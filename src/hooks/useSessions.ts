@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { sessionsApi, queryKeys } from '../lib/api';
 import { normalizeSession, type UISession } from '../types/book';
 import { useUiStore } from '../stores/uiStore';
+import { useAchievementCelebration } from './useAchievements';
 
 /** 독서 세션 목록 조회 */
 export function useSessions(params?: { bookId?: string; limit?: number }) {
@@ -30,6 +31,7 @@ export function useSessions(params?: { bookId?: string; limit?: number }) {
 export function useAddSession() {
   const qc = useQueryClient();
   const addNotification = useUiStore((s) => s.addNotification);
+  const celebrate = useAchievementCelebration();
   return useMutation({
     // mutationKey: queryClient.setMutationDefaults와 연결 →
     //   오프라인 pause 후 페이지 재실행 시 resumePausedMutations가 이 key로 함수 조회
@@ -45,7 +47,8 @@ export function useAddSession() {
         pages_read: data.endPage - data.startPage,
         duration_min: data.durationMinutes,
       }),
-    onSuccess: (_, variables) => {
+    onSuccess: (res, variables) => {
+      celebrate(res.achievements);
       qc.invalidateQueries({ queryKey: queryKeys.sessions.all });
       qc.invalidateQueries({ queryKey: queryKeys.books.all });
       qc.invalidateQueries({ queryKey: queryKeys.stats.all });

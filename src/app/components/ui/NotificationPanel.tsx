@@ -3,7 +3,7 @@
  * 인앱 이벤트(책 추가, 세션 저장, 노트 등록 등)를 시간순으로 표시합니다.
  */
 import { useEffect, useRef } from 'react';
-import { X, BookPlus, BookOpen, PenLine, RefreshCw, Info, CheckCheck, Trash2, FolderPlus, FolderMinus, Wifi } from 'lucide-react';
+import { X, BookPlus, BookOpen, PenLine, RefreshCw, Info, CheckCheck, Trash2, FolderPlus, FolderMinus, Wifi, Trophy } from 'lucide-react';
 import { useUiStore } from '../../../stores/uiStore';
 import type { NotificationItem, NotificationType } from '../../../stores/uiStore';
 
@@ -16,6 +16,7 @@ const TYPE_ICON: Record<NotificationType, React.ReactNode> = {
   collection_deleted: <FolderMinus size={16} className="text-[#EF4444]" />,
   offline_sync:  <Wifi      size={16} className="text-[#0EA5E9]" />,
   sync:          <RefreshCw size={16} className="text-[#0EA5E9]" />,
+  achievement:   <Trophy    size={16} className="text-[#B45309]" />,
   info:          <Info      size={16} className="text-[#64748B]" />,
 };
 
@@ -28,6 +29,7 @@ const TYPE_BG: Record<NotificationType, string> = {
   collection_deleted: 'bg-[#FEF2F2]',
   offline_sync:  'bg-[#F0F9FF]',
   sync:          'bg-[#F0F9FF]',
+  achievement:   'bg-[#FEF3C7]',
   info:          'bg-[#F1F5F9]',
 };
 

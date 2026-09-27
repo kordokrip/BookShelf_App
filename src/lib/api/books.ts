@@ -1,5 +1,6 @@
 import type { ApiResponse, Book, BookStatus, CreateBookInput, UpdateBookInput } from './types';
 import { ApiError, apiFetch } from './client';
+import type { WithAchievementEvent } from './achievements';
 
 export const booksApi = {
   /** 책 목록 조회 */
@@ -25,15 +26,17 @@ export const booksApi = {
     apiFetch<ApiResponse<Book>>(`/api/books/${id}`),
 
   /** 책 생성 */
+  /** 완독으로 등록하면 새로 달성한 업적이 achievements로 올 수 있음 (ADR-004) */
   create: (data: CreateBookInput) =>
-    apiFetch<ApiResponse<Book>>('/api/books', {
+    apiFetch<WithAchievementEvent<ApiResponse<Book>>>('/api/books', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
   /** 책 수정 */
+  /** 완독으로 전환하면 새로 달성한 업적이 achievements로 올 수 있음 (ADR-004) */
   update: (id: string, data: UpdateBookInput) =>
-    apiFetch<ApiResponse<Book>>(`/api/books/${id}`, {
+    apiFetch<WithAchievementEvent<ApiResponse<Book>>>(`/api/books/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),

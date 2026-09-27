@@ -22,6 +22,7 @@ export type NotificationType =
   | 'collection_deleted'
   | 'offline_sync'
   | 'sync'
+  | 'achievement'
   | 'info';
 
 export interface NotificationItem {

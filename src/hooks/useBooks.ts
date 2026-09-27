@@ -11,6 +11,7 @@ import type { BookStatus, CreateBookInput, UpdateBookInput } from '../lib/api';
 import { normalizeBook, denormalizeBook } from '../types/book';
 import type { UIBook } from '../types/book';
 import { useUiStore } from '../stores/uiStore';
+import { useAchievementCelebration } from './useAchievements';
 
 /** 도서 목록 조회 (status / genre / sort 필터) */
 /**
@@ -63,10 +64,12 @@ export function useBookDetail(id: string) {
 export function useAddBook() {
   const qc = useQueryClient();
   const addNotification = useUiStore((s) => s.addNotification);
+  const celebrate = useAchievementCelebration();
   return useMutation({
     mutationFn: (book: Partial<UIBook>) =>
       booksApi.create(denormalizeBook(book) as CreateBookInput),
-    onSuccess: (_, variables) => {
+    onSuccess: (res, variables) => {
+      celebrate(res.achievements);
       qc.invalidateQueries({ queryKey: queryKeys.books.all });
       qc.invalidateQueries({ queryKey: queryKeys.stats.all });
       addNotification('book_added', '새 책을 서재에 추가했습니다', variables.title ?? '');
@@ -78,10 +81,12 @@ export function useAddBook() {
 export function useUpdateBook() {
   const qc = useQueryClient();
   const addNotification = useUiStore((s) => s.addNotification);
+  const celebrate = useAchievementCelebration();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<UIBook> }) =>
       booksApi.update(id, denormalizeBook(data) as UpdateBookInput),
-    onSuccess: (_, { id, data }) => {
+    onSuccess: (res, { id, data }) => {
+      celebrate(res.achievements);
       qc.invalidateQueries({ queryKey: queryKeys.books.all });
       qc.invalidateQueries({ queryKey: queryKeys.books.detail(id) });
       qc.invalidateQueries({ queryKey: queryKeys.stats.all });

@@ -14,6 +14,8 @@ import { useStats } from "../../hooks/useStats";
 import { useBooks } from "../../hooks/useBooks";
 import { useFlag } from "../../hooks/useFeatureFlags";
 import { BookStack } from "../components/stats/BookStack";
+import { AchievementsSection } from "../components/characters/AchievementsSection";
+import { TIER_STYLE, DEFAULT_TIER_STYLE } from "../components/characters/tierStyle";
 import type { UISession } from "../../types/book";
 import { GENRE_CONFIG } from "../../types/book";
 import { useAuthStore } from "../../stores/authStore";
@@ -87,14 +89,7 @@ const BADGES: Badge[] = [
   { id: "5000pages",   icon: "🌟", label: "5000p 달성", description: "5,000 페이지를 읽었어요",    threshold: 5000, type: "pages", tier: "gold"     },
 ];
 
-const TIER_STYLE: Record<string, { bg: string; border: string; label: string }> = {
-  bronze:   { bg: "#FEF3C7", border: "#D97706", label: "#92400E" },
-  silver:   { bg: "#F1F5F9", border: "#64748B", label: "#334155" },
-  gold:     { bg: "#FFFBEB", border: "#F59E0B", label: "#78350F" },
-  platinum: { bg: "#F5F3FF", border: "#7C3AED", label: "#4C1D95" },
-};
-
-const DEFAULT_TIER_STYLE = TIER_STYLE.bronze!;
+// 등급 색은 Phase 3 업적 섹션과 공유 (components/characters/tierStyle.ts)
 
 function AchievementBadges({ totalDone, totalPages }: { totalDone: number; totalPages: number }) {
   const [expanded, setExpanded] = useState(false);
@@ -214,6 +209,7 @@ export function StatsPage() {
   const { data: stats, isLoading, isError } = useStats();
   const { data: doneBooks = [] } = useBooks({ status: "done" });
   const bookStackEnabled = useFlag("book_stack");
+  const charactersEnabled = useFlag("characters");
   const user = useAuthStore((s) => s.user);
   const readingGoal = user?.reading_goal;
 
@@ -417,8 +413,12 @@ export function StatsPage() {
             <StreakCard sessions={syntheticSessions} />
           </div>
 
-          {/* FEAT-101: 성취 배지 */}
-          <AchievementBadges totalDone={totalDone} totalPages={totalPages} />
+          {/* 성취 배지 — characters 플래그: 서버 저장 업적 + 캐릭터(ADR-004), 아니면 기존 화면 계산 배지(FEAT-101) */}
+          {charactersEnabled ? (
+            <AchievementsSection />
+          ) : (
+            <AchievementBadges totalDone={totalDone} totalPages={totalPages} />
+          )}
 
           {/* 지금까지 쌓은 책 (book_stack 플래그) */}
           {bookStackEnabled && doneBooks.length > 0 && (

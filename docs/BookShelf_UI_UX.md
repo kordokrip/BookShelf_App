@@ -1659,6 +1659,16 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 
 페이지 범위: 편집 시트에 "시작 페이지 ~ 끝 페이지" 입력(`notes_v2`), 카드·검색 결과 표기는 `formatNotePages()` → `p.12` / `p.12–15`. 끝 페이지 < 시작 페이지면 토스트 오류 후 시트 유지. NotesSearchPage는 `notes_v2`일 때 검색어 하이라이트와 겹치지 않도록 서식 기호를 걷어 낸 평문(`stripNoteMarkup`)으로 표시(꺼져 있으면 원문).
 
+### 10.6c Characters 컴포넌트 (`components/characters/`) ★ 리뉴얼 Phase 3 (플래그 `characters`, ADR-004)
+
+| 컴포넌트 | 파일 | 설명 |
+|---------|------|------|
+| **AchievementsSection** | `characters/AchievementsSection.tsx` | StatsPage 성취 배지 자리(플래그 on일 때 기존 `AchievementBadges` 대체). 캐릭터 카드 2장(책 부엉이·페이지 드래곤: 아바타, 현재 단계, 다음 진화까지 진행 바 `role="progressbar"`), 달성 업적(등급 색), 다음 도전(기본 2개, "모두 보기" `aria-expanded`). 데이터는 `useAchievements()`(GET /api/achievements) |
+| **CharacterAvatar** | `characters/CharacterAvatar.tsx` | 이모지 + SVG 원형 프레임(단계별 색: 회색→동→은→금→보라) + 단계 눈금 + 최종 단계 👑. `role="img"` + 캐릭터·단계 aria-label. 일러스트 교체 시 이 컴포넌트에서 `asset`으로 분기 |
+| **AchievementCelebration** | `characters/AchievementCelebration.tsx` | Root에 1회 마운트되는 축하 모달(`ui/Modal`). `celebrationStore` 큐를 하나씩 표시(여러 개면 "확인 (n개 더)"). 진화 아바타 스프링 등장(모션 줄이기 시 생략), 새 업적 배지. 드롭다운 메뉴가 닫히며 포커스를 되돌리는 경우에 대비해 200ms 후 [확인]으로 포커스 재이동. 조사는 `lib/koreanParticle.ts`로 받침에 맞춤("드래곤이", "어린 용이에요") |
+
+이벤트 흐름: 변경 API 응답 `achievements` → `useAchievementCelebration()`(useAddBook·useUpdateBook·useAddSession) → 플래그 on이면 `celebrationStore.push` + 인앱 알림(`achievement` 타입, 🏆) / 항상 업적 캐시 무효화. `/register-flow`(Root 밖)에서 달성해도 Root로 돌아오면 표시된다. 등급 색 `TIER_STYLE`은 `characters/tierStyle.ts`로 추출해 기존 배지와 공유.
+
 ### 10.7 잔존 UI 컴포넌트 (21개) ★ 17차 정리
 
 17차 코드 정리에서 **40개 미사용 shadcn/ui 래퍼를 삭제**하여, `src/app/components/ui/` 디렉토리에 **21개 핵심 컴포넌트만 잔존**:
@@ -1724,6 +1734,7 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 | `/api/notes/:id` | DELETE | BookDetailPage, NotesSearchPage | 삭제 버튼 |
 | `/api/notes/export?book_id=` | GET | — | (Markdown 내보내기) |
 | `/api/notes/random` | GET | LibraryPage DailyRecallCard (`notes_v2`) | 서재 진입 (`useDailyNote`, staleTime 1h) |
+| `/api/achievements` | GET | StatsPage AchievementsSection, AchievementCelebration (`characters`) | 통계 진입 (`useAchievements`, staleTime 60s) — 업적 이벤트 수신 시 무효화 |
 
 ### 11.5 Search API
 

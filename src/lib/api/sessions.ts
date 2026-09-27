@@ -1,5 +1,6 @@
 import type { ApiResponse, ReadingSession } from './types';
 import { apiFetch } from './client';
+import type { WithAchievementEvent } from './achievements';
 
 export const sessionsApi = {
   /** 독서 세션 목록 */
@@ -18,7 +19,7 @@ export const sessionsApi = {
     session_date?: string;
     duration_min?: number;
   }) =>
-    apiFetch<{ data: ReadingSession; new_current_page: number }>('/api/sessions', {
+    apiFetch<WithAchievementEvent<{ data: ReadingSession; new_current_page: number }>>('/api/sessions', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
