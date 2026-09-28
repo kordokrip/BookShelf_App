@@ -19,17 +19,19 @@ export function GenreBadge({ genre, size = "md", showEmoji = true }: GenreBadgeP
   const s = sizeStyles[size];
 
   return (
+    // 장르 색은 CSS 변수로 넘기고 다크 모드는 같은 색에서 color-mix로 유도 — 인라인 파스텔 배경이
+    // 다크 화면에서 흰 알약으로 남던 문제 (2026-09-27). 다크: 짙은 배경(장르색 28%) + 밝은 글자(장르색 45% + 흰색)
     <span
-      className={`inline-flex items-center gap-1 rounded-full ${s.px} whitespace-nowrap`}
+      className={`inline-flex w-fit items-center gap-1 rounded-full ${s.px} whitespace-nowrap bg-[var(--gb-bg)] text-[var(--gb-fg)] dark:bg-[color-mix(in_srgb,var(--gb-fg)_28%,#0F172A)] dark:text-[color-mix(in_srgb,var(--gb-fg)_40%,#FFFFFF)]`}
       style={{
         height: s.height,
-        backgroundColor: config.bg,
-        color: config.text,
+        ["--gb-bg" as string]: config.bg,
+        ["--gb-fg" as string]: config.text,
         fontSize: s.fontSize,
         fontWeight: 600,
       }}
     >
-      {showEmoji && <span style={{ fontSize: s.fontSize }}>{config.emoji}</span>}
+      {showEmoji && <span aria-hidden style={{ fontSize: s.fontSize }}>{config.emoji}</span>}
       {genre}
     </span>
   );

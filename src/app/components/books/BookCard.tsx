@@ -1,12 +1,22 @@
 import { useState } from "react";
 import { Calendar, Star, MoreVertical, Trash2 } from "lucide-react";
-import { type UIBook as Book, GENRE_CONFIG } from "../../../types/book";
+import { type UIBook as Book } from "../../../types/book";
+import { resolveCover, coverInitials } from "../../../lib/coverArt";
 import { GenreBadge } from "../ui/GenreBadge";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "../ui/dropdown-menu";
 
 /* ─── Shared Book Cover ────────────────────────────────────── */
+/**
+ * 표지 이미지가 없으면(또는 로드 실패 시) "생성 표지"를 그린다 — id/제목 해시로 고정된
+ * 팔레트를 골라 매번 같은 색으로 렌더링한다(새로고침해도 동일). 이전에는 표지가 없는
+ * 모든 책이 같은 인디고→바이올렛 그라디언트 + 📚 이모지로 떴다(2026-09-27 시각 개선).
+ * 계산은 src/lib/coverArt.ts(resolveCover)가 전담한다 — 사용자가 등록 시 명시적으로
+ * 고른 표지 색은 그대로 존중하고, 그 외엔 팔레트를 생성한다.
+ * 모든 호출부에서 제목·저자가 표지 옆에 텍스트로 이미 노출되므로, 생성 표지 안의
+ * 제목/이니셜은 스크린리더에 중복 정보라 aria-hidden 처리한다.
+ */
 export function BookCover({ book, size = "md" }: { book: Book; size?: "sm" | "md" | "lg" }) {
   const [imgError, setImgError] = useState(false);
 
@@ -18,7 +28,6 @@ export function BookCover({ book, size = "md" }: { book: Book; size?: "sm" | "md
 
   // sm/md → rounded-lg (8px), lg → rounded-xl (12px)
   const radius = size === "lg" ? "rounded-xl" : "rounded-lg";
-  const textSize = size === "lg" ? "text-5xl" : size === "sm" ? "text-xl" : "text-2xl";
 
   if (book.coverImage && !imgError) {
     return (
@@ -32,12 +41,55 @@ export function BookCover({ book, size = "md" }: { book: Book; size?: "sm" | "md
     );
   }
 
-  const genreConfig = GENRE_CONFIG[book.genre] ?? GENRE_CONFIG["기타"];
+  const cover = resolveCover(book);
+
+  // sm(목록 썸네일): 밴드를 넣을 공간이 없어 단색 배경 + 제목 이니셜 1~2자만 크게.
+  if (size === "sm") {
+    return (
+      <div
+        aria-hidden="true"
+        className={`${dims[size]} ${radius} flex-shrink-0 flex items-center justify-center shadow-md font-book`}
+        style={{ backgroundColor: cover.flat, color: cover.smInk }}
+      >
+        <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1 }}>{coverInitials(book.title)}</span>
+      </div>
+    );
+  }
+
+  // md(그리드/리스트)·lg(상세 히어로): 세리프 제목(3~4줄 클램프) + 저자를 하단 라벨
+  // 밴드에 얹고, 위쪽 얇은 룰 + 왼쪽 책등 하이라이트로 "인쇄된 책"의 질감을 낸다.
+  const isLg = size === "lg";
+  const titleClamp = isLg ? "line-clamp-4" : "line-clamp-3";
+
   return (
     <div
-      className={`${dims[size]} ${radius} flex-shrink-0 bg-gradient-to-br ${book.coverColor} flex items-center justify-center shadow-md`}
+      aria-hidden="true"
+      className={`${dims[size]} ${radius} relative flex-shrink-0 shadow-md overflow-hidden`}
+      style={{ backgroundImage: `linear-gradient(135deg, ${cover.bgFrom}, ${cover.bgTo})` }}
     >
-      <span className={textSize}>{genreConfig.emoji}</span>
+      {/* 책등 하이라이트 — 왼쪽 가장자리에 얇은 밝은 줄 (책을 옆에서 보는 느낌) */}
+      <div className="absolute inset-y-0 left-0 w-[3px] bg-white/25" />
+      {/* 위쪽 얇은 룰 */}
+      <div className="absolute left-3 right-3 top-2.5 h-px bg-white/25" />
+      {/* 하단 라벨 밴드: 위쪽은 배경으로 자연스럽게 번지고, 텍스트 구간은 불투명해 어떤
+          배경색에서도 흰 잉크 대비가 AA(4.5:1) 이상 유지된다. */}
+      <div className="absolute inset-x-0 bottom-0">
+        <div className="h-3" style={{ backgroundImage: "linear-gradient(to bottom, transparent, rgba(8,11,20,0.62))" }} />
+        <div className="px-2 pb-1.5 pt-0.5" style={{ backgroundColor: "rgba(8,11,20,0.62)" }}>
+          <p
+            className={`font-book break-keep ${titleClamp}`}
+            style={{ color: cover.ink, fontWeight: 700, fontSize: isLg ? 15 : 10.5, lineHeight: 1.25 }}
+          >
+            {book.title}
+          </p>
+          <p
+            className="truncate mt-0.5"
+            style={{ color: cover.ink, opacity: 0.78, fontSize: isLg ? 11 : 9 }}
+          >
+            {book.author}
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -53,8 +105,8 @@ function StarDisplay({ value }: { value: number }) {
             key={i}
             size={14}
             strokeWidth={1.5}
-            fill={lit ? "#F59E0B" : "#E2E8F0"}
-            color={lit ? "#F59E0B" : "#E2E8F0"}
+            fill="currentColor"
+            className={lit ? "text-[#F59E0B]" : "text-[#E2E8F0] dark:text-[#475569]"}
           />
         );
       })}

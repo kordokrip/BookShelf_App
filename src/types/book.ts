@@ -68,6 +68,34 @@ export interface UIBook {
   updatedAt?: string;
 }
 
+/**
+ * 원본 장르 문자열의 흔한 별칭 → 표준 GenreKey.
+ * API가 GENRE_CONFIG에 없는 문자열(예: "소설", "에세이")을 그대로 주면, 지금까지는
+ * `(api.genre as GenreKey) || '기타'`로 캐스팅만 해서 배지가 원문 그대로("소설")에
+ * 기타 이모지/색으로 뜨는 문제가 있었다(2026-09-27). normalizeGenre가 이 별칭들을
+ * detectGenre와 같은 기준으로 표준 GenreKey에 매핑해준다. DB/API는 바꾸지 않는다.
+ */
+const GENRE_ALIASES: Record<string, GenreKey> = {
+  '소설': '현대문학',
+  '에세이': '현대문학',
+  '시': '현대문학',
+  '만화': '예술/디자인',
+  '경제': '경제/경영',
+  // '역사'만으로는 한국사/해외사를 구분할 수 없어 기타로 유지한다(detectGenre도 지역 키워드가
+  // 있어야만 한국사/해외사로 분류함).
+  '역사': '기타',
+  '과학': '과학/수학',
+  '자기계발서': '자기계발',
+};
+
+/** 원본 장르 문자열을 GENRE_CONFIG 표준 GenreKey로 정규화한다 — GENRE_CONFIG에 이미
+ *  있으면 그대로, 별칭이면 매핑, 그 외/빈 값은 기타로 폴백한다. */
+export function normalizeGenre(raw: string | null | undefined): GenreKey {
+  if (!raw) return '기타';
+  if (raw in GENRE_CONFIG) return raw as GenreKey;
+  return GENRE_ALIASES[raw] ?? '기타';
+}
+
 /* ─── 변환: API → UI ─────────────────────────────────────── */
 export function normalizeBook(api: ApiBook): UIBook {
   return {
@@ -77,7 +105,7 @@ export function normalizeBook(api: ApiBook): UIBook {
     author: api.author,
     publisher: api.publisher ?? '',
     isbn: api.isbn ?? undefined,
-    genre: (api.genre as GenreKey) || '기타',
+    genre: normalizeGenre(api.genre),
     coverEmoji: api.cover_emoji,
     coverColor: api.cover_color,
     coverImage: api.cover_image ?? undefined,

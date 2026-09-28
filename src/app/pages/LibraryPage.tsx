@@ -7,7 +7,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { ChevronDown, ChevronRight, LayoutGrid, List, GitBranch, Search, X, FolderOpen, BookMarked } from "lucide-react";
 import type { UIBook, GenreKey } from "../../types/book";
-import { ALL_GENRES, GENRE_CONFIG } from "../../types/book";
+import { ALL_GENRES } from "../../types/book";
 import { useBooks, useRefreshBookCovers } from "../../hooks/useBooks";
 import { DoneBookCard } from "../components/books/BookCard";
 import { GenreFilterBar } from "../components/books/GenreFilterBar";
@@ -16,6 +16,7 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { AddBookFab } from "../components/ui/Buttons";
 import { useNavigate, Link } from "react-router";
 import { BookCardSkeleton, ErrorState } from "../components/ui/skeleton";
+import { BookCover } from "../components/books/BookCard";
 
 /* ─── helpers ─────────────────────────────────────── */
 function getMonthLabel(dateStr: string) {
@@ -128,7 +129,6 @@ function BookshelfView({ books, onBookClick }: { books: UIBook[]; onBookClick: (
             }}
           >
             {shelf.map((book) => {
-              const genreConfig = GENRE_CONFIG[book.genre] ?? GENRE_CONFIG["기타"];
               return (
                 <button
                   key={book.id}
@@ -137,22 +137,8 @@ function BookshelfView({ books, onBookClick }: { books: UIBook[]; onBookClick: (
                 >
                   {/* 책 표지 */}
                   <div className="relative mb-1.5">
-                    {book.coverImage ? (
-                      <img
-                        src={book.coverImage}
-                        alt={book.title}
-                        loading="lazy"
-                        className="w-14 sm:w-16 aspect-[2/3] rounded-lg object-cover shadow-md"
-                        style={{ boxShadow: "2px 2px 8px rgba(0,0,0,0.15)" }}
-                      />
-                    ) : (
-                      <div
-                        className={`w-14 sm:w-16 aspect-[2/3] rounded-lg bg-gradient-to-br ${book.coverColor} flex items-center justify-center shadow-md`}
-                        style={{ boxShadow: "2px 2px 8px rgba(0,0,0,0.15)" }}
-                      >
-                        <span className="text-2xl">{genreConfig.emoji}</span>
-                      </div>
-                    )}
+                    {/* 표지 없는 책도 제목·색이 다른 생성 표지로 (공용 BookCover — 모든 책이 보라 + 이모지로 같아 보이던 문제) */}
+                    <BookCover book={book} size="md" />
                   </div>
                   {/* 제목 */}
                   <p

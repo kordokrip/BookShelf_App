@@ -13,9 +13,10 @@ import { motion, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router";
 import type { UIBook } from "../../../types/book";
 import {
-  estimateThicknessMm, formatStackHeight, sortForStack, spineGradient, spineHeightPx, spineLayout,
+  estimateThicknessMm, formatStackHeight, sortForStack, spineBackground, spineHeightPx, spineLayout,
   SPINE_TITLE_MIN_PX,
 } from "../../../lib/bookStack";
+import { Library } from "lucide-react";
 
 interface BookStackProps {
   books: UIBook[];
@@ -49,8 +50,9 @@ export function BookStack({ books, title, maxVisible = 40 }: BookStackProps) {
       aria-labelledby="book-stack-title"
     >
       <div className="flex items-baseline justify-between gap-2 mb-1">
-        <h2 id="book-stack-title" className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 14, fontWeight: 700 }}>
-          📚 {title}
+        <h2 id="book-stack-title" className="flex items-center gap-1.5 text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 14, fontWeight: 700 }}>
+          <Library size={16} className="text-[#4F46E5] dark:text-[#A5B4FC]" aria-hidden />
+          {title}
         </h2>
         <span className="text-[#4F46E5] dark:text-[#A5B4FC] whitespace-nowrap" style={{ fontSize: 13, fontWeight: 700 }}>
           {books.length}권 · 약 {formatStackHeight(totalMm)}
@@ -81,9 +83,9 @@ export function BookStack({ books, title, maxVisible = 40 }: BookStackProps) {
                   onClick={() => navigate(`/book/${book.id}`)}
                   aria-label={`${book.title}, ${pagesLabel}${book.finishedDate ? `, ${book.finishedDate} 완독` : ""}`}
                   title={`${book.title} · ${pagesLabel}`}
-                  className={`bg-gradient-to-r ${spineGradient(book.id, book.coverColor)} rounded-[3px] flex items-center px-2 overflow-hidden text-left shadow-sm border-b border-black/15 hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#4F46E5] transition-[filter]`}
+                  className={`rounded-[3px] flex items-center px-2 overflow-hidden text-left shadow-sm border-b border-black/15 hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#4F46E5] transition-[filter]`}
                   // 전역 button min-height(44px 터치 영역, index.css)를 덮어써야 두께가 페이지 수를 반영한다
-                  style={{ width: `${widthPct}%`, height, minHeight: height, transform: `translateX(${offsetPx}px)` }}
+                  style={{ width: `${widthPct}%`, height, minHeight: height, transform: `translateX(${offsetPx}px)`, background: spineBackground(book) }}
                 >
                   {height >= SPINE_TITLE_MIN_PX && (
                     // 흰 글씨가 밝은 책등색(연두·주황 등)에서 대비 1.98:1까지 떨어져, 반투명 검정 배경으로

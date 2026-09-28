@@ -5,7 +5,7 @@
  * 화면에는 항상 "약"을 붙여 추정치임을 드러낸다.
  */
 
-import { COVER_GRADIENTS } from '../types/book';
+import { resolveCover } from './coverArt';
 
 export const MM_PER_PAGE = 0.06;
 export const COVER_MM = 1;
@@ -17,8 +17,6 @@ const MAX_SPINE_PX = 32;
 const PAGES_PER_PX = 14;
 /** 이 높이 이상이면 책등에 제목을 쓴다 */
 export const SPINE_TITLE_MIN_PX = 15; // 11px 제목(줄높이 1.1 + 위아래 1px)이 잘리지 않는 최소 두께
-/** DB 기본 표지 색 — 등록 흐름이 대부분 이 값을 그대로 저장한다 */
-const DEFAULT_COVER = 'from-indigo-500 to-violet-600';
 
 function pagesOf(pages?: number | null): number {
   return pages && pages > 0 ? pages : DEFAULT_PAGES;
@@ -62,12 +60,13 @@ export function spineLayout(id: string): { widthPct: number; offsetPx: number } 
 }
 
 /**
- * 책등 색: 사용자가 고른 표지 색이 있으면 그대로, 기본값이면 id로 팔레트에서 고정 선택.
- * (등록 흐름이 거의 항상 기본값을 저장해, 그대로 쓰면 모든 책등이 같은 색이 된다)
+ * 책등 배경(CSS) — 생성 표지와 같은 색 규칙(coverArt.resolveCover)을 써서 같은 책은 표지·책등 색이 같다.
+ * 사용자가 고른 표지 색이면 그 색, 기본값이면 id로 고른 차분한 팔레트(2026-09-28: 전에는 책등만 원색 팔레트라
+ * 서재에서 적갈색 표지인 책이 책 쌓기에서는 파란 책등으로 보였다)
  */
-export function spineGradient(id: string, coverColor?: string | null): string {
-  if (coverColor && coverColor !== DEFAULT_COVER) return coverColor;
-  return COVER_GRADIENTS[hash(`spine:${id}`) % COVER_GRADIENTS.length] ?? DEFAULT_COVER;
+export function spineBackground(book: { id: string; title: string; coverColor?: string | null }): string {
+  const c = resolveCover(book);
+  return `linear-gradient(to right, ${c.bgFrom}, ${c.bgTo})`;
 }
 
 /**

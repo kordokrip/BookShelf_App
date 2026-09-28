@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
-  estimateThicknessMm, spineHeightPx, formatStackHeight, spineLayout, sortForStack, spineGradient,
+  estimateThicknessMm, spineHeightPx, formatStackHeight, spineLayout, sortForStack, spineBackground,
   DEFAULT_PAGES, MM_PER_PAGE, COVER_MM,
 } from '../bookStack';
+import { resolveCover } from '../coverArt';
 
 describe('estimateThicknessMm', () => {
   it('페이지 수 × 0.06mm + 표지 1mm', () => {
@@ -56,15 +57,18 @@ describe('spineLayout', () => {
   });
 });
 
-describe('spineGradient', () => {
-  it('사용자가 고른 색은 그대로', () => {
-    expect(spineGradient('x', 'from-rose-500 to-pink-600')).toBe('from-rose-500 to-pink-600');
+describe('spineBackground', () => {
+  it('생성 표지와 같은 색 (같은 책 → 표지·책등 색 일치)', () => {
+    const book = { id: 'book-7', title: '데미안', coverColor: 'from-indigo-500 to-violet-600' };
+    const c = resolveCover(book);
+    expect(spineBackground(book)).toBe(`linear-gradient(to right, ${c.bgFrom}, ${c.bgTo})`);
   });
-  it('기본 색이면 id로 팔레트에서 고정 선택 (같은 id → 같은 색)', () => {
-    expect(spineGradient('book-7', 'from-indigo-500 to-violet-600')).toBe(spineGradient('book-7', null));
+  it('기본 색이면 id로 고정 선택 (같은 id → 같은 색), 기본값과 null은 동일', () => {
+    expect(spineBackground({ id: 'b7', title: 'x', coverColor: 'from-indigo-500 to-violet-600' }))
+      .toBe(spineBackground({ id: 'b7', title: 'x', coverColor: null }));
   });
   it('기본 색 책이 여러 권이면 색이 섞인다', () => {
-    const colors = new Set(Array.from({ length: 30 }, (_, i) => spineGradient(`b${i}`, 'from-indigo-500 to-violet-600')));
+    const colors = new Set(Array.from({ length: 30 }, (_, i) => spineBackground({ id: `b${i}`, title: 't', coverColor: null })));
     expect(colors.size).toBeGreaterThan(3);
   });
 });

@@ -27,6 +27,7 @@ export function GenreFilterBar({
       style={{ height: 44 }}
     >
       {/* 전체 chip */}
+      {/* 색은 theme.css 변수 — 다크 모드에서 흰 칩 + 옅은 회색 숫자(대비 2.56)로 남던 문제 */}
       <button
         onClick={() => onSelect(null)}
         className="flex-shrink-0 flex items-center gap-1 rounded-full border transition-all"
@@ -34,9 +35,9 @@ export function GenreFilterBar({
           height: 28,
           paddingLeft: 12,
           paddingRight: 12,
-          backgroundColor: selectedGenre === null ? "#4F46E5" : "white",
-          borderColor: selectedGenre === null ? "#4F46E5" : "#E2E8F0",
-          color: selectedGenre === null ? "white" : "#64748B",
+          backgroundColor: selectedGenre === null ? "#4F46E5" : "var(--bg-card)",
+          borderColor: selectedGenre === null ? "#4F46E5" : "var(--border-color)",
+          color: selectedGenre === null ? "white" : "var(--text-secondary)",
           fontSize: 13,
           fontWeight: 500,
           fontFamily: "var(--font-pretendard)",
@@ -49,7 +50,7 @@ export function GenreFilterBar({
             fontSize: 11,
             fontWeight: 700,
             marginLeft: 3,
-            color: selectedGenre === null ? "rgba(255,255,255,0.85)" : "#94A3B8",
+            color: selectedGenre === null ? "rgba(255,255,255,0.85)" : "var(--text-secondary)",
           }}
         >
           {totalCount}
@@ -70,9 +71,9 @@ export function GenreFilterBar({
               height: 28,
               paddingLeft: 12,
               paddingRight: 12,
-              backgroundColor: active ? "#4F46E5" : "white",
-              borderColor: active ? "#4F46E5" : "#E2E8F0",
-              color: active ? "white" : "#64748B",
+              backgroundColor: active ? "#4F46E5" : "var(--bg-card)",
+              borderColor: active ? "#4F46E5" : "var(--border-color)",
+              color: active ? "white" : "var(--text-secondary)",
               fontSize: 13,
               fontWeight: 500,
               fontFamily: "var(--font-pretendard)",
@@ -85,7 +86,7 @@ export function GenreFilterBar({
                 fontSize: 11,
                 fontWeight: 700,
                 marginLeft: 3,
-                color: active ? "rgba(255,255,255,0.85)" : "#94A3B8",
+                color: active ? "rgba(255,255,255,0.85)" : "var(--text-secondary)",
               }}
             >
               {count}
