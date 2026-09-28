@@ -14,16 +14,17 @@ import { useMarkAllNotificationsRead, useNotificationUnreadCount } from '../../.
 import { NotificationPanel } from '../ui/NotificationPanel';
 import { ProfilePopup, ProfileAvatar } from '../ui/ProfilePopup';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
+import { AppLogo } from "../brand/AppLogo";
 
 const pageTitles: Record<string, string> = {
-  '/': '완독 📚',
-  '/reading': '읽는 중 📖',
-  '/wishlist': '당신을 위한 책 추천 📚',
-  '/stats': '독서 통계 📊',
+  '/': '완독',
+  '/reading': '읽는 중',
+  '/wishlist': '책 추천',
+  '/stats': '독서 통계',
   '/design-system': '디자인 시스템',
   '/notes-search': '노트 & 검색',
-  '/groups': '독서 모임 👥',
-  '/admin': '관리자 대시보드 🛡️',
+  '/groups': '독서 모임',
+  '/admin': '관리자 대시보드',
 };
 
 const DESKTOP_NAV_LINKS = [
@@ -77,11 +78,10 @@ export function TopBar() {
         <div className="flex items-center">
           <Link
             to="/"
+            aria-label="BookShelf 서재로"
             className="lg:hidden flex items-center gap-1.5 no-underline flex-shrink-0"
           >
-            <div className="w-8 h-8 rounded-lg overflow-hidden shadow-sm flex-shrink-0">
-              <img src="/icons/icon-192.png" alt="BookShelf" className="w-full h-full object-cover" />
-            </div>
+            <AppLogo size={32} className="flex-shrink-0 drop-shadow-sm" />
             <span className="hidden sm:block text-[#1E293B] dark:text-[#F8FAFC] text-base font-bold tracking-tight">
               BookShelf
             </span>

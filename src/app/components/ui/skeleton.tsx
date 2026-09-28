@@ -1,4 +1,5 @@
 import { cn } from "./utils";
+import { AlertTriangle } from "lucide-react";
 
 function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -43,7 +44,7 @@ function ErrorState({
         className,
       )}
     >
-      <span className="text-5xl">⚠️</span>
+      <AlertTriangle size={40} aria-hidden className="text-[#F59E0B]" />
       <p className="text-sm text-slate-500">{message}</p>
       {onRetry && (
         <button

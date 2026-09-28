@@ -5,7 +5,7 @@
  * - 읽기 목표(읽는 중 도서 제한) 설정
  */
 import { useState, useEffect, useRef } from "react";
-import { X, Target, BookOpen, Timer, ChevronDown, RefreshCw, CheckCircle2 } from "lucide-react";
+import { X, Target, BookOpen, Timer, ChevronDown, RefreshCw, CheckCircle2, CalendarDays } from "lucide-react";
 import type { UIBook, GenreKey } from "../../types/book";
 import { ALL_GENRES } from "../../types/book";
 import { ReadingBookCard, BookCover } from "../components/books/BookCard";
@@ -31,6 +31,7 @@ import { useStats } from "../../hooks/useStats";
 import { FocusTimer } from "../components/reading/FocusTimer";
 import { useTimerStore } from "../../stores/timerStore";
 import { useBackToClose } from "../../hooks/useBackToClose";
+import { celebrateCompletion } from "../../lib/celebrate";
 
 
 
@@ -221,8 +222,8 @@ function PageUpdateModal({
 
           {/* Date row */}
           <div className="flex items-center justify-between mb-3 px-1">
-            <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>
-              📅 오늘: {dateStr}
+            <span className="inline-flex items-center gap-1" style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+              <CalendarDays size={14} aria-hidden />오늘: {dateStr}
             </span>
           </div>
 
@@ -898,6 +899,7 @@ export function ReadingPage() {
       {
         onSuccess: () => {
           timer.reset();
+          celebrateCompletion();
           showToast(`🎉 「${selectedBook.title}」 완독 완료!`, "success");
           setSelectedBook(null);
         },

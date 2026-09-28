@@ -8,12 +8,7 @@
  * - [발송 내역] 기발송 메시지 목록
  */
 import { useState, useCallback } from "react";
-import {
-  Users, BookOpen, BarChart2, Bell, Send, Trash2, Search, X,
-  ChevronDown, ChevronLeft, ChevronRight, ShieldCheck, RefreshCw,
-  FileText, Clock, TrendingUp, Loader2, AlertCircle, ArrowLeft,
-  UserCog, Eye, Crown,
-} from "lucide-react";
+import { Users, BookOpen, BarChart2, Bell, Send, Trash2, Search, X, ChevronDown, ChevronLeft, ChevronRight, ShieldCheck, RefreshCw, FileText, Clock, TrendingUp, Loader2, AlertCircle, ArrowLeft, UserCog, Eye, Crown, Megaphone, Mail } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { adminApi, type AdminUser, type AdminUserDetail } from "../../lib/api";
 import { useAuthStore } from "../../stores/authStore";
@@ -561,7 +556,7 @@ function SendNotifTab() {
                 : "bg-[#F1F5F9] dark:bg-[#334155] text-[#475569] dark:text-[#94A3B8]"
             }`}
           >
-            {t === "broadcast" ? "📢 전체 공지" : "✉️ 개별 메시지"}
+            <span className="inline-flex items-center gap-1.5">{t === "broadcast" ? <><Megaphone size={14} aria-hidden />전체 공지</> : <><Mail size={14} aria-hidden />개별 메시지</>}</span>
           </button>
         ))}
       </div>

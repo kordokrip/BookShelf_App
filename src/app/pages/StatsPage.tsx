@@ -6,7 +6,7 @@
  */
 import { useMemo } from "react";
 import { Link } from "react-router";
-import { BookMarked, BookOpen, Sparkles, FileText, Target, ChevronRight, Download } from "lucide-react";
+import { BookMarked, BookOpen, Sparkles, FileText, Target, ChevronRight, Download, CalendarRange, CalendarDays } from "lucide-react";
 import { SummaryCard, MonthlyBarChart, GenreDonutChart, ReadingHeatmap, StreakCard, ReadingCalendar } from "../components/stats/StatsComponents";
 import { StatCardSkeleton, ChartSkeleton } from "../components/ui/skeleton";
 import { useStats } from "../../hooks/useStats";
@@ -107,7 +107,7 @@ export function StatsPage() {
     <div className="pb-[var(--page-pb)] lg:pb-8">
       {/* Header */}
       <div className="px-4 pt-4 pb-3">
-        <h2 className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 20, fontWeight: 700 }}>나의 독서 통계 📊</h2>
+        <h2 className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 20, fontWeight: 700 }}>나의 독서 통계</h2>
         <p className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 13, marginTop: 2 }}>
           {stats ? `완독 ${totalDone}권 · 읽는 중 ${totalReading}권 · Wish ${totalWish}권` : "통계를 불러오는 중..."}
         </p>
@@ -153,7 +153,7 @@ export function StatsPage() {
                   className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
                   style={{ backgroundColor: "rgba(255,255,255,0.15)" }}
                 >
-                  <span style={{ fontSize: 20 }}>📅</span>
+                  <CalendarRange size={20} color="#FFFFFF" aria-hidden />
                 </div>
                 <div>
                   <p style={{ fontSize: 13, fontWeight: 800, color: "white" }}>
@@ -317,7 +317,7 @@ export function StatsPage() {
           {/* 독서 달력 */}
           <div className="px-4 mt-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 15, fontWeight: 700 }}>📅 독서 달력</h3>
+              <h3 className="flex items-center gap-1.5 text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 15, fontWeight: 700 }}><CalendarDays size={16} className="text-[#4F46E5] dark:text-[#A5B4FC]" aria-hidden />독서 달력</h3>
             </div>
             <ReadingCalendar
               doneBooks={doneBooks}

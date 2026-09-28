@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, Star } from "lucide-react";
+import { ChevronDown, Star, BookOpen, Trash2 } from "lucide-react";
 import type { UIBook, GenreKey } from "../../../types/book";
 import { ALL_GENRES } from "../../../types/book";
 import { WishBookCard, BookCover } from "../books/BookCard";
@@ -11,9 +11,9 @@ import { useBackToClose } from "../../../hooks/useBackToClose";
 // ─── SortDropdown ────────────────────────────────────────────
 
 const SORT_OPTIONS = [
-  { value: "priority" as const, label: "⭐ 우선순위" },
-  { value: "added" as const, label: "🕒 최신순" },
-  { value: "title" as const, label: "🔤 제목순" },
+  { value: "priority" as const, label: "우선순위" },
+  { value: "added" as const, label: "최신순" },
+  { value: "title" as const, label: "제목순" },
 ];
 
 function SortDropdown({
@@ -182,14 +182,14 @@ function WishBookDetailSheet({
                 fontWeight: 700,
               }}
             >
-              📖 읽기 시작
+              <span className="inline-flex items-center justify-center gap-1.5"><BookOpen size={17} aria-hidden />읽기 시작</span>
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(); }}
               className="w-full rounded-2xl border border-[#FEE2E2] text-[#EF4444] hover:bg-[#FEF2F2] transition-colors"
               style={{ height: 44, fontSize: 14, fontWeight: 600 }}
             >
-              🗑 위시리스트에서 삭제
+              <span className="inline-flex items-center justify-center gap-1.5"><Trash2 size={16} aria-hidden />위시리스트에서 삭제</span>
             </button>
           </div>
         </div>

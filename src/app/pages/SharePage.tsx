@@ -5,7 +5,7 @@
  */
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Inbox, Send, Mail, Clock, CheckCircle2, User, ChevronLeft } from 'lucide-react';
+import { Inbox, Send, Mail, Clock, CheckCircle2, User, ChevronLeft, BookMarked, BookOpen, Star } from 'lucide-react';
 import { useBack } from '../../hooks/useBack';
 import {
   useShareInbox,
@@ -39,7 +39,7 @@ export function SharePage() {
           >
             <ChevronLeft size={22} />
           </button>
-          <h1 className="text-xl font-bold text-foreground">공유 보고서 📬</h1>
+          <h1 className="text-xl font-bold text-foreground">공유 보고서</h1>
         </div>
         <button
           onClick={() => setShowCompose(true)}
@@ -196,9 +196,9 @@ function ReportCard({ report, label, isRead, onMarkRead }: {
             <div className="mt-3 pt-3 border-t border-border space-y-2 text-sm">
               {statusCounts && (
                 <div className="flex gap-4">
-                  <span>📚 완독 {statusCounts.done ?? 0}</span>
-                  <span>📖 읽는 중 {statusCounts.reading ?? 0}</span>
-                  <span>💫 위시 {statusCounts.wish ?? 0}</span>
+                  <span className="inline-flex items-center gap-1"><BookMarked size={13} aria-hidden />완독 {statusCounts.done ?? 0}</span>
+                  <span className="inline-flex items-center gap-1"><BookOpen size={13} aria-hidden />읽는 중 {statusCounts.reading ?? 0}</span>
+                  <span className="inline-flex items-center gap-1"><Star size={13} aria-hidden />위시 {statusCounts.wish ?? 0}</span>
                 </div>
               )}
               {totals && (

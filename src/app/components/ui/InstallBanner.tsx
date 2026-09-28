@@ -117,7 +117,7 @@ export function InstallBanner() {
           color: "#F8FAFC",
         }}
       >
-        <span style={{ fontSize: 20 }}>📱</span>
+        <Smartphone size={20} aria-hidden className="flex-shrink-0 text-[#A5B4FC]" />
         <p className="flex-1" style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.4 }}>
           홈 화면에 추가하면 앱처럼 사용할 수 있어요
         </p>

@@ -6,13 +6,15 @@
  */
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router";
-import { ArrowLeft, Search, X, Clock, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Search, X, Clock, Pencil, Trash2, SearchX, NotebookPen } from "lucide-react";
 import { useBack } from "../../hooks/useBack";
 import { useNotes, useUpdateNote, useDeleteNote } from "../../hooks/useNotes";
 import { useRecentSearches } from "../../hooks/useRecentSearches";
 import { useToast } from "../components/ui/Toast";
 import { stripNoteMarkup, formatNotePages } from "../../lib/noteMarkup";
 import { NoteMeta } from "../components/notes/NoteMeta";
+import { SideNav } from "../components/navigation/SideNav";
+import { useUiStore } from "../../stores/uiStore";
 
 const NOTES_RECENT_KEY = "notes_recent_searches";
 import type { BookNote } from "../../types/book";
@@ -25,6 +27,7 @@ import {
   AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "../components/ui/alert-dialog";
+import { NoteTypeLabel } from "../components/notes/noteTypes";
 
 /* ─── 편집용 로컬 타입 (color 포함) ─────────────────────── */
 type EditingNote = BookNote & { color?: string };
@@ -60,15 +63,14 @@ function cn(...classes: (string | undefined | false | null)[]): string {
 }
 
 /* ─── 타입 라벨 매핑 ─────────────────────────────────────── */
-const TYPE_LABELS: Record<string, string> = {
-  memo:   "📝 메모",
-  review: "🖊️ 리뷰",
-  quote:  "💬 인용",
-};
 
 /* ─── 메인 페이지 ─────────────────────────────────────────── */
 export function NotesSearchPage() {
   const back = useBack();
+  // /notes-search는 Root 레이아웃 밖 독립 라우트라 TopBar·SideNav가 없다 —
+  // 데스크톱에서 헤더만 뜬 빈 화면처럼 보이지 않도록 SideNav를 직접 마운트하고
+  // Root와 동일한 좌측 마진을 맞춘다 (SideNav 컴포넌트는 그대로 재사용, 모바일에서는 자체적으로 숨김).
+  const sidebarOpen = useUiStore((s) => s.sidebarOpen);
 
   const [searchQuery, setSearchQuery]               = useState("");
   const [debouncedQuery, setDebouncedQuery]         = useState("");
@@ -112,7 +114,12 @@ export function NotesSearchPage() {
   const { showToast } = useToast();
 
   return (
-    <main className="flex flex-col min-h-[var(--vp-h)] bg-background">
+    <div className="min-h-[var(--vp-h)] bg-background">
+      {/* 데스크톱 Side Nav — Root 밖 독립 라우트라 여기서 직접 마운트 (모바일은 컴포넌트 자체 hidden) */}
+      <SideNav />
+
+      <div className={`md:ml-20 ${sidebarOpen ? "lg:ml-60" : "lg:ml-[72px]"} transition-all duration-300 ease-in-out`}>
+      <main className="flex flex-col min-h-[var(--vp-h)] bg-background">
       {/* iOS 노치 / Dynamic Island / PWA standalone 상단 안전 영역 */}
       <div aria-hidden style={{ height: 'var(--safe-top)', flexShrink: 0 }} />
 
@@ -129,13 +136,13 @@ export function NotesSearchPage() {
         <h1 className="font-bold text-foreground text-base">독서 노트</h1>
       </div>
 
-      {/* ── 검색 + 필터 (sticky) ── */}
-      <div className="sticky top-0 z-10 bg-background border-b border-border px-4 pb-3 pt-3 flex-shrink-0">
+      {/* ── 검색 + 필터 (sticky) — 데스크톱에서는 BookDetailPage와 동일하게 중앙 폭 제한 ── */}
+      <div className="w-full max-w-2xl mx-auto lg:max-w-3xl sticky top-0 z-10 bg-background border-b border-border px-4 pb-3 pt-3 flex-shrink-0">
         <div className="relative mb-3">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <input
             type="text"
-            placeholder="메모, 리뷰, 인용구 검색..."
+            placeholder="메모, 문구, 독후감 검색..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full h-10 bg-muted rounded-xl pl-9 pr-9 text-sm outline-none border border-transparent focus:border-primary/50 focus:bg-background transition-colors"
@@ -164,7 +171,7 @@ export function NotesSearchPage() {
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               )}
             >
-              {type === "all" ? "전체" : TYPE_LABELS[type]}
+              {type === "all" ? "전체" : <NoteTypeLabel type={type} size={13} />}
             </button>
           ))}
         </div>
@@ -203,6 +210,7 @@ export function NotesSearchPage() {
 
       {/* ── 목록 영역 ── */}
       <div className="flex-1 overflow-y-auto">
+      <div className="w-full max-w-2xl mx-auto lg:max-w-3xl">
         {/* 최근 검색어 — 검색어 없을 때만 표시 */}
         {!searchQuery && recents.length > 0 && (
           <div className="px-4 pt-4 pb-2">
@@ -259,14 +267,14 @@ export function NotesSearchPage() {
 
         {!isLoading && !isError && notes.length === 0 && (
           <div className="px-4 py-16 text-center">
-            <div className="text-4xl mb-4">{debouncedQuery ? "🔍" : "📝"}</div>
+            <div className="mx-auto mb-4 w-14 h-14 rounded-2xl flex items-center justify-center" style={{ backgroundColor: "var(--bg-accent-soft)", color: "var(--text-accent)" }} aria-hidden>{debouncedQuery ? <SearchX size={26} /> : <NotebookPen size={26} />}</div>
             <p className="font-medium text-foreground mb-1">
               {debouncedQuery ? "검색 결과가 없습니다" : "노트가 없습니다"}
             </p>
             <p className="text-sm text-muted-foreground">
               {debouncedQuery
                 ? `"${debouncedQuery}"와 일치하는 노트를 찾지 못했습니다`
-                : "책을 읽으며 메모, 리뷰, 인용구를 남겨보세요"}
+                : "책을 읽으며 메모, 문구, 독후감을 남겨보세요"}
             </p>
           </div>
         )}
@@ -280,14 +288,15 @@ export function NotesSearchPage() {
               >
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                    {TYPE_LABELS[note.type] ?? note.type}
+                    <NoteTypeLabel type={note.type} size={12} />
                   </span>
                   {note.page != null && (
                     <span className="text-xs text-muted-foreground">{formatNotePages(note.page, note.endPage)}</span>
                   )}
                 </div>
 
-                <p className="text-sm text-foreground leading-relaxed mb-3">
+                {/* 문구·독후감은 책 문장이라 세리프, 메모는 UI 글꼴 (책 상세 카드와 동일 규칙) */}
+                <p className={note.type === "memo" ? "text-sm text-foreground leading-relaxed mb-3" : "font-book break-keep text-foreground mb-3"} style={note.type === "memo" ? undefined : { fontSize: 16, lineHeight: 1.8 }}>
                   {/* 검색어 하이라이트와 겹치지 않도록 서식 기호는 걷어 내고 표시 */}
                   {highlightText(stripNoteMarkup(note.content), debouncedQuery)}
                 </p>
@@ -324,6 +333,7 @@ export function NotesSearchPage() {
           </div>
         )}
       </div>
+      </div>
 
       {/* ── 편집 Sheet ── */}
       <Sheet open={isEditSheetOpen} onOpenChange={setIsEditSheetOpen}>
@@ -345,7 +355,7 @@ export function NotesSearchPage() {
                         : "border-border bg-background hover:bg-muted"
                     )}
                   >
-                    {TYPE_LABELS[type]}
+                    <NoteTypeLabel type={type} size={14} />
                   </button>
                 ))}
               </div>
@@ -450,6 +460,8 @@ export function NotesSearchPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </main>
+      </main>
+      </div>
+    </div>
   );
 }

@@ -1,4 +1,4 @@
-import { RefreshCw, Sparkles, BookOpen, ExternalLink } from "lucide-react";
+import { RefreshCw, Sparkles, BookOpen, ExternalLink, CloudOff } from "lucide-react";
 import { Link } from "react-router";
 import { useLifeBooks, useRefreshLifeBooks } from "../../../hooks/useAI";
 import { ApiError } from "../../../lib/api";
@@ -16,6 +16,7 @@ export function RecommendSection({ wishTitleSet: _wishTitleSet }: { wishTitleSet
   };
 
   const is400 = isError && error instanceof ApiError && error.status === 400;
+  const is429 = isError && error instanceof ApiError && error.status === 429;
   const books = data?.data ?? [];
 
   return (
@@ -78,20 +79,14 @@ export function RecommendSection({ wishTitleSet: _wishTitleSet }: { wishTitleSet
 
       {/* 완독 2권 미만 */}
       {!isLoading && !refresh.isPending && is400 && (
-        <div
-          className="rounded-2xl p-5 text-center"
-          style={{
-            background: "linear-gradient(135deg, #F8FAFC 0%, #FFFFFF 100%)",
-            boxShadow: "0 0 0 1px rgba(148, 163, 184, 0.25)",
-          }}
-        >
-          <div className="w-14 h-14 rounded-full bg-[#EEF2FF] flex items-center justify-center mx-auto mb-3">
-            <BookOpen size={28} className="text-[#4F46E5]" />
+        <div className="rounded-2xl p-5 text-center border bg-white border-[#E2E8F0] dark:bg-[#1E293B] dark:border-[#334155]">
+          <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3" style={{ backgroundColor: "var(--bg-accent-soft)" }}>
+            <BookOpen size={28} style={{ color: "var(--text-accent)" }} aria-hidden />
           </div>
-          <p style={{ fontSize: 14, fontWeight: 700, color: "#1E293B" }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>
             완독한 책이 2권 이상 필요해요
           </p>
-          <p className="mt-1" style={{ fontSize: 12, color: "#64748B" }}>
+          <p className="mt-1" style={{ fontSize: 12, color: "var(--text-secondary)" }}>
             서재에서 책을 완독으로 표시하면 AI가 나만의 인생책을 추천해드려요.
           </p>
           <Link
@@ -106,25 +101,23 @@ export function RecommendSection({ wishTitleSet: _wishTitleSet }: { wishTitleSet
 
       {/* 일반 오류 (새로운 추천 버튼) */}
       {!isLoading && !refresh.isPending && isError && !is400 && (
-        <div
-          className="rounded-2xl p-5 text-center"
-          style={{
-            background: "linear-gradient(135deg, #F8FAFC 0%, #FFFFFF 100%)",
-            boxShadow: "0 0 0 1px rgba(148, 163, 184, 0.25)",
-          }}
-        >
-          <p style={{ fontSize: 14, fontWeight: 700, color: "#1E293B" }}>
-            추천을 불러오는 중이에요
+        <div className="rounded-2xl p-5 text-center border bg-white border-[#E2E8F0] dark:bg-[#1E293B] dark:border-[#334155]">
+          {/* 실패 상태를 "불러오는 중"이라고 표시해 로딩과 구분되지 않던 문제 (2026-09-28 UX 재검수) */}
+          <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3" style={{ backgroundColor: "var(--bg-warn-soft)" }}>
+            <CloudOff size={26} style={{ color: "var(--text-warn)" }} aria-hidden />
+          </div>
+          <p style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>
+            {is429 ? "추천 요청이 잠시 많아요" : "지금은 추천을 가져오지 못했어요"}
           </p>
-          <p className="mt-1" style={{ fontSize: 12, color: "#64748B" }}>
-            새로운 추천 버튼을 눌러 다시 시도해보세요
+          <p className="mt-1" style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+            {is429 ? "1분쯤 뒤에 다시 시도해 주세요" : "네트워크를 확인하고 다시 시도해 주세요"}
           </p>
           <button
             onClick={handleRefresh}
             className="mt-3 rounded-full px-4 py-1.5 text-white"
             style={{ fontSize: 12, fontWeight: 700, background: "linear-gradient(135deg, #4F46E5, #7C3AED)" }}
           >
-            새로운 추천
+            다시 시도
           </button>
         </div>
       )}

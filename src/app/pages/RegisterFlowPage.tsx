@@ -6,7 +6,7 @@
  */
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
-import { Check, Search, X, Camera, ChevronRight, PenLine, Loader2, Globe, Star, ArrowLeft } from "lucide-react";
+import { Check, Search, X, Camera, ChevronRight, PenLine, Loader2, Globe, Star, ArrowLeft, BookOpen, BookCheck, Bookmark } from "lucide-react";
 import { useBookSearch } from "../../hooks/useBookSearch";
 import { useAddBook } from "../../hooks/useBooks";
 import type { GenreKey, BookStatus } from "../../types/book";
@@ -483,10 +483,10 @@ function StepStatusCover({
   update: (patch: Partial<FormState>) => void;
   onNext: () => void;
 }) {
-  const STATUS_OPTIONS: { value: BookStatus; label: string; emoji: string }[] = [
-    { value: "reading", label: "읽는 중",   emoji: "📖" },
-    { value: "done",    label: "완독",       emoji: "✅" },
-    { value: "wish",    label: "위시리스트", emoji: "🔖" },
+  const STATUS_OPTIONS: { value: BookStatus; label: string; Icon: typeof BookOpen }[] = [
+    { value: "reading", label: "읽는 중",   Icon: BookOpen },
+    { value: "done",    label: "완독",       Icon: BookCheck },
+    { value: "wish",    label: "위시리스트", Icon: Bookmark },
   ];
 
   const inputClass =
@@ -513,7 +513,7 @@ function StepStatusCover({
                   : "border-border bg-card text-muted-foreground hover:bg-muted"
               )}
             >
-              <span className="text-2xl">{opt.emoji}</span>
+              <opt.Icon size={26} aria-hidden strokeWidth={1.75} />
               <span className="text-xs font-medium">{opt.label}</span>
             </button>
           ))}
@@ -624,9 +624,9 @@ function StepConfirm({
   onSubmit: () => void;
 }) {
   const STATUS_LABELS: Record<BookStatus, string> = {
-    reading: "📖 읽는 중",
-    done:    "✅ 완독",
-    wish:    "🔖 위시리스트",
+    reading: "읽는 중",
+    done:    "완독",
+    wish:    "위시리스트",
   };
 
   return (

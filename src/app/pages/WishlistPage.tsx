@@ -13,7 +13,7 @@ type TabKey = 'new' | 'popular' | 'life' | 'mine';
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'new',     label: '새로운책' },
   { key: 'popular', label: '인기책' },
-  { key: 'life',    label: '✨ 인생책' },
+  { key: 'life',    label: '인생책' },
   { key: 'mine',    label: '내 목록' },
 ];
 

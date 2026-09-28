@@ -13,7 +13,7 @@ export function NoteContent({ content }: { content: string }) {
         if (seg.kind === "bold") return <strong key={i} style={{ fontWeight: 700 }}>{seg.text}</strong>;
         if (seg.kind === "highlight") {
           return (
-            <mark key={i} className="rounded px-0.5 bg-yellow-200 text-inherit dark:bg-yellow-400/30">
+            <mark key={i} className="rounded-sm px-0.5 text-inherit [box-decoration-break:clone] [-webkit-box-decoration-break:clone]" style={{ backgroundColor: "var(--highlight)" }}>
               {seg.text}
             </mark>
           );

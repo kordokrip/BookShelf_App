@@ -6,6 +6,7 @@ import { useAddNote } from '../../../hooks/useNotes';
 import { Textarea } from '../ui/textarea';
 import { useToast } from '../ui/Toast';
 import { useBackToClose } from "../../../hooks/useBackToClose";
+import { NoteTypeLabel } from "../notes/noteTypes";
 
 type NoteType = 'memo' | 'quote' | 'review';
 
@@ -14,11 +15,7 @@ interface Props {
   onClose: () => void;
 }
 
-const NOTE_TYPES: { value: NoteType; label: string }[] = [
-  { value: 'memo', label: '📝 메모' },
-  { value: 'quote', label: '💬 문구' },
-  { value: 'review', label: '✍️ 독후감' },
-];
+const NOTE_TYPES: { value: NoteType }[] = [{ value: 'memo' }, { value: 'quote' }, { value: 'review' }];
 
 /** 최대/최소 해상도 (OCR 성능과 파일 크기의 균형) */
 const MAX_DIMENSION = 1024;
@@ -406,7 +403,7 @@ export function CameraOCRSheet({ bookId, onClose }: Props) {
                       : 'border-[#E2E8F0] text-[#64748B]',
                   )}
                 >
-                  {t.label}
+                  <NoteTypeLabel type={t.value} size={14} />
                 </button>
               ))}
             </div>

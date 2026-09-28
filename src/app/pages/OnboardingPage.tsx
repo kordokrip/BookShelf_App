@@ -13,6 +13,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ONBOARDING_SLIDES as slides } from "../components/onboarding/onboardingSlides";
 import { AuthPreviewNav } from "../components/auth/AuthPreviewNav";
+import { AppLogo } from "../components/brand/AppLogo";
 
 /** 한 번이라도 소개를 봤으면 다음 진입부터는 로그인 화면으로 (EntryGate) */
 export const ONBOARDING_SEEN_KEY = "onboarding_seen";
@@ -76,7 +77,7 @@ export function OnboardingPage() {
         style={{ paddingTop: "max(env(safe-area-inset-top), 8px)", minHeight: 52 }}
       >
         <span className="flex items-center gap-2" style={{ fontSize: 17, fontWeight: 800, color: "#1E1B4B" }}>
-          <span aria-hidden>📚</span> BookShelf
+          <AppLogo size={28} /> BookShelf
         </span>
         <Link
           to="/login"

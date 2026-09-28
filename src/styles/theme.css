@@ -22,6 +22,11 @@
   --bg-success-soft: #ECFDF5;
   --bg-success-soft-strong: #DCFCE7;
   --text-success: #065F46;
+  /* 책 문장 카드(인용) — 종이 느낌 */
+  --paper: #FFFBF2;
+  --paper-border: #F1E4C8;
+  --paper-ink: #2B2620;
+  --highlight: rgba(251, 218, 131, 0.65);
 }
 
 /* ── Dark mode CSS variables ─────────────────────────────────── */
@@ -44,6 +49,10 @@
   --bg-success-soft: #064E3B;
   --bg-success-soft-strong: #065F46;
   --text-success: #6EE7B7;
+  --paper: #1F1D1A;
+  --paper-border: #3A342B;
+  --paper-ink: #EDE7DB;
+  --highlight: rgba(250, 204, 21, 0.28);
   color-scheme: dark;
 }
 
@@ -242,6 +251,8 @@ input[type="range"]:focus-visible::-webkit-slider-thumb {
 }
 
 @theme inline {
+  /* font-book 유틸리티: 책 문장(인용·독후감·오늘의 회고)용 세리프 — 고운바탕은 index.html에서 로드 */
+  --font-book: 'Gowun Batang', 'Noto Serif KR', 'AppleMyungjo', 'Batang', serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);

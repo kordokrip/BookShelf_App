@@ -7,7 +7,7 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router";
 import { useBack } from "../../hooks/useBack";
-import { ChevronLeft, Share2, BookMarked, FileText, Clock, Flame } from "lucide-react";
+import { ChevronLeft, Share2, BookMarked, FileText, Clock, Flame, Star, Trophy } from "lucide-react";
 import { useStats } from "../../hooks/useStats";
 import { useBooks } from "../../hooks/useBooks";
 import { BookStack } from "../components/stats/BookStack";
@@ -246,9 +246,9 @@ export function YearlyReviewPage() {
 
           {/* 베스트 책 */}
           {!bestBook && totalDone > 0 && (
-            <div className="bg-gray-50 rounded-xl p-6 text-center mb-3" style={{ border: "1px solid #E2E8F0" }}>
-              <p style={{ fontSize: 24, marginBottom: 8 }}>⭐</p>
-              <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>아직 별점을 매긴 완독 책이 없어요 ⭐</p>
+            <div className="rounded-xl p-6 text-center mb-3 border bg-[#F8FAFC] border-[#E2E8F0] dark:bg-[#1E293B] dark:border-[#334155]">
+              <Star size={24} aria-hidden className="mx-auto mb-2 text-[#F59E0B]" />
+              <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>아직 별점을 매긴 완독 책이 없어요</p>
             </div>
           )}
           {bestBook && (
@@ -257,7 +257,7 @@ export function YearlyReviewPage() {
               style={{ background: "linear-gradient(135deg, #FEF3C7, #FDE68A)", border: "1px solid #FCD34D" }}
             >
               <div className="flex items-center gap-2 mb-3">
-                <span style={{ fontSize: 16 }}>🏆</span>
+                <Trophy size={16} aria-hidden className="text-[#B45309]" />
                 <span style={{ fontSize: 14, fontWeight: 700, color: "#92400E" }}>올해 베스트 책</span>
               </div>
               <div className="flex gap-3">

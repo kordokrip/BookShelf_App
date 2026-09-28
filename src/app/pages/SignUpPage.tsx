@@ -10,6 +10,8 @@ import { usersApi } from "../../lib/api";
 import { GENRE_CONFIG } from "../../types/book";
 import { AuthPreviewNav } from "../components/auth/AuthPreviewNav";
 import { NumberStepper } from "../components/ui/NumberStepper";
+import { AppLogo } from "../components/brand/AppLogo";
+import { AlertCircle, Lock } from "lucide-react";
 
 type GenreKey = keyof typeof GENRE_CONFIG;
 const ALL_GENRES = Object.keys(GENRE_CONFIG) as GenreKey[];
@@ -110,7 +112,7 @@ function FormContent({ onSubmit }: { onSubmit: (name: string, email: string, pas
           }}
         />
         {submitted && !name && (
-          <p className="text-[12px] mt-1.5" style={{ color: "#EF4444", fontFamily: "var(--font-pretendard)" }}>⚠ 이름을 입력해주세요</p>
+          <p className="text-[12px] mt-1.5" style={{ color: "#EF4444", fontFamily: "var(--font-pretendard)" }}><AlertCircle size={13} aria-hidden className="inline -mt-0.5 mr-1" />이름을 입력해주세요</p>
         )}
       </div>
 
@@ -138,7 +140,7 @@ function FormContent({ onSubmit }: { onSubmit: (name: string, email: string, pas
           }}
         />
         {emailError && (
-          <p className="text-[12px] mt-1.5" style={{ color: "#EF4444", fontFamily: "var(--font-pretendard)" }}>⚠ {emailError}</p>
+          <p className="text-[12px] mt-1.5" style={{ color: "#EF4444", fontFamily: "var(--font-pretendard)" }}><AlertCircle size={13} aria-hidden className="inline -mt-0.5 mr-1" />{emailError}</p>
         )}
       </div>
 
@@ -170,7 +172,7 @@ function FormContent({ onSubmit }: { onSubmit: (name: string, email: string, pas
           </button>
         </div>
         {pwError && (
-          <p className="text-[12px] mt-1.5" style={{ color: "#EF4444", fontFamily: "var(--font-pretendard)" }}>⚠ {pwError}</p>
+          <p className="text-[12px] mt-1.5" style={{ color: "#EF4444", fontFamily: "var(--font-pretendard)" }}><AlertCircle size={13} aria-hidden className="inline -mt-0.5 mr-1" />{pwError}</p>
         )}
       </div>
 
@@ -201,7 +203,7 @@ function FormContent({ onSubmit }: { onSubmit: (name: string, email: string, pas
           </button>
         </div>
         {cfError && (
-          <p className="text-[12px] mt-1.5" style={{ color: "#EF4444", fontFamily: "var(--font-pretendard)" }}>⚠ {cfError}</p>
+          <p className="text-[12px] mt-1.5" style={{ color: "#EF4444", fontFamily: "var(--font-pretendard)" }}><AlertCircle size={13} aria-hidden className="inline -mt-0.5 mr-1" />{cfError}</p>
         )}
         {!cfError && confirm && confirm === password && (
           <p className="text-[12px] mt-1.5" style={{ color: "#10B981", fontFamily: "var(--font-pretendard)" }}>✓ 비밀번호가 일치합니다</p>
@@ -217,7 +219,7 @@ function FormContent({ onSubmit }: { onSubmit: (name: string, email: string, pas
           className="text-[12px] leading-relaxed"
           style={{ color: "#0369A1", fontFamily: "var(--font-pretendard)" }}
         >
-          🔒 <strong>개인정보 안내</strong>
+          <Lock size={12} aria-hidden className="inline -mt-0.5 mr-1" /><strong>개인정보 안내</strong>
         </p>
         <ul
           className="text-[11px] mt-1.5 flex flex-col gap-1"
@@ -262,7 +264,7 @@ function FormContent({ onSubmit }: { onSubmit: (name: string, email: string, pas
         </label>
       </div>
       {submitted && !terms && (
-        <p className="text-[12px] -mt-2" style={{ color: "#EF4444", fontFamily: "var(--font-pretendard)" }}>⚠ 약관에 동의해주세요</p>
+        <p className="text-[12px] -mt-2" style={{ color: "#EF4444", fontFamily: "var(--font-pretendard)" }}><AlertCircle size={13} aria-hidden className="inline -mt-0.5 mr-1" />약관에 동의해주세요</p>
       )}
 
       <button
@@ -561,7 +563,7 @@ function CompleteScreen({
 
       {error && (
         <p className="text-[13px] text-center" style={{ color: "#EF4444", fontFamily: "var(--font-pretendard)" }}>
-          ⚠ {error}
+          <AlertCircle size={13} aria-hidden className="inline -mt-0.5 mr-1" />{error}
         </p>
       )}
 
@@ -652,7 +654,7 @@ function MultiStepForm() {
             </h2>
             {regError && (
               <p className="text-[13px] mt-1" style={{ color: "#EF4444", fontFamily: "var(--font-pretendard)" }}>
-                ⚠ {regError}
+                <AlertCircle size={13} aria-hidden className="inline -mt-0.5 mr-1" />{regError}
               </p>
             )}
           </div>
@@ -706,10 +708,7 @@ export function SignUpPage() {
               className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-xl"
               style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(8px)" }}
             >
-              <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-                <path d="M18 27C18 27 7 22.5 7 12.5V9C11 9 15 11 18 14V27Z" fill="white" opacity="0.9" />
-                <path d="M18 27C18 27 29 22.5 29 12.5V9C25 9 21 11 18 14V27Z" fill="white" opacity="0.65" />
-              </svg>
+              <AppLogo variant="glyph" size={40} className="text-white" />
             </div>
             <p className="text-white text-[17px]" style={{ fontFamily: "var(--font-pretendard)", fontWeight: 700 }}>BookShelf</p>
           </div>
@@ -738,10 +737,7 @@ export function SignUpPage() {
                 className="w-14 h-14 rounded-2xl flex items-center justify-center"
                 style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(8px)" }}
               >
-                <svg width="32" height="32" viewBox="0 0 36 36" fill="none">
-                  <path d="M18 27C18 27 7 22.5 7 12.5V9C11 9 15 11 18 14V27Z" fill="white" opacity="0.9" />
-                  <path d="M18 27C18 27 29 22.5 29 12.5V9C25 9 21 11 18 14V27Z" fill="white" opacity="0.65" />
-                </svg>
+                <AppLogo variant="glyph" size={36} className="text-white" />
               </div>
               <span className="text-white text-3xl" style={{ fontFamily: "var(--font-pretendard)", fontWeight: 800 }}>BookShelf</span>
             </div>

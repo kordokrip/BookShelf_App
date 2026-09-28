@@ -6,6 +6,7 @@ import { useShareUnreadCount } from "../../../hooks/useGroups";
 import { useUiStore } from "../../../stores/uiStore";
 import { ProfileAvatar } from "../ui/ProfilePopup";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
+import { AppLogo } from "../brand/AppLogo";
 
 interface SideNavItem {
   path: string;
@@ -40,14 +41,14 @@ export function SideNav() {
   const avatarInitial = displayName[0] ?? "?";
 
   const navItems: SideNavItem[] = [
-    { path: "/", label: "완독 📚", icon: BookMarked, badge: doneBooks.length || undefined },
-    { path: "/reading", label: "읽는 중 📖", icon: BookOpen, badge: readingCount || undefined },
-    { path: "/wishlist", label: "책 추천 📚", icon: Star, badge: wishCount || undefined },
-    { path: "/stats", label: "독서 통계 📊", icon: BarChart2 },
+    { path: "/", label: "완독", icon: BookMarked, badge: doneBooks.length || undefined },
+    { path: "/reading", label: "읽는 중", icon: BookOpen, badge: readingCount || undefined },
+    { path: "/wishlist", label: "책 추천", icon: Star, badge: wishCount || undefined },
+    { path: "/stats", label: "독서 통계", icon: BarChart2 },
     { path: "/notes-search", label: "노트 & 검색", icon: FileText },
-    { path: "/lifebooks", label: "인생책 ✨", icon: Sparkles },
-    { path: "/groups", label: "독서 모임 👥", icon: Users },
-    { path: "/share", label: "공유 보고서 📬", icon: Mail, badge: shareUnread },
+    { path: "/lifebooks", label: "인생책", icon: Sparkles },
+    { path: "/groups", label: "독서 모임", icon: Users },
+    { path: "/share", label: "공유 보고서", icon: Mail, badge: shareUnread },
     { path: "/design-system", label: "디자인 시스템", icon: Palette, adminOnly: true },
   ];
 
@@ -64,9 +65,7 @@ export function SideNav() {
       <div className={`flex items-center h-16 border-b border-[#E2E8F0] dark:border-[#334155] ${showLabelsOnDesktop ? "lg:gap-3 lg:px-4" : "lg:justify-center lg:px-2"} md:justify-center md:px-2 md:max-lg:group-hover/sidebar:justify-start md:max-lg:group-hover/sidebar:px-4 md:max-lg:group-hover/sidebar:gap-3`}>
         {showLabelsOnDesktop ? (
           <>
-            <div className="w-9 h-9 rounded-xl overflow-hidden shadow-md flex-shrink-0">
-              <img src="/icons/icon-192.png" alt="BookShelf" className="w-full h-full object-cover" />
-            </div>
+            <AppLogo size={36} className="flex-shrink-0 drop-shadow" label="BookShelf" />
             <div className="hidden lg:block flex-1 min-w-0 md:max-lg:group-hover/sidebar:block">
               <p className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.2 }}>
                 BookShelf

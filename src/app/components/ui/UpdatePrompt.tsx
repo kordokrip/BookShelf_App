@@ -1,5 +1,5 @@
 import { useRegisterSW } from "virtual:pwa-register/react";
-import { X } from "lucide-react";
+import { X, RefreshCw } from "lucide-react";
 
 export function UpdatePrompt() {
   const {
@@ -33,7 +33,7 @@ export function UpdatePrompt() {
           color: "#F8FAFC",
         }}
       >
-        <span style={{ fontSize: 20 }}>🔄</span>
+        <RefreshCw size={20} aria-hidden className="flex-shrink-0 text-[#A5B4FC]" />
         <p className="flex-1" style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.4 }}>
           새 버전이 준비됐어요
         </p>

@@ -9,7 +9,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useParams } from "react-router";
 import { useBack } from "../../hooks/useBack";
-import { ChevronLeft, MoreVertical, FileText, AlignLeft, Camera, Pencil, Trash2, BookMarked, BookOpen, Heart, ScanLine, Clock, Search, Share2, Sparkles, RefreshCw } from "lucide-react";
+import { ChevronLeft, MoreVertical, FileText, AlignLeft, Camera, Pencil, Trash2, BookMarked, BookOpen, Heart, ScanLine, Clock, Search, Share2, Sparkles, RefreshCw, Zap } from "lucide-react";
 import type { BookNote } from "../../types/book";
 import type { UIBook } from "../../types/book";
 import { BookCover } from "../components/books/BookCard";
@@ -40,6 +40,8 @@ import {
   AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "../components/ui/alert-dialog";
+import { NoteTypeLabel } from "../components/notes/noteTypes";
+import { celebrateCompletion } from "../../lib/celebrate";
 
 /* ─── Star display / input ──────────────────────────────────── */
 function StarRow({ value, onRate }: { value: number; onRate?: (n: number) => void }) {
@@ -49,14 +51,24 @@ function StarRow({ value, onRate }: { value: number; onRate?: (n: number) => voi
     <div className="flex items-center gap-1">
       {[1, 2, 3, 4, 5].map((i) => {
         const lit = i <= Math.round(display);
-        return (
-          <span
+        const color = lit ? "text-[#F59E0B]" : "text-[#E2E8F0] dark:text-[#475569]";
+        // 별점을 매길 수 있으면 버튼(키보드·스크린리더로도 선택) — 전에는 클릭만 되는 span이었다
+        return onRate ? (
+          <button
             key={i}
-            style={{ fontSize: 18, color: lit ? "#F59E0B" : "#E2E8F0", cursor: onRate ? "pointer" : "default" }}
-            onMouseEnter={() => onRate && setHover(i)}
-            onMouseLeave={() => onRate && setHover(0)}
-            onClick={() => onRate?.(i)}
-          >★</span>
+            type="button"
+            className={`${color} leading-none`}
+            style={{ fontSize: 18, minWidth: 24, minHeight: 24 }}
+            aria-label={`${i}점`}
+            aria-pressed={i <= Math.round(value)}
+            onMouseEnter={() => setHover(i)}
+            onMouseLeave={() => setHover(0)}
+            onFocus={() => setHover(i)}
+            onBlur={() => setHover(0)}
+            onClick={() => onRate(i)}
+          >★</button>
+        ) : (
+          <span key={i} aria-hidden className={color} style={{ fontSize: 18 }}>★</span>
         );
       })}
       <span className="ml-1 text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 14, fontWeight: 600 }}>
@@ -66,78 +78,60 @@ function StarRow({ value, onRate }: { value: number; onRate?: (n: number) => voi
   );
 }
 
-/* ─── Quote Card ─────────────────────────────────────────────── */
+/* ─── 노트 카드 공통: 페이지 칩 + 날짜 ─────────────────────────── */
+function NoteFooter({ note, label }: { note: BookNote; label?: string }) {
+  return (
+    <div className="flex items-center gap-2 mt-3" style={{ fontFamily: "var(--font-pretendard)" }}>
+      {note.page && (
+        <span
+          className="px-2 py-0.5 rounded-md"
+          style={{ fontSize: 11, fontWeight: 700, color: "var(--text-body)", backgroundColor: "var(--bg-muted)" }}
+        >
+          {formatNotePages(note.page, note.endPage)}
+        </span>
+      )}
+      <span className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 11 }}>
+        {label}{note.date}
+      </span>
+    </div>
+  );
+}
+
+/* ─── Quote Card ───────────────────────────────────────────────
+ * 세리프(고운바탕) 본문 — 리디·Readwise처럼 책 문장은 책 글꼴로. 카드 틀(종이 톤 배경·테두리·왼쪽 색 막대)은
+ * 목록 항목이 그린다(NOTE_SURFACE) — 카드 안에 카드가 겹쳐 보이지 않도록 */
 function QuoteCard({ note }: { note: BookNote }) {
   return (
-    <div
-      className="rounded-2xl p-4"
-      style={{ background: "linear-gradient(135deg, #F5F3FF, #EDE9FE)" }}
-    >
-      <div className="flex gap-2">
-        {/* 66/99 style opening quotation mark */}
-        <span style={{ fontSize: 28, color: "#7C3AED", lineHeight: 1, marginTop: -4 }}>"</span>
-        <p
-          className="flex-1 text-[#4C1D95] italic leading-relaxed"
-          style={{ fontSize: 14 }}
-        >
-          <NoteContent content={note.content} />
-        </p>
-        {/* 66/99 style closing quotation mark */}
-        <span style={{ fontSize: 28, color: "#7C3AED", lineHeight: 1, alignSelf: "flex-end", marginBottom: -4 }}>"</span>
-      </div>
-      <div className="flex items-center gap-2 mt-3">
-        {note.page && (
-          <span
-            className="px-2 py-0.5"
-            style={{
-              // Spec: bg #F1F5F9, text #64748B, 11px, border-radius 4px
-              fontSize: 11,
-              fontWeight: 700,
-              color: "var(--text-body)",
-              backgroundColor: "var(--bg-muted)",
-              borderRadius: 4,
-            }}
-          >
-            {formatNotePages(note.page, note.endPage)}
-          </span>
-        )}
-        <span className="text-[#A78BFA]" style={{ fontSize: 11 }}>{note.date}</span>
-      </div>
-    </div>
+    <figure className="relative px-4 pt-4 pb-1">
+      <span aria-hidden className="absolute right-3 -top-2 font-book select-none text-[#7C3AED]/15 dark:text-[#A78BFA]/20" style={{ fontSize: 72, lineHeight: 1 }}>
+        &ldquo;
+      </span>
+      <blockquote className="font-book break-keep" style={{ fontSize: 17, lineHeight: 1.8, color: "var(--paper-ink)", letterSpacing: "-0.01em" }}>
+        <NoteContent content={note.content} />
+      </blockquote>
+      <NoteFooter note={note} />
+    </figure>
   );
 }
 
 /* ─── Memo Card ──────────────────────────────────────────────── */
 function MemoCard({ note }: { note: BookNote }) {
   return (
-    <div
-      className="rounded-2xl p-4 border border-[#E2E8F0] dark:border-[#334155]"
-      style={{ backgroundColor: "#FAFAFA" }}
-    >
-      <p className="text-[#374151] dark:text-[#CBD5E1] leading-relaxed" style={{ fontSize: 14 }}>
+    <div className="px-4 pt-4 pb-1">
+      <p className="text-[#374151] dark:text-[#CBD5E1] leading-relaxed" style={{ fontSize: 15 }}>
         <NoteContent content={note.content} />
       </p>
-      <div className="flex items-center gap-2 mt-3">
-        {note.page && (
-          <span
-            className="px-2 py-0.5 rounded-full bg-[#EEF2FF]"
-            style={{ fontSize: 11, fontWeight: 700, color: "#4F46E5" }}
-          >
-            {formatNotePages(note.page, note.endPage)}
-          </span>
-        )}
-        <span className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 11 }}>{note.date}</span>
-      </div>
+      <NoteFooter note={note} />
     </div>
   );
 }
 
-/* ─── Review Card ────────────────────────────────────────────── */
+/* ─── Review Card — 긴 글이라 본문은 세리프로 읽기 편하게 ───────── */
 function ReviewCard({ note, expanded, onToggle }: { note: BookNote; expanded: boolean; onToggle: () => void }) {
   const preview = note.content.slice(0, 120) + (note.content.length > 120 ? "..." : "");
   return (
-    <div className="rounded-2xl p-4 border border-[#F1F5F9] dark:border-[#334155] bg-white dark:bg-[#1E293B]" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-      <p className="text-[#374151] dark:text-[#CBD5E1] leading-relaxed" style={{ fontSize: 14 }}>
+    <div className="px-4 pt-4 pb-1">
+      <p className="font-book break-keep text-[#1F2937] dark:text-[#E2E8F0]" style={{ fontSize: 16, lineHeight: 1.85 }}>
         <NoteContent content={expanded ? note.content : preview} />
       </p>
       {note.content.length > 120 && (
@@ -145,12 +139,13 @@ function ReviewCard({ note, expanded, onToggle }: { note: BookNote; expanded: bo
           onClick={onToggle}
           className="mt-2"
           style={{ fontSize: 13, fontWeight: 600, color: "var(--text-accent)" }}
+          aria-expanded={expanded}
         >
           {expanded ? "접기" : "전체 보기"}
         </button>
       )}
-      <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[#F1F5F9] dark:border-[#334155]">
-        <span className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 11 }}>✍️ {note.date}</span>
+      <div className="pt-1 border-t border-[#F1F5F9] dark:border-[#334155] mt-3">
+        <NoteFooter note={note} label="독후감 · " />
       </div>
     </div>
   );
@@ -290,6 +285,12 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
     memo: "#4F46E5",
     review: "#0891B2",
   };
+  /** 노트 항목 한 장이 곧 카드 — 인용은 종이 톤(style로 --paper), 나머지는 기본 카드면 */
+  const NOTE_SURFACE: Record<string, string> = {
+    quote: "",
+    memo: "bg-white dark:bg-[#1E293B] border-[#E2E8F0] dark:border-[#334155]",
+    review: "bg-white dark:bg-[#1E293B] border-[#E2E8F0] dark:border-[#334155]",
+  };
 
   const hasFocusNotes = notes.some((n) => n.sessionId);
   const filteredNotes = notes
@@ -299,9 +300,9 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
 
   const NOTE_TAB_ITEMS: { value: "all" | NoteFormType; label: string; count: number }[] = [
     { value: "all", label: "전체", count: notes.length },
-    { value: "quote", label: "💬 문구", count: quotes.length },
-    { value: "memo", label: "📝 메모", count: memos.length },
-    { value: "review", label: "✍️ 독후감", count: reviews.length },
+    { value: "quote", label: "문구", count: quotes.length },
+    { value: "memo", label: "메모", count: memos.length },
+    { value: "review", label: "독후감", count: reviews.length },
   ];
 
   function NoteActions({ note }: { note: BookNote }) {
@@ -326,11 +327,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
     );
   }
 
-  const NOTE_TYPES: { value: NoteFormType; label: string }[] = [
-    { value: "memo", label: "📝 메모" },
-    { value: "quote", label: "💬 문구" },
-    { value: "review", label: "✍️ 독후감" },
-  ];
+  const NOTE_TYPES: { value: NoteFormType }[] = [{ value: "memo" }, { value: "quote" }, { value: "review" }];
 
   return (
     <>
@@ -353,9 +350,9 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
           {/* 타입 칩 */}
           <div className="flex gap-1.5 mb-2">
             {([
-              { value: "memo" as NoteFormType, label: "📝 메모" },
-              { value: "quote" as NoteFormType, label: "💬 문구" },
-              { value: "review" as NoteFormType, label: "✍️ 독후감" },
+              { value: "memo" as NoteFormType },
+              { value: "quote" as NoteFormType },
+              { value: "review" as NoteFormType },
             ] as const).map((t) => (
               <button
                 key={t.value}
@@ -368,7 +365,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
                   color: quickType === t.value ? "white" : "var(--text-accent)",
                 }}
               >
-                {t.label}
+                <NoteTypeLabel type={t.value} size={12} />
               </button>
             ))}
           </div>
@@ -384,7 +381,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
           />
           <div className="flex items-center justify-between mt-2">
             {currentPage && currentPage > 0 ? (
-              <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>📄 현재 {currentPage}p 자동 반영</span>
+              <span className="inline-flex items-center gap-1" style={{ fontSize: 11, color: "var(--text-secondary)" }}><FileText size={12} aria-hidden />현재 {currentPage}p 자동 반영</span>
             ) : (
               <span />
             )}
@@ -423,7 +420,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
               )}
               style={{ fontSize: 12, fontWeight: 600 }}
             >
-              {tab.label}
+              {tab.value === "all" ? tab.label : <NoteTypeLabel type={tab.value} size={13} />}
               <span
                 className={cn(
                   "rounded-full px-1.5 py-0.5",
@@ -469,7 +466,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
         {/* UX-106: 통합 노트 목록 (좌측 색상 바 포함) */}
         {filteredNotes.length === 0 ? (
           <p className="text-center text-[#64748B] dark:text-[#94A3B8] py-8" style={{ fontSize: 14 }}>
-            {noteSearch ? `"${noteSearch}" 검색 결과가 없어요` : "노트를 추가해 보세요 ✍️"}
+            {noteSearch ? `"${noteSearch}" 검색 결과가 없어요` : "밑줄 그은 문장이나 떠오른 생각을 남겨 보세요"}
           </p>
         ) : (
           <div className="flex flex-col gap-3">
@@ -479,7 +476,8 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2, delay: idx * 0.05 }}
-                className="flex gap-0 overflow-hidden rounded-2xl border border-[#E2E8F0] dark:border-[#334155]"
+                className={`flex gap-0 overflow-hidden rounded-2xl border ${NOTE_SURFACE[n.type] ?? NOTE_SURFACE.memo}`}
+                style={n.type === "quote" ? { backgroundColor: "var(--paper)", borderColor: "var(--paper-border)" } : undefined}
               >
                 {/* 좌측 색상 바 */}
                 <div
@@ -515,7 +513,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
               className="flex-1 py-2.5 rounded-2xl border border-[#E2E8F0] dark:border-[#334155] text-[#475569] dark:text-[#CBD5E1] hover:bg-[#F8FAFC] dark:hover:bg-[#1E293B] transition-colors"
               style={{ fontSize: 12, fontWeight: 600 }}
             >
-              + {t.label}
+              <NoteTypeLabel type={t.value} size={14} prefix="+ " />
             </button>
           ))}
         </div>
@@ -548,7 +546,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
                   )}
                   style={{ fontWeight: 600 }}
                 >
-                  {t.label}
+                  <NoteTypeLabel type={t.value} size={15} />
                 </button>
               ))}
             </div>
@@ -752,7 +750,7 @@ function BookInfoTab({ book }: { book: UIBook }) {
           <div className="h-16 rounded-xl bg-[#F1F5F9] animate-pulse" />
         ) : sessions.length === 0 ? (
           <p className="text-[#64748B] dark:text-[#94A3B8] text-center py-4" style={{ fontSize: 14 }}>
-            아직 독서 기록이 없어요 📖
+            아직 독서 기록이 없어요
           </p>
         ) : (
           <div className="flex flex-col gap-2">
@@ -855,7 +853,7 @@ function BookInfoTab({ book }: { book: UIBook }) {
               </p>
             </div>
             {summarizeMutation.data?.cached && (
-              <p className="mt-1.5 text-right" style={{ fontSize: 11, color: "#A78BFA" }}>⚡ 캐시된 분석 결과</p>
+              <p className="mt-1.5 flex items-center justify-end gap-1 text-[#7C3AED] dark:text-[#C4B5FD]" style={{ fontSize: 11 }}><Zap size={11} aria-hidden />캐시된 분석 결과</p>
             )}
           </div>
         )}
@@ -918,6 +916,7 @@ export function BookDetailPage() {
     try {
       await updateBook.mutateAsync({ id: book.id, data: { status } });
       if (status === 'done') {
+        celebrateCompletion();
         showToast(`🎉 "${book.title}" 완독을 축하해요!`, 'success');
       } else {
         const label = status === 'reading' ? '읽는 중' : '위시리스트';

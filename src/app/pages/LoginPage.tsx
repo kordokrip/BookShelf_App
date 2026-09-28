@@ -8,6 +8,8 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router";
 import { useAuthStore } from "../../stores/authStore";
 import { AuthPreviewNav } from "../components/auth/AuthPreviewNav";
+import { AppLogo } from "../components/brand/AppLogo";
+import { AlertCircle } from "lucide-react";
 
 /* ─── Floating book decorations ──────────────────────────────── */
 function FloatingBookIcons() {
@@ -204,7 +206,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
         />
         {emailError && (
           <p className="mt-1.5 flex items-center gap-1" style={{ fontSize: 12, color: "#EF4444", fontFamily: "var(--font-pretendard)" }}>
-            <span>⚠</span> {emailError}
+            <AlertCircle size={13} aria-hidden className="inline -mt-0.5 mr-1" />{emailError}
           </p>
         )}
       </div>
@@ -245,13 +247,13 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
       {/* Auth error message */}
       {authError && (
         <p className="flex items-center gap-1" style={{ fontSize: 13, color: "#EF4444", fontFamily: "var(--font-pretendard)" }}>
-          <span>⚠</span> {authError}
+          <AlertCircle size={13} aria-hidden className="inline -mt-0.5 mr-1" />{authError}
         </p>
       )}
 
       {submitted && !password.trim() && (
         <p className="flex items-center gap-1" style={{ fontSize: 12, color: "#EF4444", fontFamily: "var(--font-pretendard)" }}>
-          <span>⚠</span> 비밀번호를 입력해주세요
+          <AlertCircle size={13} aria-hidden className="inline -mt-0.5 mr-1" />비밀번호를 입력해주세요
         </p>
       )}
 
@@ -313,11 +315,7 @@ export function LoginPage() {
               className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-xl"
               style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(8px)" }}
             >
-              <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-                <path d="M18 27C18 27 7 22.5 7 12.5V9C11 9 15 11 18 14V27Z" fill="white" opacity="0.95" />
-                <path d="M18 27C18 27 29 22.5 29 12.5V9C25 9 21 11 18 14V27Z" fill="white" opacity="0.65" />
-                <line x1="18" y1="14" x2="18" y2="27" stroke="white" strokeWidth="1" opacity="0.4" />
-              </svg>
+              <AppLogo variant="glyph" size={40} className="text-white" />
             </div>
             <p
               className="text-white"
@@ -363,10 +361,7 @@ export function LoginPage() {
                 className="w-14 h-14 rounded-2xl flex items-center justify-center"
                 style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(8px)" }}
               >
-                <svg width="32" height="32" viewBox="0 0 36 36" fill="none">
-                  <path d="M18 27C18 27 7 22.5 7 12.5V9C11 9 15 11 18 14V27Z" fill="white" opacity="0.95" />
-                  <path d="M18 27C18 27 29 22.5 29 12.5V9C25 9 21 11 18 14V27Z" fill="white" opacity="0.65" />
-                </svg>
+                <AppLogo variant="glyph" size={36} className="text-white" />
               </div>
               <span
                 className="text-white"

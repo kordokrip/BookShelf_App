@@ -5,6 +5,7 @@
  */
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
+import { AlertTriangle } from "lucide-react";
 
 const ERROR_MESSAGES: Record<string, string> = {
   google_cancelled: '구글 로그인이 취소되었습니다.',
@@ -39,7 +40,7 @@ export function GoogleCallbackPage() {
   if (errorMessage) {
     return (
       <div className="min-h-[var(--vp-h)] flex flex-col items-center justify-center gap-4 p-8 text-center">
-        <span className="text-5xl">⚠️</span>
+        <AlertTriangle size={44} aria-hidden className="text-[#F59E0B]" />
         <h2 className="text-xl font-semibold text-gray-800">로그인 실패</h2>
         <p className="text-gray-600 max-w-sm leading-relaxed">{errorMessage}</p>
         <p className="text-sm text-gray-400">잠시 후 로그인 페이지로 이동합니다...</p>

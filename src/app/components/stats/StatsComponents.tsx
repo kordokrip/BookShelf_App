@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { ArrowUp, Flame } from "lucide-react";
+import { ArrowUp, Flame, CalendarDays } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   PieChart, Pie,
@@ -508,7 +508,7 @@ export function ReadingHeatmap({ sessions }: ReadingHeatmapProps) {
     }}>
       {/* Heading row */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, color: C.slate1 }}>독서 스트릭 🔥</h3>
+        <h3 className="flex items-center gap-1.5" style={{ fontSize: 16, fontWeight: 600, color: C.slate1 }}><Flame size={16} className="text-[#F59E0B]" aria-hidden />독서 스트릭</h3>
         {/* 현재 N일 연속 chip */}
         <span style={{
           fontSize: 12, fontWeight: 500,
@@ -685,7 +685,7 @@ export function StreakCard({ sessions }: { sessions: UISession[] }) {
             backgroundColor: "var(--bg-warn-soft)", color: "var(--text-warn)",
             padding: "3px 10px", borderRadius: 9999,
           }}>
-            현재 {currentStreak}일 연속 🔥
+            <Flame size={12} aria-hidden className="inline -mt-0.5 mr-0.5" />현재 {currentStreak}일 연속
           </span>
         )}
       </div>
@@ -979,7 +979,7 @@ export function ReadingCalendar({ doneBooks, sessionDates = [] }: ReadingCalenda
           >
             <div className="border-t border-[#F1F5F9] dark:border-[#334155] px-4 py-3">
               <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 8 }}>
-                📅 {selectedDate} 완독한 책
+                <CalendarDays size={12} aria-hidden className="inline -mt-0.5 mr-1" />{selectedDate} 완독한 책
               </p>
               {selectedBooks.length === 0 ? (
                 <p style={{ fontSize: 12, color: "var(--text-secondary)" }}>완독 기록이 없어요</p>

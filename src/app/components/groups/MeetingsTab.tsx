@@ -54,14 +54,14 @@ export function MeetingsTab({ groupId, isLeader }: { groupId: string; isLeader: 
                 value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
                 className="w-full px-3 py-2 rounded-lg bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/30" />
               <div className="grid grid-cols-2 gap-2">
-                <input type="text" placeholder="📕 책 제목" maxLength={200}
+                <input type="text" placeholder="책 제목" maxLength={200}
                   value={form.book_title} onChange={(e) => setForm({ ...form, book_title: e.target.value })}
                   className="px-3 py-2 rounded-lg bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/30" />
-                <input type="text" placeholder="✍️ 저자" maxLength={100}
+                <input type="text" placeholder="저자" maxLength={100}
                   value={form.book_author} onChange={(e) => setForm({ ...form, book_author: e.target.value })}
                   className="px-3 py-2 rounded-lg bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/30" />
               </div>
-              <input type="text" placeholder="📍 장소" maxLength={200}
+              <input type="text" placeholder="장소" maxLength={200}
                 value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })}
                 className="w-full px-3 py-2 rounded-lg bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/30" />
               <div className="grid grid-cols-2 gap-2">

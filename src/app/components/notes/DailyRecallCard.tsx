@@ -8,13 +8,8 @@ import { Sparkles, ChevronRight } from "lucide-react";
 import { useDailyNote } from "../../../hooks/useNotes";
 import { NoteContent } from "./NoteContent";
 import { formatNotePages } from "../../../lib/noteMarkup";
+import { NoteTypeLabel } from "./noteTypes";
 
-const TYPE_LABEL: Record<string, string> = {
-  quote: "💬 문구",
-  memo: "📝 메모",
-  review: "✍️ 독후감",
-  highlight: "🖍️ 하이라이트",
-};
 
 /** 긴 독후감이 카드 높이를 밀어내지 않도록 앞부분만 사용 (서식 기호가 잘려도 파서가 글자로 처리) */
 const PREVIEW_CHARS = 140;
@@ -40,18 +35,19 @@ export function DailyRecallCard() {
             오늘의 회고
           </span>
           <span className="text-[#B45309] dark:text-[#FCD34D]" style={{ fontSize: 11 }}>
-            · {TYPE_LABEL[note.type] ?? note.type}
+            · <NoteTypeLabel type={note.type} size={11} />
           </span>
         </div>
+        {/* 책 문장은 책 글꼴(고운바탕)로 — 회고 카드가 "다시 펼친 책장"처럼 읽히도록 */}
         <p
-          className="text-[#1E293B] dark:text-[#F8FAFC] leading-relaxed line-clamp-3"
-          style={{ fontSize: 13 }}
+          className="font-book break-keep text-[#1E293B] dark:text-[#F8FAFC] line-clamp-3"
+          style={{ fontSize: 15, lineHeight: 1.75 }}
         >
           <NoteContent content={preview} />
         </p>
         <div className="flex items-center justify-between mt-2">
           <span className="truncate text-[#78350F] dark:text-[#FDE68A]" style={{ fontSize: 11, fontWeight: 600 }}>
-            📖 {note.book_title}{pages ? ` · ${pages}` : ""} · {note.created_at.slice(0, 10).replace(/-/g, ".")}
+            {note.book_title}{pages ? ` · ${pages}` : ""} · {note.created_at.slice(0, 10).replace(/-/g, ".")}
           </span>
           <ChevronRight size={14} className="flex-shrink-0 text-[#B45309] dark:text-[#FCD34D]" aria-hidden />
         </div>
