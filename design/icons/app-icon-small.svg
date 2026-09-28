@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- 16~48px 전용 단순화 버전: 책 3권 + 선반, 넓은 간격(작은 크기에서 책이 뭉치지 않도록) -->
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4F46E5"/><stop offset="1" stop-color="#7C3AED"/></linearGradient></defs>
+  <rect width="1024" height="1024" rx="224" fill="url(#bg)"/>
+  <g fill="#FFFFFF">
+    <rect x="196" y="300" width="170" height="460" rx="36"/>
+    <rect x="430" y="210" width="190" height="550" rx="36"/>
+    <rect x="684" y="340" width="150" height="420" rx="36"/>
+    <rect x="150" y="800" width="724" height="84" rx="42"/>
+  </g>
+  <path d="M490 210 h70 v190 l-35 -30 l-35 30z" fill="#FBBF24"/>
+</svg>

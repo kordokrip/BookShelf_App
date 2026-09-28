@@ -16,7 +16,7 @@ self.addEventListener('push', function (event) {
     title: '📖 독서 시간이에요!',
     body: '오늘도 조금씩 읽어볼까요?',
     icon: '/icons/icon-192.png',
-    badge: '/icons/favicon-32.png',
+    badge: '/icons/badge-96.png', // 안드로이드는 알파만 사용 — 단색 글리프
     tag: 'reading-reminder',
     data: { url: '/reading' },
   };

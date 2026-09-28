@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- BookShelf 앱 아이콘 마스터 (풀블리드 정사각형, 모서리는 각 플랫폼이 깎음). 책 세 권 + 기울어진 책 + 선반, 호박색 책갈피 -->
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4F46E5"/><stop offset="1" stop-color="#7C3AED"/></linearGradient></defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <g fill="#FFFFFF">
+    <rect x="190" y="306" width="130" height="420" rx="24"/>
+    <rect x="350" y="226" width="150" height="500" rx="24"/>
+    <rect x="530" y="346" width="120" height="380" rx="24"/>
+    <rect x="680" y="348" width="100" height="380" rx="24" transform="rotate(15 680 728)"/>
+    <rect x="150" y="744" width="724" height="54" rx="27"/>
+  </g>
+  <g fill="#6366F1" opacity="0.45">
+    <rect x="190" y="376" width="130" height="24"/><rect x="190" y="636" width="130" height="24"/>
+    <rect x="530" y="416" width="120" height="24"/><rect x="530" y="644" width="120" height="24"/>
+  </g>
+  <path d="M398 226 h54 v170 l-27 -24 l-27 24z" fill="#FBBF24"/>
+</svg>

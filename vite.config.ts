@@ -24,6 +24,9 @@ export default defineConfig({
         // JS/CSS를 빼면 배포 후 옛 index.html + 사라진 옛 해시 JS(404) 조합으로 앱이 빈 화면에 멈추고
         // 업데이트 안내(UpdatePrompt)조차 뜨지 않는다 (2026-09-27 스테이징 재현, ADR-001 참고).
         globPatterns: ['**/*.{html,js,css,ico,png,svg,webp,woff,woff2}'],
+        // iOS 스플래시(기기별 42장)·설치 화면 스크린샷·공유 이미지는 앱 실행에 필요 없어 precache에서 제외
+        // (전에는 스플래시 4.7MB를 안드로이드·데스크톱 사용자까지 미리 받았다 — 2026-09-27 에셋 감사)
+        globIgnores: ['**/ios-startup/**', '**/pwa-screenshots/**', '**/og-image.png'],
         // Push 알림 핸들러 주입
         importScripts: ['/sw-push.js'],
         // OAuth 콜백은 303 리다이렉트 응답이므로 SW가 절대 인터셉트하면 안 됨

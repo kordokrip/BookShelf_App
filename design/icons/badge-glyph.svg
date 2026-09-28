@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- 알림 배지(안드로이드는 알파만 사용): 단색 책 3권 + 선반, 투명 배경 -->
+  <g fill="#FFFFFF">
+    <rect x="196" y="300" width="170" height="460" rx="36"/>
+    <rect x="430" y="210" width="190" height="550" rx="36"/>
+    <rect x="684" y="340" width="150" height="420" rx="36"/>
+    <rect x="150" y="800" width="724" height="84" rx="42"/>
+  </g>
+</svg>

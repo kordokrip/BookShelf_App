@@ -302,7 +302,7 @@ export async function sendPushNotification(
         title:   payload.title,
         body:    payload.body,
         icon:    payload.icon ?? '/icons/icon-192.png',
-        badge:   '/icons/favicon-32.png',
+        badge:   '/icons/badge-96.png', // 단색 글리프(안드로이드는 알파만 사용)
         tag:     payload.tag ?? 'bookshelf',
         data:    { url: payload.url ?? '/' },
       });
