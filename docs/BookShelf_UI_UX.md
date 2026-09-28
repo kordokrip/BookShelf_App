@@ -113,7 +113,7 @@
 
 **판독성 규칙 (2026-09-27 다크·라이트 대비 점검)**
 - 본문·보조 글자는 WCAG AA 4.5:1 이상, 큰 글자(24px 이상 또는 18.66px 굵게)는 3:1 이상. 점검 방법: Playwright로 `.playwright-mcp/dark-audit.js`·`light-audit.js` 실행 (oklch 색은 파싱하지 못해 오탐이 날 수 있음)
-- 글자 크기 최소 11px. 예외: 표지 위 진행률 원형 게이지 숫자(같은 값이 진행률 행에 글자로 따로 표시됨)
+- 글자 크기 최소 11px. 예외: 표지 위 진행률 원형 게이지 숫자(같은 값이 진행률 행에 글자로 따로 표시됨), 생성 표지 안의 제목·저자(표지 그림의 일부이고 같은 제목이 옆에 크게 표시됨, aria-hidden)
 - 라이트 전용 색을 인라인 `style={{ color }}`로 주면 `dark:` 클래스가 먹지 않는다 — 다크 모드가 있는 화면은 `className="text-[#64748B] dark:text-[#94A3B8]"`처럼 클래스로 지정하거나, 인라인이 필요하면 아래 1.4의 다크 대응 CSS 변수(`var(--text-primary)` 등)를 쓴다
 - 다크 모드에서 흰 카드·패널이 그대로 남는 "밝은 섬"도 결함으로 본다 (2026-09-27 통계·연간 결산·책 상세·기록 모달에서 발견·수정). 점검: `.playwright-mcp/light-island-audit.js`(화면), `overlay-dark-audit.js`(시트·모달·팝업)
 
@@ -179,6 +179,14 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 - **기본 폰트**: `Pretendard Variable` (한국어 최적화)
 - **Fallback**: `system-ui, -apple-system, BlinkMacSystemFont, sans-serif`
 - **선언**: `fonts.css`에서 `@font-face` → `woff2` 가변 폰트 (weight 100-900)
+- **책 문장 전용 세리프 (2026-09-27)**: `Gowun Batang`(고운바탕, Google Fonts — 한글을 유니코드 범위로 잘라 쓰는 글자만 로드) → Tailwind `font-book`. 인용(문구)·독후감 본문·오늘의 회고·노트 검색의 문구/독후감에만 쓰고 UI 글자는 Pretendard 유지. 크기 16~17px, 줄간격 1.8, `break-keep`(한국어 단어 단위 줄바꿈). 리디(리디바탕)·Readwise처럼 "책의 문장은 책의 글꼴로"
+- **책 문장 카드 색**: `--paper`·`--paper-border`·`--paper-ink`(라이트 `#FFFBF2`/`#F1E4C8`/`#2B2620`, 다크 `#1F1D1A`/`#3A342B`/`#EDE7DB`), 형광펜 `--highlight`(라이트 종이색 노랑 65%, 다크 28%). 노트 목록 항목 하나가 곧 카드 — 카드 안에 카드를 겹치지 않는다
+
+### 2.1b 아이콘 체계 (2026-09-27)
+
+- **조작 요소·내비게이션·섹션 제목·상태 안내 = lucide 아이콘**(선 두께 기본, 옆에 글자가 있으면 `aria-hidden`). 노트 종류는 `components/notes/noteTypes.tsx`의 `NOTE_TYPE_META`(메모 `NotebookPen`, 문구 `Quote`, 독후감 `PenLine`, 하이라이트 `Highlighter`) 한 곳에서 정의 — 화면마다 "인용/리뷰"처럼 이름이 달라지던 문제도 함께 해결
+- **이모지 = 감정·보상 순간과 콘텐츠 분류에만**: 캐릭터·업적·축하, 인사말, 토스트 문구, 장르(`GENRE_CONFIG.emoji`), 사용자가 고른 프로필·컬렉션 이모지. 이모지는 OS마다 모양이 달라 조작 요소에 쓰면 톤이 흔들리고 스크린리더가 이모지 이름까지 읽는다
+- **브랜드 마크**: `components/brand/AppLogo.tsx`(`tile`·`glyph`) — 앱 아이콘과 같은 도형. 아이콘·파비콘·스플래시·og 이미지는 `design/icons/*.svg` 벡터 마스터에서 `npm run pwa:assets`로 생성
 
 ### 2.2 타이포그래피 스케일
 
@@ -966,7 +974,7 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
   - 삭제(`Trash2`): 확인 후 `useDeleteBook()` → `navigate("/")`
 
 **BookCover** (lg, 120×168px):
-- coverImage 있으면 `<img>`, 없으면 그래디언트 + emoji
+- coverImage 있으면 `<img>`(alt=제목), 없거나 로드 실패면 **생성 표지**(2026-09-28, `src/lib/coverArt.ts`): id 해시로 차분한 책 팔레트 10종 중 고정 선택(사용자가 고른 표지 색은 존중), lg/md는 세리프 제목·저자 라벨 밴드 + 책등 하이라이트, sm은 제목 이니셜. 옆에 제목이 보이므로 `aria-hidden`. 책 쌓기 책등도 같은 색 규칙(`spineBackground`)
 - **커버 업로드 버튼**: `Camera` 아이콘, hidden `<input type="file" accept="image/jpeg,image/png,image/webp">` 2MB 제한
 - **API**: `coverApi.uploadCover(id, file)` → **POST** `/api/books/:id/cover`
 

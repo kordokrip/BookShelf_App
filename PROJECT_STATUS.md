@@ -1,9 +1,9 @@
 # BookShelf App — 현재 상태 스냅샷
 
-> **최종 업데이트:** 2026-09-27 (리뉴얼 Phase 0~4 + 온보딩 개편 + 반응형·다크 대비 점검, 기능 5종 전체 공개 후 플래그 분기 제거·교차검증)
+> **최종 업데이트:** 2026-09-28 (PWA 네이티브 동작 점검 + 디자인 전면 업그레이드: 아이콘·생성 표지·세리프 노트·아이콘 체계)
 > **Git 브랜치:** `main` (kordokrip/BookShelf_App)
 > **E2E 테스트:** `bash scripts/e2e-api-test.sh` → **전체 PASS** ✅ (2026-09-27 스테이징·프로덕션 확인, 테스트 개수는 `grep -n '^  TOTAL=' scripts/e2e-api-test.sh`로 확인)
-> **상세 세션 리포트:** `docs/sessions/2026-09-27-renewal-onboarding-responsive.md`
+> **상세 세션 리포트:** `docs/sessions/2026-09-28-pwa-native-design-upgrade.md`
 > **기능 플래그:** 등록 목록은 `worker/lib/featureFlags.ts`의 `ALL_FEATURE_FLAGS`(현재 비어 있음), 공개 상태는 `GET /api/flags/public`으로 확인 (ADR-003)
 
 ---
@@ -227,9 +227,11 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 | 리뉴얼: 노트 v2(서식·페이지 범위·오늘의 회고) / 책 쌓기 / 업적·캐릭터 / 몰입 타이머·AI 태그 | ✅ 2026-09-27 전체 공개, 플래그 분기 제거, 기능 간 교차검증(API·UI 여정) 완료. AI 태그는 본문 단어 + 고정 감정 목록 규칙 |
 | 온보딩 개편 (스플래시 통합, 로그인까지 1탭) | ✅ 완료(2026-09-27) |
 | 반응형·다크/라이트 대비 | ✅ 2026-09-27 Playwright 점검(8개 뷰포트·13개 화면, WebKit·Chromium 기기 에뮬레이션). **실기기(iOS 홈 화면 설치 모드·노치·진동)는 미확인** |
+| PWA 네이티브 동작 (뒤로 가기로 오버레이 닫기·자동 채움·오프라인·회전) | ✅ 2026-09-28 에뮬레이션·Lighthouse 점검 |
+| 브랜드 에셋·디자인 시스템 (벡터 아이콘, 생성 표지, 세리프 책 문장, lucide 아이콘 체계) | ✅ 2026-09-28 — 규칙은 `docs/BookShelf_UI_UX.md` 1.4·2.1·2.1b·3.3, 에셋 재생성 `npm run pwa:assets` |
 
 > 상세 변경 이력: `docs/CHANGELOG.md`
-> 마지막 세션 상세 리포트: `docs/sessions/2026-09-27-renewal-onboarding-responsive.md`
+> 마지막 세션 상세 리포트: `docs/sessions/2026-09-28-pwa-native-design-upgrade.md`
 > 아키텍처 결정 기록: `docs/adr/README.md`
 > API 스펙: `docs/TRACE_MAP.md`
 > QA 절차: `docs/QA_가이드.md`
