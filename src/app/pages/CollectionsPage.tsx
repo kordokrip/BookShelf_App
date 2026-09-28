@@ -6,7 +6,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, BookOpen, Plus, FolderOpen, Trash2 } from "lucide-react";
+import { ChevronLeft, BookOpen, Plus, FolderOpen, Trash2, Layers } from "lucide-react";
 import {
   useCollections,
   useCreateCollection,
@@ -209,7 +209,8 @@ export function CollectionsPage() {
   }
 
   return (
-    <div className="pb-[var(--page-pb)] lg:pb-8">
+    // 데스크톱에서 한 줄 목록이 1400px+로 늘어나지 않도록 모임 화면과 같은 폭으로 제한
+    <div className="pb-[var(--page-pb)] lg:pb-8 max-w-3xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-4 pb-3">
         <div className="flex items-center gap-2">
@@ -220,7 +221,7 @@ export function CollectionsPage() {
           >
             <ChevronLeft size={22} className="text-[#1E293B] dark:text-[#F8FAFC]" />
           </button>
-          <h2 className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 20, fontWeight: 700 }}>내 컬렉션 📂</h2>
+          <h2 className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 20, fontWeight: 700 }}>내 컬렉션</h2>
         </div>
         <button
           onClick={() => setShowCreate(true)}
@@ -303,6 +304,36 @@ export function CollectionsPage() {
               </motion.div>
             ))}
           </AnimatePresence>
+
+          {/* 컬렉션이 1~2개뿐일 때 화면 여백을 채우는 보조 안내 카드 (0개일 때는 위의 EmptyState가 이미 CTA를 제공) */}
+          {collections.length <= 2 && (
+            <div
+              className="rounded-2xl border border-dashed p-6 text-center mt-1"
+              style={{ borderColor: "var(--border-color)", backgroundColor: "var(--bg-card)" }}
+            >
+              <div
+                className="flex items-center justify-center w-12 h-12 rounded-2xl mx-auto mb-3"
+                style={{ backgroundColor: "var(--bg-accent-soft)" }}
+              >
+                <Layers size={24} style={{ color: "var(--text-accent)" }} aria-hidden />
+              </div>
+              <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>
+                컬렉션으로 책을 더 모아보세요
+              </p>
+              <p style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 4 }}>
+                시리즈, 주제, 무드별로 책을 묶어두면 나중에 찾기 쉬워요
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowCreate(true)}
+                className="inline-flex items-center justify-center gap-1.5 min-h-11 px-5 mt-4 rounded-xl text-white"
+                style={{ fontSize: 13, fontWeight: 600, background: "linear-gradient(135deg, #4F46E5, #7C3AED)" }}
+              >
+                <Plus size={16} />
+                컬렉션 만들기
+              </button>
+            </div>
+          )}
         </div>
       )}
 

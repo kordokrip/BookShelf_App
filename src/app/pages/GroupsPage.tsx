@@ -6,7 +6,7 @@
  */
 import { useState, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Plus, LogIn, Crown, ChevronRight, Search, Clock } from 'lucide-react';
+import { Users, Plus, LogIn, Crown, ChevronRight, Search, Clock, BookOpen, Compass } from 'lucide-react';
 import { useGroups, useCreateGroup, useJoinGroup } from '../../hooks/useGroups';
 import { useAuthStore } from '../../stores/authStore';
 import { useToast } from '../components/ui/Toast';
@@ -125,7 +125,9 @@ export function GroupsPage() {
         </section>
       ) : !isLoading && (
         <section className="text-center py-10 px-6 bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 rounded-2xl border border-indigo-100 dark:border-indigo-900/50">
-          <div className="text-4xl mb-3">📚</div>
+          <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-white/70 dark:bg-white/5 mx-auto mb-3">
+            <BookOpen size={32} className="text-[#4F46E5] dark:text-[#A5B4FC]" aria-hidden />
+          </div>
           <h3 className="text-lg font-bold text-[#1E293B] dark:text-[#F8FAFC]">독서 모임을 시작해보세요!</h3>
           <p className="text-sm text-[#64748B] dark:text-[#94A3B8] mt-2 max-w-md mx-auto">
             모임을 만들어 친구들과 함께 책을 읽고, 일정을 잡고, 후기를 공유하세요.
@@ -160,8 +162,11 @@ export function GroupsPage() {
         {isLoading ? (
           <div className="text-center py-12 text-[#64748B] dark:text-[#94A3B8]">로딩 중...</div>
         ) : filteredPublic.length === 0 ? (
-          <div className="text-center py-12 text-[#64748B] dark:text-[#94A3B8]">
-            {searchQuery ? '검색 결과가 없습니다.' : '참여 가능한 공개 모임이 없습니다.'}
+          <div className="text-center py-12 px-4">
+            <Search size={32} className="text-[#CBD5E1] dark:text-[#475569] mx-auto mb-2" aria-hidden />
+            <p className="text-sm text-[#64748B] dark:text-[#94A3B8]">
+              {searchQuery ? '검색 결과가 없습니다.' : '참여 가능한 공개 모임이 없습니다.'}
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -180,6 +185,37 @@ export function GroupsPage() {
           </div>
         )}
       </section>
+
+      {/* 모임이 아직 적을 때(1~2개) 화면 여백을 채우는 보조 안내 카드 — 0개일 때는 위의 EmptyState가 이미 CTA를 제공하므로 중복 노출하지 않음 */}
+      {!isLoading && !searchQuery && (approvedGroups.length + pendingGroups.length + filteredPublic.length) > 0 && (approvedGroups.length + pendingGroups.length + filteredPublic.length) <= 2 && (
+        <section
+          className="rounded-2xl border border-dashed p-6 text-center"
+          style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-card)' }}
+        >
+          <div
+            className="flex items-center justify-center w-12 h-12 rounded-2xl mx-auto mb-3"
+            style={{ backgroundColor: 'var(--bg-accent-soft)' }}
+          >
+            <Compass size={24} style={{ color: 'var(--text-accent)' }} aria-hidden />
+          </div>
+          <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
+            아직 모임이 많지 않아요
+          </p>
+          <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>
+            관심 있는 주제의 모임을 더 찾아보거나, 직접 모임을 만들어 친구들을 초대해보세요
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowCreate(true)}
+            disabled={ownsGroup}
+            title={ownsGroup ? '유저당 1개의 모임만 만들 수 있습니다' : undefined}
+            className="inline-flex items-center justify-center gap-1.5 min-h-11 px-5 mt-4 rounded-xl text-sm font-medium text-white bg-[#4F46E5] hover:bg-[#4338CA] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <Plus size={16} />
+            모임 만들기
+          </button>
+        </section>
+      )}
 
       {/* 모임 생성 모달 */}
       <AnimatePresence>
