@@ -9,6 +9,8 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { usersApi, ApiError } from '../lib/api';
 import { useTimerStore } from './timerStore';
+import { useUiStore } from './uiStore';
+import { queryClient, QUERY_CACHE_KEY } from '../lib/queryClient';
 
 export interface AuthUser {
   id: string;
@@ -132,6 +134,11 @@ export const useAuthStore = create<AuthState>()(
         // 타이머는 기기에 저장되므로(persist) 로그아웃 시 비워 다음 사용자에게 넘어가지 않게 한다
         useTimerStore.setState({ bookId: null, isRunning: false, accumulatedSec: 0, startedAt: null, sessionNoteIds: [] });
         useTimerStore.persist.clearStorage();
+        // 서버 데이터 캐시(메모리 + localStorage 퍼시스트)와 인앱 알림도 비운다 — 쿼리 키에 사용자 id가 없어서
+        // 같은 기기로 다른 사람이 로그인하면 재조회 전까지 이전 사용자의 서재·통계·노트가 보일 수 있었다 (2026-09-28 QA)
+        queryClient.clear();
+        localStorage.removeItem(QUERY_CACHE_KEY);
+        useUiStore.getState().clearNotifications();
         set(
           { user: null, status: 'unauthenticated', error: null },
           false,

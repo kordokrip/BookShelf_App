@@ -16,6 +16,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { PushNotificationToggle } from "./PushNotificationToggle";
 import { THEME_LABEL } from "../navigation/TopBar";
 import { useBackToClose } from "../../../hooks/useBackToClose";
+import { useNavigate } from "react-router";
 
 /* ─── 인사말 생성 ─────────────────────────────────── */
 function getGreeting(name: string): string {
@@ -166,6 +167,7 @@ export function ProfileAvatar({
 /* ─── 메인 팝업 ───────────────────────────────────── */
 export function ProfilePopup({ onClose }: { onClose: () => void }) {
   useBackToClose(true, onClose);
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const themeMode = useUiStore((s) => s.themeMode);
@@ -219,10 +221,10 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
   };
 
   const handleLogout = () => {
-    logout();
-    // 로그아웃한 사용자는 기존 사용자이므로 소개 화면이 아니라 로그인으로.
-    // 전체 페이지 이동이라 팝업을 따로 닫지 않는다 — 닫으면 뒤로 가기용 기록 정리(history.back)가 이동과 겹칠 수 있음
-    window.location.href = "/login";
+    logout(); // 캐시·알림까지 비우므로 전체 새로고침 없이 앱 안에서 이동
+    // 로그아웃한 사용자는 기존 사용자이므로 소개 화면이 아니라 로그인으로. 전에는 location.href 전체 이동이
+    // 보호 라우트의 앱 내 이동(지연 로딩 중인 로그인 화면)과 겹쳐 Safari에서 모듈 로드 오류가 났다 (2026-09-28 QA)
+    navigate("/login", { replace: true });
   };
 
   const saveReminderPrefs = async (prefs: {

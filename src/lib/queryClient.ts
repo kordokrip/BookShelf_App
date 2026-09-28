@@ -70,9 +70,12 @@ queryClient.setMutationDefaults(['addNote'], {
 });
 
 // ── localStorage 퍼시스터 ────────────────────────────────────────
+/** 퍼시스트 캐시 localStorage 키 — 로그아웃 시 authStore가 지운다 */
+export const QUERY_CACHE_KEY = 'bookshelf_query_cache';
+
 export const persister = createSyncStoragePersister({
   storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-  key: 'bookshelf_query_cache',
+  key: QUERY_CACHE_KEY,
   // 직렬화 오류 시 캐시 조용히 버림 (앱 크래시 방지)
   serialize: (data) => JSON.stringify(data),
   deserialize: (str) => JSON.parse(str),
