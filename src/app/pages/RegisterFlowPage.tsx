@@ -15,6 +15,7 @@ import { Skeleton } from "../components/ui/skeleton";
 import type { SearchBook } from "../../lib/api";
 import { searchApi } from "../../lib/api";
 import ISBNScanner from "../components/books/ISBNScanner";
+import { SafeAreaTop } from "../components/navigation/SafeAreaTop";
 
 /* ─── 타입 ──────────────────────────────────────────────────── */
 type Step = 1 | 2 | 3 | 4;
@@ -775,8 +776,8 @@ export function RegisterFlowPage() {
 
   return (
     <main className="flex flex-col min-h-[var(--vp-h)] bg-background">
-      {/* iOS 노치 / Dynamic Island / PWA standalone 상단 안전 영역 */}
-      <div aria-hidden style={{ height: 'var(--safe-top)', flexShrink: 0 }} />
+      {/* iOS 노치 / Dynamic Island / PWA standalone 상단 안전 영역 — 스크롤해도 콘텐츠가 노치 아래로 비치지 않게 고정 */}
+      <SafeAreaTop />
 
       {/* 헤더 */}
       <div className="flex items-center gap-3 px-4 h-14 border-b border-border flex-shrink-0">

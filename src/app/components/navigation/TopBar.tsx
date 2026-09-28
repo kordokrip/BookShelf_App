@@ -63,8 +63,10 @@ export function TopBar() {
   const bellRef = useRef<HTMLDivElement>(null);
 
   // z-[45]: 헤더 안의 프로필·알림 팝업이 설치 배너·하단 탭바(z-40)보다 위에 오도록 (시트·모달은 z-50 이상)
+  // 불투명 배경 — 반투명 + 배경 블러(유리 효과)는 스크롤한 콘텐츠가 노치·상태 표시줄 영역에 뿌옇게 비쳐
+  // 상단이 흐릿해 보였다 (2026-09-28 iPhone 14 Pro 제보). sticky라 GPU 레이어 강제(fixed-nav)도 쓰지 않는다
   return (
-    <header className="fixed-nav sticky top-0 z-[45] bg-white/95 dark:bg-[#0F172A]/95 glass-surface border-b border-[#E2E8F0] dark:border-[#334155]">
+    <header className="fixed-nav sticky top-0 z-[45] bg-white dark:bg-[#0F172A] border-b border-[#E2E8F0] dark:border-[#334155]">
       {/* iOS 노치 / PWA 스탠드얼론 모드에서 상단 안전 영역 여백 */}
       <div aria-hidden style={{ height: 'var(--safe-top)' }} />
 

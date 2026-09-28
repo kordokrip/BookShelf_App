@@ -159,7 +159,8 @@ svg {
   iOS Safari: fixed 요소가 스크롤 시 떨리는 현상 방지
   → transform: translateZ(0) 으로 합성 레이어 분리 강제
 */
-.fixed-nav {
+/* position: fixed인 내비(하단 탭바)만 — sticky 상단바까지 레이어로 올리면 사파리에서 글자가 미세하게 흐려질 수 있다 */
+.fixed-nav.fixed {
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
   backface-visibility: hidden;

@@ -251,6 +251,8 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 | 시트·모달·확인창 | 50 | Radix Sheet·AlertDialog, 페이지 모달 |
 | 토스트 / 공용 Modal | 100 / 200 | |
 
+**상단 안전 영역(노치·다이내믹 아일랜드)**: 홈 화면 설치 시 상태 표시줄이 투명(`black-translucent`)이라, Root 안은 불투명 TopBar가, Root 밖 독립 화면(`/notes-search`·`/register-flow`)은 `components/navigation/SafeAreaTop.tsx`(sticky + 불투명)가 이 영역을 덮는다. 그 아래 sticky 요소는 `top: var(--safe-top)`.
+
 **뒤로 가기(안드로이드 백 버튼·iOS 스와이프 백)**: 열린 시트·모달·팝업을 먼저 닫는다 — `src/hooks/useBackToClose.ts`. 열릴 때 같은 URL의 기록 항목을 하나 쌓고 popstate에서 닫으며, 화면에서 직접 닫으면 그 항목을 걷는다(한 틱 뒤, 여전히 자기 항목일 때만 — 닫으면서 다른 화면으로 이동했거나 다른 오버레이를 연 경우는 건드리지 않음). 공용 `Sheet`·`AlertDialog`·`Modal`에 내장되어 있고, 페이지가 직접 만든 모달(`fixed inset-0`)은 컴포넌트 첫 줄에서 `useBackToClose(true, onClose)`를 호출한다. 모임·컬렉션 상세처럼 라우트가 아닌 화면 내부 상태 전환도 같은 훅으로 "상세 → 목록"이 된다. **새 오버레이를 만들면 반드시 이 훅을 붙일 것.**
 
 ---
@@ -324,9 +326,9 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 ### 4.3 TopBar (상단 헤더)
 
 - **파일**: `src/app/components/navigation/TopBar.tsx`
-- **위치**: `sticky top-0 z-40`
+- **위치**: `sticky top-0 z-[45]` (3.3 겹침 순서 참고)
 - **높이**: 56px (`h-14`)
-- **배경**: `bg-white/95 glass-surface` / `dark:bg-[#0F172A]/95`
+- **배경**: 불투명 `bg-white` / `dark:bg-[#0F172A]` (2026-09-28 — 반투명 + 배경 블러(유리 효과)는 스크롤한 콘텐츠가 노치·상태 표시줄 영역에 뿌옇게 비쳐 상단이 흐릿해 보였다. sticky라 GPU 레이어 강제(`.fixed-nav`의 transform)는 fixed 요소에만 적용)
 - **하단 테두리**: `border-b border-[#E2E8F0]`
 - **레이아웃**: `grid grid-cols-[auto_1fr_auto]` — 좌(로고) | 중(타이틀) | 우(액션)
 
@@ -389,8 +391,8 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 - 배경: `#F8FAFC` → `#0F172A`
 - 텍스트: `#1E293B` → `#F8FAFC`
 - 테두리: `#E2E8F0` → `#334155`
-- TopBar: `bg-white/95` → `bg-[#0F172A]/95`
-- BottomNavBar: 동일 패턴
+- TopBar: `bg-white` → `bg-[#0F172A]` (불투명)
+- BottomNavBar: `bg-white/95` → `bg-[#0F172A]/95` + 배경 블러(하단은 노치 영향이 없어 반투명 유지)
 
 ---
 

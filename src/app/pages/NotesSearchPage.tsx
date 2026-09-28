@@ -28,6 +28,7 @@ import {
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "../components/ui/alert-dialog";
 import { NoteTypeLabel } from "../components/notes/noteTypes";
+import { SafeAreaTop } from "../components/navigation/SafeAreaTop";
 
 /* ─── 편집용 로컬 타입 (color 포함) ─────────────────────── */
 type EditingNote = BookNote & { color?: string };
@@ -120,8 +121,8 @@ export function NotesSearchPage() {
 
       <div className={`md:ml-20 ${sidebarOpen ? "lg:ml-60" : "lg:ml-[72px]"} transition-all duration-300 ease-in-out`}>
       <main className="flex flex-col min-h-[var(--vp-h)] bg-background">
-      {/* iOS 노치 / Dynamic Island / PWA standalone 상단 안전 영역 */}
-      <div aria-hidden style={{ height: 'var(--safe-top)', flexShrink: 0 }} />
+      {/* iOS 노치 / Dynamic Island / PWA standalone 상단 안전 영역 — 스크롤해도 콘텐츠가 노치 아래로 비치지 않게 고정 */}
+      <SafeAreaTop />
 
       {/* ── 헤더 ── */}
       <div className="flex items-center gap-3 px-4 h-14 border-b border-border flex-shrink-0">
@@ -137,7 +138,7 @@ export function NotesSearchPage() {
       </div>
 
       {/* ── 검색 + 필터 (sticky) — 데스크톱에서는 BookDetailPage와 동일하게 중앙 폭 제한 ── */}
-      <div className="w-full max-w-2xl mx-auto lg:max-w-3xl sticky top-0 z-10 bg-background border-b border-border px-4 pb-3 pt-3 flex-shrink-0">
+      <div className="w-full max-w-2xl mx-auto lg:max-w-3xl sticky top-[var(--safe-top)] z-10 bg-background border-b border-border px-4 pb-3 pt-3 flex-shrink-0">
         <div className="relative mb-3">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <input
