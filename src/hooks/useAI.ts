@@ -9,26 +9,55 @@ export interface LifeBookItem {
   publisher: string;
   isbn: string;
   url: string;
+  /** 실제 도서 검색으로 존재를 확인한 책 */
+  verified?: boolean;
 }
 
-interface LifeBooksResponse {
+export type AIProvider = 'openrouter' | 'workers-ai';
+
+export interface LifeBooksResponse {
   data: LifeBookItem[];
   cached: boolean;
-  source?: 'workers-ai' | 'curated-fallback';
+  source?: 'openrouter' | 'workers-ai' | 'curated-fallback' | (string & {});
+  provider?: AIProvider | null;
   error?: string;
 }
+
+/** AI 제공자 캡션 — 어떤 모델이 만든 결과인지 알려 신뢰도를 가늠하게 한다 */
+export function providerLabel(provider?: AIProvider | string | null): string | null {
+  if (provider === 'openrouter') return 'Gemma · OpenRouter';
+  if (provider === 'workers-ai') return 'Workers AI';
+  return null;
+}
+
+/** 인생책 추천 출처 캡션 (기본 목록이면 AI가 아님을 분명히) */
+export function lifeBooksSourceLabel(res?: Pick<LifeBooksResponse, 'source' | 'provider'> | null): string | null {
+  if (!res?.source) return null;
+  if (res.source === 'curated-fallback') return '추천 목록(기본)';
+  const p = providerLabel(res.provider ?? res.source);
+  return p ? `AI 추천 · ${p.split(' · ')[0]}` : 'AI 추천';
+}
+
+/** 429(요청 한도) 안내 문구 — 서버 제한 창이 10분 */
+export const RATE_LIMIT_RETRY_COPY = '10분쯤 뒤에 다시 시도해 주세요';
 
 export interface AIRecommendation {
   title: string;
   author: string;
   reason: string;
   genre: string;
-  source?: 'workers-ai' | 'curated-fallback';
+  source?: 'openrouter' | 'workers-ai' | 'curated-fallback';
 }
 
-interface SummarizeResponse {
-  summary: string;
+export interface SummarizeResponse {
+  /** null이면 분석하지 않음 (reason 참고) */
+  summary: string | null;
   cached: boolean;
+  provider?: AIProvider | null;
+  grounded?: boolean;
+  source?: 'kakao' | 'naver' | 'client';
+  /** 'no_source': 책 소개 정보를 못 찾아 환각 방지를 위해 분석을 거절 */
+  reason?: 'no_source';
 }
 
 interface RecommendResponse {
@@ -36,7 +65,7 @@ interface RecommendResponse {
   topGenres: string[];
   cached?: boolean;
   message?: string;
-  source?: 'workers-ai' | 'curated-fallback' | 'none';
+  source?: 'openrouter' | 'workers-ai' | 'curated-fallback' | 'none';
   analysis?: {
     historyCount?: number;
     anchorBook?: string;
@@ -47,14 +76,15 @@ interface RecommendResponse {
 /** 책 설명 요약 */
 export function useBookSummary() {
   return useMutation({
-    mutationFn: ({ description, title, author }: {
+    mutationFn: ({ description, title, author, isbn }: {
       description?: string;
       title: string;
       author: string;
+      isbn?: string;
     }) =>
       apiFetch<SummarizeResponse>('/api/ai/summarize', {
         method: 'POST',
-        body: JSON.stringify({ description, title, author }),
+        body: JSON.stringify({ description, title, author, isbn }),
       }),
     retry: false,
   });

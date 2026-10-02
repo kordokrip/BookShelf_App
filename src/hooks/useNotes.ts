@@ -52,6 +52,19 @@ export function useDailyNote() {
   });
 }
 
+/**
+ * 오늘의 명문장 (GET /api/notes/daily-quote) — 내 노트 또는 AI가 고른 문장
+ * - 서버가 KST 날짜별로 고정해 주므로 1시간 캐시 · 실패해도 재시도하지 않음(카드는 조용히 숨김)
+ */
+export function useDailyQuote() {
+  return useQuery({
+    queryKey: queryKeys.notes.dailyQuote(),
+    queryFn: async () => (await notesApi.dailyQuote()).data,
+    staleTime: 60 * 60_000,
+    retry: false,
+  });
+}
+
 /** 노트 생성 */
 /** AI 태그는 저장 응답 후 서버에서 비동기로 붙으므로, 잠시 뒤 노트 목록을 다시 불러와 반영 */
 const TAG_REFRESH_DELAY_MS = 8000;

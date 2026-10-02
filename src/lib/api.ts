@@ -49,6 +49,7 @@ export const queryKeys = {
     details: () => [...queryKeys.notes.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.notes.details(), id] as const,
     daily: () => [...queryKeys.notes.all, 'daily'] as const,
+    dailyQuote: () => [...queryKeys.notes.all, 'dailyQuote'] as const,
   },
   search: {
     all: ['search'] as const,
@@ -85,12 +86,6 @@ export const queryKeys = {
     all: ['notifications'] as const,
     list: () => [...queryKeys.notifications.all, 'list'] as const,
     unreadCount: () => [...queryKeys.notifications.all, 'unread-count'] as const,
-  },
-  share: {
-    all: ['share'] as const,
-    inbox: () => [...queryKeys.share.all, 'inbox'] as const,
-    sent: () => [...queryKeys.share.all, 'sent'] as const,
-    unread: () => [...queryKeys.share.all, 'unread'] as const,
   },
   initialData: {
     all: ['initial-data'] as const,

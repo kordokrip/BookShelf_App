@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import { RefreshCw, Sparkles, BookOpen, ExternalLink } from "lucide-react";
-import { useLifeBooks, useRefreshLifeBooks } from "../../hooks/useAI";
+import { useLifeBooks, useRefreshLifeBooks, lifeBooksSourceLabel, RATE_LIMIT_RETRY_COPY } from "../../hooks/useAI";
 import { ApiError } from "../../lib/api";
 import { useToast } from "../components/ui/Toast";
 
@@ -11,11 +11,20 @@ export function LifeBooksPage() {
 
   const handleRefresh = () => {
     refreshMutation.mutate(undefined, {
-      onError: () => showToast("새로고침에 실패했어요. 다시 시도해주세요.", "error"),
+      onError: (e) =>
+        showToast(
+          e instanceof ApiError && e.status === 429
+            ? `추천 요청이 잠시 많아요. ${RATE_LIMIT_RETRY_COPY}`
+            : "새로고침에 실패했어요. 다시 시도해주세요.",
+          "error",
+        ),
     });
   };
 
   const is400 = isError && error instanceof ApiError && error.status === 400;
+  const is429 = isError && error instanceof ApiError && error.status === 429;
+  const sourceLabel = lifeBooksSourceLabel(data);
+  const hasVerified = (data?.data ?? []).some((b) => b.verified);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0F172A] pb-24">
@@ -45,6 +54,13 @@ export function LifeBooksPage() {
         </div>
         {data?.cached && (
           <p className="mt-1.5 text-xs text-[#64748B] dark:text-[#94A3B8]">캐시된 결과 · 24시간 유지</p>
+        )}
+        {(sourceLabel || hasVerified) && (data?.data?.length ?? 0) > 0 && (
+          <p className="mt-1 text-xs text-[#64748B] dark:text-[#94A3B8]">
+            {sourceLabel}
+            {sourceLabel && hasVerified ? " · " : ""}
+            {hasVerified ? "실제 도서 검색으로 확인한 책" : ""}
+          </p>
         )}
       </div>
 
@@ -92,7 +108,9 @@ export function LifeBooksPage() {
         {/* 일반 오류 */}
         {isError && !is400 && (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <p className="text-sm text-[#64748B] dark:text-[#94A3B8] mb-4">추천을 불러오는 중 오류가 발생했습니다.</p>
+            <p className="text-sm text-[#64748B] dark:text-[#94A3B8] mb-4">
+              {is429 ? `추천 요청이 잠시 많아요. ${RATE_LIMIT_RETRY_COPY}` : "추천을 불러오는 중 오류가 발생했습니다."}
+            </p>
             <button
               onClick={handleRefresh}
               className="px-5 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors"

@@ -1,6 +1,6 @@
 import { RefreshCw, Sparkles, BookOpen, ExternalLink, CloudOff } from "lucide-react";
 import { Link } from "react-router";
-import { useLifeBooks, useRefreshLifeBooks } from "../../../hooks/useAI";
+import { useLifeBooks, useRefreshLifeBooks, lifeBooksSourceLabel, RATE_LIMIT_RETRY_COPY } from "../../../hooks/useAI";
 import { ApiError } from "../../../lib/api";
 import { useToast } from "../ui/Toast";
 
@@ -11,13 +11,21 @@ export function RecommendSection({ wishTitleSet: _wishTitleSet }: { wishTitleSet
 
   const handleRefresh = () => {
     refresh.mutate(undefined, {
-      onError: () => showToast("새로고침에 실패했어요. 다시 시도해주세요.", "error"),
+      onError: (e) =>
+        showToast(
+          e instanceof ApiError && e.status === 429
+            ? `추천 요청이 잠시 많아요. ${RATE_LIMIT_RETRY_COPY}`
+            : "새로고침에 실패했어요. 다시 시도해주세요.",
+          "error",
+        ),
     });
   };
 
   const is400 = isError && error instanceof ApiError && error.status === 400;
   const is429 = isError && error instanceof ApiError && error.status === 429;
   const books = data?.data ?? [];
+  const sourceLabel = lifeBooksSourceLabel(data);
+  const hasVerified = books.some((b) => b.verified);
 
   return (
     <div className="px-4">
@@ -39,6 +47,13 @@ export function RecommendSection({ wishTitleSet: _wishTitleSet }: { wishTitleSet
           <p className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 12, marginTop: 2 }}>
             {data?.cached ? "캐시된 결과 · 24시간 유지" : "완독 이력 기반 인생책 추천"}
           </p>
+          {books.length > 0 && (sourceLabel || hasVerified) && (
+            <p className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 11, marginTop: 2 }}>
+              {sourceLabel}
+              {sourceLabel && hasVerified ? " · " : ""}
+              {hasVerified ? "실제 도서 검색으로 확인한 책" : ""}
+            </p>
+          )}
         </div>
         {books.length > 0 && (
           <button
@@ -110,7 +125,7 @@ export function RecommendSection({ wishTitleSet: _wishTitleSet }: { wishTitleSet
             {is429 ? "추천 요청이 잠시 많아요" : "지금은 추천을 가져오지 못했어요"}
           </p>
           <p className="mt-1" style={{ fontSize: 12, color: "var(--text-secondary)" }}>
-            {is429 ? "1분쯤 뒤에 다시 시도해 주세요" : "네트워크를 확인하고 다시 시도해 주세요"}
+            {is429 ? RATE_LIMIT_RETRY_COPY : "네트워크를 확인하고 다시 시도해 주세요"}
           </p>
           <button
             onClick={handleRefresh}

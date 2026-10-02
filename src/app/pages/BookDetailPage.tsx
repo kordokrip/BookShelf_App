@@ -18,8 +18,8 @@ import { useToast } from "../components/ui/Toast";
 import { useBookDetail, useDeleteBook, useUpdateBook } from "../../hooks/useBooks";
 import { useBookNotes, useAddNote, useUpdateNote, useDeleteNote } from "../../hooks/useNotes";
 import { useSessions, useDeleteSession } from "../../hooks/useSessions";
-import { useBookSummary as useBookSummaryMutation } from "../../hooks/useAI";
-import { coverApi, queryKeys } from "../../lib/api";
+import { useBookSummary as useBookSummaryMutation, providerLabel, RATE_LIMIT_RETRY_COPY } from "../../hooks/useAI";
+import { ApiError, coverApi, queryKeys } from "../../lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../components/ui/sheet";
 import {
@@ -424,7 +424,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
               <span
                 className={cn(
                   "rounded-full px-1.5 py-0.5",
-                  noteFilter === tab.value ? "bg-white/20 text-white" : "bg-[#F1F5F9] text-[#475569] dark:bg-[#334155] dark:text-[#CBD5E1]"
+                  noteFilter === tab.value ? "bg-black/25 text-white" : "bg-[#F1F5F9] text-[#475569] dark:bg-[#334155] dark:text-[#CBD5E1]"
                 )}
                 style={{ fontSize: 11, fontWeight: 700 }}
               >
@@ -605,6 +605,8 @@ function BookInfoTab({ book }: { book: UIBook }) {
   const [summaryResult, setSummaryResult] = useState<string | null>(null);
   const [displayedSummary, setDisplayedSummary] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  // 서버가 책 소개를 못 찾아 분석을 거절한 상태 (환각 방지)
+  const [noSource, setNoSource] = useState(false);
   const [goalDateVal, setGoalDateVal] = useState(book.goalDate ?? "");
   const summarizeMutation = useBookSummaryMutation();
   const updateBook = useUpdateBook();
@@ -646,12 +648,15 @@ function BookInfoTab({ book }: { book: UIBook }) {
 
   const handleSummarize = async () => {
     setSummaryResult(null);
+    setNoSource(false);
     try {
       const res = await summarizeMutation.mutateAsync({
         title: book.title,
         author: book.author,
+        ...(book.isbn ? { isbn: book.isbn } : {}),
       });
-      setSummaryResult(res.summary);
+      if (res.summary) setSummaryResult(res.summary);
+      else setNoSource(true);
     } catch {
       // 오류는 summarizeMutation.isError 로 표시
     }
@@ -692,8 +697,8 @@ function BookInfoTab({ book }: { book: UIBook }) {
         {rows.map((row, i) => (
           <div
             key={row.label}
-            className="flex items-center justify-between px-4 py-3.5"
-            style={{ borderBottom: i < rows.length - 1 ? "1px solid #F1F5F9" : "none" }}
+            className={`flex items-center justify-between px-4 py-3.5 ${i < rows.length - 1 ? "border-b border-[#F1F5F9] dark:border-[#334155]" : ""}`}
+            style={i < rows.length - 1 ? { borderBottomWidth: 1, borderBottomStyle: "solid" } : undefined}
           >
             <span className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 13 }}>{row.label}</span>
             <span className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 13, fontWeight: 600 }}>{row.value}</span>
@@ -784,7 +789,7 @@ function BookInfoTab({ book }: { book: UIBook }) {
       </div>
 
       {/* AI 분석 섹션 */}
-      <div className="rounded-2xl overflow-hidden border border-violet-200" style={{ background: "linear-gradient(135deg, var(--brand2-50) 0%, var(--brand-50) 100%)" }}>
+      <div className="rounded-2xl overflow-hidden border border-violet-200 dark:border-violet-800 [background:linear-gradient(135deg,var(--brand2-50)_0%,var(--brand-50)_100%)] dark:[background:var(--brand-900)]">
         {/* Header */}
         <div className="px-4 pt-4 pb-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -794,12 +799,12 @@ function BookInfoTab({ book }: { book: UIBook }) {
             >
               <Sparkles size={14} className="text-white" />
             </div>
-            <span style={{ fontSize: 14, fontWeight: 700, color: "var(--brand2-900)" }}>AI 책 분석</span>
+            <span className="text-[color:var(--brand2-900)] dark:text-[color:var(--brand-200)]" style={{ fontSize: 14, fontWeight: 700 }}>AI 책 분석</span>
           </div>
           {summaryResult && !summarizeMutation.isPending && (
             <button
               onClick={() => void handleSummarize()}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-violet-600 hover:bg-white/60 transition-colors"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-violet-600 dark:text-[color:var(--brand-200)] hover:bg-white/60 dark:hover:bg-white/10 transition-colors"
               style={{ fontSize: 11, fontWeight: 600 }}
             >
               <RefreshCw size={11} />
@@ -811,16 +816,26 @@ function BookInfoTab({ book }: { book: UIBook }) {
         {/* Idle: 분석 시작 버튼 */}
         {!summaryResult && !summarizeMutation.isPending && !summarizeMutation.isError && (
           <div className="px-4 pb-4 flex flex-col gap-3">
-            <p style={{ fontSize: 12, color: "var(--brand2-600)", lineHeight: 1.65 }}>
-              AI가 이 책의 핵심 내용과 읽어야 할 이유를 분석해 드립니다
-            </p>
+            {noSource ? (
+              <p
+                role="status"
+                className="rounded-xl p-3 border border-violet-200 bg-white/70 dark:bg-white/10 dark:border-white/20 text-violet-900 dark:text-violet-100"
+                style={{ fontSize: 12, lineHeight: 1.65 }}
+              >
+                이 책의 소개 정보를 찾지 못해 AI 분석을 하지 않았어요. 잘못된 내용을 지어내지 않도록 소개가 있는 책만 분석해요.
+              </p>
+            ) : (
+              <p className="text-[color:var(--brand2-700)] dark:text-[color:var(--brand-200)]" style={{ fontSize: 12, lineHeight: 1.65 }}>
+                AI가 이 책의 핵심 내용과 읽어야 할 이유를 분석해 드립니다
+              </p>
+            )}
             <button
               onClick={() => void handleSummarize()}
               className="flex items-center justify-center gap-2 py-3 rounded-xl text-white transition-all active:scale-[0.98]"
               style={{ background: "linear-gradient(135deg, var(--brand2-600), var(--brand-600))", fontSize: 14, fontWeight: 700 }}
             >
               <Sparkles size={15} />
-              AI 분석 시작
+              {noSource ? "다시 시도" : "AI 분석 시작"}
             </button>
           </div>
         )}
@@ -830,19 +845,19 @@ function BookInfoTab({ book }: { book: UIBook }) {
           <div className="px-4 pb-4 flex flex-col gap-2">
             <div className="flex items-center gap-2 mb-1">
               <div className="w-4 h-4 rounded-full border-2 border-violet-600 border-t-transparent animate-spin" />
-              <span style={{ fontSize: 12, color: "var(--brand2-600)", fontWeight: 600 }}>AI가 분석 중...</span>
+              <span className="text-[color:var(--brand2-700)] dark:text-[color:var(--brand-200)]" style={{ fontSize: 12, fontWeight: 600 }}>AI가 분석 중...</span>
             </div>
-            <div className="h-3 rounded-full animate-pulse" style={{ background: "var(--brand2-200)", width: "100%" }} />
-            <div className="h-3 rounded-full animate-pulse" style={{ background: "var(--brand2-200)", width: "80%" }} />
-            <div className="h-3 rounded-full animate-pulse" style={{ background: "var(--brand2-200)", width: "60%" }} />
+            <div className="h-3 rounded-full animate-pulse bg-[color:var(--brand2-200)] dark:bg-white/20" style={{ width: "100%" }} />
+            <div className="h-3 rounded-full animate-pulse bg-[color:var(--brand2-200)] dark:bg-white/20" style={{ width: "80%" }} />
+            <div className="h-3 rounded-full animate-pulse bg-[color:var(--brand2-200)] dark:bg-white/20" style={{ width: "60%" }} />
           </div>
         )}
 
         {/* Result: 타이핑 애니메이션 */}
         {summaryResult && !summarizeMutation.isPending && (
           <div className="px-4 pb-4">
-            <div className="rounded-xl p-3.5 border border-violet-200" style={{ background: "rgba(255,255,255,0.75)" }}>
-              <p style={{ fontSize: 13, lineHeight: 1.85, color: "#3B1F70" }}>
+            <div className="rounded-xl p-3.5 border border-violet-200 dark:border-white/20 bg-white/75 dark:bg-white/10">
+              <p className="text-[#3B1F70] dark:text-[#E2E8F0]" style={{ fontSize: 13, lineHeight: 1.85 }}>
                 {displayedSummary}
                 {isTyping && (
                   <span
@@ -852,8 +867,14 @@ function BookInfoTab({ book }: { book: UIBook }) {
                 )}
               </p>
             </div>
-            {summarizeMutation.data?.cached && (
-              <p className="mt-1.5 flex items-center justify-end gap-1 text-violet-600 dark:text-violet-300" style={{ fontSize: 11 }}><Zap size={11} aria-hidden />캐시된 분석 결과</p>
+            {(summarizeMutation.data?.cached || providerLabel(summarizeMutation.data?.provider)) && (
+              <p className="mt-1.5 flex items-center justify-end gap-1.5 text-violet-700 dark:text-[color:var(--brand-200)]" style={{ fontSize: 11 }}>
+                {summarizeMutation.data?.cached && (
+                  <span className="inline-flex items-center gap-1"><Zap size={11} aria-hidden />캐시된 분석 결과</span>
+                )}
+                {summarizeMutation.data?.cached && providerLabel(summarizeMutation.data?.provider) && <span aria-hidden>·</span>}
+                {providerLabel(summarizeMutation.data?.provider) && <span>{providerLabel(summarizeMutation.data?.provider)}</span>}
+              </p>
             )}
           </div>
         )}
@@ -861,7 +882,11 @@ function BookInfoTab({ book }: { book: UIBook }) {
         {/* Error: 재시도 */}
         {summarizeMutation.isError && !summarizeMutation.isPending && (
           <div className="px-4 pb-4 flex flex-col gap-2">
-            <p style={{ fontSize: 12, color: "#EF4444" }}>분석 중 오류가 발생했습니다</p>
+            <p className="text-red-600" style={{ fontSize: 12 }}>
+              {summarizeMutation.error instanceof ApiError && summarizeMutation.error.status === 429
+                ? `AI 요청이 잠시 많아요. ${RATE_LIMIT_RETRY_COPY}`
+                : "분석 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."}
+            </p>
             <button
               onClick={() => void handleSummarize()}
               className="self-start flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"

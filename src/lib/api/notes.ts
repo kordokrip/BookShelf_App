@@ -25,6 +25,25 @@ export interface DailyNote extends Note {
   book_cover_color: string | null;
 }
 
+/** GET /api/notes/daily-quote 응답의 data — 내 노트 또는 AI가 고른 명문장 (하루 동안 고정) */
+export interface DailyQuoteBook {
+  id: string;
+  title: string;
+  author: string | null;
+  cover_image?: string | null;
+  cover_color?: string | null;
+}
+export type DailyQuote =
+  | { source: 'note'; note: DailyNote }
+  | {
+      source: 'ai';
+      text: string;
+      context?: string | null;
+      book: DailyQuoteBook;
+      provider?: string;
+      disclaimer?: boolean;
+    };
+
 export interface NoteWriteFields {
   type: string;
   content: string;
@@ -47,6 +66,10 @@ export const notesApi = {
 
   /** 오늘의 회고 노트 (노트가 없으면 data: null) */
   daily: () => apiFetch<ApiResponse<DailyNote | null>>('/api/notes/random'),
+
+  /** 오늘의 명문장 (내 노트 또는 AI 선정, 없으면 data: null) */
+  dailyQuote: () =>
+    apiFetch<ApiResponse<DailyQuote | null> & { date?: string }>('/api/notes/daily-quote'),
 
   /** 단일 노트 조회 */
   get: (id: string) =>
