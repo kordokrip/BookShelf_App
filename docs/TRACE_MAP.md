@@ -67,10 +67,11 @@
 | `/yearly-review` | `YearlyReviewPage` (lazy) | **보호** | ★ 신규 (FEAT-104) — lazy import, 연간 독서 결산 |
 | `/collections` | `CollectionsPage` (lazy) | **보호** | 컬렉션 목록/상세 관리 |
 | `/book/:id` | `Root` > `BookDetailPage` | **보호** | |
-| `/design-system` | `DesignSystemPage` (lazy) | **보호** ★ (16차) | `protected_(withSuspense(Lazy))` + 컴포넌트 내부 admin gate (`role==='admin'`) |
+| `/settings/appearance` | `AppearancePage` (lazy) | **보호** ★ (34차) | 앱 디자인 — 강조색 프리셋·화면 모드, 모든 사용자. `PATCH /api/users/profile {theme_accent, theme_mode}` |
+| `/design-system` | 리다이렉트 → `/settings/appearance` | — | 34차에 DesignSystemPage 제거 |
 | `/entry` | `EntryGate` | 공개 ★ (16차) | 인증→`/`, 처음 방문→`/onboarding`, 그 외→`/login` |
 | `/groups` | `GroupsPage` (lazy) | **보호** ★ (21차) | 독서 모임 목록/생성/가입 + GroupDetailView(채팅/일정/피드백/멤버 탭) |
-| `/share` | `SharePage` (lazy) | **보호** | 공유 리포트 inbox/outbox |
+| `/share` | 리다이렉트 → `/stats` | — | 34차에 SharePage 제거 — 통계 공유는 StatsPage `내 통계 공유`(클라이언트 이미지 생성, API 호출 없음) |
 | `/admin` | `AdminPage` (lazy) | **보호** | 관리자 대시보드 |
 | `/lifebooks` | `LifeBooksPage` (lazy) | **보호** | AI 인생책 추천 — `GET /api/ai/lifebooks` |
 | `*` | `NotFoundPage` | 공개 | 404 fallback 라우트 ✅ |
@@ -214,19 +215,20 @@ toggleSidebar() → uiStore.sidebarOpen 반전 → localStorage 영속화
   → 아이콘 hover 시 label 텍스트 표시 (side="right")
 펼친 상태 → Tooltip 비활성 (label 직접 노출)
 
-[메뉴 항목] (7개)
-BookOpen → "/" (서재)
-BookOpenCheck → "/reading" (읽는 중)
-Heart → "/wishlist" (위시리스트)
-BarChart3 → "/stats" (통계)
-FileSearch → "/notes-search" (노트 검색)
-Calendar → "/yearly-review" (연간 결산)
-Palette → "/design-system" (디자인 시스템) — admin 전용 ★
+[메뉴 항목] (8개, 34차 기준 — 정의: SideNav.tsx navItems)
+BookMarked → "/" (완독)
+BookOpen → "/reading" (읽는 중)
+Star → "/wishlist" (책 추천)
+BarChart2 → "/stats" (독서 통계)
+FileText → "/notes-search" (노트 & 검색)
+Sparkles → "/lifebooks" (인생책)
+Users → "/groups" (독서 모임)
+Palette → "/settings/appearance" (앱 디자인) — 모든 사용자 ★ 34차
 
 [Admin 체계] ★ (16차)
 isAdmin = user?.role === 'admin'
   → ShieldCheck 아이콘 + "ADMIN" 배지 (bg-gradient violet→purple, 텍스트 xs)
-  → 디자인 시스템 링크: isAdmin일 때만 표시
+  → (34차) 디자인 시스템 링크 제거 — 앱 디자인은 모든 사용자에게 표시
 접힌 상태에서도 ShieldCheck → Tooltip "관리자" 표시
 
 [사용자 프로필 영역]
@@ -856,7 +858,7 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 | GET | `/api/users/profile` | **authMiddleware** | — | `{data: user}` | `routes/users.ts` |
 | GET | `/api/users/:id` | **authMiddleware** | — | `{data: user}` (자신: 전체, 타인: 공개 필드) | `routes/users.ts` |
 | POST | `/api/users` | **authMiddleware** | `{id, email, name, avatar_url?}` | `{data: user}` 201 | `routes/users.ts` |
-| PATCH | `/api/users/profile` | **authMiddleware** | `{name?, favorite_genres?, reading_goal?, avatar_url?}` (zod 검증 ✅) | `{data}` (SELECT 시 role 포함 ★16차) | `routes/users.ts` |
+| PATCH | `/api/users/profile` | **authMiddleware** | `{name?, favorite_genres?, reading_goal?, avatar_url?, profile_emoji?, reminder_*?, weekly_report_enabled?, theme_accent?: 'indigo'\|'ocean'\|'forest'\|'sunset'\|'rose'\|'graphite'\|null, theme_mode?: 'auto'\|'light'\|'dark'\|null}` (zod 검증 ✅; 테마 필드는 0017, GET/PATCH 응답에 `theme_accent`·`theme_mode` 포함) | `{data}` (SELECT 시 role 포함 ★16차) | `routes/users.ts` |
 | DELETE | `/api/users/me` | **authMiddleware** + rate limit `delete_account` 5회/분 | `{password}` | `{data:{deleted:true}}` · 401 비밀번호 불일치 · 403 관리자 · 400 소셜 계정 | `routes/users.ts` (FK CASCADE로 연관 데이터 삭제, `group_messages.deleted_by` NULL 처리, R2 `covers/{userId}/` 정리) |
 
 ### 기능 플래그 (`/api/flags`)
@@ -908,6 +910,7 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 |---|---|---|---|---|---|
 | GET | `/api/notes` | **authMiddleware** | `?book_id=&type=&search=&tag=&limit=&offset=` — `tag`(Phase 4): AI 태그 정확 일치(`json_each(tags)`) | `{data: Note[], count}` | `routes/notes.ts` |
 | GET | `/api/notes/export` | **authMiddleware** | `?book_id=` | Markdown 파일 (페이지 범위는 `(p.12–15)` 표기) | `routes/notes.ts` |
+| GET | `/api/notes/daily-quote` | **authMiddleware** | — | `{data: {source:'note', note: Note & {book_title, book_author, book_cover_image, book_cover_color}} \| {source:'ai', text, context, book:{id,title,author,cover_image,cover_color}, provider:'openrouter', disclaimer:true} \| null, date}` — 사용자·KST 날짜별 하루 고정. quote 노트가 있고 FNV 홀짝이 'note'면 내 문장, 아니면 AI(완독 책 1권의 대표 문장, Workers AI 폴백 없음). AI는 OpenRouter 타임아웃 8초·백그라운드 예산 상한(`OPENROUTER_BACKGROUND_BUDGET`)·사용자별 60초 잠금(`daily_quote_lock:{userId}:{date}`, 동시 요청 중복 호출 방지). AI 실패 시 노트로 대체(30분 캐시), 노트도 없으면 `data: null` | KV `daily_quote:v1:{userId}:{date}` 26시간. `lib/dailyQuote.ts`. `/:id` 앞에 선언 |
 | GET | `/api/notes/random` | **authMiddleware** | — | `{data: Note & {book_title, book_author, book_cover_image, book_cover_color} \| null}` — 오늘의 회고. 사용자·KST 날짜별 결정적 선택(`pickDailyIndex`), 노트가 없으면 `null` | `routes/notes.ts` + `lib/noteHelpers.ts` |
 | GET | `/api/notes/:id` | **authMiddleware** | — | `{data: Note}` | `routes/notes.ts` |
 | POST | `/api/notes` | **authMiddleware** ✅ | `{book_id, type?, content, page_number?, end_page?, color?}` | `{data: Note}` 201 · 400 범위 오류 | `routes/notes.ts` |
@@ -925,8 +928,9 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 
 | Method | 경로 | 인증 | 요청 | 응답 | 캐시 |
 |---|---|---|---|---|---|
-| POST | `/api/ai/summarize` | optionalAuth | `{description, title, author}` | `{summary, cached}` | KV 1일 TTL |
-| GET | `/api/ai/recommend` | optionalAuth | `?limit=5` (`&refresh=true` 지원 ★) | `{recommendations, topGenres, cached}` | KV 1시간 TTL |
+| POST | `/api/ai/summarize` | **authMiddleware** (한도는 사용자별 `ai_sum`, 5회/분) | `{title, author, isbn?, description?}` — 20자 이상 description이 없으면 서버가 카카오→네이버에서 책 소개 조회(ISBN 우선, 제목 유사도 검증) | 근거 있음: `{summary, cached, provider: 'openrouter'\|'workers-ai', grounded: true, source: 'kakao'\|'naver'\|'client'}` · 근거 없음(모델 미호출): `{summary: null, reason: 'no_source', cached: false, provider: null}` · 실패 500 | KV `ai_summary:v3:{SHA-256(isbn·제목·저자·소개 전체)}` 7일(성공 결과만, 요약 800자 상한). `lib/aiSummary.ts` |
+| GET | `/api/ai/recommend` | optionalAuth (Gemma 우선 → Workers AI 폴백, `source`에 `openrouter` 추가) | `?limit=5` (`&refresh=true` 지원 ★) | `{recommendations, topGenres, cached}` | KV 1시간 TTL |
+| GET | `/api/ai/lifebooks` | **authMiddleware** (한도는 사용자별 `ai_life`, 3회/10분) | `?refresh=true` | `{data: [{title, author, reason, thumbnail, publisher, isbn, url, verified}], cached, source: 'openrouter'\|'workers-ai'\|'curated-fallback', provider: 'openrouter'\|'workers-ai'\|null}` — 완독 전체(≤200권)로 후보 10권 → 서재 중복 제거 + 카카오/네이버 실존 검증 → 5권(3권 미만이면 큐레이션 보충, 400: 완독 2권 미만) | KV `ai_lifebooks:v2:{userId}:{hash(완독 전체)}` 24시간. `lib/lifeBooks.ts` |
 | POST | `/api/ai/ocr` | optionalAuth | FormData(`image` 파일, 최대 5MB) | `{text, confidence}` ★ (FEAT-102) | 없음 |
 
 ### 통계 (`/api/stats`) ★ 신규 (2026-03-28)
@@ -1019,6 +1023,8 @@ totals:       { totalPages: number; totalMinutes: number }
 **Cron**: `*/15 * * * *` (15분마다) 트리거 → `sendDailyReminders()`가 현재 시각과 사용자별 `reminder_time` 슬롯이 일치하는 사용자에게 독서 리마인더 발송 (`worker/index.ts` scheduled)
 
 ### 공유 리포트 (`/api/share`)
+
+> 34차: UI(SharePage·SideNav 배지·`shareApi`) 제거. 기존 데이터 보존과 e2e 유지를 위해 API는 남겨 두었고 현재 화면 호출은 없다.
 
 | Method | 경로 | 인증 | 요청 | 응답 | Worker 파일 |
 |---|---|---|---|---|---|

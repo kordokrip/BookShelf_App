@@ -1,9 +1,9 @@
 # BookShelf App — 현재 상태 스냅샷
 
-> **최종 업데이트:** 2026-09-28 (PWA 네이티브 동작 점검 + 디자인 전면 업그레이드: 아이콘·생성 표지·세리프 노트·아이콘 체계)
+> **최종 업데이트:** 2026-10-03 (iPad 대응 · OpenRouter Gemma AI 재구성 · 통계 이미지 공유 · 개인 앱 테마)
 > **Git 브랜치:** `main` (kordokrip/BookShelf_App)
-> **E2E 테스트:** `bash scripts/e2e-api-test.sh` → **전체 PASS** ✅ (2026-09-27 스테이징·프로덕션 확인, 테스트 개수는 `grep -n '^  TOTAL=' scripts/e2e-api-test.sh`로 확인)
-> **상세 세션 리포트:** `docs/sessions/2026-09-28-pwa-native-design-upgrade.md`
+> **E2E 테스트:** `bash scripts/e2e-api-test.sh --url <대상>` → **전체 PASS** ✅ (2026-10-03 스테이징·프로덕션 확인, 테스트 개수는 `grep -n '^  TOTAL=' scripts/e2e-api-test.sh`로 확인)
+> **상세 세션 리포트:** `docs/sessions/2026-10-03-ipad-ai-theme.md`
 > **기능 플래그:** 등록 목록은 `worker/lib/featureFlags.ts`의 `ALL_FEATURE_FLAGS`(현재 비어 있음), 공개 상태는 `GET /api/flags/public`으로 확인 (ADR-003)
 
 ---
@@ -41,7 +41,7 @@
 
 ---
 
-## 3. 라우트 & 페이지 (리프 라우트 21개 — 페이지 컴포넌트 20개 + `EntryGate`)
+## 3. 라우트 & 페이지 (정의: `src/app/routes.ts`, 페이지 수는 `ls src/app/pages/*.tsx | wc -l`로 확인)
 
 | 라우트 | 페이지 |
 |--------|--------|
@@ -57,12 +57,13 @@
 | `/reading` | ReadingPage (독서 타이머·읽는중) |
 | `/wishlist` | WishlistPage (위시+검색+AI추천, 4탭) |
 | `/stats` | StatsPage (차트·스트릭·배지) |
-| `/design-system` | DesignSystemPage (admin 전용 디자인 토큰 레퍼런스) |
+| `/settings/appearance` | AppearancePage (앱 디자인 — 강조색·화면 모드, 모든 사용자) |
+| `/design-system` | `/settings/appearance`로 리다이렉트 (34차 화면 제거) |
 | `/book/:id` | BookDetailPage |
 | `/yearly-review` | YearlyReviewPage |
 | `/collections` | CollectionsPage |
 | `/groups` | GroupsPage (그룹 목록 + 상세는 내부 상태 전환) |
-| `/share` | SharePage (통계 공유 보고서) |
+| `/share` | `/stats`로 리다이렉트 (34차 화면 제거 — 통계 공유는 StatsPage 안) |
 | `/admin` | AdminPage (role=admin 전용) |
 | `/lifebooks` | LifeBooksPage (AI 인생책 추천) |
 | `*` | NotFoundPage |
@@ -147,6 +148,7 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 | `0014_reminder_prefs.sql` | users 리마인더 설정 3컬럼 추가 |
 | `0015_notes_page_range_session_tags.sql` | notes `end_page`(페이지 범위), `session_id`(몰입 타이머 연결, FK SET NULL), `tags`(AI 태깅) 추가 + session_id 인덱스 |
 | `0016_user_achievements.sql` | 업적 달성 기록 `user_achievements(user_id, achievement_id, unlocked_at)` (ADR-004) |
+| `0017_user_appearance.sql` | users `theme_accent`(강조색 프리셋 id), `theme_mode`(auto/light/dark) 추가 — 둘 다 NULL 허용 |
 
 마이그레이션 적용 절차·로컬 검증 원칙은 `docs/CI_CD.md` 참고. **로컬에서 `--remote` 마이그레이션을 직접 실행하지 말 것** — `git push origin main` 시 CI가 자동 적용한다.
 
@@ -215,9 +217,9 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 | 독서 세션 + 타이머 | ✅ 완료 |
 | 노트 CRUD + FTS5 검색 | ✅ 완료 |
 | 통계 + 연간결산 + 성취배지 | ✅ 완료 |
-| AI 요약·추천·OCR·인생책 추천 | ✅ 완료 — 2026-09 폐기 모델 교체로 복구(`@cf/meta/llama-3.1-8b-instruct-fast`). 폴백 사용 여부는 e2e TEST 23의 "(fallback)" 표시로 확인 |
+| AI 요약·추천·OCR·인생책 추천·오늘의 명문장 | ✅ 2026-10-03 OpenRouter `google/gemma-4-26b-a4b-it:free` 우선 + Workers AI(`@cf/meta/llama-3.1-8b-instruct-fast`) 폴백. 요약은 책 소개 근거만, 인생책은 실재 검증. **무료 Gemma는 공용 풀 혼잡(429)이 잦아 폴백 비중이 높음** — 크레딧/BYOK로 개선 가능. 응답의 `provider`로 확인 |
 | 독서 모임 + 실시간 채팅(DO WebSocket) + 일정 | ✅ 완료 |
-| 통계 공유 보고서 | ✅ 완료 |
+| 통계 공유 | ✅ 2026-10-03 보고서 화면 → 독서 통계 '내 통계 공유'(이미지 Web Share/PNG)·'요약 복사'. `/api/share`는 데이터 보존용으로 남김 |
 | 관리자 대시보드 | ✅ 완료 |
 | 컬렉션 / 책 탐색(discover) / 웹 푸시 | ✅ 완료 |
 | PWA + 오프라인 지원 | ✅ 완료 |
@@ -229,9 +231,11 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 | 반응형·다크/라이트 대비 | ✅ 2026-09-27 Playwright 점검(8개 뷰포트·13개 화면, WebKit·Chromium 기기 에뮬레이션). **실기기(iOS 홈 화면 설치 모드·노치·진동)는 미확인** |
 | PWA 네이티브 동작 (뒤로 가기로 오버레이 닫기·자동 채움·오프라인·회전) | ✅ 2026-09-28 에뮬레이션·Lighthouse 점검 |
 | 브랜드 에셋·디자인 시스템 (벡터 아이콘, 생성 표지, 세리프 책 문장, lucide 아이콘 체계) | ✅ 2026-09-28 — 규칙은 `docs/BookShelf_UI_UX.md` 1.4·2.1·2.1b·3.3, 에셋 재생성 `npm run pwa:assets` |
+| 개인 앱 테마 (강조색 프리셋·화면 모드, 서버 동기화) | ✅ 2026-10-03 — `docs/BookShelf_UI_UX.md` 5.4. 프리셋 정의 `src/lib/themePresets.ts` → `npm run theme:accent` |
+| iPad·태블릿 (안전 영역, 가로 시작 화면) | ✅ 2026-10-03 에뮬레이션 점검(WebKit + safe-area 주입). **iPad 실기기 설치 상태 미확인** — 시작 화면은 앱 재설치 필요 |
 
 > 상세 변경 이력: `docs/CHANGELOG.md`
-> 마지막 세션 상세 리포트: `docs/sessions/2026-09-28-pwa-native-design-upgrade.md`
+> 마지막 세션 상세 리포트: `docs/sessions/2026-10-03-ipad-ai-theme.md`
 > 아키텍처 결정 기록: `docs/adr/README.md`
 > API 스펙: `docs/TRACE_MAP.md`
 > QA 절차: `docs/QA_가이드.md`

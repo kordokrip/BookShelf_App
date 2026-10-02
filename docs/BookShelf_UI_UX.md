@@ -5,7 +5,17 @@
 > **대상 기준**: `main` 브랜치 작업본 (2026-05-31)  
 > **목적**: 코드레벨 교차 검증을 통한 완전한 UI/UX 명세. 이 문서만으로 모든 버튼, 이미지, 데이터 바인딩, API 호출을 파악할 수 있도록 작성.
 
-### 최근 동기화 노트 (2026-05-31)
+### 최근 동기화 노트 (2026-10-03, 34차)
+
+- **개인 앱 테마**: 디자인 시스템 화면(관리자 전용)을 없애고 모든 사용자의 `앱 디자인`(`/settings/appearance`, 9.14)으로 교체. 강조색 프리셋 6종 × 자동·라이트·다크, 서버 프로필에 저장해 기기 간 동기화 (5.4)
+- **강조색 토큰화**: 앱의 인디고·바이올렛은 이제 `--brand-*`·`--brand2-*` CSS 변수에서 나온다(`src/styles/accent.css`, 1.1·5.4)
+- **iPad 안전 영역**: SideNav 맨 위 safe-top 여백 + 로고 행 57px(TopBar와 경계 정렬), 하단 safe-bottom. 월 헤더·관리자 헤더·오프라인 배너는 `top: var(--topbar-h)`, 전체 화면 시트(검색·카메라·스캐너)는 첫 행에 safe-top
+- **시작 화면**: manifest `orientation` 제거(가로 실행 허용), iOS 시작 이미지를 장식 없이 중앙 글리프만 두도록 재생성
+- **통계 공유**: 공유 보고서(`/share`) 화면 제거 → 독서 통계의 `내 통계 공유`(이미지) + `요약 복사` (9.11). `/share`는 `/stats`로 리다이렉트
+- **오늘의 회고 → 명문장**: `GET /api/notes/daily-quote` — 날짜마다 내 문구 노트 또는 AI가 고른 읽은 책의 명문장, 본문 5줄 (10.6b)
+- **AI 근거 강화**: 책 분석은 Kakao·Naver 책 소개문에만 근거(없으면 분석 안 함), 인생책 추천은 완독 전체 기반 + 실재 검증 (11.6)
+
+### 이전 동기화 노트 (2026-05-31)
 
 - `useViewport` 훅 신규: `visualViewport` 기반 실측 viewport(`--vp-h`, `--vp-w`) 반영
 - Safe-area 변수 체계 정비: `--safe-top`, `--safe-bottom`, `--topbar-h`, `--bottomnav-h`, `--page-pb`
@@ -49,12 +59,12 @@
   - [9.11 StatsPage (독서 통계)](#911-statspage-독서-통계)
   - [9.12 YearlyReviewPage (연간 결산)](#912-yearlyreviewpage-연간-결산)
   - [9.13 NotesSearchPage (노트 검색)](#913-notessearchpage-노트-검색)
-  - [9.14 DesignSystemPage (디자인 시스템)](#914-designsystempage-디자인-시스템)
+  - [9.14 AppearancePage (앱 디자인)](#914-appearancepage-앱-디자인--34차--designsystempage-대체)
   - [9.15 NotFoundPage (404)](#915-notfoundpage-404)
   - [9.16 GroupsPage (독서 모임)](#916-groupspage-독서-모임)
   - [9.17 GroupDetailView (모임 상세)](#917-groupdetailview-모임-상세)
   - [9.18 CollectionsPage (컬렉션)](#918-collectionspage-컬렉션)
-  - [9.19 SharePage (공유 리포트)](#919-sharepage-공유-리포트)
+  - [9.19 (제거됨) SharePage](#919-제거됨-sharepage--34차)
   - [9.20 AdminPage (관리자 대시보드)](#920-adminpage-관리자-대시보드)
   - [9.21 LifeBooksPage (인생책)](#921-lifebookspage-인생책)
 - [10. 공유 컴포넌트 라이브러리](#10-공유-컴포넌트-라이브러리)
@@ -95,8 +105,8 @@
 
 | 토큰 | HEX | 용도 |
 |------|------|------|
-| **Primary** | `#4F46E5` | 인디고 — 메인 CTA, 활성 탭, 프로그레스 바 |
-| **Secondary** | `#7C3AED` | 바이올렛 — 그래디언트 종착점, 보조 액센트 |
+| **Primary** | `#4F46E5` (`--brand-600`) | 인디고 — 메인 CTA, 활성 탭, 프로그레스 바. 사용자 테마에 따라 바뀜(5.4) |
+| **Secondary** | `#7C3AED` (`--brand2-600`) | 바이올렛 — 그래디언트 종착점, 보조 액센트. 사용자 테마에 따라 바뀜(5.4) |
 | **Accent** | `#F59E0B` | 앰버 — 별점(Star), 경고, 현재 월 바 차트 |
 | **Success** | `#10B981` | 에메랄드 — 완료 뱃지, 비밀번호 일치, 체크마크 |
 | **Warning** | `#F59E0B` | 앰버 — 목표 미설정, D-Day 임박 |
@@ -120,7 +130,7 @@
 ### 1.2 CTA 그래디언트
 
 ```css
-background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)
+background: var(--brand-gradient) /* = linear-gradient(135deg, var(--brand-600) 0%, var(--brand2-600) 100%) */
 ```
 - **사용처**: 회원가입/로그인 버튼, FAB, 아바타, AuthPreviewNav 토글, 설치 배너 버튼
 
@@ -293,7 +303,9 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 - **너비**: 기본 `w-20`, 데스크톱 토글 시 `lg:w-60` ↔ `lg:w-[72px]`
 - **배경**: `bg-white`, `border-r border-[#E2E8F0]`
 
-**상단 로고 영역** (높이 64px):
+**상단 안전 영역**: 맨 위에 `height: var(--safe-top)` 여백(설치 PWA에서 상태 표시줄 시각·날짜가 로고와 겹치던 문제, 34차)
+
+**상단 로고 영역** (높이 57px `h-[57px]` — TopBar의 56px 콘텐츠 행 + 1px 하단 테두리와 경계선이 정확히 맞도록):
 - 로고 이미지: `/icons/icon-192.png` (36px, `rounded-xl shadow-md`)
 - "BookShelf" 16px Bold `#1E293B`
 - "북쉘프" 11px Regular `#64748B`
@@ -309,8 +321,9 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 | 5 | `PlusCircle` 20px | 책 등록 플로우 | `/register-flow` | — |
 | 6 | `FileText` 20px | 노트 & 검색 | `/notes-search` | — |
 | 7 | `Users` 20px | 독서 모임 👥 | `/groups` | — |
-| 8 | `Mail` 20px | 공유 보고서 📬 | `/share` | `shareUnread` |
-| 9 | `Palette` 20px | 디자인 시스템 (adminOnly) | `/design-system` | — |
+| 8 | `Palette` 20px | 앱 디자인 (모든 사용자) | `/settings/appearance` | — |
+
+(공유 보고서 항목·배지는 34차에 제거 — 통계 공유는 독서 통계 화면 안으로 이동)
 
 **활성 상태**: `bg-[#EEF2FF] text-[#4F46E5]`, strokeWidth 2.5, fontWeight 600
 **비활성**: `text-[#64748B]`, hover → `bg-[#F8FAFC] text-[#1E293B]`
@@ -321,7 +334,8 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 - 표시명: `user.name ?? "게스트"`, 13px SemiBold `#1E293B`
 - 부제: "올해 읽은 책 N권" (올해 완독 수 계산), 11px `#64748B`
 - 설정 버튼: `Settings` 16px `#94A3B8`
-- **데이터 바인딩**: `useAuthStore(user)`, `useBooks({status:'done'})`, `useBookCount('reading'|'wish')`, `useShareUnreadCount()`
+- 하단 여백: `calc(1rem + var(--safe-bottom))` (홈 인디케이터)
+- **데이터 바인딩**: `useAuthStore(user)`, `useBooks({status:'done'})`, `useBookCount('reading'|'wish')`
 
 ### 4.3 TopBar (상단 헤더)
 
@@ -347,7 +361,7 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 | `/reading` | 읽는 중 📖 |
 | `/wishlist` | 당신을 위한 책 추천 📚 |
 | `/stats` | 독서 통계 📊 |
-| `/design-system` | 디자인 시스템 |
+| `/settings/appearance` | 앱 디자인 |
 | `/notes-search` | 노트 & 검색 |
 | 기타 | BookShelf |
 
@@ -393,6 +407,17 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 - 테두리: `#E2E8F0` → `#334155`
 - TopBar: `bg-white` → `bg-[#0F172A]` (불투명)
 - BottomNavBar: `bg-white/95` → `bg-[#0F172A]/95` + 배경 블러(하단은 노치 영향이 없어 반투명 유지)
+
+### 5.4 개인 강조색 (34차)
+
+- **프리셋 6종**: `indigo`(기본) · `ocean` · `forest` · `sunset` · `rose` · `graphite` — 정의는 `src/lib/themePresets.ts`(brand·brand2 각 11단계)
+- **적용 방식**: `<html data-accent="ocean">`. `src/styles/accent.css`(`npm run theme:accent`로 생성, 직접 고치지 말 것)가 프리셋별 `--brand-50…950`·`--brand2-50…950`을 정의하고, `@theme inline`으로 Tailwind `indigo-*`→`--brand-*`, `violet-*`→`--brand2-*`를 연결한다. 그래서 `bg-indigo-600`·`text-violet-600`·인라인 `var(--brand-600)`·`var(--brand-gradient)`가 모두 테마를 따른다
+- **새 코드 규칙**: 강조색은 `indigo-*`/`violet-*` 클래스 또는 `var(--brand-*)`로 쓴다. `#4F46E5` 같은 hex를 직접 쓰면 테마를 따르지 않는다. 테마를 따르면 안 되는 색(장르 배지, 생성 표지, 앱 로고, 온보딩, 업적 등급)만 hex로 둔다
+- **대비 보장**: 모든 프리셋의 600(흰 배경 글자·흰 글자 버튼), 300(다크 배경 글자), 50 위 600, 900 위 200이 WCAG AA 4.5:1 이상 — `src/lib/__tests__/themePresets.test.ts`가 검사하고 accent.css와 TS 정의가 같은지도 대조
+- **저장**: 즉시 `localStorage`(`themeAccent`, `themeMode`)에 반영 → `PATCH /api/users/profile {theme_accent, theme_mode}`로 서버 저장(D1 `users.theme_accent`·`theme_mode`, 마이그레이션 0017). 로그인·프로필 조회 시 서버 값으로 맞춘다(`src/lib/themeSync.ts`). 저장 실패 시에도 기기에는 적용되고 토스트로 안내. 실패하면 `themeUnsynced` 표시를 남겨 다음 프로필 조회 때 서버 값 대신 기기 값을 다시 올린다. 프로필 응답보다 늦게(요청 출발 뒤) 기기에서 바꾼 선택은 덮어쓰지 않고, 연속 저장은 순서대로 보낸다
+- **로그아웃**: 테마는 기기 설정으로 남는다(로그인 화면도 같은 색). 다음 사용자가 서버에 저장한 테마가 있으면 로그인 시 그것으로 바뀐다
+- **깜빡임 방지**: `index.html`의 사전 페인트 스크립트가 React보다 먼저 `data-accent`·`.dark`·`theme-color`를 적용
+- **따르지 않는 것**: 앱 아이콘, iOS 시작 화면, manifest `theme_color` — OS가 설치 시점에 고정하므로 브랜드 인디고 유지
 
 ---
 
@@ -1131,6 +1156,14 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 - `useStats()` → **GET** `/api/stats`
 - `useAuthStore(user)` → 프로필 정보
 
+#### 내 통계 공유 ★ 34차 (공유 보고서 대체)
+
+- 상단 요약 영역 아래 버튼 2개: **내 통계 공유**(`Share2`) · **요약 복사**(`Copy`)
+- `src/lib/statsShareImage.ts`: 새 의존성 없이 canvas로 1080×1350 PNG 카드 생성 — 앱 이름, 올해 완독 권수·페이지·연속 독서일, 상위 장르 3개, 최근 완독 표지 색 띠. 강조색은 현재 테마의 `--brand-600`을 읽는다
+- 공유 순서: `navigator.canShare({ files })`면 Web Share(이미지 파일) → 아니면 PNG 다운로드. 사용자가 공유 시트를 닫으면(AbortError) 아무 안내 없음
+- 요약 복사: 같은 데이터를 한 단락 텍스트로 클립보드에 복사
+- YearlyReviewPage의 공유 버튼도 같은 생성기를 쓰고, 이미지 실패 시 요약 복사로 대체
+
 #### UI 구조
 
 **SummaryCards (2×2 그리드)**:
@@ -1211,7 +1244,7 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 #### UI 구조
 
 **뒤로 버튼**: `ChevronLeft` → `navigate(-1)`
-**공유 버튼**: `Share2` → `navigator.share()` || `clipboard.writeText()`
+**공유 버튼**: `Share2` → `shareStatsImage()`(9.11 내 통계 공유와 같은 이미지) → 실패 시 `copyStatsSummary()`
 
 **Hero 카드** (그래디언트 인디고→바이올렛):
 - 완독 N권: 52px Bold White
@@ -1303,34 +1336,15 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 
 ---
 
-### 9.14 DesignSystemPage (디자인 시스템)
+### 9.14 AppearancePage (앱 디자인) ★ 34차 — DesignSystemPage 대체
 
-- **파일**: `src/app/pages/DesignSystemPage.tsx` (~580줄)
-- **경로**: `/design-system`
-- **보호**: ProtectedRoute + **admin gate** ★ (16차: `isAdmin = user?.role === 'admin'`, 비admin → 리다이렉트)
-
-#### 컴포넌트 쇼케이스 (12개 섹션)
-
-| 섹션 | 이모지 | 제목 | 포함 컴포넌트 |
-|------|--------|------|-------------|
-| 1 | 🎨 | 색상 팔레트 | 12개 색상 카드 (Primary~Muted) |
-| 2 | ✍️ | 타이포그래피 | Heading 1~3, Body, Caption |
-| 3 | 🏷️ | 장르 배지 | GenreBadge 19개 + 사이즈 비교 (sm/md/lg) |
-| 4 | 🔘 | 버튼 | Button 4variants × 3sizes + fullWidth/loading + IconButton 4종 |
-| 5 | 📝 | 입력 컴포넌트 | TextInput(상태별), GenreSelect, NumberStepper, DatePicker, StarRating, SearchBar |
-| 6 | 📊 | 진행 바 | ProgressBar thin/thick, custom color, success |
-| 7 | 📚 | 책 카드 | DoneBookCard, ReadingBookCard, WishBookCard (mock 데이터) |
-| 8 | 💬 | 상태 & 피드백 | Toast(success/error/info), BookCardSkeleton, StatCardSkeleton, Modal |
-| 9 | 📈 | 통계 카드 | SummaryCard 4종 (BookMarked/Star/BookOpen/Flame) |
-| 10 | 🏅 | 뱃지 & 칩 | 숫자 뱃지 4종, 상태 칩 5종 |
-| 11 | — | — | (추가 섹션 있을 수 있음) |
-| 12 | 🌵 | 빈 상태 | 📚 + "완독한 책이 없어요" + CTA 버튼 |
-
-#### Hero 영역
-
-- 그래디언트 인디고→바이올렛→퍼플
-- "BookShelf Design System" 13px + "컴포넌트 라이브러리" 28px Bold
-- 스탯 3개: 컬러 12+, 컴포넌트 30+, 장르 19
+- **파일**: `src/app/pages/AppearancePage.tsx`
+- **경로**: `/settings/appearance` (Lazy, ProtectedRoute, 모든 사용자). 예전 `/design-system`은 여기로 리다이렉트
+- **진입**: SideNav `앱 디자인`, ProfilePopup `앱 디자인` 행
+- **강조색**: 프리셋 6종 라디오 그룹 카드(방향키·Home/End 이동). 카드마다 프리셋 hex로 그린 미니 미리보기(그라데이션 띠·버튼·칩), 선택 시 체크 표시
+- **화면 모드**: 자동(시간대)·라이트·다크 세그먼트 컨트롤 — TopBar 테마 토글과 같은 `themeMode`
+- **미리보기**: 실제 토큰(`bg-indigo-*` 등)으로 그린 버튼·칩·진행 바·표지 — 선택 결과를 바로 확인
+- **저장 흐름**: 5.4 참고 (`changeTheme` → 기기 즉시 적용 + 서버 PATCH, 실패 시 토스트)
 
 ---
 
@@ -1460,28 +1474,11 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 
 ---
 
-### 9.19 SharePage (공유 리포트)
+### 9.19 (제거됨) SharePage — 34차
 
-- **파일**: `src/app/pages/SharePage.tsx`
-- **경로**: `/share` (Lazy loaded, 인증 필수)
-
-#### 역할
-
-- 통계 보고서 공유 inbox/outbox 확인
-- 읽음 처리 및 공유 상세 보기
-
-#### 데이터 연결
-
-- **훅**: `useGroups`의 share 관련 query/mutation + `useOfflineQueue()` 보조
-- **API**: `shareApi.*` → `/api/share/*`
-- **백엔드**: `worker/routes/share.ts`
-- **DB**: `0008_groups_and_sharing.sql` (shared_reports)
-
-#### UX 포인트
-
-- 읽지 않은 공유 항목 강조 표시
-- 읽음 처리 즉시 카운트 동기화(SideNav/TopBar 배지)
-- 네트워크 불안정 시 오프라인 큐 기반 재시도 UX (`useOfflineQueue`)
+- 공유 보고서 받은함·보낸함 화면과 SideNav 항목·배지를 제거했다. 통계 공유는 9.11 `내 통계 공유`로 대체
+- `/share`는 `/stats`로 리다이렉트(예전 북마크·알림 링크 보호)
+- 백엔드 `/api/share/*`와 `shared_reports` 테이블(0008)은 데이터 보존을 위해 남겨 두었다(UI 호출 없음)
 
 ---
 
@@ -1633,7 +1630,7 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 |---------|------|------|
 | **NoteContent** | `notes/NoteContent.tsx` | 노트 본문 렌더러. `**굵게**` → `<strong>`, `==하이라이트==` → `<mark>`(노랑, 다크: `yellow-400/30`). `src/lib/noteMarkup.ts`의 파서 결과를 React 요소로 그림(HTML 주입 없음). 2026-09-27 전체 공개 후 모든 노트에 서식 적용(별표·등호를 글자로 쓴 옛 노트도 서식으로 보임) |
 | **NoteEditor** | `notes/NoteEditor.tsx` | textarea + 서식 툴바(굵게·하이라이트). 단축키 ⌘/Ctrl+B, ⌘/Ctrl+Shift+H. 서식 적용 후 선택 영역을 기호 안쪽으로 유지. 툴바 아이콘은 밝은/어두운 배경 모두 대응하도록 `#64748B` 고정. BookDetailPage 빠른 입력·편집 시트에서 사용 |
-| **DailyRecallCard** | `notes/DailyRecallCard.tsx` | LibraryPage 상단 "오늘의 회고" 카드(앰버 그라데이션, 다크 대응). `GET /api/notes/random`(사용자·KST 날짜별 고정), 본문 140자 미리보기 + 3줄 클램프, 탭 → 해당 책 상세. 노트가 없으면 렌더링 안 함 |
+| **DailyRecallCard** | `notes/DailyRecallCard.tsx` | LibraryPage 상단 카드(앰버 그라데이션, 다크 대응). `GET /api/notes/daily-quote`(사용자·KST 날짜별 고정, `useDailyQuote`). 날짜마다 **내 문구 노트**("오늘의 회고") 또는 **AI 명문장**("오늘의 명문장" — 완독한 소설에서 고른 널리 알려진 문장 + 짧은 맥락 + 책 링크 + `AI가 고른 문장 · 원문과 다를 수 있어요` 칩). 본문 세리프 `line-clamp-5`(미리보기 300자), 탭 → 해당 책 상세. 데이터가 없으면 렌더링 안 함 |
 
 페이지 범위: 편집 시트에 "시작 페이지 ~ 끝 페이지" 입력, 카드·검색 결과 표기는 `formatNotePages()` → `p.12` / `p.12–15`. 끝 페이지 < 시작 페이지면 토스트 오류 후 시트 유지. NotesSearchPage는 검색어 하이라이트와 겹치지 않도록 서식 기호를 걷어 낸 평문(`stripNoteMarkup`)으로 표시.
 
@@ -1722,7 +1719,8 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 | `/api/notes/:id` | PUT | BookDetailPage, NotesSearchPage | "수정 완료" 버튼 |
 | `/api/notes/:id` | DELETE | BookDetailPage, NotesSearchPage | 삭제 버튼 |
 | `/api/notes/export?book_id=` | GET | — | (Markdown 내보내기) |
-| `/api/notes/random` | GET | LibraryPage DailyRecallCard | 서재 진입 (`useDailyNote`, staleTime 1h) |
+| `/api/notes/daily-quote` | GET | LibraryPage DailyRecallCard | 서재 진입 (`useDailyQuote`, staleTime 1h). 응답 `data`: `null` · `{source:'note', note}` · `{source:'ai', text, context, book, disclaimer}` |
+| `/api/notes/random` | GET | — | (하위 호환으로 유지, 34차부터 화면 호출 없음) |
 | `/api/achievements` | GET | StatsPage AchievementsSection, AchievementCelebration (`characters`) | 통계 진입 (`useAchievements`, staleTime 60s) — 업적 이벤트 수신 시 무효화 |
 
 ### 11.5 Search API
@@ -1736,8 +1734,9 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 
 | 엔드포인트 | 메서드 | UI 사용처 | 호출 트리거 |
 |-----------|--------|----------|-----------|
-| `/api/ai/summarize` | POST | BookDetailPage BookInfoTab | "AI 분석 시작" 버튼 |
-| `/api/ai/recommend?limit=&refresh=` | GET | WishlistPage AI 추천 | 페이지 진입 / "새로운 추천" 버튼 |
+| `/api/ai/summarize` | POST | BookDetailPage BookInfoTab | "AI 분석 시작" 버튼. 로그인 필요. 책 소개문(Kakao·Naver)에만 근거 — 소개문이 없으면 `reason:'no_source'`로 "분석할 수 없어요" 안내. 결과 아래 제공 모델 표기(Gemma · OpenRouter / Workers AI) |
+| `/api/ai/lifebooks?refresh=` | GET | LifeBooksPage, WishlistPage RecommendSection | 진입 / "새로 추천" 버튼. 완독 전체 기반 → 읽은 책 제외 → 실재 검증. `source`로 "AI 추천"·"추천 목록" 표시. 429 시 "10분쯤 뒤에" 안내 |
+| `/api/ai/recommend?limit=&refresh=` | GET | — | (화면 호출 없음) |
 | `/api/ai/ocr` | POST | CameraOCRSheet | 사진 촬영 후 자동 |
 
 ### 11.7 Stats API

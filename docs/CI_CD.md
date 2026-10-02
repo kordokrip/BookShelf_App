@@ -66,6 +66,8 @@ PWA 정적 자산(아이콘, iOS startup 이미지, `sw.js`/workbox 프리캐시
 
 **스테이징 사용 절차:** `git push origin main:staging`(또는 작업 브랜치를 `staging`에 push) → CI가 마이그레이션 + 배포 → `bash scripts/e2e-api-test.sh --url https://bookshelf-api-staging.kordokrip.workers.dev`. 스테이징 worker 시크릿은 프로덕션과 별도이며 이름은 `npx wrangler secret list --env staging`으로 확인한다.
 
+**OpenRouter 시크릿**: AI 요약·인생책 추천·오늘의 문장은 OpenRouter 무료 모델(Gemma)을 우선 쓰고, 키가 없거나 일일 예산(KV `or_budget:{KST 날짜}`, 상한은 `worker/lib/openrouter.ts`의 `OPENROUTER_DAILY_BUDGET`)을 넘기면 Workers AI로 폴백한다(오늘의 문장은 폴백 없이 노트로 대체). 오늘의 문장은 사용자가 요청하지 않은 백그라운드 호출이라 예산 중 `OPENROUTER_BACKGROUND_BUDGET`까지만 쓰고, 나머지는 책 분석·추천 몫으로 남긴다. 시크릿 이름은 `OPENROUTER_API_KEY` — production/staging 각각 `npx wrangler secret put OPENROUTER_API_KEY [--env staging]`로 등록하고 `npx wrangler secret list`로 확인한다. 로컬 개발은 `.dev.vars`에 같은 이름으로 둔다(커밋 금지).
+
 > 최초 부트스트랩 예외: 2026-09-27 스테이징 D1을 만든 직후 0001~0014 마이그레이션을 로컬에서 `--remote --env staging`으로 1회 직접 적용했다(빈 DB 초기화). 이후 스테이징 D1 변경도 CI 경로로만 한다.
 >
 > **알려진 스키마 드리프트 — `users.role`:** 프로덕션의 `users.role` 컬럼은 마이그레이션 파일에 기록되지 않은 경로로 추가됐다(`0004_user_role.sql`은 no-op이고, 이를 고치는 마이그레이션은 프로덕션에서 `duplicate column`으로 실패해 `1592da8`에서 되돌림). 그래서 **마이그레이션만으로 새로 만든 D1(로컬·스테이징)에는 `role`이 없어** `/api/flags`와 프로필 수정 등이 500을 낸다. 새 D1을 만들면 마이그레이션 적용 직후 다음을 1회 실행한다(스테이징은 2026-09-27 적용 완료):
@@ -116,7 +118,7 @@ CI 배포 자체는 `cloudflare/wrangler-action@v4`가 `wranglerVersion: '4'`로
 
 DO(Durable Objects)를 포함한 기능(채팅룸)을 테스트할 때는 `npx wrangler dev --local --persist`로 세션 간 로컬 상태를 유지할 수 있다(`docs/QA_가이드.md` 참고).
 
-**AI 바인딩 주의:** `wrangler dev --local`에서도 Workers AI는 원격 호출만 가능하며, 현재 설정에서는 `Binding AI needs to be run remotely` 오류로 실패한다. 그래서 로컬 e2e(`bash scripts/e2e-api-test.sh --url http://localhost:8787`)에서는 TEST 22(AI 요약)가 FAIL로 나오는 것이 정상이다. AI 경로는 스테이징이나 프로덕션 e2e로 검증한다.
+**AI 바인딩 주의:** `wrangler dev --local`에서도 Workers AI는 원격 호출만 가능하며, 현재 설정에서는 `Binding AI needs to be run remotely` 오류로 실패한다. 그래서 로컬 e2e(`bash scripts/e2e-api-test.sh --url http://localhost:8787`)에서는 AI 모델이 필요한 TEST 22(AI 요약)·62(AI 태그)가 FAIL로 나오는 것이 정상이다(OpenRouter 무료 모델이 혼잡해도 같은 결과). 스크립트 기본 대상은 프로덕션이므로 로컬 실행 시 `--url`을 반드시 붙인다. AI 경로는 스테이징이나 프로덕션 e2e로 검증한다.
 
 **기능 플래그:** 새 기능은 `FEATURE_FLAGS` var(쉼표 구분, 등록 목록은 `worker/lib/featureFlags.ts`의 `ALL_FEATURE_FLAGS`)로 UI 노출을 제어한다. 새 플래그는 프로덕션 `[vars]`에 넣지 않은 채 관리자 계정(항상 전체 on)으로 먼저 검증하고, 문제가 없으면 `[vars] FEATURE_FLAGS`에 추가해 전체 공개한다. 현재 공개된 플래그는 `wrangler.toml`의 `[vars] FEATURE_FLAGS` 또는 `curl https://bookshelf-api.kordokrip.workers.dev/api/flags/public`으로 확인한다. 스테이징 `[env.staging.vars]`에는 단계 공개 중인 플래그를 모두 켠다. 로컬에서 일반 계정으로 확인하려면 `.dev.vars`에 `FEATURE_FLAGS=이름1,이름2`를 추가한다(`.dev.vars`가 `[vars]`를 덮어씀). 리뉴얼 5종은 2026-09-27 전체 공개 후 분기 코드와 함께 제거되어 현재 등록된 플래그가 없다. 공개 절차는 `docs/adr/ADR-003-feature-flags-staging.md`를 참고한다.
 
