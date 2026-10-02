@@ -1,0 +1,186 @@
+/*
+ * 개인 앱 테마(강조색) — scripts/generate-accent-css.mjs가 src/lib/themePresets.ts에서 생성. 직접 고치지 말 것.
+ * 앱의 강조색은 Tailwind indigo·violet 클래스와 인라인 var(--brand-*)로 쓰인다. 아래 @theme inline이
+ * indigo→--brand, violet→--brand2로 연결하므로 <html data-accent="ocean"> 하나로 앱 전체 강조색이 바뀐다.
+ * 장르 색·생성 표지·앱 로고처럼 의미가 고정된 색은 hex를 그대로 써서 테마를 따르지 않는다.
+ */
+
+:root, [data-accent="indigo"] {
+  --brand-50: #EEF2FF;
+  --brand-100: #E0E7FF;
+  --brand-200: #C7D2FE;
+  --brand-300: #A5B4FC;
+  --brand-400: #818CF8;
+  --brand-500: #6366F1;
+  --brand-600: #4F46E5;
+  --brand-700: #4338CA;
+  --brand-800: #3730A3;
+  --brand-900: #312E81;
+  --brand-950: #1E1B4B;
+  --brand2-50: #F5F3FF;
+  --brand2-100: #EDE9FE;
+  --brand2-200: #DDD6FE;
+  --brand2-300: #C4B5FD;
+  --brand2-400: #A78BFA;
+  --brand2-500: #8B5CF6;
+  --brand2-600: #7C3AED;
+  --brand2-700: #6D28D9;
+  --brand2-800: #5B21B6;
+  --brand2-900: #4C1D95;
+  --brand2-950: #2E1065;
+}
+
+[data-accent="ocean"] {
+  --brand-50: #EFF6FF;
+  --brand-100: #DBEAFE;
+  --brand-200: #BFDBFE;
+  --brand-300: #93C5FD;
+  --brand-400: #60A5FA;
+  --brand-500: #3B82F6;
+  --brand-600: #2563EB;
+  --brand-700: #1D4ED8;
+  --brand-800: #1E40AF;
+  --brand-900: #1E3A8A;
+  --brand-950: #172554;
+  --brand2-50: #ECFEFF;
+  --brand2-100: #CFFAFE;
+  --brand2-200: #A5F3FC;
+  --brand2-300: #67E8F9;
+  --brand2-400: #22D3EE;
+  --brand2-500: #06B6D4;
+  --brand2-600: #0E7490;
+  --brand2-700: #155E75;
+  --brand2-800: #164E63;
+  --brand2-900: #0F3F50;
+  --brand2-950: #083344;
+}
+
+[data-accent="forest"] {
+  --brand-50: #ECFDF5;
+  --brand-100: #D1FAE5;
+  --brand-200: #A7F3D0;
+  --brand-300: #6EE7B7;
+  --brand-400: #34D399;
+  --brand-500: #10B981;
+  --brand-600: #047857;
+  --brand-700: #065F46;
+  --brand-800: #064E3B;
+  --brand-900: #053F30;
+  --brand-950: #022C22;
+  --brand2-50: #F0FDFA;
+  --brand2-100: #CCFBF1;
+  --brand2-200: #99F6E4;
+  --brand2-300: #5EEAD4;
+  --brand2-400: #2DD4BF;
+  --brand2-500: #14B8A6;
+  --brand2-600: #0F766E;
+  --brand2-700: #115E59;
+  --brand2-800: #134E4A;
+  --brand2-900: #0F3D3A;
+  --brand2-950: #042F2E;
+}
+
+[data-accent="sunset"] {
+  --brand-50: #FFF7ED;
+  --brand-100: #FFEDD5;
+  --brand-200: #FED7AA;
+  --brand-300: #FDBA74;
+  --brand-400: #FB923C;
+  --brand-500: #F97316;
+  --brand-600: #C2410C;
+  --brand-700: #9A3412;
+  --brand-800: #7C2D12;
+  --brand-900: #5A2310;
+  --brand-950: #431407;
+  --brand2-50: #FFF1F2;
+  --brand2-100: #FFE4E6;
+  --brand2-200: #FECDD3;
+  --brand2-300: #FDA4AF;
+  --brand2-400: #FB7185;
+  --brand2-500: #F43F5E;
+  --brand2-600: #E11D48;
+  --brand2-700: #BE123C;
+  --brand2-800: #9F1239;
+  --brand2-900: #881337;
+  --brand2-950: #4C0519;
+}
+
+[data-accent="rose"] {
+  --brand-50: #FDF2F8;
+  --brand-100: #FCE7F3;
+  --brand-200: #FBCFE8;
+  --brand-300: #F9A8D4;
+  --brand-400: #F472B6;
+  --brand-500: #EC4899;
+  --brand-600: #BE185D;
+  --brand-700: #9D174D;
+  --brand-800: #831843;
+  --brand-900: #6D1238;
+  --brand-950: #500724;
+  --brand2-50: #FAF5FF;
+  --brand2-100: #F3E8FF;
+  --brand2-200: #E9D5FF;
+  --brand2-300: #D8B4FE;
+  --brand2-400: #C084FC;
+  --brand2-500: #A855F7;
+  --brand2-600: #9333EA;
+  --brand2-700: #7E22CE;
+  --brand2-800: #6B21A8;
+  --brand2-900: #581C87;
+  --brand2-950: #3B0764;
+}
+
+[data-accent="graphite"] {
+  --brand-50: #EEF1F5;
+  --brand-100: #E2E8F0;
+  --brand-200: #CBD5E1;
+  --brand-300: #CBD5E1;
+  --brand-400: #94A3B8;
+  --brand-500: #64748B;
+  --brand-600: #334155;
+  --brand-700: #1E293B;
+  --brand-800: #0F172A;
+  --brand-900: #3B4658;
+  --brand-950: #1E293B;
+  --brand2-50: #FAFAFA;
+  --brand2-100: #F4F4F5;
+  --brand2-200: #E4E4E7;
+  --brand2-300: #D4D4D8;
+  --brand2-400: #A1A1AA;
+  --brand2-500: #71717A;
+  --brand2-600: #52525B;
+  --brand2-700: #3F3F46;
+  --brand2-800: #27272A;
+  --brand2-900: #3F3F46;
+  --brand2-950: #18181B;
+}
+
+@theme inline {
+  --color-indigo-50: var(--brand-50);
+  --color-indigo-100: var(--brand-100);
+  --color-indigo-200: var(--brand-200);
+  --color-indigo-300: var(--brand-300);
+  --color-indigo-400: var(--brand-400);
+  --color-indigo-500: var(--brand-500);
+  --color-indigo-600: var(--brand-600);
+  --color-indigo-700: var(--brand-700);
+  --color-indigo-800: var(--brand-800);
+  --color-indigo-900: var(--brand-900);
+  --color-indigo-950: var(--brand-950);
+  --color-violet-50: var(--brand2-50);
+  --color-violet-100: var(--brand2-100);
+  --color-violet-200: var(--brand2-200);
+  --color-violet-300: var(--brand2-300);
+  --color-violet-400: var(--brand2-400);
+  --color-violet-500: var(--brand2-500);
+  --color-violet-600: var(--brand2-600);
+  --color-violet-700: var(--brand2-700);
+  --color-violet-800: var(--brand2-800);
+  --color-violet-900: var(--brand2-900);
+  --color-violet-950: var(--brand2-950);
+}
+
+:root {
+  /* 브랜드 그라디언트 — 버튼·배너 등 인라인 style에서 사용 */
+  --brand-gradient: linear-gradient(135deg, var(--brand-600) 0%, var(--brand2-600) 100%);
+}

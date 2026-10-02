@@ -136,7 +136,7 @@ export function MembersTab({ groupId, members, isLeader, onBack, onlineSet }: {
             <div key={m.user_id} className="flex items-center gap-3 p-3 bg-white dark:bg-[#1E293B] rounded-xl border border-[#E2E8F0] dark:border-[#334155]">
               {/* 아바타 + 온라인 dot */}
               <div className="relative flex-shrink-0">
-                <div className="w-9 h-9 rounded-full bg-[#EEF2FF] dark:bg-[#312E81] flex items-center justify-center text-sm">
+                <div className="w-9 h-9 rounded-full bg-indigo-50 dark:bg-indigo-900 flex items-center justify-center text-sm">
                   {m.profile_emoji || m.name?.[0] || '?'}
                 </div>
                 {isOnline && (
@@ -158,7 +158,7 @@ export function MembersTab({ groupId, members, isLeader, onBack, onlineSet }: {
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => handleTransferLeader(m.user_id, m.name)}
-                    className="p-1.5 text-[#4F46E5] hover:bg-[#EEF2FF] dark:hover:bg-[#312E81] rounded-lg transition-colors"
+                    className="p-1.5 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900 rounded-lg transition-colors"
                     aria-label={`${m.name}에게 모임장 위임`}
                   >
                     <ArrowRightLeft size={14} />

@@ -81,7 +81,7 @@ export function WishlistPage() {
             onClick={() => setActiveTab(tab.key)}
             className={`shrink-0 mr-5 pb-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
               activeTab === tab.key
-                ? 'border-[#4F46E5] text-[#4F46E5] dark:text-[#A5B4FC] dark:border-[#A5B4FC]'
+                ? 'border-indigo-600 text-indigo-600 dark:text-indigo-300 dark:border-indigo-300'
                 : 'border-transparent text-[#64748B] dark:text-[#94A3B8] hover:text-[#475569] dark:hover:text-[#CBD5E1]'
             }`}
           >

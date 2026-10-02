@@ -87,7 +87,7 @@ export function PushNotificationToggle() {
         disabled={isLoading}
         className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
           isSubscribed
-            ? 'bg-[#4F46E5]/10 text-[#4F46E5] dark:bg-[#4F46E5]/20 dark:text-[#818CF8] hover:bg-[#4F46E5]/20 dark:hover:bg-[#4F46E5]/30'
+            ? 'bg-indigo-600/10 text-indigo-600 dark:bg-indigo-600/20 dark:text-indigo-400 hover:bg-indigo-600/20 dark:hover:bg-indigo-600/30'
             : 'bg-[#F1F5F9] dark:bg-[#1E293B] text-[#475569] dark:text-[#94A3B8] hover:bg-[#E2E8F0] dark:hover:bg-[#334155]'
         }`}
       >
@@ -113,7 +113,7 @@ export function PushNotificationToggle() {
         {/* 토글 스위치 */}
         <div
           className={`flex-shrink-0 w-9 h-5 rounded-full transition-colors ${
-            isSubscribed ? 'bg-[#4F46E5]' : 'bg-[#CBD5E1] dark:bg-[#475569]'
+            isSubscribed ? 'bg-indigo-600' : 'bg-[#CBD5E1] dark:bg-[#475569]'
           }`}
         >
           <div

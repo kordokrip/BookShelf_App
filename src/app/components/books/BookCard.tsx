@@ -185,7 +185,7 @@ export function DoneBookCard({
   return (
     <div
       onClick={onClick}
-      className="bg-white dark:bg-[#1E293B] rounded-xl p-3 flex gap-3 cursor-pointer hover:shadow-md hover:border-[#E0E7FF] dark:hover:border-[#4338CA] transition-all active:scale-[0.99] border border-[#F1F5F9] dark:border-[#334155]"
+      className="bg-white dark:bg-[#1E293B] rounded-xl p-3 flex gap-3 cursor-pointer hover:shadow-md hover:border-indigo-100 dark:hover:border-indigo-700 transition-all active:scale-[0.99] border border-[#F1F5F9] dark:border-[#334155]"
       style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
     >
       {/* Cover 60×85px */}
@@ -229,7 +229,7 @@ export function DoneBookCard({
 /* ─── Variant B: Reading Book Card ────────────────────────────
    Spec:
    - Cover 60×85px, rounded-xl card 12px, padding 12px
-   - Progress bar: 8px height, track #E2E8F0, fill #4F46E5 (always indigo)
+   - Progress bar: 8px height, track #E2E8F0, fill var(--brand-600) (always indigo)
    - Progress row: "65%" right, "195/300p" left
    - Chips row (bottom): D-day LEFT · daily goal RIGHT
    - Warning row (overdue only): ⚠ styled box
@@ -312,7 +312,7 @@ export function ReadingBookCard({
             <circle
               cx="14" cy="14" r="11"
               fill="none"
-              stroke={isOverdue ? "#EF4444" : "#4F46E5"}
+              stroke={isOverdue ? "#EF4444" : "var(--brand-600)"}
               strokeWidth="3"
               strokeLinecap="round"
               strokeDasharray={`${2 * Math.PI * 11}`}
@@ -327,7 +327,7 @@ export function ReadingBookCard({
               style={{
                 fontSize: progress >= 100 ? 6.5 : 7.5,
                 fontWeight: 800,
-                fill: isOverdue ? "#EF4444" : "#4F46E5",
+                fill: isOverdue ? "#EF4444" : "var(--brand-600)",
                 fontFamily: "system-ui, sans-serif",
               }}
             >
@@ -352,9 +352,9 @@ export function ReadingBookCard({
 
       {/* ── Progress text row (pages + %) ── */}
       <div className="flex items-center justify-between">
-        {/* 인라인 color는 다크 모드를 못 따라가 #4F46E5 on #1E293B(2.33)가 됐음 → 클래스로 라이트·다크 지정 */}
+        {/* 인라인 color는 다크 모드를 못 따라가 var(--brand-600) on #1E293B(2.33)가 됐음 → 클래스로 라이트·다크 지정 */}
         <span
-          className={isOverdue ? "text-[#DC2626] dark:text-[#FCA5A5]" : "text-[#4F46E5] dark:text-[#A5B4FC]"}
+          className={isOverdue ? "text-[#DC2626] dark:text-[#FCA5A5]" : "text-indigo-600 dark:text-indigo-300"}
           style={{ fontSize: 12, fontWeight: 600 }}
         >
           {book.currentPage ?? 0}p{book.totalPages ? ` / ${book.totalPages}p` : ''}
@@ -381,8 +381,8 @@ export function ReadingBookCard({
                 fontSize: 12,
                 fontWeight: 600,
                 // Overdue → amber urgency, normal → indigo
-                backgroundColor: isOverdue ? "#FEF3C7" : "#EEF2FF",
-                color: isOverdue ? "#92400E" : "#4F46E5",
+                backgroundColor: isOverdue ? "#FEF3C7" : "var(--brand-50)",
+                color: isOverdue ? "#92400E" : "var(--brand-600)",
               }}
             >
               오늘 목표: {book.dailyGoal}p
@@ -432,7 +432,7 @@ export function WishBookCard({
 
   return (
     <div
-      className="bg-white dark:bg-[#1E293B] rounded-xl border border-[#F1F5F9] dark:border-[#334155] p-3 flex flex-col gap-2.5 transition-all hover:border-[#4F46E5]/30 dark:hover:border-[#4338CA] hover:shadow-md"
+      className="bg-white dark:bg-[#1E293B] rounded-xl border border-[#F1F5F9] dark:border-[#334155] p-3 flex flex-col gap-2.5 transition-all hover:border-indigo-600/30 dark:hover:border-indigo-700 hover:shadow-md"
       style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
     >
       <div className="flex gap-3">
@@ -477,7 +477,7 @@ export function WishBookCard({
           className="flex items-center gap-1.5 rounded-xl text-white transition-opacity hover:opacity-90 active:scale-[0.98] px-3"
           style={{
             height: 32,
-            background: "linear-gradient(135deg, #4F46E5, #7C3AED)",
+            background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))",
             fontSize: 12,
             fontWeight: 700,
             fontFamily: "var(--font-pretendard)",

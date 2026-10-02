@@ -69,9 +69,9 @@ export function FeedbackSection({ groupId, meetingId }: { groupId: string; meeti
               type="text" placeholder="피드백을 작성하세요..." maxLength={2000}
               value={content} onChange={(e) => setContent(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-              className="flex-1 px-3 py-2 rounded-lg bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/30" />
+              className="flex-1 px-3 py-2 rounded-lg bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600/30" />
             <button onClick={handleSubmit} disabled={!content.trim() || createFeedback.isPending}
-              className="px-3 py-2 rounded-lg bg-[#4F46E5] text-white text-sm font-medium hover:bg-[#4338CA] disabled:opacity-50 transition-colors">
+              className="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors">
               등록
             </button>
           </div>

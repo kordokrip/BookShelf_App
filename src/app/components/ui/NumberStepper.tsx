@@ -99,7 +99,7 @@ export function NumberStepper({ value, min = 0, max = 9999, onChange, unit = "íŽ
               lineHeight: 1,
               fontFamily: "var(--font-pretendard)",
               textAlign: "center",
-              border: "2px solid #4F46E5",
+              border: "2px solid var(--brand-600)",
               borderRadius: 8,
               outline: "none",
               padding: "2px 4px",

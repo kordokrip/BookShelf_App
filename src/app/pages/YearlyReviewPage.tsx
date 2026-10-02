@@ -35,7 +35,7 @@ function MonthlyMiniChart({ monthly }: { monthly: { month: string; count: number
             style={{
               height: `${Math.max((d.count / max) * 56, d.count > 0 ? 6 : 0)}px`,
               background: d.count > 0
-                ? "linear-gradient(180deg, #4F46E5, #7C3AED)"
+                ? "linear-gradient(180deg, var(--brand-600), var(--brand2-600))"
                 : "#F1F5F9",
             }}
           />
@@ -68,7 +68,7 @@ function GenreSummary({ genres }: { genres: { genre: string; count: number }[] }
               <div className="h-1.5 rounded-full bg-[#F1F5F9] overflow-hidden">
                 <div
                   className="h-full rounded-full"
-                  style={{ width: `${pct}%`, backgroundColor: cfg?.text ?? "#4F46E5" }}
+                  style={{ width: `${pct}%`, backgroundColor: cfg?.text ?? "var(--brand-600)" }}
                 />
               </div>
             </div>
@@ -139,7 +139,7 @@ export function YearlyReviewPage() {
         </button>
         <button
           onClick={handleShare}
-          className="flex items-center gap-1.5 rounded-full px-3 py-1.5 bg-[#EEF2FF] text-[#4F46E5] hover:bg-[#E0E7FF] transition-colors"
+          className="flex items-center gap-1.5 rounded-full px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
           style={{ fontSize: 13, fontWeight: 600 }}
         >
           <Share2 size={14} />
@@ -149,14 +149,14 @@ export function YearlyReviewPage() {
 
       {isLoading ? (
         <div className="flex items-center justify-center pt-20">
-          <div className="w-8 h-8 border-2 border-[#4F46E5] border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
         <div className="px-4 max-w-lg mx-auto">
           {/* Hero 카드 */}
           <div
             className="rounded-3xl p-6 mb-4 text-white relative overflow-hidden"
-            style={{ background: "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)" }}
+            style={{ background: "linear-gradient(135deg, var(--brand-600) 0%, var(--brand2-600) 100%)" }}
           >
             <div className="relative z-10">
               <p style={{ fontSize: 13, opacity: 0.8 }}>{YEAR}년 독서 결산</p>
@@ -226,7 +226,7 @@ export function YearlyReviewPage() {
           {stats?.monthly && (
             <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-3 border border-[#E2E8F0] dark:border-[#334155]">
               <div className="flex items-center gap-2 mb-3">
-                <BookMarked size={16} className="text-[#4F46E5]" />
+                <BookMarked size={16} className="text-indigo-600" />
                 <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>월별 독서량</span>
               </div>
               <MonthlyMiniChart monthly={stats.monthly} />
@@ -237,7 +237,7 @@ export function YearlyReviewPage() {
           {stats?.genres && stats.genres.length > 0 && (
             <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-3 border border-[#E2E8F0] dark:border-[#334155]">
               <div className="flex items-center gap-2 mb-3">
-                <FileText size={16} className="text-[#8B5CF6]" />
+                <FileText size={16} className="text-violet-500" />
                 <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>좋아하는 장르 TOP 3</span>
               </div>
               <GenreSummary genres={stats.genres} />
@@ -298,7 +298,7 @@ export function YearlyReviewPage() {
               <button
                 onClick={() => navigate("/reading")}
                 className="px-5 py-2 rounded-full text-white"
-                style={{ fontSize: 13, fontWeight: 600, background: "linear-gradient(135deg, #4F46E5, #7C3AED)" }}
+                style={{ fontSize: 13, fontWeight: 600, background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))" }}
               >
                 독서 중 페이지로 이동
               </button>

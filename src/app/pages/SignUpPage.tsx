@@ -243,8 +243,8 @@ function FormContent({ onSubmit }: { onSubmit: (name: string, email: string, pas
           onClick={() => setTerms(!terms)}
           className="mt-0.5 flex-shrink-0 w-5 h-5 rounded flex items-center justify-center transition-colors"
           style={{
-            border: submitted && !terms ? "2px solid #EF4444" : terms ? "2px solid #4F46E5" : "2px solid #D1D5DB",
-            backgroundColor: terms ? "#4F46E5" : "white",
+            border: submitted && !terms ? "2px solid #EF4444" : terms ? "2px solid var(--brand-600)" : "2px solid #D1D5DB",
+            backgroundColor: terms ? "var(--brand-600)" : "white",
           }}
         >
           {terms && (
@@ -259,8 +259,8 @@ function FormContent({ onSubmit }: { onSubmit: (name: string, email: string, pas
           style={{ color: "#374151", fontFamily: "var(--font-pretendard)" }}
           onClick={() => setTerms(!terms)}
         >
-          <span style={{ color: "#4F46E5", fontWeight: 600 }}>이용약관</span> 및{" "}
-          <span style={{ color: "#4F46E5", fontWeight: 600 }}>개인정보처리방침</span>에 동의합니다
+          <span style={{ color: "var(--brand-600)", fontWeight: 600 }}>이용약관</span> 및{" "}
+          <span style={{ color: "var(--brand-600)", fontWeight: 600 }}>개인정보처리방침</span>에 동의합니다
         </label>
       </div>
       {submitted && !terms && (
@@ -275,7 +275,7 @@ function FormContent({ onSubmit }: { onSubmit: (name: string, email: string, pas
           height: 48,
           background: isDisabled
             ? "linear-gradient(135deg, #94A3B8 0%, #CBD5E1 100%)"
-            : "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)",
+            : "linear-gradient(135deg, var(--brand-600) 0%, var(--brand2-600) 100%)",
           fontFamily: "var(--font-pretendard)",
           fontWeight: 700,
           opacity: isDisabled ? 0.6 : 1,
@@ -286,7 +286,7 @@ function FormContent({ onSubmit }: { onSubmit: (name: string, email: string, pas
 
       <p className="text-center text-[13px]" style={{ color: "#6B7280", fontFamily: "var(--font-pretendard)" }}>
         이미 계정이 있으신가요?{" "}
-        <Link to="/login" className="font-semibold" style={{ color: "#4F46E5" }}>
+        <Link to="/login" className="font-semibold" style={{ color: "var(--brand-600)" }}>
           로그인
         </Link>
       </p>
@@ -307,14 +307,14 @@ function StepIndicator({ step }: { step: number }) {
           <div key={n} className="flex items-center">
             <div className="relative flex items-center justify-center" style={{ width: 26, height: 26 }}>
               {isActive && (
-                <div className="absolute inset-0 rounded-full" style={{ backgroundColor: "#C7D2FE" }} />
+                <div className="absolute inset-0 rounded-full" style={{ backgroundColor: "var(--brand-200)" }} />
               )}
               <div
                 className="relative z-10 flex items-center justify-center rounded-full"
                 style={{
                   width: 18,
                   height: 18,
-                  backgroundColor: isCompleted ? "#10B981" : isActive ? "#4F46E5" : "white",
+                  backgroundColor: isCompleted ? "#10B981" : isActive ? "var(--brand-600)" : "white",
                   border: isCompleted || isActive ? "none" : "1.5px solid #E2E8F0",
                 }}
               >
@@ -354,7 +354,7 @@ function GenreScreen({
       <div>
         <h2
           className="text-[20px] mb-1"
-          style={{ fontFamily: "var(--font-pretendard)", fontWeight: 700, color: "#1e1b4b" }}
+          style={{ fontFamily: "var(--font-pretendard)", fontWeight: 700, color: "var(--brand-950)" }}
         >
           좋아하는 장르를 선택해주세요
         </h2>
@@ -405,7 +405,7 @@ function GenreScreen({
         style={{
           height: 48,
           background: canProceed
-            ? "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)"
+            ? "linear-gradient(135deg, var(--brand-600) 0%, var(--brand2-600) 100%)"
             : "linear-gradient(135deg, #94A3B8 0%, #CBD5E1 100%)",
           fontFamily: "var(--font-pretendard)",
           fontWeight: 700,
@@ -433,7 +433,7 @@ function GoalScreen({
       <div>
         <h2
           className="text-[20px] mb-1"
-          style={{ fontFamily: "var(--font-pretendard)", fontWeight: 700, color: "#1e1b4b" }}
+          style={{ fontFamily: "var(--font-pretendard)", fontWeight: 700, color: "var(--brand-950)" }}
         >
           연간 독서 목표를 설정해주세요
         </h2>
@@ -454,12 +454,12 @@ function GoalScreen({
       {/* Guide messages */}
       <div
         className="rounded-2xl px-4 py-3 flex items-center gap-3"
-        style={{ background: "linear-gradient(135deg, #EEF2FF, #EDE9FE)" }}
+        style={{ background: "linear-gradient(135deg, var(--brand-50), var(--brand2-100))" }}
       >
         <span style={{ fontSize: 24 }}>
           {goal <= 6 ? "🌱" : goal <= 15 ? "📚" : goal <= 30 ? "🚀" : "🌟"}
         </span>
-        <p className="text-[13px]" style={{ color: "#4F46E5", fontFamily: "var(--font-pretendard)", fontWeight: 500 }}>
+        <p className="text-[13px]" style={{ color: "var(--brand-600)", fontFamily: "var(--font-pretendard)", fontWeight: 500 }}>
           {goal <= 6
             ? "한 달에 한 권씩이에요. 천천히 시작해봐요!"
             : goal <= 15
@@ -476,7 +476,7 @@ function GoalScreen({
         className="w-full rounded-2xl text-white text-[15px] transition-opacity active:opacity-80"
         style={{
           height: 48,
-          background: "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)",
+          background: "linear-gradient(135deg, var(--brand-600) 0%, var(--brand2-600) 100%)",
           fontFamily: "var(--font-pretendard)",
           fontWeight: 700,
         }}
@@ -510,7 +510,7 @@ function CompleteScreen({
         <div className="text-5xl mb-3">📚</div>
         <h2
           className="text-[22px] mb-2"
-          style={{ fontFamily: "var(--font-pretendard)", fontWeight: 800, color: "#1e1b4b" }}
+          style={{ fontFamily: "var(--font-pretendard)", fontWeight: 800, color: "var(--brand-950)" }}
         >
           {name}님, 반가워요!
         </h2>
@@ -530,7 +530,7 @@ function CompleteScreen({
           </span>
           <span
             className="text-[15px]"
-            style={{ color: "#4F46E5", fontFamily: "var(--font-pretendard)", fontWeight: 700 }}
+            style={{ color: "var(--brand-600)", fontFamily: "var(--font-pretendard)", fontWeight: 700 }}
           >
             📖 {goal}권
           </span>
@@ -576,7 +576,7 @@ function CompleteScreen({
           height: 52,
           background: isLoading
             ? "linear-gradient(135deg, #94A3B8 0%, #CBD5E1 100%)"
-            : "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)",
+            : "linear-gradient(135deg, var(--brand-600) 0%, var(--brand2-600) 100%)",
           fontFamily: "var(--font-pretendard)",
           fontWeight: 700,
           opacity: isLoading ? 0.7 : 1,
@@ -648,7 +648,7 @@ function MultiStepForm() {
           <div className="mb-2">
             <h2
               className="text-[20px] mb-1"
-              style={{ fontFamily: "var(--font-pretendard)", fontWeight: 700, color: "#1e1b4b" }}
+              style={{ fontFamily: "var(--font-pretendard)", fontWeight: 700, color: "var(--brand-950)" }}
             >
               회원가입
             </h2>
@@ -699,7 +699,7 @@ export function SignUpPage() {
           className="relative overflow-hidden flex-shrink-0"
           style={{
             height: "28vh",
-            background: "linear-gradient(135deg, #7C3AED 0%, #4F46E5 100%)",
+            background: "linear-gradient(135deg, var(--brand2-600) 0%, var(--brand-600) 100%)",
           }}
         >
           <FloatingBookIcons />
@@ -717,7 +717,7 @@ export function SignUpPage() {
         {/* Card */}
         <div
           className="flex-1 bg-white px-6 pt-6 pb-16 -mt-6 rounded-t-[28px]"
-          style={{ boxShadow: "0 -4px 24px rgba(124,58,237,0.08)" }}
+          style={{ boxShadow: "0 -4px 24px color-mix(in srgb, var(--brand2-600) 8%, transparent)" }}
         >
           <MultiStepForm />
         </div>
@@ -728,7 +728,7 @@ export function SignUpPage() {
         {/* Left */}
         <div
           className="w-1/2 relative flex flex-col items-center justify-center overflow-hidden"
-          style={{ background: "linear-gradient(135deg, #7C3AED 0%, #4F46E5 100%)" }}
+          style={{ background: "linear-gradient(135deg, var(--brand2-600) 0%, var(--brand-600) 100%)" }}
         >
           <FloatingBookIcons />
           <div className="relative z-10 flex flex-col items-center gap-8 px-12 text-center">

@@ -213,7 +213,7 @@ function StepSearch({
               type="button"
               onClick={() => setShowScanner(true)}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
-              style={{ backgroundColor: "#EEF2FF", color: "#4F46E5" }}
+              style={{ backgroundColor: "var(--brand-50)", color: "var(--brand-600)" }}
             >
               <Camera size={16} />
               ISBN 바코드 스캔

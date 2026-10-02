@@ -34,7 +34,7 @@ export function MeetingsTab({ groupId, isLeader }: { groupId: string; isLeader: 
     <div className="overflow-y-auto h-full px-4 py-3 space-y-3">
       <button
         onClick={() => setShowCreate(!showCreate)}
-        className="flex items-center gap-2 px-4 py-2 bg-[#4F46E5] text-white rounded-xl text-sm font-medium hover:bg-[#4338CA] transition-colors w-full justify-center"
+        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors w-full justify-center"
       >
         <Plus size={16} />
         모임 일정 추가
@@ -49,28 +49,28 @@ export function MeetingsTab({ groupId, isLeader }: { groupId: string; isLeader: 
             <div className="bg-[#F8FAFC] dark:bg-[#0F172A] rounded-xl p-4 space-y-3 border border-[#E2E8F0] dark:border-[#334155]">
               <input type="text" placeholder="모임 제목 *" maxLength={100}
                 value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/30" />
+                className="w-full px-3 py-2 rounded-lg bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600/30" />
               <textarea placeholder="설명" rows={2} maxLength={1000}
                 value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/30" />
+                className="w-full px-3 py-2 rounded-lg bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-600/30" />
               <div className="grid grid-cols-2 gap-2">
                 <input type="text" placeholder="책 제목" maxLength={200}
                   value={form.book_title} onChange={(e) => setForm({ ...form, book_title: e.target.value })}
-                  className="px-3 py-2 rounded-lg bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/30" />
+                  className="px-3 py-2 rounded-lg bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600/30" />
                 <input type="text" placeholder="저자" maxLength={100}
                   value={form.book_author} onChange={(e) => setForm({ ...form, book_author: e.target.value })}
-                  className="px-3 py-2 rounded-lg bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/30" />
+                  className="px-3 py-2 rounded-lg bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600/30" />
               </div>
               <input type="text" placeholder="장소" maxLength={200}
                 value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/30" />
+                className="w-full px-3 py-2 rounded-lg bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600/30" />
               <div className="grid grid-cols-2 gap-2">
                 <input type="date"
                   value={form.meeting_date} onChange={(e) => setForm({ ...form, meeting_date: e.target.value })}
-                  className="px-3 py-2 rounded-lg bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/30" />
+                  className="px-3 py-2 rounded-lg bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600/30" />
                 <input type="time"
                   value={form.meeting_time} onChange={(e) => setForm({ ...form, meeting_time: e.target.value })}
-                  className="px-3 py-2 rounded-lg bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/30" />
+                  className="px-3 py-2 rounded-lg bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600/30" />
               </div>
               <div className="flex gap-2">
                 <button onClick={() => setShowCreate(false)}
@@ -78,7 +78,7 @@ export function MeetingsTab({ groupId, isLeader }: { groupId: string; isLeader: 
                   취소
                 </button>
                 <button onClick={handleCreate} disabled={!form.title.trim() || !form.meeting_date || createMeeting.isPending}
-                  className="flex-1 py-2 rounded-lg text-sm text-white bg-[#4F46E5] hover:bg-[#4338CA] disabled:opacity-50 transition-colors">
+                  className="flex-1 py-2 rounded-lg text-sm text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition-colors">
                   {createMeeting.isPending ? '생성 중...' : '추가'}
                 </button>
               </div>

@@ -128,7 +128,7 @@ function PageUpdateModal({
             </div>
             <span
               className="px-2.5 py-1 rounded-full text-white"
-              style={{ fontSize: 12, fontWeight: 700, background: isComplete ? "linear-gradient(135deg, #10B981, #059669)" : "linear-gradient(135deg, #4F46E5, #7C3AED)" }}
+              style={{ fontSize: 12, fontWeight: 700, background: isComplete ? "linear-gradient(135deg, #10B981, #059669)" : "linear-gradient(135deg, var(--brand-600), var(--brand2-600))" }}
             >
               {progress}%
             </span>
@@ -203,7 +203,7 @@ function PageUpdateModal({
               onChange={(e) => setLocalGoalDate(e.target.value)}
               aria-label="완독 목표일 입력"
               title="완독 목표일"
-              className="w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-[#334155] bg-[#F8FAFC] dark:bg-[#0F172A] text-sm text-[#1E293B] dark:text-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/30"
+              className="w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-[#334155] bg-[#F8FAFC] dark:bg-[#0F172A] text-sm text-[#1E293B] dark:text-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-indigo-600/30"
             />
           </div>
 
@@ -215,7 +215,7 @@ function PageUpdateModal({
                 width: `${progress}%`,
                 background: isComplete
                   ? "linear-gradient(90deg, #10B981, #059669)"
-                  : "linear-gradient(90deg, #4F46E5, #7C3AED)",
+                  : "linear-gradient(90deg, var(--brand-600), var(--brand2-600))",
               }}
             />
           </div>
@@ -309,7 +309,7 @@ function PageUpdateModal({
                 className="w-full rounded-2xl text-white transition-opacity hover:opacity-90 active:scale-[0.98]"
                 style={{
                   height: 48,
-                  background: "linear-gradient(135deg, #4F46E5, #7C3AED)",
+                  background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))",
                   fontSize: 15,
                   fontWeight: 700,
                 }}
@@ -346,7 +346,7 @@ function ReadingOverviewBanner({ books, weeklyPages, annualGoal, annualDone }: {
   return (
     <div
       className="mx-4 mt-5 mb-4 rounded-2xl p-4 text-white"
-      style={{ background: "linear-gradient(135deg, #7C3AED 0%, #4F46E5 100%)" }}
+      style={{ background: "linear-gradient(135deg, var(--brand2-600) 0%, var(--brand-600) 100%)" }}
     >
       <p style={{ fontSize: 13, opacity: 0.85 }}>현재 읽는 중</p>
       <div className="flex items-end gap-1 mt-0.5">
@@ -503,7 +503,7 @@ function LogTodayModal({
             오늘 독서 기록
           </h2>
           {initialDuration && initialDuration > 0 && (
-            <div className="flex items-center gap-1.5 mb-4" style={{ fontSize: 13, color: "#4F46E5", fontWeight: 600 }}>
+            <div className="flex items-center gap-1.5 mb-4" style={{ fontSize: 13, color: "var(--brand-600)", fontWeight: 600 }}>
               <Timer size={14} />
               <span>⏱ {initialDuration}분 독서가 자동으로 반영됩니다</span>
             </div>
@@ -543,7 +543,7 @@ function LogTodayModal({
                         <p className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 11 }}>{b.currentPage ?? 0}p 읽는 중</p>
                       </div>
                       {b.id === selectedBookId && (
-                        <span className="text-[#4F46E5]" style={{ fontSize: 11, fontWeight: 700 }}>✓</span>
+                        <span className="text-indigo-600" style={{ fontSize: 11, fontWeight: 700 }}>✓</span>
                       )}
                     </button>
                   ))}
@@ -592,7 +592,7 @@ function LogTodayModal({
               className="w-full rounded-2xl text-white transition-opacity hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
               style={{
                 height: 48,
-                background: "linear-gradient(135deg, #4F46E5, #7C3AED)",
+                background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))",
                 fontSize: 15,
                 fontWeight: 700,
               }}
@@ -707,7 +707,7 @@ function GoalModal({
                 onClick={() => setGoal(p)}
                 className="py-2.5 rounded-2xl transition-all"
                 style={{
-                  backgroundColor: goal === p ? "#4F46E5" : "#F1F5F9",
+                  backgroundColor: goal === p ? "var(--brand-600)" : "#F1F5F9",
                   color: goal === p ? "white" : "#475569",
                   fontSize: 13,
                   fontWeight: 700,
@@ -983,7 +983,7 @@ export function ReadingPage() {
           읽고 있는 책
         </h2>
         <span
-          className="rounded-full bg-[#EEF2FF] dark:bg-[#312E81] text-[#4F46E5] dark:text-[#C7D2FE]"
+          className="rounded-full bg-indigo-50 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-200"
           style={{ fontSize: 12, fontWeight: 500, padding: "2px 8px" }}
         >
           {books.length}권
@@ -1105,9 +1105,9 @@ export function ReadingPage() {
           >
             <div
               className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
-              style={{ background: "linear-gradient(135deg, #EEF2FF, #C7D2FE)" }}
+              style={{ background: "linear-gradient(135deg, var(--brand-50), var(--brand-200))" }}
             >
-              <Timer size={24} style={{ color: "#4F46E5" }} />
+              <Timer size={24} style={{ color: "var(--brand-600)" }} />
             </div>
             <h3 className="text-[#1E293B] dark:text-[#F8FAFC] mb-2" style={{ fontSize: 17, fontWeight: 800 }}>
               독서 {timerPromptMinutes}분을 기록할까요?
@@ -1121,7 +1121,7 @@ export function ReadingPage() {
                 className="w-full rounded-2xl text-white transition-opacity hover:opacity-90 active:scale-[0.98]"
                 style={{
                   height: 48,
-                  background: "linear-gradient(135deg, #4F46E5, #7C3AED)",
+                  background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))",
                   fontSize: 15,
                   fontWeight: 700,
                 }}

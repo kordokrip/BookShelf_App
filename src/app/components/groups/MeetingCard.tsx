@@ -14,9 +14,9 @@ export function MeetingCard({ meeting, groupId, isLeader, expanded, onToggle, on
       <button onClick={onToggle} className="w-full text-left p-4">
         <div className="flex items-start gap-3">
           <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-            isPast ? 'bg-[#F1F5F9] dark:bg-[#0F172A]' : 'bg-[#EEF2FF] dark:bg-[#312E81]'
+            isPast ? 'bg-[#F1F5F9] dark:bg-[#0F172A]' : 'bg-indigo-50 dark:bg-indigo-900'
           }`}>
-            <Calendar size={18} className={isPast ? 'text-[#64748B] dark:text-[#94A3B8]' : 'text-[#4F46E5]'} />
+            <Calendar size={18} className={isPast ? 'text-[#64748B] dark:text-[#94A3B8]' : 'text-indigo-600'} />
           </div>
           <div className="flex-1 min-w-0">
             <h4 className="text-sm font-semibold text-[#1E293B] dark:text-[#F8FAFC] truncate">{meeting.title}</h4>

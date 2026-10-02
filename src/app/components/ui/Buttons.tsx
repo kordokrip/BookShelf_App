@@ -23,8 +23,8 @@ export function Button({
     "inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed select-none";
 
   const variants: Record<string, string> = {
-    primary:   "bg-[#4F46E5] text-white hover:bg-[#4338CA] shadow-sm hover:shadow-md",
-    secondary: "bg-white text-[#4F46E5] border border-[#4F46E5] hover:bg-[#EEF2FF] dark:bg-[#1E293B] dark:text-[#A5B4FC] dark:border-[#A5B4FC] dark:hover:bg-[#312E81]",
+    primary:   "bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm hover:shadow-md",
+    secondary: "bg-white text-indigo-600 border border-indigo-600 hover:bg-indigo-50 dark:bg-[#1E293B] dark:text-indigo-300 dark:border-indigo-300 dark:hover:bg-indigo-900",
     ghost:     "bg-transparent text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#1E293B]",
     danger:    "bg-[#EF4444] text-white hover:bg-[#DC2626] shadow-sm",
   };
@@ -61,7 +61,7 @@ interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 export function IconButton({ icon, label, variant = "default", className = "", ...props }: IconButtonProps) {
   const variants: Record<string, string> = {
     default: "bg-[#F1F5F9] text-[#475569] hover:bg-[#E2E8F0] hover:text-[#1E293B]",
-    primary: "bg-[#4F46E5] text-white hover:bg-[#4338CA] shadow-sm",
+    primary: "bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm",
     ghost:   "bg-transparent text-[#64748B] hover:bg-[#F1F5F9]",
   };
 
@@ -91,7 +91,7 @@ export function AddBookFab({ onClick, label = "책 추가" }: FABProps) {
       style={{
         bottom: "var(--floating-bottom)",
         right: "var(--floating-right)",
-        background: "linear-gradient(135deg, #4F46E5, #7C3AED)",
+        background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))",
       }}
     >
       <Plus size={24} />

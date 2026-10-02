@@ -264,7 +264,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
         className="w-full rounded-2xl text-white mt-2 flex items-center justify-center gap-2 transition-opacity active:opacity-80 disabled:opacity-80"
         style={{
           height: 48,
-          background: "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)",
+          background: "linear-gradient(135deg, var(--brand-600) 0%, var(--brand2-600) 100%)",
           fontFamily: "var(--font-pretendard)",
           fontSize: 15,
           fontWeight: 700,
@@ -284,7 +284,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
       {/* Sign up link */}
       <p className="text-center mt-2" style={{ fontSize: 13, color: "#64748B", fontFamily: "var(--font-pretendard)" }}>
         계정이 없으신가요?{" "}
-        <Link to="/signup" style={{ color: "#4F46E5", fontWeight: 600, textDecoration: "underline" }}>
+        <Link to="/signup" style={{ color: "var(--brand-600)", fontWeight: 600, textDecoration: "underline" }}>
           회원가입
         </Link>
       </p>
@@ -305,7 +305,7 @@ export function LoginPage() {
           className="relative overflow-hidden flex-shrink-0"
           style={{
             height: "38vh",
-            background: "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)",
+            background: "linear-gradient(135deg, var(--brand-600) 0%, var(--brand2-600) 100%)",
           }}
         >
           <FloatingBookIcons />
@@ -329,7 +329,7 @@ export function LoginPage() {
         {/* White bottom sheet — rounded-t-3xl = 24px per spec */}
         <div
           className="flex-1 bg-white px-6 pt-8 pb-10 -mt-6 rounded-t-3xl relative z-10"
-          style={{ boxShadow: "0 -4px 24px rgba(79,70,229,0.08)" }}
+          style={{ boxShadow: "0 -4px 24px color-mix(in srgb, var(--brand-600) 8%, transparent)" }}
         >
           <h2
             className="mb-6"
@@ -351,7 +351,7 @@ export function LoginPage() {
         {/* Left panel — indigo gradient */}
         <div
           className="w-1/2 relative flex flex-col items-center justify-center overflow-hidden"
-          style={{ background: "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)" }}
+          style={{ background: "linear-gradient(135deg, var(--brand-600) 0%, var(--brand2-600) 100%)" }}
         >
           <FloatingBookIcons />
           <div className="relative z-10 flex flex-col items-center gap-8">
@@ -396,7 +396,7 @@ export function LoginPage() {
               {[
                 { title: "파친코", author: "이민진", progress: 72, color: "#F59E0B" },
                 { title: "채식주의자", author: "한강", progress: 100, color: "#10B981" },
-                { title: "아몬드", author: "손원평", progress: 35, color: "#4F46E5" },
+                { title: "아몬드", author: "손원평", progress: 35, color: "var(--brand-600)" },
               ].map((book, i) => (
                 <div key={i} className="flex items-center gap-3 mb-3 last:mb-0">
                   <div
@@ -443,7 +443,7 @@ export function LoginPage() {
         <div className="w-1/2 flex items-center justify-center bg-white px-8">
           <div
             className="w-full rounded-3xl bg-white p-10"
-            style={{ maxWidth: 400, boxShadow: "0 8px 40px rgba(79,70,229,0.10)" }}
+            style={{ maxWidth: 400, boxShadow: "0 8px 40px color-mix(in srgb, var(--brand-600) 10%, transparent)" }}
           >
             <div className="mb-8">
               <h1

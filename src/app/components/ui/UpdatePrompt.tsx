@@ -33,7 +33,7 @@ export function UpdatePrompt() {
           color: "#F8FAFC",
         }}
       >
-        <RefreshCw size={20} aria-hidden className="flex-shrink-0 text-[#A5B4FC]" />
+        <RefreshCw size={20} aria-hidden className="flex-shrink-0 text-indigo-300" />
         <p className="flex-1" style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.4 }}>
           새 버전이 준비됐어요
         </p>
@@ -42,7 +42,7 @@ export function UpdatePrompt() {
           className="shrink-0 rounded-xl px-3 py-1.5 text-white font-semibold transition-opacity hover:opacity-80"
           style={{
             fontSize: 13,
-            background: "linear-gradient(135deg, #4F46E5, #7C3AED)",
+            background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))",
           }}
         >
           업데이트

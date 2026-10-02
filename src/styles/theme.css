@@ -13,12 +13,12 @@
   /* 인라인 style에서 쓰는 다크 대응 색 — 인라인 hex는 dark: 클래스가 닿지 않아 통계·결산 카드가 다크에서 흰색으로 남았다 */
   --text-body: #475569;
   --bg-muted: #F1F5F9;
-  --bg-accent-soft: #EEF2FF;
+  --bg-accent-soft: var(--brand-50);
   --bg-warn-soft: #FEF3C7;
   --text-warn: #92400E;
   --text-sun: #DC2626; /* 달력 일요일 */
   --text-sat: #2563EB; /* 달력 토요일 */
-  --text-accent: #4F46E5;
+  --text-accent: var(--brand-600);
   --bg-success-soft: #ECFDF5;
   --bg-success-soft-strong: #DCFCE7;
   --text-success: #065F46;
@@ -40,12 +40,12 @@
   --nav-bg: rgba(15, 23, 42, 0.95);
   --text-body: #CBD5E1;
   --bg-muted: #334155;
-  --bg-accent-soft: #312E81;
+  --bg-accent-soft: var(--brand-900);
   --bg-warn-soft: #451A03;
   --text-warn: #FCD34D;
   --text-sun: #F87171;
   --text-sat: #60A5FA;
-  --text-accent: #A5B4FC;
+  --text-accent: var(--brand-300);
   --bg-success-soft: #064E3B;
   --bg-success-soft-strong: #065F46;
   --text-success: #6EE7B7;
@@ -182,8 +182,8 @@ input[type="range"]::-webkit-slider-thumb {
   height: 24px;
   border-radius: 50%;
   background: white;
-  border: 2.5px solid #4F46E5;
-  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+  border: 2.5px solid var(--brand-600);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--brand-600) 30%, transparent);
   cursor: pointer;
   margin-top: -8px;
 }
@@ -197,8 +197,8 @@ input[type="range"]::-moz-range-thumb {
   height: 24px;
   border-radius: 50%;
   background: white;
-  border: 2.5px solid #4F46E5;
-  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+  border: 2.5px solid var(--brand-600);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--brand-600) 30%, transparent);
   cursor: pointer;
 }
 input[type="range"]::-moz-range-track {
@@ -210,7 +210,7 @@ input[type="range"]:focus {
   outline: none;
 }
 input[type="range"]:focus-visible::-webkit-slider-thumb {
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.25);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-600) 25%, transparent);
 }
 
 .dark {

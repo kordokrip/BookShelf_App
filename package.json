@@ -25,7 +25,8 @@
     "test:watch": "vitest",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write \"src/**/*.{ts,tsx}\" \"worker/**/*.ts\""
+    "format": "prettier --write \"src/**/*.{ts,tsx}\" \"worker/**/*.ts\"",
+    "theme:accent": "node scripts/generate-accent-css.mjs"
   },
   "dependencies": {
     "@cloudflare/workers-types": "4.20260702.1",

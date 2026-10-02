@@ -78,7 +78,7 @@ export function SideNav() {
               <TooltipTrigger asChild>
                 <button
                   onClick={toggleSidebar}
-                  className="hidden lg:flex w-8 h-8 rounded-lg items-center justify-center text-[#64748B] dark:text-[#94A3B8] hover:text-[#4F46E5] dark:hover:text-[#A5B4FC] hover:bg-[#EEF2FF] dark:hover:bg-[#312E81] transition-colors flex-shrink-0"
+                  className="hidden lg:flex w-8 h-8 rounded-lg items-center justify-center text-[#64748B] dark:text-[#94A3B8] hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900 transition-colors flex-shrink-0"
                 >
                   <ChevronsLeft size={18} />
                 </button>
@@ -91,7 +91,7 @@ export function SideNav() {
             <TooltipTrigger asChild>
               <button
                 onClick={toggleSidebar}
-                className="w-11 h-11 rounded-xl flex items-center justify-center bg-[#EEF2FF] dark:bg-[#312E81] text-[#4F46E5] dark:text-[#A5B4FC] hover:bg-[#E0E7FF] dark:hover:bg-[#3730A3] transition-colors shadow-sm md:max-lg:hidden"
+                className="w-11 h-11 rounded-xl flex items-center justify-center bg-indigo-50 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-colors shadow-sm md:max-lg:hidden"
               >
                 <ChevronsRight size={20} />
               </button>
@@ -99,7 +99,7 @@ export function SideNav() {
             <TooltipContent side="right" sideOffset={8}>사이드바 펼치기</TooltipContent>
           </Tooltip>
         )}
-        <div className="hidden md:max-lg:flex w-11 h-11 rounded-xl items-center justify-center bg-[#EEF2FF] dark:bg-[#312E81] text-[#4F46E5] dark:text-[#A5B4FC] shadow-sm">
+        <div className="hidden md:max-lg:flex w-11 h-11 rounded-xl items-center justify-center bg-indigo-50 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 shadow-sm">
           <BookMarked size={20} />
         </div>
       </div>
@@ -121,7 +121,7 @@ export function SideNav() {
                 showLabelsOnDesktop ? "lg:justify-start" : "lg:justify-center"
               } ${
                 isActive
-                  ? "bg-[#EEF2FF] dark:bg-[#312E81] text-[#4F46E5] dark:text-[#A5B4FC]"
+                  ? "bg-indigo-50 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300"
                   : "text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F8FAFC] dark:hover:bg-[#1E293B] hover:text-[#1E293B] dark:hover:text-[#F8FAFC]"
               } md:justify-center md:max-lg:group-hover/sidebar:justify-start`}
             >
@@ -139,12 +139,12 @@ export function SideNav() {
                 {item.label}
               </span>
               {item.adminOnly && (
-                <ShieldCheck size={14} className="text-[#4F46E5] dark:text-[#A5B4FC] opacity-60" />
+                <ShieldCheck size={14} className="text-indigo-600 dark:text-indigo-300 opacity-60" />
               )}
               {item.badge != null && (
                 <span
                   className={`min-w-[20px] h-5 px-1.5 rounded-full items-center justify-center ${
-                    isActive ? "bg-[#4F46E5] text-white" : "bg-[#E2E8F0] dark:bg-[#334155] text-[#475569] dark:text-[#CBD5E1]"
+                    isActive ? "bg-indigo-600 text-white" : "bg-[#E2E8F0] dark:bg-[#334155] text-[#475569] dark:text-[#CBD5E1]"
                   } ${showLabelsOnDesktop ? "lg:flex" : "lg:hidden"} md:hidden md:max-lg:group-hover/sidebar:flex`}
                   style={{ fontSize: 11, fontWeight: 700 }}
                 >
@@ -178,7 +178,7 @@ export function SideNav() {
               {user ? (
                 <ProfileAvatar user={user} size={40} fontSize={14} />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] flex items-center justify-center shadow-sm flex-shrink-0">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center shadow-sm flex-shrink-0">
                   <span className="text-white" style={{ fontSize: 14, fontWeight: 700 }}>{avatarInitial}</span>
                 </div>
               )}
@@ -188,7 +188,7 @@ export function SideNav() {
                     {displayName}
                   </p>
                   {isAdmin && (
-                    <span className="text-[11px] font-bold text-[#4F46E5] dark:text-[#A5B4FC] bg-[#EEF2FF] dark:bg-[#312E81] px-1.5 py-0.5 rounded-full">
+                    <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900 px-1.5 py-0.5 rounded-full">
                       ADMIN
                     </span>
                   )}
@@ -213,7 +213,7 @@ export function SideNav() {
                 {user ? (
                   <ProfileAvatar user={user} size={40} fontSize={14} className="cursor-pointer" />
                 ) : (
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] flex items-center justify-center shadow-sm cursor-pointer">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center shadow-sm cursor-pointer">
                     <span className="text-white" style={{ fontSize: 14, fontWeight: 700 }}>{avatarInitial}</span>
                   </div>
                 )}

@@ -9,11 +9,11 @@ import type { NotificationItem, NotificationType } from '../../../stores/uiStore
 import { useBackToClose } from "../../../hooks/useBackToClose";
 
 const TYPE_ICON: Record<NotificationType, React.ReactNode> = {
-  book_added:    <BookPlus  size={16} className="text-[#4F46E5]" />,
-  book_updated:  <BookOpen  size={16} className="text-[#7C3AED]" />,
+  book_added:    <BookPlus  size={16} className="text-indigo-600" />,
+  book_updated:  <BookOpen  size={16} className="text-violet-600" />,
   session_saved: <BookOpen  size={16} className="text-[#059669]" />,
   note_saved:    <PenLine   size={16} className="text-[#D97706]" />,
-  collection_created: <FolderPlus size={16} className="text-[#4F46E5]" />,
+  collection_created: <FolderPlus size={16} className="text-indigo-600" />,
   collection_deleted: <FolderMinus size={16} className="text-[#EF4444]" />,
   offline_sync:  <Wifi      size={16} className="text-[#0EA5E9]" />,
   sync:          <RefreshCw size={16} className="text-[#0EA5E9]" />,
@@ -22,11 +22,11 @@ const TYPE_ICON: Record<NotificationType, React.ReactNode> = {
 };
 
 const TYPE_BG: Record<NotificationType, string> = {
-  book_added:    'bg-[#EEF2FF]',
-  book_updated:  'bg-[#F5F3FF]',
+  book_added:    'bg-indigo-50',
+  book_updated:  'bg-violet-50',
   session_saved: 'bg-[#ECFDF5]',
   note_saved:    'bg-[#FFFBEB]',
-  collection_created: 'bg-[#EEF2FF]',
+  collection_created: 'bg-indigo-50',
   collection_deleted: 'bg-[#FEF2F2]',
   offline_sync:  'bg-[#F0F9FF]',
   sync:          'bg-[#F0F9FF]',
@@ -137,7 +137,7 @@ export function NotificationPanel({ onClose }: Props) {
                   <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-1">{timeAgo(n.createdAt)}</p>
                 </div>
                 {!n.read && (
-                  <span className="w-2 h-2 bg-[#4F46E5] rounded-full flex-shrink-0 mt-2" aria-hidden />
+                  <span className="w-2 h-2 bg-indigo-600 rounded-full flex-shrink-0 mt-2" aria-hidden />
                 )}
               </li>
             ))}

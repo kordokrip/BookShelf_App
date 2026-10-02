@@ -40,7 +40,7 @@ export function GroupDetailView({ groupId, onBack }: { groupId: string; onBack: 
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
         <p className="text-[#64748B] dark:text-[#94A3B8]">모임을 찾을 수 없습니다.</p>
-        <button onClick={onBack} className="text-[#4F46E5] text-sm font-medium">돌아가기</button>
+        <button onClick={onBack} className="text-indigo-600 text-sm font-medium">돌아가기</button>
       </div>
     );
   }
@@ -60,7 +60,7 @@ export function GroupDetailView({ groupId, onBack }: { groupId: string; onBack: 
         <button onClick={onBack} aria-label="이전으로 돌아가기" className="p-1 -ml-1 text-[#64748B] hover:text-[#1E293B] dark:hover:text-[#F8FAFC]">
           <ArrowLeft size={20} />
         </button>
-        <div className="w-10 h-10 rounded-xl bg-[#EEF2FF] dark:bg-[#312E81] flex items-center justify-center text-xl flex-shrink-0">
+        <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900 flex items-center justify-center text-xl flex-shrink-0">
           {group.cover_emoji}
         </div>
         <div className="flex-1 min-w-0">
@@ -79,7 +79,7 @@ export function GroupDetailView({ groupId, onBack }: { groupId: string; onBack: 
               onClick={() => setActiveTab(t.key)}
               className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-medium transition-colors ${
                 activeTab === t.key
-                  ? 'text-[#4F46E5] border-b-2 border-[#4F46E5]'
+                  ? 'text-indigo-600 border-b-2 border-indigo-600'
                   : 'text-[#64748B] dark:text-[#94A3B8] hover:text-[#64748B]'
               }`}
             >

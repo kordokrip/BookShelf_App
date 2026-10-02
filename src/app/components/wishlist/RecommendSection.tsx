@@ -28,7 +28,7 @@ export function RecommendSection({ wishTitleSet: _wishTitleSet }: { wishTitleSet
             style={{
               fontSize: 13,
               fontWeight: 700,
-              background: "linear-gradient(90deg, #4F46E5, #7C3AED)",
+              background: "linear-gradient(90deg, var(--brand-600), var(--brand2-600))",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
               backgroundClip: "text",
@@ -48,7 +48,7 @@ export function RecommendSection({ wishTitleSet: _wishTitleSet }: { wishTitleSet
             style={{
               fontSize: 12,
               fontWeight: 600,
-              background: "linear-gradient(135deg, #4F46E5, #7C3AED)",
+              background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))",
             }}
             aria-label="새로운 추천 받기"
           >
@@ -92,7 +92,7 @@ export function RecommendSection({ wishTitleSet: _wishTitleSet }: { wishTitleSet
           <Link
             to="/"
             className="inline-block mt-3 rounded-full px-4 py-1.5 text-white"
-            style={{ fontSize: 12, fontWeight: 700, background: "linear-gradient(135deg, #4F46E5, #7C3AED)" }}
+            style={{ fontSize: 12, fontWeight: 700, background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))" }}
           >
             서재로 이동
           </Link>
@@ -115,7 +115,7 @@ export function RecommendSection({ wishTitleSet: _wishTitleSet }: { wishTitleSet
           <button
             onClick={handleRefresh}
             className="mt-3 rounded-full px-4 py-1.5 text-white"
-            style={{ fontSize: 12, fontWeight: 700, background: "linear-gradient(135deg, #4F46E5, #7C3AED)" }}
+            style={{ fontSize: 12, fontWeight: 700, background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))" }}
           >
             다시 시도
           </button>
@@ -129,11 +129,11 @@ export function RecommendSection({ wishTitleSet: _wishTitleSet }: { wishTitleSet
             <div
               key={`${book.title}-${i}`}
               className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 shadow-sm"
-              style={{ boxShadow: "0 0 0 1px rgba(79, 70, 229, 0.12)" }}
+              style={{ boxShadow: "0 0 0 1px color-mix(in srgb, var(--brand-600) 12%, transparent)" }}
             >
               <div className="flex gap-3">
                 {/* 표지 */}
-                <div className="w-14 h-20 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-[#EEF2FF] to-[#E0E7FF] dark:from-[#312E81] dark:to-[#1E1B4B] flex items-center justify-center shadow-sm">
+                <div className="w-14 h-20 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900 dark:to-indigo-950 flex items-center justify-center shadow-sm">
                   {book.thumbnail ? (
                     <img
                       src={book.thumbnail}
@@ -142,7 +142,7 @@ export function RecommendSection({ wishTitleSet: _wishTitleSet }: { wishTitleSet
                       loading="lazy"
                     />
                   ) : (
-                    <Sparkles size={20} className="text-[#4F46E5] opacity-50" />
+                    <Sparkles size={20} className="text-indigo-600 opacity-50" />
                   )}
                 </div>
 
@@ -158,7 +158,7 @@ export function RecommendSection({ wishTitleSet: _wishTitleSet }: { wishTitleSet
                         href={book.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[#64748B] dark:text-[#94A3B8] hover:text-[#4F46E5] dark:hover:text-[#A5B4FC] transition-colors flex-shrink-0 p-4 -m-4"
+                        className="text-[#64748B] dark:text-[#94A3B8] hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors flex-shrink-0 p-4 -m-4"
                         aria-label={`${book.title} 상세 보기`}
                       >
                         <ExternalLink size={13} />
@@ -173,7 +173,7 @@ export function RecommendSection({ wishTitleSet: _wishTitleSet }: { wishTitleSet
                     style={{
                       fontSize: 12,
                       fontStyle: "italic",
-                      borderLeft: "3px solid #7C3AED",
+                      borderLeft: "3px solid var(--brand2-600)",
                       paddingLeft: 8,
                     }}
                   >

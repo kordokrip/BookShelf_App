@@ -79,7 +79,7 @@ function TimelineView({ grouped, monthKeys, onBookClick }: {
             <div className="flex flex-col items-center" style={{ width: 24 }}>
               <div
                 className="rounded-full shrink-0"
-                style={{ width: 12, height: 12, backgroundColor: "#4F46E5", marginTop: 2 }}
+                style={{ width: 12, height: 12, backgroundColor: "var(--brand-600)", marginTop: 2 }}
               />
               {idx < monthKeys.length - 1 && (
                 <div className="flex-1 mt-1 dark:opacity-50" style={{ width: 2, backgroundColor: "#E2E8F0", minHeight: 20 }} />
@@ -87,7 +87,7 @@ function TimelineView({ grouped, monthKeys, onBookClick }: {
             </div>
             {/* 콘텐츠 */}
             <div className="flex-1 pb-6 min-w-0">
-              <p className="text-[#4F46E5] mb-3" style={{ fontSize: 13, fontWeight: 700, marginTop: 0 }}>
+              <p className="text-indigo-600 mb-3" style={{ fontSize: 13, fontWeight: 700, marginTop: 0 }}>
                 {key} · {booksInMonth.length}권
               </p>
               <div className="flex flex-col gap-3">
@@ -243,7 +243,7 @@ function SortDropdown({
               style={{
                 fontSize: 13,
                 fontWeight: opt.value === value ? 700 : 400,
-                color: opt.value === value ? "#4F46E5" : undefined,
+                color: opt.value === value ? "var(--brand-600)" : undefined,
               }}
             >
               <span className={opt.value === value ? '' : 'text-[#374151] dark:text-[#CBD5E1]'}>
@@ -315,7 +315,7 @@ export function LibraryPage() {
           </h1>
           {/* Count badge */}
           <span
-            className="rounded-full bg-[#EEF2FF] dark:bg-[#312E81] flex-shrink-0 text-[#4F46E5] dark:text-[#C7D2FE]"
+            className="rounded-full bg-indigo-50 dark:bg-indigo-900 flex-shrink-0 text-indigo-600 dark:text-indigo-200"
             style={{
               fontSize: 12,
               fontWeight: 500,
@@ -339,7 +339,7 @@ export function LibraryPage() {
                 onClick={() => setViewMode(v)}
                 aria-label={label}
                 title={label}
-                className={`flex items-center justify-center rounded-lg transition-all ${viewMode === v ? 'bg-white dark:bg-[#1E293B] shadow-sm text-[#4F46E5]' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
+                className={`flex items-center justify-center rounded-lg transition-all ${viewMode === v ? 'bg-white dark:bg-[#1E293B] shadow-sm text-indigo-600' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
                 style={{ width: 30, height: 28 }}
               >
                 {icon}
@@ -375,12 +375,12 @@ export function LibraryPage() {
           <div className="px-4 mb-3">
             <Link
               to="/collections"
-              className="flex items-center gap-3 w-full rounded-2xl px-4 py-3 bg-[#F8FAFC] dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] hover:bg-[#EEF2FF] dark:hover:bg-[#334155] transition-colors"
+              className="flex items-center gap-3 w-full rounded-2xl px-4 py-3 bg-[#F8FAFC] dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] hover:bg-indigo-50 dark:hover:bg-[#334155] transition-colors"
             >
               <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-[#EEF2FF] dark:bg-[#312E81]"
+                className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-indigo-50 dark:bg-indigo-900"
               >
-                <FolderOpen size={16} style={{ color: "#4F46E5" }} />
+                <FolderOpen size={16} style={{ color: "var(--brand-600)" }} />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 13, fontWeight: 700 }}>내 컬렉션</p>
@@ -399,7 +399,7 @@ export function LibraryPage() {
                 placeholder="제목 또는 저자로 검색..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-10 bg-[#F1F5F9] dark:bg-[#334155] rounded-xl pl-9 pr-9 text-sm text-[#1E293B] dark:text-[#F8FAFC] placeholder:text-[#94A3B8] dark:placeholder:text-[#64748B] outline-none border border-transparent focus:border-[#4F46E5]/30 focus:bg-white dark:focus:bg-[#1E293B] transition-colors"
+                className="w-full h-10 bg-[#F1F5F9] dark:bg-[#334155] rounded-xl pl-9 pr-9 text-sm text-[#1E293B] dark:text-[#F8FAFC] placeholder:text-[#94A3B8] dark:placeholder:text-[#64748B] outline-none border border-transparent focus:border-indigo-600/30 focus:bg-white dark:focus:bg-[#1E293B] transition-colors"
               />
               {searchQuery && (
                 <button
@@ -503,7 +503,7 @@ export function LibraryPage() {
                       <div className="px-4 py-3">
                         <button
                           onClick={() => setShowAll(true)}
-                          className="w-full py-3 rounded-2xl border border-dashed border-[#CBD5E1] dark:border-[#475569] flex items-center justify-center gap-2 transition-colors hover:border-[#4F46E5] hover:bg-[#F8FAFF] dark:hover:bg-[#1E293B] text-[#64748B] dark:text-[#94A3B8]"
+                          className="w-full py-3 rounded-2xl border border-dashed border-[#CBD5E1] dark:border-[#475569] flex items-center justify-center gap-2 transition-colors hover:border-indigo-600 hover:bg-[#F8FAFF] dark:hover:bg-[#1E293B] text-[#64748B] dark:text-[#94A3B8]"
                           style={{ fontSize: 14, fontWeight: 600 }}
                         >
                           <ChevronRight size={16} />

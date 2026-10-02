@@ -2,7 +2,7 @@
  * 완독 축하 컨페티 — 라이브러리 없이 DOM 조각 몇십 개를 Web Animations API로 흩뿌린 뒤 제거한다.
  * 북모리처럼 "완독"이라는 보상의 순간에만 쓰고(과한 모션은 피함), 모션 줄이기 설정이면 아무것도 하지 않는다.
  */
-const COLORS = ['#4F46E5', '#7C3AED', '#FBBF24', '#10B981', '#F472B6', '#38BDF8'];
+const COLORS = ['var(--brand-600)', 'var(--brand2-600)', '#FBBF24', '#10B981', '#F472B6', '#38BDF8'];
 
 export function prefersReducedMotion(): boolean {
   return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;

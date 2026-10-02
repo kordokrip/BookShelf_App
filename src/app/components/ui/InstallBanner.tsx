@@ -117,7 +117,7 @@ export function InstallBanner() {
           color: "#F8FAFC",
         }}
       >
-        <Smartphone size={20} aria-hidden className="flex-shrink-0 text-[#A5B4FC]" />
+        <Smartphone size={20} aria-hidden className="flex-shrink-0 text-indigo-300" />
         <p className="flex-1" style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.4 }}>
           홈 화면에 추가하면 앱처럼 사용할 수 있어요
         </p>
@@ -126,7 +126,7 @@ export function InstallBanner() {
           className="shrink-0 rounded-xl px-4 min-h-10 text-white font-semibold transition-opacity hover:opacity-80"
           style={{
             fontSize: 13,
-            background: "linear-gradient(135deg, #4F46E5, #7C3AED)",
+            background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))",
           }}
         >
           설치

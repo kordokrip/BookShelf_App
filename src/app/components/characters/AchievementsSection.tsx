@@ -26,7 +26,7 @@ export function AchievementsSection() {
       <div className="px-4 mb-3">
         <div className="rounded-2xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] p-4 text-center" style={{ fontSize: 13, color: "var(--text-secondary)" }}>
           업적을 불러오지 못했어요.{" "}
-          <button type="button" onClick={() => void refetch()} className="underline text-[#4F46E5]" style={{ minHeight: "unset" }}>
+          <button type="button" onClick={() => void refetch()} className="underline text-indigo-600" style={{ minHeight: "unset" }}>
             다시 시도
           </button>
         </div>
@@ -75,7 +75,7 @@ export function AchievementsSection() {
                     aria-valuenow={next.percent}
                     aria-label={next.nextName ? `${next.nextName}까지 진행률` : "최종 단계"}
                   >
-                    <div className="h-full rounded-full bg-[#4F46E5]" style={{ width: `${next.percent}%` }} />
+                    <div className="h-full rounded-full bg-indigo-600" style={{ width: `${next.percent}%` }} />
                   </div>
                   <p className="mt-1 truncate" style={{ fontSize: 11, color: "var(--text-secondary)" }}>
                     {next.nextName

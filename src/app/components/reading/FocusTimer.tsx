@@ -25,12 +25,12 @@ export function FocusTimer({ timer, timerBook }: FocusTimerProps) {
   const targetMin = Math.round(timer.targetSec / 60);
 
   const segment = (active: boolean) =>
-    `flex-1 rounded-full py-2 transition-colors ${active ? "bg-white text-[#312E81]" : "text-white/80 hover:text-white"} disabled:opacity-50`;
+    `flex-1 rounded-full py-2 transition-colors ${active ? "bg-white text-indigo-900" : "text-white/80 hover:text-white"} disabled:opacity-50`;
 
   return (
     <section
       className="mx-4 mb-4 rounded-2xl px-5 py-4 text-white"
-      style={{ background: "linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)" }}
+      style={{ background: "linear-gradient(135deg, var(--brand-950) 0%, var(--brand-700) 100%)" }}
       aria-label="독서 타이머"
     >
       {/* 모드 선택 */}

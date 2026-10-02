@@ -24,7 +24,7 @@ export function LifeBooksPage() {
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-2xl font-bold text-[#1E293B] dark:text-[#F8FAFC] flex items-center gap-2">
-              <Sparkles size={22} className="text-[#4F46E5] dark:text-[#A5B4FC]" />
+              <Sparkles size={22} className="text-indigo-600 dark:text-indigo-300" />
               나의 인생책
             </h1>
             <p className="mt-1 text-sm text-[#64748B] dark:text-[#94A3B8]">
@@ -35,7 +35,7 @@ export function LifeBooksPage() {
             <button
               onClick={handleRefresh}
               disabled={refreshMutation.isPending}
-              className="flex items-center justify-center gap-1.5 min-w-11 min-h-11 px-2 -mr-2 rounded-full text-sm text-[#64748B] dark:text-[#94A3B8] hover:text-[#4F46E5] hover:bg-[#F1F5F9] dark:hover:text-[#A5B4FC] dark:hover:bg-[#334155] transition-colors disabled:opacity-40"
+              className="flex items-center justify-center gap-1.5 min-w-11 min-h-11 px-2 -mr-2 rounded-full text-sm text-[#64748B] dark:text-[#94A3B8] hover:text-indigo-600 hover:bg-[#F1F5F9] dark:hover:text-indigo-300 dark:hover:bg-[#334155] transition-colors disabled:opacity-40"
               aria-label="인생책 새로고침"
             >
               <RefreshCw size={15} className={refreshMutation.isPending ? "animate-spin" : ""} />
@@ -71,8 +71,8 @@ export function LifeBooksPage() {
         {/* 완독 2권 미만 */}
         {is400 && (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-20 h-20 rounded-full bg-[#EEF2FF] dark:bg-[#312E81] flex items-center justify-center mb-5">
-              <BookOpen size={36} className="text-[#4F46E5] dark:text-[#A5B4FC]" />
+            <div className="w-20 h-20 rounded-full bg-indigo-50 dark:bg-indigo-900 flex items-center justify-center mb-5">
+              <BookOpen size={36} className="text-indigo-600 dark:text-indigo-300" />
             </div>
             <h2 className="text-lg font-semibold text-[#1E293B] dark:text-[#F8FAFC] mb-2">
               완독한 책이 2권 이상 필요해요
@@ -82,7 +82,7 @@ export function LifeBooksPage() {
             </p>
             <Link
               to="/"
-              className="px-6 py-2.5 bg-[#4F46E5] text-white rounded-xl text-sm font-semibold hover:bg-[#4338CA] transition-colors"
+              className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors"
             >
               서재로 이동
             </Link>
@@ -95,7 +95,7 @@ export function LifeBooksPage() {
             <p className="text-sm text-[#64748B] dark:text-[#94A3B8] mb-4">추천을 불러오는 중 오류가 발생했습니다.</p>
             <button
               onClick={handleRefresh}
-              className="px-5 py-2 bg-[#4F46E5] text-white rounded-xl text-sm font-semibold hover:bg-[#4338CA] transition-colors"
+              className="px-5 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors"
             >
               다시 시도
             </button>
@@ -112,7 +112,7 @@ export function LifeBooksPage() {
               >
                 <div className="flex gap-4">
                   {/* 표지 */}
-                  <div className="w-16 h-24 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-[#EEF2FF] to-[#E0E7FF] dark:from-[#312E81] dark:to-[#1E1B4B] flex items-center justify-center shadow-sm">
+                  <div className="w-16 h-24 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900 dark:to-indigo-950 flex items-center justify-center shadow-sm">
                     {book.thumbnail ? (
                       <img
                         src={book.thumbnail}
@@ -121,7 +121,7 @@ export function LifeBooksPage() {
                         loading="lazy"
                       />
                     ) : (
-                      <Sparkles size={22} className="text-[#4F46E5] dark:text-[#A5B4FC] opacity-50" />
+                      <Sparkles size={22} className="text-indigo-600 dark:text-indigo-300 opacity-50" />
                     )}
                   </div>
 
@@ -141,7 +141,7 @@ export function LifeBooksPage() {
                           href={book.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-[#64748B] hover:text-[#4F46E5] dark:hover:text-[#A5B4FC] transition-colors flex-shrink-0 p-4 -m-4"
+                          className="text-[#64748B] hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors flex-shrink-0 p-4 -m-4"
                           aria-label={`${book.title} 상세 보기`}
                         >
                           <ExternalLink size={14} />

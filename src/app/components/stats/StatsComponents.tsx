@@ -10,8 +10,8 @@ import type { UISession } from "../../../types/book";
 /* ─── Design Tokens ─────────────────────────────────────────── */
 // 중립색은 CSS 변수(theme.css) — 인라인 style이라 dark: 클래스가 닿지 않아 다크 모드에서 흰 카드로 남던 문제
 const C = {
-  indigo: "#4F46E5",
-  violet: "#7C3AED",
+  indigo: "var(--brand-600)",
+  violet: "var(--brand2-600)",
   green: "#10B981",
   amber: "#F59E0B",
   slate1: "var(--text-primary)",
@@ -185,7 +185,7 @@ export function MonthlyBarChart({ data: monthlyData }: { data: { month: string; 
               return (
                 <Cell
                   key={i}
-                  fill={isSelected ? C.violet : isOtherSelected ? "#E0E7FF" : baseColor}
+                  fill={isSelected ? C.violet : isOtherSelected ? "var(--brand-100)" : baseColor}
                 />
               );
             })}
@@ -209,7 +209,7 @@ export function MonthlyBarChart({ data: monthlyData }: { data: { month: string; 
                 marginTop: 10,
                 borderRadius: 10,
                 backgroundColor: "var(--bg-accent-soft)",
-                border: `1px solid #C7D2FE`,
+                border: `1px solid var(--brand-200)`,
                 padding: "10px 14px",
                 display: "flex",
                 alignItems: "center",
@@ -380,7 +380,7 @@ export function GenreDonutChart({ allData, doneData, readingData }: GenreDonutCh
 // Stats: "총 독서일: N일" "최장 연속: N일"
 // Legend: 적음 [L0~L4] 많음
 
-const HEATMAP_LEVELS = ["var(--bg-muted)", "#C7D2FE", "#818CF8", "#4F46E5", "#312E81"];
+const HEATMAP_LEVELS = ["var(--bg-muted)", "var(--brand-200)", "var(--brand-400)", "var(--brand-600)", "var(--brand-900)"];
 const WEEK_DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 const MONTH_LABELS = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
 
@@ -858,7 +858,7 @@ export function ReadingCalendar({ doneBooks, sessionDates = [] }: ReadingCalenda
                     paddingBottom: 4,
                     borderRadius: 10,
                     backgroundColor: isSelected ? "var(--bg-accent-soft)" : "transparent",
-                    border: isSelected ? "1.5px solid #4F46E5" : "1.5px solid transparent",
+                    border: isSelected ? "1.5px solid var(--brand-600)" : "1.5px solid transparent",
                     cursor: "pointer",
                     minHeight: 52,
                   }}
@@ -875,7 +875,7 @@ export function ReadingCalendar({ doneBooks, sessionDates = [] }: ReadingCalenda
                         : di === 6
                         ? "var(--text-sat)"
                         : "var(--text-primary)",
-                      backgroundColor: isToday ? "#4F46E5" : "transparent",
+                      backgroundColor: isToday ? "var(--brand-600)" : "transparent",
                       borderRadius: "50%",
                       width: 22,
                       height: 22,
@@ -899,7 +899,7 @@ export function ReadingCalendar({ doneBooks, sessionDates = [] }: ReadingCalenda
                             borderRadius: 3,
                             overflow: "hidden",
                             flexShrink: 0,
-                            backgroundColor: b.coverColor || "#4F46E5",
+                            backgroundColor: b.coverColor || "var(--brand-600)",
                             boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
                           }}
                         >
@@ -995,7 +995,7 @@ export function ReadingCalendar({ doneBooks, sessionDates = [] }: ReadingCalenda
                           borderRadius: 4,
                           overflow: "hidden",
                           flexShrink: 0,
-                          backgroundColor: b.coverColor || "#4F46E5",
+                          backgroundColor: b.coverColor || "var(--brand-600)",
                           boxShadow: "0 2px 6px rgba(0,0,0,0.12)",
                         }}
                       >

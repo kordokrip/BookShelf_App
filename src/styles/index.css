@@ -1,6 +1,7 @@
 @import './fonts.css';
 @import './tailwind.css';
 @import './theme.css';
+@import './accent.css';
 
 /* ═══════════════════════════════════════════════════════════════
  * 반응형 크로스브라우저 글로벌 최적화
@@ -137,7 +138,7 @@ html[data-ios-standalone="true"] body {
 }
 /* 키보드 탐색: 포커스 링 표시 (접근성) */
 :focus-visible {
-  outline: 2px solid #4F46E5;
+  outline: 2px solid var(--brand-600);
   outline-offset: 2px;
 }
 
@@ -237,12 +238,12 @@ svg {
 
 /* ── 10. 텍스트 선택 색상 ─────────────────────────────────────── */
 ::selection {
-  background-color: rgba(79, 70, 229, 0.15);
-  color: #4F46E5;
+  background-color: color-mix(in srgb, var(--brand-600) 15%, transparent);
+  color: var(--brand-600);
 }
 ::-moz-selection {
-  background-color: rgba(79, 70, 229, 0.15);
-  color: #4F46E5;
+  background-color: color-mix(in srgb, var(--brand-600) 15%, transparent);
+  color: var(--brand-600);
 }
 
 /* ── 11. 인쇄 최적화 ──────────────────────────────────────────── */

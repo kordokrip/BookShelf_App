@@ -45,7 +45,7 @@ function SortDropdown({
               style={{
                 fontSize: 13,
                 fontWeight: opt.value === value ? 700 : 400,
-                color: opt.value === value ? "#4F46E5" : undefined,
+                color: opt.value === value ? "var(--brand-600)" : undefined,
               }}
             >
               <span className={opt.value === value ? "" : "text-[#374151] dark:text-[#CBD5E1]"}>
@@ -156,7 +156,7 @@ function WishBookDetailSheet({
                 appearance: "none",
                 height: 8,
                 borderRadius: 999,
-                background: `linear-gradient(to right, #4F46E5 ${((priority - 1) / 9) * 100}%, #E2E8F0 ${((priority - 1) / 9) * 100}%)`,
+                background: `linear-gradient(to right, var(--brand-600) ${((priority - 1) / 9) * 100}%, #E2E8F0 ${((priority - 1) / 9) * 100}%)`,
               }}
             />
             <div className="flex justify-between mt-1">
@@ -177,7 +177,7 @@ function WishBookDetailSheet({
               className="w-full rounded-2xl text-white transition-opacity hover:opacity-90"
               style={{
                 height: 48,
-                background: "linear-gradient(135deg, #4F46E5, #7C3AED)",
+                background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))",
                 fontSize: 15,
                 fontWeight: 700,
               }}
@@ -291,12 +291,12 @@ export function WishGrid({
             읽고 싶은 책
           </h2>
           <span
-            className="rounded-full bg-[#EEF2FF] dark:bg-[#312E81]"
+            className="rounded-full bg-indigo-50 dark:bg-indigo-900"
             style={{
               fontSize: 12,
               fontWeight: 500,
               backgroundColor: "var(--bg-accent-soft)",
-              color: "#4F46E5",
+              color: "var(--brand-600)",
               padding: "2px 8px",
             }}
           >

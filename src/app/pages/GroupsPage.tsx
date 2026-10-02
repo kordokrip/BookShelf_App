@@ -80,7 +80,7 @@ export function GroupsPage() {
           onClick={() => setShowCreate(true)}
           disabled={ownsGroup}
           title={ownsGroup ? '유저당 1개의 모임만 만들 수 있습니다' : undefined}
-          className="flex items-center gap-2 px-4 py-2.5 bg-[#4F46E5] text-white rounded-xl text-sm font-medium hover:bg-[#4338CA] disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
         >
           <Plus size={16} />
           모임 만들기
@@ -91,7 +91,7 @@ export function GroupsPage() {
       {(approvedGroups.length > 0 || pendingGroups.length > 0) ? (
         <section>
           <h2 className="text-base sm:text-lg font-semibold text-[#1E293B] dark:text-[#F8FAFC] mb-3 flex items-center gap-2">
-            <Users size={18} className="text-[#4F46E5] flex-shrink-0" />
+            <Users size={18} className="text-indigo-600 flex-shrink-0" />
             내 모임
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -126,7 +126,7 @@ export function GroupsPage() {
       ) : !isLoading && (
         <section className="text-center py-10 px-6 bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 rounded-2xl border border-indigo-100 dark:border-indigo-900/50">
           <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-white/70 dark:bg-white/5 mx-auto mb-3">
-            <BookOpen size={32} className="text-[#4F46E5] dark:text-[#A5B4FC]" aria-hidden />
+            <BookOpen size={32} className="text-indigo-600 dark:text-indigo-300" aria-hidden />
           </div>
           <h3 className="text-lg font-bold text-[#1E293B] dark:text-[#F8FAFC]">독서 모임을 시작해보세요!</h3>
           <p className="text-sm text-[#64748B] dark:text-[#94A3B8] mt-2 max-w-md mx-auto">
@@ -135,7 +135,7 @@ export function GroupsPage() {
           </p>
           <button
             onClick={() => setShowCreate(true)}
-            className="mt-4 px-5 py-2.5 bg-[#4F46E5] text-white rounded-xl text-sm font-medium hover:bg-[#4338CA] transition-colors shadow-sm inline-flex items-center gap-2"
+            className="mt-4 px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm inline-flex items-center gap-2"
           >
             <Plus size={16} />
             첫 모임 만들기
@@ -156,7 +156,7 @@ export function GroupsPage() {
             placeholder="모임 이름으로 검색..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#F1F5F9] dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] text-sm text-[#1E293B] dark:text-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/30"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#F1F5F9] dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] text-sm text-[#1E293B] dark:text-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-indigo-600/30"
           />
         </div>
         {isLoading ? (
@@ -209,7 +209,7 @@ export function GroupsPage() {
             onClick={() => setShowCreate(true)}
             disabled={ownsGroup}
             title={ownsGroup ? '유저당 1개의 모임만 만들 수 있습니다' : undefined}
-            className="inline-flex items-center justify-center gap-1.5 min-h-11 px-5 mt-4 rounded-xl text-sm font-medium text-white bg-[#4F46E5] hover:bg-[#4338CA] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="inline-flex items-center justify-center gap-1.5 min-h-11 px-5 mt-4 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <Plus size={16} />
             모임 만들기
@@ -239,7 +239,7 @@ export function GroupsPage() {
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                     placeholder="예: 월요일 독서 클럽"
-                    className="w-full px-3 py-2.5 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-[#334155] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/30"
+                    className="w-full px-3 py-2.5 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-[#334155] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600/30"
                   />
                 </div>
                 <div>
@@ -249,7 +249,7 @@ export function GroupsPage() {
                     value={form.description}
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
                     placeholder="모임에 대한 간략한 설명"
-                    className="w-full px-3 py-2.5 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-[#334155] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/30"
+                    className="w-full px-3 py-2.5 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-[#334155] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-600/30"
                   />
                 </div>
                 <div>
@@ -261,7 +261,7 @@ export function GroupsPage() {
                         onClick={() => setForm({ ...form, cover_emoji: e })}
                         className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg border-2 transition-all ${
                           form.cover_emoji === e
-                            ? 'border-[#4F46E5] bg-[#EEF2FF] dark:bg-[#312E81]'
+                            ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900'
                             : 'border-transparent hover:bg-[#F1F5F9] dark:hover:bg-[#0F172A]'
                         }`}
                       >
@@ -281,7 +281,7 @@ export function GroupsPage() {
                 <button
                   onClick={handleCreate}
                   disabled={!form.name.trim() || createGroup.isPending}
-                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-[#4F46E5] hover:bg-[#4338CA] disabled:opacity-50 transition-colors"
+                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition-colors"
                 >
                   {createGroup.isPending ? '생성 중...' : '모임 만들기'}
                 </button>
@@ -313,7 +313,7 @@ function GroupCard({ group, userId, onClick, onJoin, showJoin, isPending }: {
       onClick={isPending ? undefined : onClick}
     >
       <div className="flex items-start gap-3">
-        <div className="w-12 h-12 rounded-xl bg-[#EEF2FF] dark:bg-[#312E81] flex items-center justify-center text-2xl flex-shrink-0">
+        <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-900 flex items-center justify-center text-2xl flex-shrink-0">
           {group.cover_emoji}
         </div>
         <div className="flex-1 min-w-0">
@@ -345,7 +345,7 @@ function GroupCard({ group, userId, onClick, onJoin, showJoin, isPending }: {
           {showJoin && !isMyGroup ? (
             <button
               onClick={(e) => { e.stopPropagation(); onJoin?.(); }}
-              className="flex items-center gap-1 px-3 py-1.5 bg-[#4F46E5] text-white rounded-lg text-xs font-medium hover:bg-[#4338CA] transition-colors"
+              className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 transition-colors"
             >
               <LogIn size={12} />
               가입

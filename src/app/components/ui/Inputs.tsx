@@ -17,14 +17,14 @@ export function TextInput({ label, error, helper, id, disabled, ...props }: Text
   const borderColor = error
     ? "#EF4444"
     : focused
-    ? "#4F46E5"
+    ? "var(--brand-600)"
     : "#E2E8F0";
 
   return (
     <div className="flex flex-col gap-1">
       <div
         className="relative rounded-xl border bg-white dark:bg-[#1E293B] transition-all"
-        style={{ borderColor, boxShadow: focused ? `0 0 0 3px ${error ? "#FEE2E2" : "#EEF2FF"}` : undefined }}
+        style={{ borderColor, boxShadow: focused ? `0 0 0 3px ${error ? "#FEE2E2" : "var(--brand-50)"}` : undefined }}
       >
         <label
           htmlFor={inputId}
@@ -34,7 +34,7 @@ export function TextInput({ label, error, helper, id, disabled, ...props }: Text
             transform: focused || hasValue ? "translateY(0) scale(0.85)" : "translateY(-50%) scale(1)",
             transformOrigin: "left",
             fontSize: 14,
-            color: error ? "#EF4444" : focused ? "#4F46E5" : "#94A3B8",
+            color: error ? "#EF4444" : focused ? "var(--brand-600)" : "#94A3B8",
             fontWeight: 500,
           }}
         >
@@ -80,7 +80,7 @@ export function GenreSelect({ value, onChange, label = "장르 선택" }: GenreS
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full h-12 px-4 rounded-xl border border-[#E2E8F0] dark:border-[#334155] bg-white dark:bg-[#1E293B] flex items-center justify-between transition-all hover:border-[#4F46E5]"
+        className="w-full h-12 px-4 rounded-xl border border-[#E2E8F0] dark:border-[#334155] bg-white dark:bg-[#1E293B] flex items-center justify-between transition-all hover:border-indigo-600"
       >
         <div className="flex items-center gap-2">
           {config ? (
@@ -198,8 +198,8 @@ export function SearchBar({ value, onChange, placeholder = "책 제목, 저자 �
     <div
       className="flex items-center gap-2 rounded-full border bg-white dark:bg-[#1E293B] px-4 h-11 transition-all"
       style={{
-        borderColor: focused ? "#4F46E5" : "#E2E8F0",
-        boxShadow: focused ? "0 0 0 3px #EEF2FF" : undefined,
+        borderColor: focused ? "var(--brand-600)" : "#E2E8F0",
+        boxShadow: focused ? "0 0 0 3px var(--brand-50)" : undefined,
       }}
     >
       <Search size={16} className="text-[#64748B] dark:text-[#94A3B8] flex-shrink-0" />
@@ -245,8 +245,8 @@ export function DatePicker({ value, onChange, label, min, max }: DatePickerProps
       <div
         className="relative rounded-xl border bg-white dark:bg-[#1E293B] h-12 flex items-center px-4 transition-all"
         style={{
-          borderColor: focused ? "#4F46E5" : "#E2E8F0",
-          boxShadow: focused ? "0 0 0 3px #EEF2FF" : undefined,
+          borderColor: focused ? "var(--brand-600)" : "#E2E8F0",
+          boxShadow: focused ? "0 0 0 3px var(--brand-50)" : undefined,
         }}
       >
         <input

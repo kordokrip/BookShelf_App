@@ -103,7 +103,7 @@ function NoteFooter({ note, label }: { note: BookNote; label?: string }) {
 function QuoteCard({ note }: { note: BookNote }) {
   return (
     <figure className="relative px-4 pt-4 pb-1">
-      <span aria-hidden className="absolute right-3 -top-2 font-book select-none text-[#7C3AED]/15 dark:text-[#A78BFA]/20" style={{ fontSize: 72, lineHeight: 1 }}>
+      <span aria-hidden className="absolute right-3 -top-2 font-book select-none text-violet-600/15 dark:text-violet-400/20" style={{ fontSize: 72, lineHeight: 1 }}>
         &ldquo;
       </span>
       <blockquote className="font-book break-keep" style={{ fontSize: 17, lineHeight: 1.8, color: "var(--paper-ink)", letterSpacing: "-0.01em" }}>
@@ -281,8 +281,8 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
   const [noteSearch, setNoteSearch] = useState("");
 
   const NOTE_COLOR: Record<string, string> = {
-    quote: "#7C3AED",
-    memo: "#4F46E5",
+    quote: "var(--brand2-600)",
+    memo: "var(--brand-600)",
     review: "#0891B2",
   };
   /** 노트 항목 한 장이 곧 카드 — 인용은 종이 톤(style로 --paper), 나머지는 기본 카드면 */
@@ -335,7 +335,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
         {/* Phase 4: 몰입 타이머 진행 중 안내 */}
         {timerActiveForBook && (
           <div
-            className="flex items-center gap-2 rounded-xl px-3 py-2 bg-[#EEF2FF] text-[#3730A3]"
+            className="flex items-center gap-2 rounded-xl px-3 py-2 bg-indigo-50 text-indigo-800"
             role="status"
             style={{ fontSize: 12, fontWeight: 600 }}
           >
@@ -345,7 +345,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
 
         {/* ── 빠른 노트 캡처 바 ── */}
         <div
-          className="rounded-2xl p-3 border bg-[#FAFBFF] border-[#C7D2FE] dark:bg-[#1E293B] dark:border-[#3730A3]"
+          className="rounded-2xl p-3 border bg-[#FAFBFF] border-indigo-200 dark:bg-[#1E293B] dark:border-indigo-800"
         >
           {/* 타입 칩 */}
           <div className="flex gap-1.5 mb-2">
@@ -361,7 +361,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
                 style={{
                   fontSize: 11,
                   fontWeight: 600,
-                  backgroundColor: quickType === t.value ? "#4F46E5" : "var(--bg-accent-soft)",
+                  backgroundColor: quickType === t.value ? "var(--brand-600)" : "var(--bg-accent-soft)",
                   color: quickType === t.value ? "white" : "var(--text-accent)",
                 }}
               >
@@ -376,7 +376,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
             onChange={setQuickText}
             onKeyDown={handleQuickKeyDown}
             placeholder="빠른 노트를 입력하세요... (⌘+Enter로 저장)"
-            className="w-full bg-white dark:bg-[#1E293B] rounded-xl border border-[#E2E8F0] dark:border-[#334155] outline-none focus:border-[#4F46E5] resize-none px-3 py-2 transition-colors"
+            className="w-full bg-white dark:bg-[#1E293B] rounded-xl border border-[#E2E8F0] dark:border-[#334155] outline-none focus:border-indigo-600 resize-none px-3 py-2 transition-colors"
             style={{ fontSize: 13, color: "var(--text-primary)" }}
           />
           <div className="flex items-center justify-between mt-2">
@@ -389,7 +389,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
               onClick={() => void handleQuickSave()}
               disabled={!quickText.trim() || addMutation.isPending}
               className="rounded-xl text-white px-3 py-1.5 transition-opacity hover:opacity-90 active:scale-[0.97] disabled:opacity-40"
-              style={{ fontSize: 12, fontWeight: 700, background: "linear-gradient(135deg, #4F46E5, #7C3AED)" }}
+              style={{ fontSize: 12, fontWeight: 700, background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))" }}
             >
               {addMutation.isPending ? "저장 중..." : "저장"}
             </button>
@@ -415,7 +415,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
               className={cn(
                 "flex-shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border transition-all",
                 noteFilter === tab.value
-                  ? "bg-[#4F46E5] text-white border-[#4F46E5]"
+                  ? "bg-indigo-600 text-white border-indigo-600"
                   : "border-[#E2E8F0] text-[#64748B] bg-white dark:border-[#334155] dark:text-[#94A3B8] dark:bg-[#1E293B]"
               )}
               style={{ fontSize: 12, fontWeight: 600 }}
@@ -442,7 +442,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
             aria-pressed={focusOnly}
             className={cn(
               "self-start inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border transition-all",
-              focusOnly ? "bg-[#3730A3] text-white border-[#3730A3]" : "border-[#C7D2FE] text-[#3730A3] bg-white dark:border-[#3730A3] dark:text-[#C7D2FE] dark:bg-[#1E293B]",
+              focusOnly ? "bg-indigo-800 text-white border-indigo-800" : "border-indigo-200 text-indigo-800 bg-white dark:border-indigo-800 dark:text-indigo-200 dark:bg-[#1E293B]",
             )}
             style={{ fontSize: 12, fontWeight: 600 }}
           >
@@ -458,7 +458,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
             value={noteSearch}
             onChange={(e) => setNoteSearch(e.target.value)}
             placeholder="노트 내용 검색..."
-            className="w-full pl-8 pr-4 py-2 rounded-xl border border-[#E2E8F0] dark:border-[#334155] bg-[#F8FAFC] dark:bg-[#0F172A] outline-none focus:border-[#4F46E5] transition-colors"
+            className="w-full pl-8 pr-4 py-2 rounded-xl border border-[#E2E8F0] dark:border-[#334155] bg-[#F8FAFC] dark:bg-[#0F172A] outline-none focus:border-indigo-600 transition-colors"
             style={{ fontSize: 13 }}
           />
         </div>
@@ -541,7 +541,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
                   className={cn(
                     "flex-1 py-2 text-sm rounded-xl border transition-colors",
                     form.type === t.value
-                      ? "bg-[#4F46E5] text-white border-[#4F46E5]"
+                      ? "bg-indigo-600 text-white border-indigo-600"
                       : "border-[#E2E8F0] text-[#64748B]"
                   )}
                   style={{ fontWeight: 600 }}
@@ -716,14 +716,14 @@ function BookInfoTab({ book }: { book: UIBook }) {
               type="date"
               value={goalDateVal}
               onChange={(e) => setGoalDateVal(e.target.value)}
-              className="flex-1 border border-[#E2E8F0] dark:border-[#334155] rounded-xl px-3 py-2 text-[#1E293B] dark:text-[#F8FAFC] bg-[#F8FAFC] dark:bg-[#0F172A] outline-none focus:border-[#4F46E5]"
+              className="flex-1 border border-[#E2E8F0] dark:border-[#334155] rounded-xl px-3 py-2 text-[#1E293B] dark:text-[#F8FAFC] bg-[#F8FAFC] dark:bg-[#0F172A] outline-none focus:border-indigo-600"
               style={{ fontSize: 13 }}
             />
             <Button
               size="sm"
               onClick={handleGoalDateSave}
               disabled={updateBook.isPending}
-              className="bg-[#4F46E5] hover:bg-[#4338CA] text-white shrink-0"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white shrink-0"
             >
               저장
             </Button>
@@ -784,22 +784,22 @@ function BookInfoTab({ book }: { book: UIBook }) {
       </div>
 
       {/* AI 분석 섹션 */}
-      <div className="rounded-2xl overflow-hidden border border-[#DDD6FE]" style={{ background: "linear-gradient(135deg, #F5F3FF 0%, #EEF2FF 100%)" }}>
+      <div className="rounded-2xl overflow-hidden border border-violet-200" style={{ background: "linear-gradient(135deg, var(--brand2-50) 0%, var(--brand-50) 100%)" }}>
         {/* Header */}
         <div className="px-4 pt-4 pb-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div
               className="w-7 h-7 rounded-xl flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg, #7C3AED, #4F46E5)" }}
+              style={{ background: "linear-gradient(135deg, var(--brand2-600), var(--brand-600))" }}
             >
               <Sparkles size={14} className="text-white" />
             </div>
-            <span style={{ fontSize: 14, fontWeight: 700, color: "#4C1D95" }}>AI 책 분석</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: "var(--brand2-900)" }}>AI 책 분석</span>
           </div>
           {summaryResult && !summarizeMutation.isPending && (
             <button
               onClick={() => void handleSummarize()}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[#7C3AED] hover:bg-white/60 transition-colors"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-violet-600 hover:bg-white/60 transition-colors"
               style={{ fontSize: 11, fontWeight: 600 }}
             >
               <RefreshCw size={11} />
@@ -811,13 +811,13 @@ function BookInfoTab({ book }: { book: UIBook }) {
         {/* Idle: 분석 시작 버튼 */}
         {!summaryResult && !summarizeMutation.isPending && !summarizeMutation.isError && (
           <div className="px-4 pb-4 flex flex-col gap-3">
-            <p style={{ fontSize: 12, color: "#7C3AED", lineHeight: 1.65 }}>
+            <p style={{ fontSize: 12, color: "var(--brand2-600)", lineHeight: 1.65 }}>
               AI가 이 책의 핵심 내용과 읽어야 할 이유를 분석해 드립니다
             </p>
             <button
               onClick={() => void handleSummarize()}
               className="flex items-center justify-center gap-2 py-3 rounded-xl text-white transition-all active:scale-[0.98]"
-              style={{ background: "linear-gradient(135deg, #7C3AED, #4F46E5)", fontSize: 14, fontWeight: 700 }}
+              style={{ background: "linear-gradient(135deg, var(--brand2-600), var(--brand-600))", fontSize: 14, fontWeight: 700 }}
             >
               <Sparkles size={15} />
               AI 분석 시작
@@ -829,31 +829,31 @@ function BookInfoTab({ book }: { book: UIBook }) {
         {summarizeMutation.isPending && (
           <div className="px-4 pb-4 flex flex-col gap-2">
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-4 h-4 rounded-full border-2 border-[#7C3AED] border-t-transparent animate-spin" />
-              <span style={{ fontSize: 12, color: "#7C3AED", fontWeight: 600 }}>AI가 분석 중...</span>
+              <div className="w-4 h-4 rounded-full border-2 border-violet-600 border-t-transparent animate-spin" />
+              <span style={{ fontSize: 12, color: "var(--brand2-600)", fontWeight: 600 }}>AI가 분석 중...</span>
             </div>
-            <div className="h-3 rounded-full animate-pulse" style={{ background: "#DDD6FE", width: "100%" }} />
-            <div className="h-3 rounded-full animate-pulse" style={{ background: "#DDD6FE", width: "80%" }} />
-            <div className="h-3 rounded-full animate-pulse" style={{ background: "#DDD6FE", width: "60%" }} />
+            <div className="h-3 rounded-full animate-pulse" style={{ background: "var(--brand2-200)", width: "100%" }} />
+            <div className="h-3 rounded-full animate-pulse" style={{ background: "var(--brand2-200)", width: "80%" }} />
+            <div className="h-3 rounded-full animate-pulse" style={{ background: "var(--brand2-200)", width: "60%" }} />
           </div>
         )}
 
         {/* Result: 타이핑 애니메이션 */}
         {summaryResult && !summarizeMutation.isPending && (
           <div className="px-4 pb-4">
-            <div className="rounded-xl p-3.5 border border-[#DDD6FE]" style={{ background: "rgba(255,255,255,0.75)" }}>
+            <div className="rounded-xl p-3.5 border border-violet-200" style={{ background: "rgba(255,255,255,0.75)" }}>
               <p style={{ fontSize: 13, lineHeight: 1.85, color: "#3B1F70" }}>
                 {displayedSummary}
                 {isTyping && (
                   <span
                     className="inline-block ml-0.5 rounded-sm animate-pulse align-middle"
-                    style={{ width: 2, height: 14, background: "#7C3AED" }}
+                    style={{ width: 2, height: 14, background: "var(--brand2-600)" }}
                   />
                 )}
               </p>
             </div>
             {summarizeMutation.data?.cached && (
-              <p className="mt-1.5 flex items-center justify-end gap-1 text-[#7C3AED] dark:text-[#C4B5FD]" style={{ fontSize: 11 }}><Zap size={11} aria-hidden />캐시된 분석 결과</p>
+              <p className="mt-1.5 flex items-center justify-end gap-1 text-violet-600 dark:text-violet-300" style={{ fontSize: 11 }}><Zap size={11} aria-hidden />캐시된 분석 결과</p>
             )}
           </div>
         )}
@@ -973,7 +973,7 @@ export function BookDetailPage() {
   if (isLoading) {
     return (
       <div className="min-h-svh bg-[#F8FAFC] dark:bg-[#0F172A] flex items-center justify-center">
-        <div className="w-8 h-8 border-3 border-[#4F46E5] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -1009,7 +1009,7 @@ export function BookDetailPage() {
           {book?.status === 'done' && (
             <button
               onClick={handleShare}
-              className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition-colors text-[#4F46E5] dark:text-[#A5B4FC]"
+              className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition-colors text-indigo-600 dark:text-indigo-300"
               aria-label="공유"
             >
               <Share2 size={18} />
@@ -1027,7 +1027,7 @@ export function BookDetailPage() {
           <DropdownMenuContent align="end" className="w-44">
             {book?.status !== 'done' && (
               <DropdownMenuItem onClick={() => handleChangeStatus('done')}>
-                <BookMarked size={14} className="mr-2 text-[#4F46E5]" />
+                <BookMarked size={14} className="mr-2 text-indigo-600" />
                 완독으로 변경
               </DropdownMenuItem>
             )}
@@ -1064,7 +1064,7 @@ export function BookDetailPage() {
           {/* Cover: 120×168px — 클릭 시 표지 이미지 업로드 */}
           <div
             className="relative cursor-pointer group"
-            style={{ filter: "drop-shadow(0 8px 24px rgba(79,70,229,0.2))" }}
+            style={{ filter: "drop-shadow(0 8px 24px color-mix(in srgb, var(--brand-600) 20%, transparent))" }}
             onClick={() => fileInputRef.current?.click()}
             title="표지 이미지 변경"
           >
@@ -1122,7 +1122,7 @@ export function BookDetailPage() {
             {book.status === "reading" && (
               <span
                 className="px-3 py-1 rounded-full text-white"
-                style={{ fontSize: 12, fontWeight: 700, background: "linear-gradient(135deg, #4F46E5, #7C3AED)" }}
+                style={{ fontSize: 12, fontWeight: 700, background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))" }}
               >
                 📖 읽는 중
               </span>
@@ -1130,7 +1130,7 @@ export function BookDetailPage() {
           </div>
         </div>
 
-        {/* ── Tabs: [독서 노트] [책 정보], 2px underline #4F46E5 ── */}
+        {/* ── Tabs: [독서 노트] [책 정보], 2px underline var(--brand-600) ── */}
         {/* top: --topbar-h (56px + safe-area-inset-top) */}
         <div className="bg-white dark:bg-[#1E293B] border-b border-[#F1F5F9] dark:border-[#334155] sticky z-20" style={{ top: "var(--topbar-h)" }}>
           <div className="flex px-4">

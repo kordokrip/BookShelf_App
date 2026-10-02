@@ -168,7 +168,7 @@ export function SearchSheet({
                         setSearchQuery(q);
                         handleSearchCommit(q);
                       }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#E2E8F0] dark:border-[#334155] bg-[#F8FAFC] dark:bg-[#0F172A] text-[#475569] dark:text-[#CBD5E1] hover:bg-[#EEF2FF] hover:border-[#C7D2FE] hover:text-[#4F46E5] transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#E2E8F0] dark:border-[#334155] bg-[#F8FAFC] dark:bg-[#0F172A] text-[#475569] dark:text-[#CBD5E1] hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600 transition-colors"
                       style={{ fontSize: 13 }}
                     >
                       <Search size={11} />

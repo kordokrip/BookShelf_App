@@ -59,7 +59,7 @@ export function AchievementCelebration() {
                 {evo.characterName}{subjectParticle(evo.characterName)} 진화했어요!
               </p>
               <p className="text-center" style={{ fontSize: 13, color: "#64748B" }}>
-                이제 <strong style={{ color: "#4F46E5" }}>{evo.stageName}</strong>{copulaEnding(evo.stageName)}
+                이제 <strong style={{ color: "var(--brand-600)" }}>{evo.stageName}</strong>{copulaEnding(evo.stageName)}
               </p>
             </motion.div>
           );
@@ -87,7 +87,7 @@ export function AchievementCelebration() {
           type="button"
           onClick={dismiss}
           className="w-full rounded-xl py-3 text-white"
-          style={{ fontSize: 15, fontWeight: 700, background: "linear-gradient(135deg, #4F46E5, #7C3AED)" }}
+          style={{ fontSize: 15, fontWeight: 700, background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))" }}
         >
           {remaining > 1 ? `확인 (${remaining - 1}개 더)` : "확인"}
         </button>

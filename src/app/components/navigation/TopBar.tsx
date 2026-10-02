@@ -106,7 +106,7 @@ export function TopBar() {
                 to={item.to}
                 className={`px-3 h-9 rounded-lg inline-flex items-center transition-colors whitespace-nowrap touch-manipulation ${
                   isActive
-                    ? 'bg-[#EEF2FF] dark:bg-[#312E81] text-[#4F46E5] dark:text-[#A5B4FC] font-semibold'
+                    ? 'bg-indigo-50 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 font-semibold'
                     : 'text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B]'
                 }`}
               >
@@ -212,14 +212,14 @@ export function TopBar() {
               <TooltipTrigger asChild>
                 <button
                   onClick={() => setProfileOpen((v) => !v)}
-                  className="ml-1 flex-shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5]"
+                  className="ml-1 flex-shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600"
                   aria-label="프로필"
                   aria-expanded={profileOpen}
                 >
                   {user ? (
                     <ProfileAvatar user={user} size={32} fontSize={12} />
                   ) : (
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center">
                       <span className="text-white text-xs font-semibold">?</span>
                     </div>
                   )}

@@ -71,9 +71,9 @@ function ToastItem({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => vo
     },
     info: {
       icon: <Info size={18} />,
-      bg: "#EEF2FF",
-      text: "#3730A3",
-      border: "#C7D2FE",
+      bg: "var(--brand-50)",
+      text: "var(--brand-800)",
+      border: "var(--brand-200)",
     },
   };
 

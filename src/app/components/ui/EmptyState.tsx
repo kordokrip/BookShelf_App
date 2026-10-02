@@ -19,7 +19,7 @@ export function EmptyState({ emoji = "📚", heading, subtext, ctaLabel, onCta }
     <div className="flex flex-col items-center justify-center py-16 px-8 text-center">
       {/* 72px emoji icon container */}
       <div
-        className="flex items-center justify-center rounded-3xl bg-gradient-to-br from-[#EEF2FF] to-[#E0E7FF]"
+        className="flex items-center justify-center rounded-3xl bg-gradient-to-br from-indigo-50 to-indigo-100"
         style={{ width: 72, height: 72 }}
       >
         <span style={{ fontSize: 36 }}>{emoji}</span>
@@ -62,7 +62,7 @@ export function EmptyState({ emoji = "📚", heading, subtext, ctaLabel, onCta }
             paddingLeft: 48,
             paddingRight: 48,
             borderRadius: 12,
-            background: "linear-gradient(135deg, #4F46E5, #7C3AED)",
+            background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))",
             fontSize: 15,
             fontWeight: 700,
             fontFamily: "var(--font-pretendard)",

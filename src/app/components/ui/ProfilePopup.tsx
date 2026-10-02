@@ -79,7 +79,7 @@ function EmojiPicker({
           <button
             key={emoji}
             onClick={() => onSelect(emoji)}
-            className="w-8 h-8 rounded-lg hover:bg-[#EEF2FF] flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-lg hover:bg-indigo-50 flex items-center justify-center transition-colors"
             style={{ fontSize: 18 }}
           >
             {emoji}
@@ -128,7 +128,7 @@ export function ProfileAvatar({
             // fallback to gradient
             (e.target as HTMLImageElement).style.display = "none";
             (e.target as HTMLImageElement).parentElement!.classList.add(
-              "bg-gradient-to-br", "from-[#4F46E5]", "to-[#7C3AED]"
+              "bg-gradient-to-br", "from-indigo-600", "to-violet-600"
             );
           }}
         />
@@ -144,7 +144,7 @@ export function ProfileAvatar({
           width: size,
           height: size,
           backgroundColor: "var(--bg-accent-soft)",
-          border: "2px solid #C7D2FE",
+          border: "2px solid var(--brand-200)",
         }}
       >
         <span style={{ fontSize: fontSize * 1.2 }}>{emoji}</span>
@@ -154,7 +154,7 @@ export function ProfileAvatar({
 
   return (
     <div
-      className={`rounded-full bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] flex items-center justify-center flex-shrink-0 shadow-sm ${className}`}
+      className={`rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center flex-shrink-0 shadow-sm ${className}`}
       style={{ width: size, height: size }}
     >
       <span className="text-white" style={{ fontSize, fontWeight: 700 }}>
@@ -365,7 +365,7 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
             <button
               onClick={handleReminderToggle}
               disabled={savingReminder}
-              className={`relative w-10 h-5 rounded-full transition-colors ${reminderEnabled ? "bg-[#4F46E5]" : "bg-[#CBD5E1] dark:bg-[#475569]"}`}
+              className={`relative w-10 h-5 rounded-full transition-colors ${reminderEnabled ? "bg-indigo-600" : "bg-[#CBD5E1] dark:bg-[#475569]"}`}
             >
               <span
                 className={`absolute top-0.5 w-4 h-4 rounded-full bg-white dark:bg-[#1E293B] shadow transition-transform ${reminderEnabled ? "translate-x-5" : "translate-x-0.5"}`}
@@ -395,7 +395,7 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
             <button
               onClick={handleWeeklyReportToggle}
               disabled={savingReminder}
-              className={`relative w-10 h-5 rounded-full transition-colors ${weeklyReportEnabled ? "bg-[#4F46E5]" : "bg-[#CBD5E1] dark:bg-[#475569]"}`}
+              className={`relative w-10 h-5 rounded-full transition-colors ${weeklyReportEnabled ? "bg-indigo-600" : "bg-[#CBD5E1] dark:bg-[#475569]"}`}
             >
               <span
                 className={`absolute top-0.5 w-4 h-4 rounded-full bg-white dark:bg-[#1E293B] shadow transition-transform ${weeklyReportEnabled ? "translate-x-5" : "translate-x-0.5"}`}

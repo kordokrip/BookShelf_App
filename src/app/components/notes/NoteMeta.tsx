@@ -14,7 +14,7 @@ export function NoteMeta({ note, className = "" }: { note: Pick<BookNote, "sessi
     <div className={`flex flex-wrap items-center gap-1.5 ${className}`}>
       {showFocus && (
         <span
-          className="inline-flex items-center gap-1 rounded-full px-2 bg-[#EEF2FF] text-[#3730A3]"
+          className="inline-flex items-center gap-1 rounded-full px-2 bg-indigo-50 text-indigo-800"
           style={{ fontSize: 11, fontWeight: 700, minHeight: 24 }}
           title="몰입 타이머 구간에 작성한 메모"
         >

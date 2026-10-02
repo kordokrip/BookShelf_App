@@ -69,7 +69,7 @@ export function BottomNavBar() {
               {/* 상단 활성 표시 바 */}
               <span
                 className={`absolute top-0 left-1/4 right-1/4 h-0.5 rounded-b-full transition-all duration-200 ${
-                  isActive ? "bg-[#4F46E5] opacity-100" : "opacity-0"
+                  isActive ? "bg-indigo-600 opacity-100" : "opacity-0"
                 }`}
               />
 
@@ -78,7 +78,7 @@ export function BottomNavBar() {
                 <span
                   className={`block transition-colors duration-200 ${
                     isActive
-                      ? "text-[#4F46E5] dark:text-[#A5B4FC]"
+                      ? "text-indigo-600 dark:text-indigo-300"
                       : "text-[#64748B] dark:text-[#94A3B8]"
                   }`}
                 >
@@ -101,7 +101,7 @@ export function BottomNavBar() {
               <span
                 className={`transition-colors duration-200 ${
                   isActive
-                    ? "text-[#4F46E5] dark:text-[#A5B4FC]"
+                    ? "text-indigo-600 dark:text-indigo-300"
                     : "text-[#64748B] dark:text-[#94A3B8]"
                 }`}
                 style={{ fontSize: 11, fontWeight: isActive ? 600 : 400 }}

@@ -204,7 +204,7 @@ export function ChatTab({
                     msg.deleted_at
                       ? 'bg-[#F1F5F9] dark:bg-[#1E293B] text-[#475569] dark:text-[#94A3B8] italic'
                       : isMine
-                        ? 'bg-[#4F46E5] text-white rounded-br-md'
+                        ? 'bg-indigo-600 text-white rounded-br-md'
                         : 'bg-[#F1F5F9] dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F8FAFC] rounded-bl-md'
                   }`}>
                     {msg.deleted_at ? '삭제된 메시지입니다.' : msg.content}
@@ -241,7 +241,7 @@ export function ChatTab({
         {pendingMsgs.map((pm) => (
           <div key={pm.tempId} className="flex justify-end px-4 py-1">
             <div className="max-w-[75%]">
-              <div className="px-3.5 py-2 rounded-2xl rounded-br-md text-sm bg-[#4F46E5]/60 text-white opacity-70">
+              <div className="px-3.5 py-2 rounded-2xl rounded-br-md text-sm bg-indigo-600/60 text-white opacity-70">
                 {pm.content}
               </div>
               <div className="flex items-center justify-end gap-1 mt-0.5">
@@ -253,7 +253,7 @@ export function ChatTab({
                     <button
                       type="button"
                       onClick={() => sendWithRetry(pm.content, pm.tempId)}
-                      className="flex items-center gap-0.5 text-[11px] text-[#4F46E5] hover:underline ml-1"
+                      className="flex items-center gap-0.5 text-[11px] text-indigo-600 hover:underline ml-1"
                     >
                       <RotateCcw size={9} /> 재전송
                     </button>
@@ -279,13 +279,13 @@ export function ChatTab({
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
             maxLength={1000}
-            className="flex-1 px-4 py-2.5 rounded-xl bg-[#F1F5F9] dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/30"
+            className="flex-1 px-4 py-2.5 rounded-xl bg-[#F1F5F9] dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600/30"
           />
           <button
             onClick={handleSend}
             disabled={!text.trim() || sendMessage.isPending}
             aria-label="메시지 전송"
-            className="w-10 h-10 rounded-xl bg-[#4F46E5] text-white flex items-center justify-center hover:bg-[#4338CA] disabled:opacity-50 transition-colors flex-shrink-0"
+            className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700 disabled:opacity-50 transition-colors flex-shrink-0"
           >
             <Send size={16} />
           </button>

@@ -144,8 +144,8 @@ export function StatsPage() {
               to="/yearly-review"
               className="flex items-center justify-between w-full rounded-2xl px-5 py-4 text-white"
               style={{
-                background: "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)",
-                boxShadow: "0 4px 14px rgba(79,70,229,0.3)",
+                background: "linear-gradient(135deg, var(--brand-600) 0%, var(--brand2-600) 100%)",
+                boxShadow: "0 4px 14px color-mix(in srgb, var(--brand-600) 30%, transparent)",
               }}
             >
               <div className="flex items-center gap-3">
@@ -194,9 +194,9 @@ export function StatsPage() {
           {/* Summary Cards: 2×2 grid */}
           <div className="px-4 mb-4" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <SummaryCard
-              icon={<BookMarked size={18} color="#4F46E5" />}
-              iconBg="#EEF2FF"
-              borderColor="#4F46E5"
+              icon={<BookMarked size={18} color="var(--brand-600)" />}
+              iconBg="var(--brand-50)"
+              borderColor="var(--brand-600)"
               label="완독한 책"
               value={`${totalDone}권`}
             />
@@ -215,9 +215,9 @@ export function StatsPage() {
               value={`${totalWish}권`}
             />
             <SummaryCard
-              icon={<FileText size={18} color="#8B5CF6" />}
-              iconBg="#EDE9FE"
-              borderColor="#8B5CF6"
+              icon={<FileText size={18} color="var(--brand2-500)" />}
+              iconBg="var(--brand2-100)"
+              borderColor="var(--brand2-500)"
               label="총 읽은 페이지"
               value={totalPages.toLocaleString() + "p"}
             />
@@ -317,7 +317,7 @@ export function StatsPage() {
           {/* 독서 달력 */}
           <div className="px-4 mt-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="flex items-center gap-1.5 text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 15, fontWeight: 700 }}><CalendarDays size={16} className="text-[#4F46E5] dark:text-[#A5B4FC]" aria-hidden />독서 달력</h3>
+              <h3 className="flex items-center gap-1.5 text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 15, fontWeight: 700 }}><CalendarDays size={16} className="text-indigo-600 dark:text-indigo-300" aria-hidden />독서 달력</h3>
             </div>
             <ReadingCalendar
               doneBooks={doneBooks}

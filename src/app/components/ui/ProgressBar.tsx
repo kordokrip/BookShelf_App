@@ -12,7 +12,7 @@ export function ProgressBar({
   value,
   variant = "thin",
   showLabel = false,
-  color = "#4F46E5",
+  color = "var(--brand-600)",
   animated = true,
 }: ProgressBarProps) {
   const [displayed, setDisplayed] = useState(0);

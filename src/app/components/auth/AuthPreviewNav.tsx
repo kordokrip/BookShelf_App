@@ -28,7 +28,7 @@ export function AuthPreviewNav() {
             style={{
               fontFamily: "var(--font-pretendard)",
               fontWeight: location.pathname === p.path ? 700 : 500,
-              color: location.pathname === p.path ? "#1e1b4b" : "rgba(255,255,255,0.75)",
+              color: location.pathname === p.path ? "var(--brand-950)" : "rgba(255,255,255,0.75)",
               backgroundColor: location.pathname === p.path ? "white" : "transparent",
             }}
           >

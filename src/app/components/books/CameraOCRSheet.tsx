@@ -346,7 +346,7 @@ export function CameraOCRSheet({ bookId, onClose }: Props) {
           <div className="flex-1 px-4 py-4 flex flex-col gap-3">
             {/* OCR 처리 중 */}
             {isProcessing && (
-              <div className="flex items-center gap-2 text-[#4F46E5] py-1">
+              <div className="flex items-center gap-2 text-indigo-600 py-1">
                 <Loader2 size={16} className="animate-spin" />
                 <span className="text-sm font-medium">
                   {retryCount > 0 ? `텍스트 재인식 중... (${retryCount}회)` : '텍스트 인식 중...'}
@@ -399,7 +399,7 @@ export function CameraOCRSheet({ bookId, onClose }: Props) {
                   className={cn(
                     'flex-1 py-2 text-xs rounded-xl border transition-colors font-semibold',
                     noteType === t.value
-                      ? 'bg-[#4F46E5] text-white border-[#4F46E5]'
+                      ? 'bg-indigo-600 text-white border-indigo-600'
                       : 'border-[#E2E8F0] text-[#64748B]',
                   )}
                 >

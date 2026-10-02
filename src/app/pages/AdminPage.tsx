@@ -110,7 +110,7 @@ function UserDetailModal({
 
         {isLoading && (
           <div className="flex justify-center py-16">
-            <Loader2 size={28} className="animate-spin text-[#4F46E5]" />
+            <Loader2 size={28} className="animate-spin text-indigo-600" />
           </div>
         )}
 
@@ -130,7 +130,7 @@ function UserDetailModal({
                 <div className="flex items-center gap-2 mt-1">
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                     detail.user.role === "admin"
-                      ? "bg-[#EEF2FF] text-[#4F46E5] dark:bg-[#312E81]/30 dark:text-[#818CF8]"
+                      ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400"
                       : "bg-[#F1F5F9] text-[#475569] dark:bg-[#334155] dark:text-[#94A3B8]"
                   }`}>
                     {detail.user.role === "admin" ? "관리자" : "회원"}
@@ -236,7 +236,7 @@ function DashboardTab() {
   if (isLoading) {
     return (
       <div className="flex justify-center py-20">
-        <Loader2 size={28} className="animate-spin text-[#4F46E5]" />
+        <Loader2 size={28} className="animate-spin text-indigo-600" />
       </div>
     );
   }
@@ -318,7 +318,7 @@ function DashboardTab() {
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   {u.role === "admin" && <Crown size={12} className="text-amber-500" />}
-                  <span className="text-xs font-semibold text-[#4F46E5]">{u.activity_count}건</span>
+                  <span className="text-xs font-semibold text-indigo-600">{u.activity_count}건</span>
                 </div>
               </div>
             ))}
@@ -378,7 +378,7 @@ function UsersTab() {
             value={q}
             onChange={(e) => { setQ(e.target.value); setPage(1); }}
             placeholder="이름 또는 이메일 검색"
-            className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-[#334155] bg-white dark:bg-[#1E293B] text-sm text-[#0F172A] dark:text-white outline-none focus:border-[#4F46E5]"
+            className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-[#334155] bg-white dark:bg-[#1E293B] text-sm text-[#0F172A] dark:text-white outline-none focus:border-indigo-600"
           />
         </div>
         <select
@@ -409,7 +409,7 @@ function UsersTab() {
             }}
             className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
               sort === v
-                ? "bg-[#4F46E5] text-white"
+                ? "bg-indigo-600 text-white"
                 : "bg-[#F1F5F9] dark:bg-[#334155] text-[#475569] dark:text-[#94A3B8]"
             }`}
           >
@@ -422,7 +422,7 @@ function UsersTab() {
       {/* 로딩 */}
       {isLoading && (
         <div className="flex justify-center py-10">
-          <Loader2 size={24} className="animate-spin text-[#4F46E5]" />
+          <Loader2 size={24} className="animate-spin text-indigo-600" />
         </div>
       )}
 
@@ -552,7 +552,7 @@ function SendNotifTab() {
             onClick={() => setType(t)}
             className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors ${
               type === t
-                ? "bg-[#4F46E5] text-white"
+                ? "bg-indigo-600 text-white"
                 : "bg-[#F1F5F9] dark:bg-[#334155] text-[#475569] dark:text-[#94A3B8]"
             }`}
           >
@@ -572,7 +572,7 @@ function SendNotifTab() {
               value={targetSearch}
               onChange={(e) => { setTargetSearch(e.target.value); setTargetUserId(""); }}
               placeholder="이름 또는 이메일 입력"
-              className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-[#334155] bg-white dark:bg-[#1E293B] text-sm outline-none focus:border-[#4F46E5]"
+              className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-[#334155] bg-white dark:bg-[#1E293B] text-sm outline-none focus:border-indigo-600"
             />
           </div>
           {searchResults.length > 0 && !targetUserId && (
@@ -598,7 +598,7 @@ function SendNotifTab() {
             </div>
           )}
           {targetUserId && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-[#EEF2FF] dark:bg-[#312E81]/20 rounded-xl text-sm text-[#4F46E5]">
+            <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl text-sm text-indigo-600">
               <ShieldCheck size={14} />
               수신자 선택됨: {targetSearch}
               <button onClick={() => { setTargetUserId(""); setTargetSearch(""); }} className="ml-auto">
@@ -618,7 +618,7 @@ function SendNotifTab() {
           onChange={(e) => setTitle(e.target.value)}
           maxLength={100}
           placeholder="알림 제목"
-          className="w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-[#334155] bg-white dark:bg-[#1E293B] text-sm outline-none focus:border-[#4F46E5]"
+          className="w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-[#334155] bg-white dark:bg-[#1E293B] text-sm outline-none focus:border-indigo-600"
         />
       </div>
 
@@ -631,7 +631,7 @@ function SendNotifTab() {
           maxLength={500}
           rows={4}
           placeholder="알림 내용을 입력하세요."
-          className="w-full px-4 py-3 rounded-xl border border-[#E2E8F0] dark:border-[#334155] bg-white dark:bg-[#1E293B] text-sm resize-none outline-none focus:border-[#4F46E5]"
+          className="w-full px-4 py-3 rounded-xl border border-[#E2E8F0] dark:border-[#334155] bg-white dark:bg-[#1E293B] text-sm resize-none outline-none focus:border-indigo-600"
         />
         <p className="text-xs text-right text-[#64748B] dark:text-[#94A3B8]">{body.length}/500</p>
       </div>
@@ -656,7 +656,7 @@ function SendNotifTab() {
       <button
         onClick={() => mutation.mutate()}
         disabled={!canSend || mutation.isPending}
-        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#4F46E5] text-white font-semibold text-sm disabled:opacity-50 active:scale-[0.97] transition-transform"
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-indigo-600 text-white font-semibold text-sm disabled:opacity-50 active:scale-[0.97] transition-transform"
       >
         {mutation.isPending
           ? <Loader2 size={16} className="animate-spin" />
@@ -716,7 +716,7 @@ function MessagesHistoryTab() {
 
       {isLoading && (
         <div className="flex justify-center py-10">
-          <Loader2 size={24} className="animate-spin text-[#4F46E5]" />
+          <Loader2 size={24} className="animate-spin text-indigo-600" />
         </div>
       )}
 
@@ -841,7 +841,7 @@ export function AdminPage() {
               onClick={() => setTab(id)}
               className={`flex-1 flex flex-col items-center gap-0.5 py-2 rounded-xl text-xs font-medium transition-colors ${
                 tab === id
-                  ? "bg-[#4F46E5] text-white"
+                  ? "bg-indigo-600 text-white"
                   : "text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F1F5F9] dark:hover:bg-[#334155]"
               }`}
             >

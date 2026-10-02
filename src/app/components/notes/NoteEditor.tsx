@@ -64,7 +64,7 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>(funct
   // 에디터가 놓이는 배경이 화면마다 다르므로(다크 모드에서도 밝은 카드 안에 있을 수 있음)
   // dark: 변형 대신 밝은/어두운 배경 모두에서 3:1 이상 대비가 나오는 중간 회색을 쓴다
   const toolButton =
-    "flex items-center justify-center w-8 h-8 rounded-lg text-[#64748B] hover:bg-[#4F46E5]/10 hover:text-[#4F46E5] transition-colors";
+    "flex items-center justify-center w-8 h-8 rounded-lg text-[#64748B] hover:bg-indigo-600/10 hover:text-indigo-600 transition-colors";
 
   return (
     <div className="flex flex-col gap-1">
@@ -101,7 +101,7 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>(funct
         aria-label={ariaLabel ?? placeholder}
         className={
           className ??
-          "w-full bg-white dark:bg-slate-900 rounded-xl border border-[#E2E8F0] dark:border-slate-700 outline-none focus:border-[#4F46E5] resize-none px-3 py-2 transition-colors"
+          "w-full bg-white dark:bg-slate-900 rounded-xl border border-[#E2E8F0] dark:border-slate-700 outline-none focus:border-indigo-600 resize-none px-3 py-2 transition-colors"
         }
         style={style ?? { fontSize: 14, color: "inherit" }}
       />

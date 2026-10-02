@@ -98,7 +98,7 @@ function CreateCollectionDialog({
             onClick={handleSubmit}
             disabled={!name.trim() || createMutation.isPending}
             className="flex-1 py-2.5 rounded-xl text-white disabled:opacity-50"
-            style={{ fontSize: 13, fontWeight: 600, background: "linear-gradient(135deg, #4F46E5, #7C3AED)" }}
+            style={{ fontSize: 13, fontWeight: 600, background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))" }}
           >
             {createMutation.isPending ? "생성 중..." : "만들기"}
           </button>
@@ -116,7 +116,7 @@ function CollectionDetailView({ id, onBack }: { id: string; onBack: () => void }
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="w-8 h-8 border-2 border-[#4F46E5] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -156,7 +156,7 @@ function CollectionDetailView({ id, onBack }: { id: string; onBack: () => void }
             <button
               key={book.id}
               onClick={() => navigate(`/book/${book.id}`)}
-              className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] hover:border-[#4F46E5] transition-colors text-left"
+              className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] hover:border-indigo-600 transition-colors text-left"
             >
               <div
                 className="w-10 h-14 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -226,7 +226,7 @@ export function CollectionsPage() {
         <button
           onClick={() => setShowCreate(true)}
           className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-white"
-          style={{ fontSize: 13, fontWeight: 600, background: "linear-gradient(135deg, #4F46E5, #7C3AED)" }}
+          style={{ fontSize: 13, fontWeight: 600, background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))" }}
         >
           <Plus size={14} />
           만들기
@@ -236,7 +236,7 @@ export function CollectionsPage() {
       {/* Loading */}
       {isLoading && (
         <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 border-2 border-[#4F46E5] border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
         </div>
       )}
 
@@ -251,7 +251,7 @@ export function CollectionsPage() {
           <button
             onClick={() => setShowCreate(true)}
             className="mt-4 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-white"
-            style={{ fontSize: 13, fontWeight: 600, background: "linear-gradient(135deg, #4F46E5, #7C3AED)" }}
+            style={{ fontSize: 13, fontWeight: 600, background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))" }}
           >
             <Plus size={14} />
             첫 컬렉션 만들기
@@ -270,7 +270,7 @@ export function CollectionsPage() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, x: -100 }}
-                className="flex items-center gap-3 p-4 rounded-2xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] hover:border-[#C7D2FE] transition-colors cursor-pointer"
+                className="flex items-center gap-3 p-4 rounded-2xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] hover:border-indigo-200 transition-colors cursor-pointer"
                 onClick={() => setSelectedId(col.id)}
               >
                 <div
@@ -327,7 +327,7 @@ export function CollectionsPage() {
                 type="button"
                 onClick={() => setShowCreate(true)}
                 className="inline-flex items-center justify-center gap-1.5 min-h-11 px-5 mt-4 rounded-xl text-white"
-                style={{ fontSize: 13, fontWeight: 600, background: "linear-gradient(135deg, #4F46E5, #7C3AED)" }}
+                style={{ fontSize: 13, fontWeight: 600, background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))" }}
               >
                 <Plus size={16} />
                 컬렉션 만들기
