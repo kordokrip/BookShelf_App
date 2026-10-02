@@ -48,7 +48,7 @@ FAILED_TESTS=()
 if [[ "$READONLY" == true ]]; then
   TOTAL=3
 else
-  TOTAL=63
+  TOTAL=68
 fi
 
 # ── 시작 시각 ────────────────────────────────────────────────────
@@ -1285,6 +1285,95 @@ if [[ "$HTTP_CODE" == "200" && "$IS_LIST" == "True" ]]; then
   printf "         ${CYAN}↳ %s${NC}\n" "$BODY"
 else
   fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE}, flags 배열=${IS_LIST} (기대: 200 + 배열, 인증 없이)"
+fi
+
+# ================================================================
+# GROUP 16c — 오늘의 문장 · 앱 디자인 설정 · AI 요약 근거 없음
+# ================================================================
+printf "\n%s── Group 16c: 오늘의 문장 / 테마 설정 / 요약 no_source (5개)%s\n" "$CYAN" "$NC"
+
+T=64; NAME="GET /api/notes/daily-quote (data null 또는 유효한 카드)"; START=$(now_ms)
+printf "         ${YELLOW}⏳ AI 문장 생성 시 최대 30초 대기${NC}\n"
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s --max-time 40 -o "$TMPF" -w "%{http_code}" "${BASE_URL}/api/notes/daily-quote" \
+  -H "Authorization: Bearer ${TOKEN}")
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+QUOTE_OK=$(json_val "$BODY" "(d['data'] is None) or (d['data']['source'] == 'note' and 'book_title' in d['data']['note']) or (d['data']['source'] == 'ai' and bool(d['data']['text']) and 'title' in d['data']['book'] and d['data']['disclaimer'] is True)")
+HAS_DATE=$(json_val "$BODY" "len(d['date']) == 10")
+if [[ "$HTTP_CODE" == "200" && "$QUOTE_OK" == "True" && "$HAS_DATE" == "True" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+  printf "         ${CYAN}↳ source=%s${NC}\n" "$(json_val "$BODY" "(d['data'] or {}).get('source', 'null')")"
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE}, 카드 형식=${QUOTE_OK}, date=${HAS_DATE} (기대: 200 + data null 또는 note/ai 카드)"
+fi
+
+T=65; NAME="PATCH /api/users/profile (theme_accent=ocean, theme_mode=dark)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" -X PATCH \
+  "${BASE_URL}/api/users/profile" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"theme_accent":"ocean","theme_mode":"dark"}')
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+PATCHED=$(json_val "$BODY" "d['data']['theme_accent'] + '/' + d['data']['theme_mode']")
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+curl -s -o "$TMPF" "${BASE_URL}/api/users/profile" -H "Authorization: Bearer ${TOKEN}"
+GOT=$(cat "$TMPF"); rm -f "$TMPF"
+READBACK=$(json_val "$GOT" "d['data']['theme_accent'] + '/' + d['data']['theme_mode']")
+if [[ "$HTTP_CODE" == "200" && "$PATCHED" == "ocean/dark" && "$READBACK" == "ocean/dark" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+  printf "         ${CYAN}↳ PATCH 응답=%s, GET 재조회=%s${NC}\n" "$PATCHED" "$READBACK"
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE}, PATCH=${PATCHED}, GET=${READBACK} (기대: 200 + ocean/dark 왕복)"
+fi
+
+T=66; NAME="PATCH /api/users/profile (theme_accent null → 기본값 복귀)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" -X PATCH \
+  "${BASE_URL}/api/users/profile" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"theme_accent":null}')
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+IS_NULL=$(json_val "$BODY" "d['data']['theme_accent'] is None and d['data']['theme_mode'] == 'dark'")
+if [[ "$HTTP_CODE" == "200" && "$IS_NULL" == "True" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE}, null 복귀=${IS_NULL} (기대: 200 + theme_accent null, theme_mode 유지)"
+fi
+
+T=67; NAME="PATCH /api/users/profile (theme_accent 잘못된 값 → 400)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" -X PATCH \
+  "${BASE_URL}/api/users/profile" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"theme_accent":"neon-pink"}')
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+if [[ "$HTTP_CODE" == "400" || "$HTTP_CODE" == "422" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+  printf "         ${CYAN}↳ HTTP %s (유효성 검사 거부)${NC}\n" "$HTTP_CODE"
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE} (기대: 400 또는 422)"
+fi
+
+T=68; NAME="POST /api/ai/summarize (책 소개 없는 가짜 책 → no_source)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s --max-time 30 -o "$TMPF" -w "%{http_code}" -X POST "${BASE_URL}/api/ai/summarize" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"zxqv유령의서재qwjk9981","author":"존재하지않는저자qqzz"}')
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+NO_SRC=$(json_val "$BODY" "d['summary'] is None and d['reason'] == 'no_source' and d['cached'] is False and d['provider'] is None")
+if [[ "$HTTP_CODE" == "200" && "$NO_SRC" == "True" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE}, no_source=${NO_SRC} (기대: 200 + summary null, reason no_source — 모델 호출 없이)"
 fi
 
 # ================================================================

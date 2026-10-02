@@ -257,6 +257,9 @@ const updateProfileSchema = z.object({
   reminder_time: z.string().regex(/^([01]\d|2[0-3]):(00|15|30|45)$/).optional(),
   reminder_enabled: z.boolean().optional(),
   weekly_report_enabled: z.boolean().optional(),
+  // 개인 앱 디자인(0017) — accent id는 src/lib/themePresets.ts와 동일해야 한다. null이면 기본값으로 되돌림
+  theme_accent: z.enum(['indigo', 'ocean', 'forest', 'sunset', 'rose', 'graphite']).nullable().optional(),
+  theme_mode: z.enum(['auto', 'light', 'dark']).nullable().optional(),
 });
 
 // ─── PATCH /api/users/profile ───────────────────────────────────
@@ -311,6 +314,16 @@ usersRouter.patch(
       values.push(body.weekly_report_enabled ? 1 : 0);
     }
 
+    if (body.theme_accent !== undefined) {
+      updates.push('theme_accent = ?');
+      values.push(body.theme_accent);
+    }
+
+    if (body.theme_mode !== undefined) {
+      updates.push('theme_mode = ?');
+      values.push(body.theme_mode);
+    }
+
     if (updates.length === 0) {
       return c.json({ error: '업데이트할 내용이 없습니다' }, 400);
     }
@@ -323,7 +336,7 @@ usersRouter.patch(
     ).bind(...values).run();
 
     const user = await c.env.DB.prepare(
-      'SELECT id, email, name, avatar_url, profile_emoji, favorite_genres, reading_goal, role, reminder_time, reminder_enabled, weekly_report_enabled, created_at, updated_at FROM users WHERE id = ?'
+      'SELECT id, email, name, avatar_url, profile_emoji, favorite_genres, reading_goal, role, reminder_time, reminder_enabled, weekly_report_enabled, theme_accent, theme_mode, created_at, updated_at FROM users WHERE id = ?'
     ).bind(userId).first();
 
     return c.json({ data: user });

@@ -5,6 +5,11 @@ interface RateLimitOptions {
   limit: number;
   windowMs: number;
   keyPrefix?: string;
+  /**
+   * 한도 기준: 'ip'(기본) | 'user'. 'user'는 authMiddleware 뒤에 두어야 하며(c.get('userId')),
+   * 같은 IP를 공유하는 사용자끼리 한도를 나눠 쓰지 않게 한다. userId가 없으면 IP로 대체.
+   */
+  keyBy?: 'ip' | 'user';
 }
 
 /** KV expirationTtl 최소값(초) */
@@ -31,16 +36,18 @@ export function computeRateLimitWindow(nowMs: number, windowMs: number) {
 export function rateLimit(
   options: RateLimitOptions,
 ): MiddlewareHandler<{ Bindings: Bindings }> {
-  const { limit, windowMs, keyPrefix = 'rl' } = options;
+  const { limit, windowMs, keyPrefix = 'rl', keyBy = 'ip' } = options;
 
   return async (c, next) => {
     const ip =
       c.req.header('cf-connecting-ip') ??
       c.req.header('x-forwarded-for') ??
       'unknown';
+    const userId = keyBy === 'user' ? (c as unknown as { get(k: string): unknown }).get('userId') : undefined;
+    const subject = typeof userId === 'string' && userId ? `u:${userId}` : ip;
     const path = new URL(c.req.url).pathname;
     const { windowId, ttlSec } = computeRateLimitWindow(Date.now(), windowMs);
-    const key = `rl:${keyPrefix}:${path}:${ip}:${windowId}`;
+    const key = `rl:${keyPrefix}:${path}:${subject}:${windowId}`;
 
     const current = await c.env.KV.get(key);
     const count = current ? parseInt(current, 10) : 0;

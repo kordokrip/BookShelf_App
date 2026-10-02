@@ -27,6 +27,11 @@ CREATE TABLE IF NOT EXISTS users (
   favorite_genres TEXT NOT NULL DEFAULT '[]',
   reading_goal    INTEGER NOT NULL DEFAULT 12,
   role            TEXT NOT NULL DEFAULT 'user',
+  reminder_time         TEXT    NOT NULL DEFAULT '17:00',   -- 0014
+  reminder_enabled      INTEGER NOT NULL DEFAULT 1,         -- 0014
+  weekly_report_enabled INTEGER NOT NULL DEFAULT 1,         -- 0014
+  theme_accent    TEXT,                                     -- 0017: indigo|ocean|forest|sunset|rose|graphite
+  theme_mode      TEXT,                                     -- 0017: auto|light|dark
   created_at      TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );

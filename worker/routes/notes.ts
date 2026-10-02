@@ -4,6 +4,7 @@
  * GET    /api/notes/export    — 노트 마크다운 파일 내보내기 (book_id 필터 가능)
  * GET    /api/notes           — 노트 목록 조회 (book_id, type, search, tag 필터 + FTS5 전문검색)
  * GET    /api/notes/random    — 오늘의 회고 노트 1건 (사용자·KST 날짜별 결정적 선택, 없으면 null)
+ * GET    /api/notes/daily-quote — 오늘의 문장 카드 (내 quote 노트 또는 AI 대표 문장, 하루 고정 KV 캐시)
  * POST   /api/notes           — 노트 생성
  * PUT    /api/notes/:id       — 노트 수정 (end_page는 page_number 이상)
  * DELETE /api/notes/:id       — 노트 삭제
@@ -21,6 +22,12 @@ import { logActivity } from './admin';
 import { validatePageRange, formatPageRange, kstDateString, pickDailyIndex } from '../lib/noteHelpers';
 import { shouldTag } from '../lib/noteTags';
 import { tagNote } from '../lib/noteTagger';
+import { generateText, OPENROUTER_BACKGROUND_BUDGET } from '../lib/openrouter';
+import { extractJsonObject } from '../lib/aiRecommend';
+import {
+  DAILY_QUOTE_FALLBACK_TTL_SEC, DAILY_QUOTE_TTL_SEC, buildQuoteMessages, chooseSource, dailyQuoteCacheKey,
+  pickQuoteBook, validateQuote, type QuoteBook,
+} from '../lib/dailyQuote';
 
 export const notesRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -255,6 +262,88 @@ notesRouter.get('/random', authMiddleware, async (c) => {
   ).bind(userId, index).first();
 
   return c.json({ data: note ?? null });
+});
+
+// ─── GET /api/notes/daily-quote ──────────────────────────────
+// 오늘의 문장: 사용자·KST 날짜별 하루 고정 카드. 출처는 FNV 해시로 결정 — 내 quote 노트('note') 또는
+// AI가 완독한 책에서 소개하는 대표 문장('ai'). AI는 인용구 환각 위험 때문에 Gemma 전용(Workers AI 폴백 없음).
+// 두 출처 모두 KV에 캐시(26h)해 하루 동안 카드가 바뀌지 않는다. /:id 보다 앞에 선언.
+notesRouter.get('/daily-quote', authMiddleware, async (c) => {
+  const userId = c.get('userId');
+  const date = kstDateString(Date.now());
+  const cacheKey = dailyQuoteCacheKey(userId, date);
+
+  const cached = await c.env.KV.get(cacheKey);
+  if (cached) {
+    try {
+      return c.json({ data: JSON.parse(cached), date });
+    } catch { /* 손상된 캐시는 재생성 */ }
+  }
+
+  const noteSelect = `SELECT n.*, b.title AS book_title, b.author AS book_author,
+            b.cover_image AS book_cover_image, b.cover_color AS book_cover_color
+     FROM notes n JOIN books b ON b.id = n.book_id`;
+  const pickNote = async (onlyQuotes: boolean) => {
+    const where = onlyQuotes ? "WHERE n.user_id = ? AND n.type = 'quote'" : 'WHERE n.user_id = ?';
+    const countRow = await c.env.DB.prepare(`SELECT COUNT(*) AS total FROM notes n ${where}`)
+      .bind(userId).first<{ total: number }>();
+    const total = countRow?.total ?? 0;
+    const index = pickDailyIndex(userId, date, total);
+    if (index === null) return { total, note: null };
+    const note = await c.env.DB.prepare(`${noteSelect} ${where} ORDER BY n.created_at ASC, n.id ASC LIMIT 1 OFFSET ?`)
+      .bind(userId, index).first();
+    return { total, note: note ?? null };
+  };
+  const remember = (data: unknown, ttl: number) =>
+    c.env.KV.put(cacheKey, JSON.stringify(data), { expirationTtl: ttl }).catch(() => undefined);
+
+  // 내 quote 노트가 있고 오늘이 'note' 날이면 본인 문장
+  const quoteNotes = await pickNote(true);
+  if (chooseSource(userId, date, quoteNotes.total) === 'note' && quoteNotes.note) {
+    const data = { source: 'note', note: quoteNotes.note };
+    await remember(data, DAILY_QUOTE_TTL_SEC);
+    return c.json({ data, date });
+  }
+
+  // AI: 완독한 책 한 권을 날짜별로 고르고 대표 문장을 받는다
+  try {
+    const { results } = await c.env.DB.prepare(
+      `SELECT id, title, author, genre, cover_image, cover_color FROM books
+       WHERE user_id = ? AND status = 'done' ORDER BY created_at ASC, id ASC LIMIT 500`,
+    ).bind(userId).all<QuoteBook>();
+    const book = pickQuoteBook(userId, date, results ?? []);
+    // 같은 사용자의 동시 요청(탭 두 개 등)이 모델을 두 번 부르지 않도록 짧은 잠금
+    const lockKey = `daily_quote_lock:${userId}:${date}`;
+    const locked = book ? await c.env.KV.get(lockKey) : null;
+    if (book && !locked) {
+      await c.env.KV.put(lockKey, '1', { expirationTtl: 60 }).catch(() => undefined);
+      const { text } = await generateText(
+        c.env,
+        // 서재 첫 화면이 이 응답을 기다리므로 타임아웃을 짧게 — 실패하면 노트로 대체된다
+        { messages: buildQuoteMessages(book), maxTokens: 700, temperature: 0.3, json: true, timeoutMs: 8_000, budgetCap: OPENROUTER_BACKGROUND_BUDGET },
+        { fallback: 'none' },
+      );
+      const quote = validateQuote(extractJsonObject(text));
+      if (quote) {
+        const data = {
+          source: 'ai', text: quote.text, context: quote.context,
+          book: { id: book.id, title: book.title, author: book.author, cover_image: book.cover_image, cover_color: book.cover_color },
+          provider: 'openrouter', disclaimer: true,
+        };
+        await remember(data, DAILY_QUOTE_TTL_SEC);
+        return c.json({ data, date });
+      }
+    }
+  } catch (err) {
+    console.warn('[daily-quote] AI 실패 → 노트로 대체:', err instanceof Error ? err.message : err);
+  }
+
+  // 대체: 아무 노트(/random과 같은 선택) — 일시 장애일 수 있으니 짧게만 캐시
+  const fallback = quoteNotes.note ? quoteNotes : await pickNote(false);
+  if (!fallback.note) return c.json({ data: null, date });
+  const data = { source: 'note', note: fallback.note };
+  await remember(data, DAILY_QUOTE_FALLBACK_TTL_SEC);
+  return c.json({ data, date });
 });
 
 // ─── GET /api/notes/:id ──────────────────────────────────────

@@ -42,6 +42,8 @@ export interface DbUser {
   reminder_time: string;         // "HH:MM" 15분 단위, DEFAULT '17:00'
   reminder_enabled: number;      // 0 | 1
   weekly_report_enabled: number; // 0 | 1
+  theme_accent: string | null;   // 'indigo'|'ocean'|'forest'|'sunset'|'rose'|'graphite' (0017)
+  theme_mode: string | null;     // 'auto'|'light'|'dark' (0017)
   created_at: string;
   updated_at: string;
 }
@@ -156,4 +158,6 @@ export interface Bindings {
   VAPID_SUBJECT?: string;      // 'mailto:admin@example.com'
   // 알라딘 오픈API (선택 - wrangler secret put ALADIN_TTB_KEY)
   ALADIN_TTB_KEY?: string;     // 알라딘 TTB API 키 (실제 베스트셀러 순위 조회용)
+  // OpenRouter 무료 Gemma (wrangler secret put OPENROUTER_API_KEY) — AI 요약·인생책·오늘의 문장
+  OPENROUTER_API_KEY?: string;
 }
