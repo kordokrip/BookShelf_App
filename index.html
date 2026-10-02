@@ -12,10 +12,10 @@
       <meta name="application-name" content="BookShelf" />
       <meta name="apple-mobile-web-app-title" content="BookShelf" />
       <meta name="color-scheme" content="light dark" />
-      <!-- 다크/라이트 모드 theme-color 분기 -->
+      <!-- theme-color: 개인 테마(강조색·화면 모드)에 따라 아래 pre-paint 스크립트와 applyTheme이 갱신 -->
       <meta name="theme-color" content="#4F46E5" />
-      <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-      <meta name="theme-color" content="#0F172A" media="(prefers-color-scheme: dark)" />
+      <!-- pre-paint: CSS 로드 전에 강조색·다크 클래스를 적용해 테마 깜빡임 방지 (규칙은 src/lib/applyTheme.ts와 동일) -->
+      <script>(function(){try{var d=document.documentElement,a=localStorage.getItem('themeAccent'),m=localStorage.getItem('themeMode'),H={indigo:'#4F46E5',ocean:'#2563EB',forest:'#047857',sunset:'#C2410C',rose:'#BE185D',graphite:'#334155'};if(!Object.prototype.hasOwnProperty.call(H,a))a='indigo';var h=new Date().getHours(),k=m==='dark'||(m!=='light'&&(h<6||h>=18));d.dataset.accent=a;if(k)d.classList.add('dark');document.querySelector('meta[name=theme-color]').content=k?'#0F172A':H[a]}catch(e){}})();</script>
       <meta name="description" content="독서 기록, 읽는 중, 위시리스트를 한 곳에서 관리하는 개인 독서 트래커" />
 
       <!-- PWA -->

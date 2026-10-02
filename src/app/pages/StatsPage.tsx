@@ -4,10 +4,10 @@
  * - 장르 분포도넛, 연속 읽기 스트릭
  * - 연간 리뷰 페이지 링크
  */
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router";
-import { BookMarked, BookOpen, Sparkles, FileText, Target, ChevronRight, Download, CalendarRange, CalendarDays } from "lucide-react";
-import { SummaryCard, MonthlyBarChart, GenreDonutChart, ReadingHeatmap, StreakCard, ReadingCalendar } from "../components/stats/StatsComponents";
+import { BookMarked, BookOpen, Sparkles, FileText, Target, ChevronRight, Download, CalendarRange, CalendarDays, Share2, Copy, Loader2 } from "lucide-react";
+import { SummaryCard, MonthlyBarChart, GenreDonutChart, ReadingHeatmap, StreakCard, ReadingCalendar, calcReadingStreak } from "../components/stats/StatsComponents";
 import { StatCardSkeleton, ChartSkeleton } from "../components/ui/skeleton";
 import { useStats } from "../../hooks/useStats";
 import { useBooks } from "../../hooks/useBooks";
@@ -17,6 +17,8 @@ import type { UISession } from "../../types/book";
 import { GENRE_CONFIG } from "../../types/book";
 import { useAuthStore } from "../../stores/authStore";
 import { statsApi } from "../../lib/api";
+import { collectShareData, shareStatsImage, copyStatsSummary } from "../../lib/statsShareImage";
+import { useToast } from "../components/ui/Toast";
 
 /* ─── 장르별 색상 매핑 (GENRE_CONFIG 기반 — 19종 전체 커버) */
 const GENRE_COLORS: Record<string, string> = Object.fromEntries(
@@ -94,6 +96,33 @@ export function StatsPage() {
     () => buildSyntheticSessions(stats?.sessionDates ?? []),
     [stats?.sessionDates],
   );
+
+  const { showToast } = useToast();
+  const [sharing, setSharing] = useState(false);
+
+  /** 내 통계 이미지 공유 (Web Share → 불가 시 PNG 다운로드) */
+  const handleShareStats = async () => {
+    if (sharing) return;
+    setSharing(true);
+    try {
+      const data = collectShareData(doneBooks, new Date().getFullYear(), calcReadingStreak(syntheticSessions));
+      const result = await shareStatsImage(data);
+      if (result === 'downloaded') showToast("통계 이미지를 저장했어요.", "success");
+    } catch {
+      showToast("통계 이미지를 만들지 못했어요. 다시 시도해주세요.", "error");
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const handleCopySummary = async () => {
+    try {
+      await copyStatsSummary(collectShareData(doneBooks, new Date().getFullYear(), calcReadingStreak(syntheticSessions)));
+      showToast("요약을 복사했어요.", "success");
+    } catch {
+      showToast("복사하지 못했어요. 브라우저 권한을 확인해주세요.", "error");
+    }
+  };
 
   const totalDone = stats?.statusCounts.done ?? 0;
   const totalReading = stats?.statusCounts.reading ?? 0;
@@ -325,8 +354,32 @@ export function StatsPage() {
             />
           </div>
 
+          {/* 내 통계 공유 */}
+          <div className="px-4 mt-4 flex gap-2">
+            <button
+              type="button"
+              onClick={handleShareStats}
+              disabled={sharing}
+              aria-busy={sharing}
+              className="flex-1 flex items-center justify-center gap-2 rounded-2xl py-3 text-white disabled:opacity-70 transition-opacity"
+              style={{ fontSize: 14, fontWeight: 700, background: "linear-gradient(135deg, var(--brand-600) 0%, var(--brand2-600) 100%)" }}
+            >
+              {sharing ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Share2 size={16} aria-hidden />}
+              {sharing ? "이미지 만드는 중..." : "내 통계 공유"}
+            </button>
+            <button
+              type="button"
+              onClick={handleCopySummary}
+              className="flex items-center justify-center gap-2 rounded-2xl px-4 py-3 border border-[#E2E8F0] dark:border-[#334155] bg-white dark:bg-[#1E293B] hover:bg-[#F8FAFC] transition-colors"
+              style={{ fontSize: 14, fontWeight: 600, color: "var(--text-accent)" }}
+            >
+              <Copy size={16} aria-hidden />
+              요약 복사
+            </button>
+          </div>
+
           {/* CSV Export */}
-          <div className="px-4 mt-4">
+          <div className="px-4 mt-3">
             <button
               onClick={async () => {
                 try {

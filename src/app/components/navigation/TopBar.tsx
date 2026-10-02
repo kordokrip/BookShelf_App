@@ -21,7 +21,7 @@ const pageTitles: Record<string, string> = {
   '/reading': '읽는 중',
   '/wishlist': '책 추천',
   '/stats': '독서 통계',
-  '/design-system': '디자인 시스템',
+  '/settings/appearance': '앱 디자인',
   '/notes-search': '노트 & 검색',
   '/groups': '독서 모임',
   '/admin': '관리자 대시보드',

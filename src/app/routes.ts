@@ -37,7 +37,7 @@ const LazyStatsPage       = makeLazy(() => import("./pages/StatsPage"),       "S
 const LazyBookDetailPage  = makeLazy(() => import("./pages/BookDetailPage"),  "BookDetailPage");
 const LazyNotesSearchPage = makeLazy(() => import("./pages/NotesSearchPage"), "NotesSearchPage");
 const LazyRegisterFlowPage= makeLazy(() => import("./pages/RegisterFlowPage"),"RegisterFlowPage");
-const LazyDesignSystemPage= makeLazy(() => import("./pages/DesignSystemPage"),"DesignSystemPage");
+const LazyAppearancePage  = makeLazy(() => import("./pages/AppearancePage"),  "AppearancePage");
 const LazyOnboardingPage  = makeLazy(() => import("./pages/OnboardingPage"),  "OnboardingPage");
 const LazyLoginPage       = makeLazy(() => import("./pages/LoginPage"),       "LoginPage");
 const LazySignUpPage      = makeLazy(() => import("./pages/SignUpPage"),      "SignUpPage");
@@ -46,7 +46,6 @@ const LazyNotFoundPage    = makeLazy(() => import("./pages/NotFoundPage"),    "N
 const LazyYearlyReviewPage = makeLazy(() => import("./pages/YearlyReviewPage"), "YearlyReviewPage");
 const LazyCollectionsPage = makeLazy(() => import("./pages/CollectionsPage"), "CollectionsPage");
 const LazyGroupsPage      = makeLazy(() => import("./pages/GroupsPage"),       "GroupsPage");
-const LazySharePage       = makeLazy(() => import("./pages/SharePage"),        "SharePage");
 const LazyAdminPage       = makeLazy(() => import("./pages/AdminPage"),        "AdminPage");
 const LazyLifeBooksPage   = makeLazy(() => import("./pages/LifeBooksPage"),    "LifeBooksPage");
 
@@ -128,12 +127,13 @@ export const router = createBrowserRouter([
       { path: "reading", Component: protected_(withSuspense(LazyReadingPage, "독서 로딩 중...")), ErrorBoundary: EB },
       { path: "wishlist", Component: protected_(withSuspense(LazyWishlistPage, "위시리스트 로딩 중...")), ErrorBoundary: EB },
       { path: "stats", Component: protected_(withSuspense(LazyStatsPage, "통계 로딩 중...")), ErrorBoundary: EB },
-      { path: "design-system", Component: protected_(withSuspense(LazyDesignSystemPage)), ErrorBoundary: EB },
+      { path: "settings/appearance", Component: protected_(withSuspense(LazyAppearancePage, "앱 디자인 로딩 중...")), ErrorBoundary: EB },
+      { path: "design-system", element: createElement(Navigate, { to: "/settings/appearance", replace: true }) },
       { path: "book/:id", Component: protected_(withSuspense(LazyBookDetailPage, "책 상세 로딩 중...")), ErrorBoundary: EB },
       { path: "yearly-review", Component: protected_(withSuspense(LazyYearlyReviewPage, "연간 결산 로딩 중...")), ErrorBoundary: EB },
       { path: "collections", Component: protected_(withSuspense(LazyCollectionsPage, "컬렉션 로딩 중...")), ErrorBoundary: EB },
       { path: "groups", Component: protected_(withSuspense(LazyGroupsPage, "독서 모임 로딩 중...")), ErrorBoundary: EB },
-      { path: "share", Component: protected_(withSuspense(LazySharePage, "공유 로딩 중...")), ErrorBoundary: EB },
+      { path: "share", Component: () => createElement(Navigate, { to: "/stats", replace: true }) }, // 공유 보고서 폐지 → 통계 공유로 대체
       { path: "admin", Component: protected_(withSuspense(LazyAdminPage, "관리자 페이지 로딩 중...")), ErrorBoundary: EB },
       { path: "lifebooks", Component: protected_(withSuspense(LazyLifeBooksPage, "인생책 로딩 중...")), ErrorBoundary: EB },
     ],

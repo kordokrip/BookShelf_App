@@ -1,5 +1,5 @@
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { groupsApi, shareApi, notificationsApi, queryKeys } from '../lib/api';
+import { groupsApi, notificationsApi, queryKeys } from '../lib/api';
 
 // ═══════════════════════════════════════════════════════════════
 // Groups Hooks
@@ -259,54 +259,6 @@ export function useMarkAllNotificationsRead() {
     mutationFn: () => notificationsApi.markAllRead(),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.notifications.all });
-    },
-  });
-}
-
-// ═══════════════════════════════════════════════════════════════
-// Share Hooks
-// ═══════════════════════════════════════════════════════════════
-
-export function useShareInbox() {
-  return useQuery({
-    queryKey: queryKeys.share.inbox(),
-    queryFn: () => shareApi.getInbox(),
-    select: (res) => res.data,
-  });
-}
-
-export function useShareSent() {
-  return useQuery({
-    queryKey: queryKeys.share.sent(),
-    queryFn: () => shareApi.getSent(),
-    select: (res) => res.data,
-  });
-}
-
-export function useShareUnreadCount() {
-  return useQuery({
-    queryKey: queryKeys.share.unread(),
-    queryFn: () => shareApi.getUnreadCount(),
-    select: (res) => res.data.count,
-    refetchInterval: 30_000,
-  });
-}
-
-export function useShareReport() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: shareApi.shareReport,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.share.sent() }); },
-  });
-}
-
-export function useMarkReportRead() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => shareApi.markRead(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.share.inbox() });
-      qc.invalidateQueries({ queryKey: queryKeys.share.unread() });
     },
   });
 }

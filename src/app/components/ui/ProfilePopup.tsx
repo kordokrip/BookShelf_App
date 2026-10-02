@@ -8,7 +8,7 @@
  */
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogOut, X, Camera, Sun, Moon, Clock } from "lucide-react";
+import { LogOut, X, Camera, Sun, Moon, Clock, Palette, ChevronRight } from "lucide-react";
 import { useAuthStore, type AuthUser } from "../../../stores/authStore";
 import { useUiStore } from "../../../stores/uiStore";
 import { usersApi } from "../../../lib/api";
@@ -353,6 +353,18 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
             {themeMode === 'auto' ? <Clock size={18} /> : themeMode === 'light' ? <Sun size={18} /> : <Moon size={18} />}
           </button>
         </div>
+
+        {/* 앱 디자인 (강조색·화면 모드) */}
+        <button
+          onClick={() => { onClose(); navigate("/settings/appearance"); }}
+          className="w-full min-h-[44px] flex items-center justify-between rounded-xl px-1 text-left hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors"
+        >
+          <span className="flex items-center gap-2 text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 13 }}>
+            <Palette size={18} className="text-indigo-600 dark:text-indigo-300" aria-hidden="true" />
+            앱 디자인
+          </span>
+          <ChevronRight size={16} className="text-[#64748B] dark:text-[#94A3B8]" aria-hidden="true" />
+        </button>
 
         {/* 알림 설정 */}
         <div className="rounded-xl border border-[#E2E8F0] dark:border-[#475569] p-3 space-y-2">

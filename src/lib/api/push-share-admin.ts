@@ -33,43 +33,6 @@ export const pushApi = {
     }>('/api/push/debug'),
 };
 
-// ─── Share API ────────────────────────────────────────────────
-
-export interface SharedReport {
-  id: string;
-  sender_id: string;
-  recipient_id: string;
-  sender_name?: string;
-  sender_email?: string;
-  sender_avatar?: string | null;
-  sender_emoji?: string | null;
-  recipient_name?: string;
-  recipient_email?: string;
-  report_data: string;
-  message: string | null;
-  is_read: number;
-  created_at: string;
-}
-
-export const shareApi = {
-  shareReport: (data: { recipient_email: string; message?: string }) =>
-    apiFetch<{ data: { id: string; shared: boolean } }>('/api/share/report', {
-      method: 'POST', body: JSON.stringify(data),
-    }),
-
-  getInbox: () =>
-    apiFetch<{ data: SharedReport[] }>('/api/share/inbox'),
-
-  getSent: () =>
-    apiFetch<{ data: SharedReport[] }>('/api/share/sent'),
-
-  markRead: (id: string) =>
-    apiFetch<{ data: { read: boolean } }>(`/api/share/${id}/read`, { method: 'PATCH' }),
-
-  getUnreadCount: () =>
-    apiFetch<{ data: { count: number } }>('/api/share/unread-count'),
-};
-
 // ─── Admin API ────────────────────────────────────────────────
 
 export interface AdminStats {

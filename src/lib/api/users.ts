@@ -49,6 +49,9 @@ export const usersApi = {
     reminder_time?: string;
     reminder_enabled?: boolean;
     weekly_report_enabled?: boolean;
+    /** 개인 앱 테마 — 강조색 프리셋 id / 화면 모드 (null = 기기 설정 따름) */
+    theme_accent?: string | null;
+    theme_mode?: 'auto' | 'light' | 'dark' | null;
   }) =>
     apiFetch<{ data: unknown }>('/api/users/profile', {
       method: 'PATCH',

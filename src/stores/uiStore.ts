@@ -5,11 +5,40 @@
 
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
+import { getTimeBasedTheme, isThemeMode, normalizeAccent, type ThemeMode } from '../lib/applyTheme';
+import { DEFAULT_ACCENT, isAccentId as isAccentIdValue, type AccentId } from '../lib/themePresets';
 
-/** 현재 시각 기반 테마 결정: 06:00 ~ 18:00 = light, 그 외 = dark */
-export function getTimeBasedTheme(): 'light' | 'dark' {
-  const h = new Date().getHours();
-  return h >= 6 && h < 18 ? 'light' : 'dark';
+// 기존 import 경로 호환 (App.tsx 등)
+export { getTimeBasedTheme };
+
+/** 테마 변경을 서버에 저장하는 핸들러 — lib/themeSync가 등록 (순환 import 방지) */
+let themePersistHandler: ((prefs: { theme_accent?: AccentId; theme_mode?: ThemeMode }) => void) | null = null;
+export function setThemePersistHandler(fn: typeof themePersistHandler) {
+  themePersistHandler = fn;
+}
+
+/** 서버 저장이 실패해 기기 값이 서버보다 새로움을 표시하는 키 — 다음 프로필 조회 때 서버로 다시 올린다 */
+export const THEME_UNSYNCED_KEY = 'themeUnsynced';
+/** 이 기기에서 마지막으로 테마를 바꾼 시각 — 그보다 먼저 출발한 프로필 응답이 새 선택을 덮지 않게 */
+let localThemeChangedAt = 0;
+const markLocalThemeChange = () => { localThemeChangedAt = Date.now(); };
+
+function readStored(key: string): string | null {
+  try { return typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null; } catch { return null; }
+}
+function writeStored(key: string, value: string) {
+  try { localStorage.setItem(key, value); } catch { /* 저장 불가 환경은 무시 */ }
+}
+
+/** 저장된 화면 모드 (잘못된 값 → auto) */
+export function loadThemeMode(): ThemeMode {
+  const v = readStored('themeMode');
+  return isThemeMode(v) ? v : 'auto';
+}
+/** 저장된 강조색 (잘못된 값 → 기본 indigo) */
+export function loadAccent(): AccentId {
+  const v = readStored('themeAccent');
+  return v === null ? DEFAULT_ACCENT : normalizeAccent(v);
 }
 
 // ─── 알림 타입 ──────────────────────────────────────────────
@@ -103,8 +132,16 @@ interface UiState {
   setActiveTab: (tab: string) => void;
 
   // 테마 모드 (auto = 시간 기반 자동, light/dark = 수동 고정)
-  themeMode: 'auto' | 'light' | 'dark';
+  themeMode: ThemeMode;
   cycleThemeMode: () => void;
+  setThemeMode: (mode: ThemeMode) => void;
+
+  // 개인 앱 테마 강조색 (localStorage 'themeAccent' 영속)
+  accent: AccentId;
+  setAccent: (accent: AccentId) => void;
+  /** 서버 프로필의 테마 값을 반영 (null/잘못된 값은 무시 → 기기 값 유지) */
+  /** 프로필 응답의 테마를 기기에 반영. requestedAt: 그 요청을 보낸 시각(이후의 기기 변경이 우선) */
+  applyServerTheme: (server: { theme_accent?: unknown; theme_mode?: unknown } | null | undefined, requestedAt?: number) => void;
 
   // 프로필 팝업 (TopBar 아바타·SideNav 설정 버튼이 공유)
   profilePopupOpen: boolean;
@@ -187,17 +224,51 @@ export const useUiStore = create<UiState>()(
         set({ activeTab: tab }, false, 'ui/setActiveTab'),
 
       // 테마 모드 (localStorage 영속, 기본값: 'auto' = 시간 기반 자동 전환)
-      themeMode: (typeof localStorage !== 'undefined'
-        ? (localStorage.getItem('themeMode') as 'auto' | 'light' | 'dark' | null) ?? 'auto'
-        : 'auto'),
-      cycleThemeMode: () =>
-        set((s) => {
-          const order: ('auto' | 'light' | 'dark')[] = ['auto', 'light', 'dark'];
-          const currentIndex = order.indexOf(s.themeMode);
-          const next = order[(currentIndex + 1) % order.length] ?? 'auto';
-          localStorage.setItem('themeMode', next);
-          return { themeMode: next };
-        }, false, 'ui/cycleThemeMode'),
+      themeMode: loadThemeMode(),
+      cycleThemeMode: () => {
+        const order: ThemeMode[] = ['auto', 'light', 'dark'];
+        const cur = useUiStore.getState().themeMode;
+        const next = order[(order.indexOf(cur) + 1) % order.length] ?? 'auto';
+        writeStored('themeMode', next);
+        markLocalThemeChange();
+        set({ themeMode: next }, false, 'ui/cycleThemeMode');
+        themePersistHandler?.({ theme_mode: next });
+      },
+      setThemeMode: (mode) => {
+        if (!isThemeMode(mode)) return;
+        writeStored('themeMode', mode);
+        markLocalThemeChange();
+        set({ themeMode: mode }, false, 'ui/setThemeMode');
+      },
+
+      accent: loadAccent(),
+      setAccent: (accent) => {
+        const next = normalizeAccent(accent);
+        writeStored('themeAccent', next);
+        markLocalThemeChange();
+        set({ accent: next }, false, 'ui/setAccent');
+      },
+      applyServerTheme: (server, requestedAt) => {
+        if (!server) return;
+        // 요청이 출발한 뒤 이 기기에서 테마를 바꿨다면 그 선택이 더 새롭다
+        if (requestedAt !== undefined && localThemeChangedAt > requestedAt) return;
+        // 지난 저장이 실패했다면 서버 값이 낡았다 — 기기 값을 서버로 다시 올린다
+        if (readStored(THEME_UNSYNCED_KEY) === '1') {
+          const { accent, themeMode } = useUiStore.getState();
+          themePersistHandler?.({ theme_accent: accent, theme_mode: themeMode });
+          return;
+        }
+        const patch: Partial<{ accent: AccentId; themeMode: ThemeMode }> = {};
+        if (typeof server.theme_accent === 'string' && isAccentIdValue(server.theme_accent)) {
+          patch.accent = server.theme_accent;
+          writeStored('themeAccent', server.theme_accent);
+        }
+        if (isThemeMode(server.theme_mode)) {
+          patch.themeMode = server.theme_mode;
+          writeStored('themeMode', server.theme_mode);
+        }
+        if (Object.keys(patch).length > 0) set(patch, false, 'ui/applyServerTheme');
+      },
 
       profilePopupOpen: false,
       setProfilePopupOpen: (open) => set({ profilePopupOpen: open }, false, 'ui/setProfilePopupOpen'),

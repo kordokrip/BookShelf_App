@@ -4,7 +4,7 @@
  * - 상위 장르 / 최다 읽은 달 통계
  * - 이미지 공유 옵션
  */
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useBack } from "../../hooks/useBack";
 import { ChevronLeft, Share2, BookMarked, FileText, Clock, Flame, Star, Trophy } from "lucide-react";
@@ -13,6 +13,9 @@ import { useBooks } from "../../hooks/useBooks";
 import { BookStack } from "../components/stats/BookStack";
 import { useAuthStore } from "../../stores/authStore";
 import { GENRE_CONFIG } from "../../types/book";
+import { collectShareData, shareStatsImage, copyStatsSummary } from "../../lib/statsShareImage";
+import { calcReadingStreak } from "../components/stats/StatsComponents";
+import { useToast } from "../components/ui/Toast";
 
 const YEAR = new Date().getFullYear();
 const MONTH_LABELS = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
@@ -116,12 +119,29 @@ export function YearlyReviewPage() {
     return rated.reduce((best, b) => ((b.rating ?? 0) > (best.rating ?? 0) ? b : best));
   }, [allBooks]);
 
+  const { showToast } = useToast();
+  const [sharing, setSharing] = useState(false);
+
+  // 통계 페이지와 동일한 이미지 공유 (Web Share → PNG 다운로드 → 실패 시 텍스트 복사)
   const handleShare = async () => {
-    const text = `📖 ${YEAR}년 독서 결산\n완독 ${totalDone}권 · ${totalPages.toLocaleString()}페이지 · ${totalHours}시간\n${topGenre ? `좋아하는 장르: ${topGenre.genre}` : ""}\n#BookShelf #독서기록`;
-    if (navigator.share) {
-      try { await navigator.share({ title: `${YEAR}년 독서 결산`, text }); } catch { /* 취소 */ }
-    } else {
-      await navigator.clipboard.writeText(text);
+    if (sharing) return;
+    setSharing(true);
+    const sessions = (stats?.sessionDates ?? []).map((d) => ({
+      id: d, bookId: "", userId: "", pagesRead: 1, sessionDate: d, createdAt: d,
+    }));
+    const data = collectShareData(allBooks, YEAR, calcReadingStreak(sessions));
+    try {
+      const result = await shareStatsImage(data);
+      if (result === "downloaded") showToast("결산 이미지를 저장했어요.", "success");
+    } catch {
+      try {
+        await copyStatsSummary(data);
+        showToast("이미지를 만들지 못해 요약을 복사했어요.", "info");
+      } catch {
+        showToast("공유하지 못했어요. 다시 시도해주세요.", "error");
+      }
+    } finally {
+      setSharing(false);
     }
   };
 
@@ -139,7 +159,9 @@ export function YearlyReviewPage() {
         </button>
         <button
           onClick={handleShare}
-          className="flex items-center gap-1.5 rounded-full px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
+          disabled={sharing}
+          aria-busy={sharing}
+          className="disabled:opacity-60 flex items-center gap-1.5 rounded-full px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
           style={{ fontSize: 13, fontWeight: 600 }}
         >
           <Share2 size={14} />

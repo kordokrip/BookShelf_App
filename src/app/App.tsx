@@ -4,7 +4,9 @@ import { initVitals } from "../lib/vitals";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { queryClient, persister } from "../lib/queryClient";
 import { useAuthStore } from "../stores/authStore";
-import { useUiStore, getTimeBasedTheme } from "../stores/uiStore";
+import { useUiStore } from "../stores/uiStore";
+import { applyTheme } from "../lib/applyTheme";
+import "../lib/themeSync";
 import { useViewport } from "../hooks/useViewport";
 import { router } from "./routes";
 import { ToastProvider, useToast } from "./components/ui/Toast";
@@ -14,25 +16,20 @@ import { TooltipProvider } from "./components/ui/tooltip";
 export default function App() {
   const checkAuth = useAuthStore((s) => s.checkAuth);
   const themeMode = useUiStore((s) => s.themeMode);
+  const accent = useUiStore((s) => s.accent);
   // 실제 디바이스 뷰포트 크기를 CSS 변수로 주입 (iOS Safari, Android Chrome 대응)
   useViewport();
 
   // Web Vitals 수집 — 앱 초기화 시 한 번만 등록 (20% 샘플링)
   useEffect(() => { initVitals(); }, []);
 
-  // 다크모드 class 적용 (auto: 시간 기반 자동, 1분마다 갱신)
+  // 개인 테마 적용: 강조색(data-accent) + 다크 class + theme-color 메타 (auto: 시간 기반, 1분마다 갱신)
   useEffect(() => {
-    function applyTheme() {
-      const isDark =
-        themeMode === 'dark' ||
-        (themeMode === 'auto' && getTimeBasedTheme() === 'dark');
-      document.documentElement.classList.toggle('dark', isDark);
-    }
-    applyTheme();
+    applyTheme(accent, themeMode);
     if (themeMode !== 'auto') return;
-    const id = setInterval(applyTheme, 60_000);
+    const id = setInterval(() => applyTheme(accent, themeMode), 60_000);
     return () => clearInterval(id);
-  }, [themeMode]);
+  }, [themeMode, accent]);
 
   useEffect(() => {
     // OAuth 콜백 후 /?token=xxx&refreshToken=yyy&provider=google 파라미터 처리

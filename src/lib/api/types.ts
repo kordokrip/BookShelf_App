@@ -35,6 +35,8 @@ export interface User {
   reminder_time?: string;
   reminder_enabled?: number;
   weekly_report_enabled?: number;
+  theme_accent?: string | null;
+  theme_mode?: 'auto' | 'light' | 'dark' | null;
 }
 
 export interface ReadingSession {

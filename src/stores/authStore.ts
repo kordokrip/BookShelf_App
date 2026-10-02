@@ -25,6 +25,9 @@ export interface AuthUser {
   reminder_time?: string;
   reminder_enabled?: number;
   weekly_report_enabled?: number;
+  /** 개인 앱 테마 (서버 저장값, 없으면 null) */
+  theme_accent?: string | null;
+  theme_mode?: 'auto' | 'light' | 'dark' | null;
 }
 
 type AuthStatus = 'idle' | 'authenticated' | 'unauthenticated';
@@ -60,6 +63,7 @@ export const useAuthStore = create<AuthState>()(
 
       login: async (email, password) => {
         set({ isLoading: true, error: null }, false, 'auth/login:start');
+        const requestedAt = Date.now();
         try {
           const res = await usersApi.login({ email, password });
           localStorage.setItem(TOKEN_KEY, res.data.token);
@@ -73,6 +77,8 @@ export const useAuthStore = create<AuthState>()(
             role?: string;
             created_at?: string;
             profile_emoji?: string | null;
+            theme_accent?: string | null;
+            theme_mode?: 'auto' | 'light' | 'dark' | null;
           };
           const favoriteGenres =
             typeof raw.favorite_genres === 'string'
@@ -90,6 +96,8 @@ export const useAuthStore = create<AuthState>()(
                 favorite_genres: favoriteGenres,
                 reading_goal: raw.reading_goal,
                 created_at: raw.created_at,
+                theme_accent: raw.theme_accent ?? null,
+                theme_mode: raw.theme_mode ?? null,
               },
               status: 'authenticated',
               isLoading: false,
@@ -98,6 +106,8 @@ export const useAuthStore = create<AuthState>()(
             false,
             'auth/login:success',
           );
+          // 서버에 저장된 개인 테마가 있으면 기기 값보다 우선 (로그인 = 서버 우선)
+          useUiStore.getState().applyServerTheme(raw, requestedAt);
         } catch (e) {
           const message =
             e instanceof ApiError ? e.message : '로그인에 실패했습니다.';
@@ -154,9 +164,10 @@ export const useAuthStore = create<AuthState>()(
         }
 
         set({ isLoading: true }, false, 'auth/check:start');
+        const requestedAt = Date.now();
         try {
           const res = await usersApi.getProfile();
-          const raw = res.data as AuthUser & { favorite_genres?: string | string[]; role?: string; created_at?: string; profile_emoji?: string | null; reminder_time?: string; reminder_enabled?: number; weekly_report_enabled?: number };
+          const raw = res.data as AuthUser & { favorite_genres?: string | string[]; role?: string; created_at?: string; profile_emoji?: string | null; reminder_time?: string; reminder_enabled?: number; weekly_report_enabled?: number; theme_accent?: string | null; theme_mode?: 'auto' | 'light' | 'dark' | null };
           const favoriteGenres =
             typeof raw.favorite_genres === 'string'
               ? (JSON.parse(raw.favorite_genres || '[]') as string[])
@@ -176,6 +187,8 @@ export const useAuthStore = create<AuthState>()(
                 reminder_time: raw.reminder_time,
                 reminder_enabled: raw.reminder_enabled,
                 weekly_report_enabled: raw.weekly_report_enabled,
+                theme_accent: raw.theme_accent ?? null,
+                theme_mode: raw.theme_mode ?? null,
               },
               status: 'authenticated',
               isLoading: false,
@@ -184,6 +197,7 @@ export const useAuthStore = create<AuthState>()(
             'auth/check:success',
           );
           localStorage.setItem(HAS_VISITED_KEY, '1');
+          useUiStore.getState().applyServerTheme(raw, requestedAt);
         } catch {
           localStorage.removeItem(TOKEN_KEY);
           localStorage.removeItem(REFRESH_TOKEN_KEY);
