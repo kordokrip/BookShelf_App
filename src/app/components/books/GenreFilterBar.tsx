@@ -50,7 +50,7 @@ export function GenreFilterBar({
             fontSize: 11,
             fontWeight: 700,
             marginLeft: 3,
-            color: selectedGenre === null ? "rgba(255,255,255,0.85)" : "var(--text-secondary)",
+            color: selectedGenre === null ? "#fff" : "var(--text-secondary)",
           }}
         >
           {totalCount}
@@ -86,7 +86,7 @@ export function GenreFilterBar({
                 fontSize: 11,
                 fontWeight: 700,
                 marginLeft: 3,
-                color: active ? "rgba(255,255,255,0.85)" : "var(--text-secondary)",
+                color: active ? "#fff" : "var(--text-secondary)",
               }}
             >
               {count}

@@ -46,7 +46,7 @@ export function BottomNavBar() {
        lg:hidden: 데스크톱(1024px+)에서는 SideNav로 대체되므로 숨김 */
     <nav
       className="fixed-nav fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#0F172A]/95 glass-surface border-t border-[#E2E8F0] dark:border-[#334155] md:hidden"
-      style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+      style={{ paddingBottom: "var(--safe-bottom)" }}
       aria-label="하단 네비게이션"
     >
       <div className="flex items-stretch min-h-[var(--bottomnav-content-h)] h-[var(--bottomnav-content-h)] max-w-screen-sm mx-auto">

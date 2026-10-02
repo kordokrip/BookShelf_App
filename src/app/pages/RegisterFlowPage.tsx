@@ -779,44 +779,46 @@ export function RegisterFlowPage() {
       {/* iOS 노치 / Dynamic Island / PWA standalone 상단 안전 영역 — 스크롤해도 콘텐츠가 노치 아래로 비치지 않게 고정 */}
       <SafeAreaTop />
 
-      {/* 헤더 */}
-      <div className="flex items-center gap-3 px-4 h-14 border-b border-border flex-shrink-0">
-        <button
-          type="button"
-          onClick={prev}
-          className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-5 w-5" />
-          <span className="text-sm font-medium">{step > 1 ? "이전" : "뒤로"}</span>
-        </button>
-        <div className="flex-1">
-          <h1 className="font-bold text-foreground text-base leading-none">책 등록</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">{STEP_LABELS[step - 1]}</p>
+      <div className="flex flex-col flex-1 w-full max-w-2xl mx-auto">
+        {/* 헤더 */}
+        <div className="flex items-center gap-3 px-4 h-14 border-b border-border flex-shrink-0">
+          <button
+            type="button"
+            onClick={prev}
+            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-5 w-5" />
+            <span className="text-sm font-medium">{step > 1 ? "이전" : "뒤로"}</span>
+          </button>
+          <div className="flex-1">
+            <h1 className="font-bold text-foreground text-base leading-none">책 등록</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">{STEP_LABELS[step - 1]}</p>
+          </div>
         </div>
-      </div>
 
-      {/* 단계 표시기 */}
-      <StepIndicator current={step} total={4} />
+        {/* 단계 표시기 */}
+        <StepIndicator current={step} total={4} />
 
-      {/* 단계 콘텐츠 */}
-      <div className="flex-1 overflow-hidden">
-        {step === 1 && (
-          <StepSearch onSelect={fillFromSearch} onManual={() => setStep(2)} />
-        )}
-        {step === 2 && (
-          <StepBookInfo form={form} update={update} onNext={() => setStep(3)} />
-        )}
-        {step === 3 && (
-          <StepStatusCover form={form} update={update} onNext={() => setStep(4)} />
-        )}
-        {step === 4 && (
-          <StepConfirm
-            form={form}
-            isLoading={addBook.isPending}
-            error={submitError}
-            onSubmit={handleSubmit}
-          />
-        )}
+        {/* 단계 콘텐츠 */}
+        <div className="flex-1 overflow-hidden">
+          {step === 1 && (
+            <StepSearch onSelect={fillFromSearch} onManual={() => setStep(2)} />
+          )}
+          {step === 2 && (
+            <StepBookInfo form={form} update={update} onNext={() => setStep(3)} />
+          )}
+          {step === 3 && (
+            <StepStatusCover form={form} update={update} onNext={() => setStep(4)} />
+          )}
+          {step === 4 && (
+            <StepConfirm
+              form={form}
+              isLoading={addBook.isPending}
+              error={submitError}
+              onSubmit={handleSubmit}
+            />
+          )}
+        </div>
       </div>
     </main>
   );

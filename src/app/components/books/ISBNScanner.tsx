@@ -459,7 +459,7 @@ export default function ISBNScanner({ onResult, onClose }: ISBNScannerProps) {
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">
       {/* TopBar */}
-      <div className="flex items-center justify-between px-4 py-3 bg-black/80">
+      <div className="flex items-center justify-between px-4 pb-3 bg-black/80" style={{ paddingTop: "calc(0.75rem + var(--safe-top))" }}>
         <h2 className="text-white font-semibold text-base">바코드 스캔</h2>
         <button
           type="button"

@@ -143,16 +143,19 @@ html[data-ios-standalone="true"] body {
 }
 
 /* ── 5. 이미지 반응형 기본값 ──────────────────────────────────── */
-img,
-video,
-svg {
-  max-width: 100%;
-  height: auto;
-  display: block;
-  /* 드래그/선택 방지 */
-  -webkit-user-drag: none;
-  -webkit-user-select: none;
-  user-select: none;
+/* @layer base로 감싸 Tailwind 4 유틸리티(h-full, h-14 등)가 이미지에서 우선하도록 함 */
+@layer base {
+  img,
+  video,
+  svg {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    /* 드래그/선택 방지 */
+    -webkit-user-drag: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
 }
 
 /* ── 6. 네비게이션 바 — GPU 레이어 고정 ──────────────────────── */

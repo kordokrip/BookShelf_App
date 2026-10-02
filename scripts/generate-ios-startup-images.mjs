@@ -39,12 +39,10 @@ const DEVICES = [
 ];
 
 function gradientSvg(width, height) {
-  // 단색 배경 — 그라디언트는 팔레트 압축 시 띠(banding)가 생기고 무손실이면 기기당 200KB+라 단색으로 (2026-09-27)
+  // 단색 배경(장식 원 없음 — 방향 불일치로 스케일되어도 왜곡이 눈에 띄지 않도록) — 그라디언트는 팔레트 압축 시 띠(banding)가 생기고 무손실이면 기기당 200KB+라 단색으로 (2026-09-27)
   return Buffer.from(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
       <rect width="${width}" height="${height}" fill="#5B45E6"/>
-      <circle cx="${Math.round(width * 0.86)}" cy="${Math.round(height * 0.18)}" r="${Math.round(Math.min(width, height) * 0.18)}" fill="#FFFFFF" fill-opacity="0.07"/>
-      <circle cx="${Math.round(width * 0.14)}" cy="${Math.round(height * 0.82)}" r="${Math.round(Math.min(width, height) * 0.22)}" fill="#FFFFFF" fill-opacity="0.05"/>
     </svg>`,
   );
 }
@@ -52,13 +50,13 @@ function gradientSvg(width, height) {
 async function generateSplash(width, height, outputFile) {
   const bg = await sharp(gradientSvg(width, height)).png().toBuffer();
   const short = Math.min(width, height);
-  const iconSize = Math.round(short * 0.3);
+  const iconSize = Math.round(short * 0.22);
   const icon = await sharp(ICON_SOURCE, { density: 300 })
     .resize(iconSize, iconSize, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .png()
     .toBuffer();
   // 글리프 아래 앱 이름 (시스템 한글 글꼴 — 생성 PC에 설치된 글꼴로 래스터화되어 이미지에 고정됨)
-  const fontSize = Math.round(short * 0.06);
+  const fontSize = Math.round(short * 0.048);
   const word = Buffer.from(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${Math.round(fontSize * 1.6)}">` +
       `<text x="50%" y="${fontSize}" text-anchor="middle" font-family="Apple SD Gothic Neo, Pretendard, sans-serif" font-size="${fontSize}" font-weight="800" fill="#FFFFFF">BookShelf</text></svg>`,

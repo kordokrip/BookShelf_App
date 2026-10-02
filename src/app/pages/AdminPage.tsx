@@ -817,7 +817,7 @@ export function AdminPage() {
   return (
     <div className="min-h-[var(--vp-h)] bg-[#F8FAFC] dark:bg-[#0F172A]">
       {/* 헤더 */}
-      <header className="sticky top-0 z-30 bg-white dark:bg-[#0F172A] border-b border-[#E2E8F0] dark:border-[#334155]">
+      <header className="sticky z-30 bg-white dark:bg-[#0F172A] border-b border-[#E2E8F0] dark:border-[#334155]" style={{ top: "var(--topbar-h)" }}>
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
           <button
             onClick={() => navigate("/")}

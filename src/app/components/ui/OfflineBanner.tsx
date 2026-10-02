@@ -6,8 +6,9 @@ export function OfflineBanner() {
   if (isOnline) return null;
   return (
     <div
-      className="sticky top-0 z-40 w-full flex items-center justify-center gap-2 px-4 py-2.5"
+      className="sticky z-40 w-full flex items-center justify-center gap-2 px-4 py-2.5"
       style={{
+        top: "var(--topbar-h)", // TopBar 아래에 붙도록
         backgroundColor: "#FFFBEB",
         borderBottom: "1px solid #FDE68A",
       }}

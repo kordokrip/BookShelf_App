@@ -249,7 +249,7 @@ export function CameraOCRSheet({ bookId, onClose }: Props) {
       />
 
       {/* 헤더 */}
-      <div className="flex items-center justify-between px-4 py-3 bg-black/80">
+      <div className="flex items-center justify-between px-4 pb-3 bg-black/80" style={{ paddingTop: "calc(0.75rem + var(--safe-top))" }}>
         <button onClick={onClose} className="p-2 text-white" aria-label="닫기">
           <X size={22} />
         </button>

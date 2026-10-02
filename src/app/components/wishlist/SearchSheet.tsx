@@ -97,7 +97,7 @@ export function SearchSheet({
     <>
       <div className="fixed inset-0 z-50 bg-white dark:bg-[#1E293B] flex flex-col">
         {/* 검색 헤더 */}
-        <div className="flex items-center gap-2 px-4 pt-5 pb-3 border-b border-[#F1F5F9] dark:border-[#334155]">
+        <div className="flex items-center gap-2 px-4 pb-3 border-b border-[#F1F5F9] dark:border-[#334155]" style={{ paddingTop: "calc(1.25rem + var(--safe-top))" }}>
           <div className="flex-1 flex items-center gap-2 bg-[#F8FAFC] dark:bg-[#0F172A] rounded-xl px-3 py-2.5">
             <Search size={16} className="text-[#64748B] dark:text-[#94A3B8] shrink-0" />
             <input

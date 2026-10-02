@@ -1,8 +1,7 @@
 import { Link, useLocation } from "react-router";
-import { BookMarked, BookOpen, Star, BarChart2, Settings, Palette, FileText, ChevronsLeft, ChevronsRight, ShieldCheck, Users, Mail, Sparkles } from "lucide-react";
+import { BookMarked, BookOpen, Star, BarChart2, Settings, Palette, FileText, ChevronsLeft, ChevronsRight, ShieldCheck, Users, Sparkles } from "lucide-react";
 import { useAuthStore } from "../../../stores/authStore";
 import { useBookCount, useBooks } from "../../../hooks/useBooks";
-import { useShareUnreadCount } from "../../../hooks/useGroups";
 import { useUiStore } from "../../../stores/uiStore";
 import { ProfileAvatar } from "../ui/ProfilePopup";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
@@ -28,8 +27,6 @@ export function SideNav() {
   const { data: doneBooks = [] } = useBooks({ status: 'done' });
   const { data: readingCount = 0 } = useBookCount('reading');
   const { data: wishCount = 0 } = useBookCount('wish');
-  const { data: unreadData } = useShareUnreadCount();
-  const shareUnread = (unreadData as unknown as { data: { count: number } })?.data?.count || undefined;
 
   const currentYear = new Date().getFullYear();
   const yearDoneCount = doneBooks.filter((b) => {
@@ -48,8 +45,7 @@ export function SideNav() {
     { path: "/notes-search", label: "노트 & 검색", icon: FileText },
     { path: "/lifebooks", label: "인생책", icon: Sparkles },
     { path: "/groups", label: "독서 모임", icon: Users },
-    { path: "/share", label: "공유 보고서", icon: Mail, badge: shareUnread },
-    { path: "/design-system", label: "디자인 시스템", icon: Palette, adminOnly: true },
+    { path: "/settings/appearance", label: "앱 디자인", icon: Palette },
   ];
 
   const visibleNavItems = navItems.filter((item) => !item.adminOnly || isAdmin);
@@ -61,11 +57,13 @@ export function SideNav() {
     <aside
       className={`fixed-nav hidden md:flex group/sidebar flex-col w-20 md:max-lg:hover:w-60 ${desktopWidth} min-h-[var(--vp-h)] bg-white dark:bg-[#0F172A] border-r border-[#E2E8F0] dark:border-[#334155] fixed left-0 top-0 bottom-0 z-30 transition-all duration-300 ease-in-out overflow-x-hidden`}
     >
-      {/* Logo + 토글 버튼 */}
-      <div className={`flex items-center h-16 border-b border-[#E2E8F0] dark:border-[#334155] ${showLabelsOnDesktop ? "lg:gap-3 lg:px-4" : "lg:justify-center lg:px-2"} md:justify-center md:px-2 md:max-lg:group-hover/sidebar:justify-start md:max-lg:group-hover/sidebar:px-4 md:max-lg:group-hover/sidebar:gap-3`}>
+      {/* 상태바(노치/시간) 영역 확보 — TopBar와 동일한 safe-top spacer */}
+      <div aria-hidden="true" className="flex-shrink-0" style={{ height: "var(--safe-top)" }} />
+      {/* Logo + 토글 버튼 (TopBar 콘텐츠 행 h-14와 하단 경계선 정렬) */}
+      <div className={`flex items-center h-[57px] flex-shrink-0 border-b border-[#E2E8F0] dark:border-[#334155] ${showLabelsOnDesktop ? "lg:gap-3 lg:px-4" : "lg:justify-center lg:px-2"} md:justify-center md:px-2 md:max-lg:group-hover/sidebar:justify-start md:max-lg:group-hover/sidebar:px-4 md:max-lg:group-hover/sidebar:gap-3`}>
         {showLabelsOnDesktop ? (
           <>
-            <AppLogo size={36} className="flex-shrink-0 drop-shadow" label="BookShelf" />
+            <AppLogo size={36} className="flex-shrink-0 drop-shadow md:max-lg:hidden md:max-lg:group-hover/sidebar:block" label="BookShelf" />
             <div className="hidden lg:block flex-1 min-w-0 md:max-lg:group-hover/sidebar:block">
               <p className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.2 }}>
                 BookShelf
@@ -99,7 +97,7 @@ export function SideNav() {
             <TooltipContent side="right" sideOffset={8}>사이드바 펼치기</TooltipContent>
           </Tooltip>
         )}
-        <div className="hidden md:max-lg:flex w-11 h-11 rounded-xl items-center justify-center bg-indigo-50 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 shadow-sm">
+        <div className="hidden md:max-lg:flex md:max-lg:group-hover/sidebar:hidden w-11 h-11 rounded-xl items-center justify-center bg-indigo-50 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 shadow-sm">
           <BookMarked size={20} />
         </div>
       </div>
@@ -171,7 +169,7 @@ export function SideNav() {
       </nav>
 
       {/* User Profile at Bottom */}
-      <div className="px-3 py-4 border-t border-[#E2E8F0] dark:border-[#334155]">
+      <div className="px-3 pt-4 border-t border-[#E2E8F0] dark:border-[#334155]" style={{ paddingBottom: "calc(1rem + var(--safe-bottom))" }}>
         <div className={`flex items-center gap-3 ${showLabelsOnDesktop ? "lg:justify-start" : "lg:justify-center"} md:justify-center md:max-lg:group-hover/sidebar:justify-start`}>
           {showLabelsOnDesktop ? (
             <>

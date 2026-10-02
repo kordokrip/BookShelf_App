@@ -202,8 +202,8 @@ const SORT_OPTIONS = [
 function MonthGroupHeader({ label, count }: { label: string; count: number }) {
   return (
     <div
-      className="flex items-center px-4 w-full sticky top-0 z-10 bg-[#F8FAFC] dark:bg-[#0F172A]"
-      style={{ height: 36 }}
+      className="flex items-center px-4 w-full sticky z-10 bg-[#F8FAFC] dark:bg-[#0F172A]"
+      style={{ height: 36, top: "var(--topbar-h)" }}
     >
       <span className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 13, fontWeight: 600 }}>
         {label} · {count}권
@@ -339,7 +339,7 @@ export function LibraryPage() {
                 onClick={() => setViewMode(v)}
                 aria-label={label}
                 title={label}
-                className={`flex items-center justify-center rounded-lg transition-all ${viewMode === v ? 'bg-white dark:bg-[#1E293B] shadow-sm text-indigo-600' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
+                className={`flex items-center justify-center rounded-lg transition-all ${viewMode === v ? 'bg-white dark:bg-[#1E293B] shadow-sm text-indigo-600 dark:text-indigo-300' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
                 style={{ width: 30, height: 28 }}
               >
                 {icon}
