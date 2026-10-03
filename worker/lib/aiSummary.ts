@@ -3,13 +3,15 @@
  *
  * 1. 클라이언트가 20자 이상 description을 주면 그것을, 아니면 카카오/네이버에서 ISBN→제목+저자 순으로 소개를 조회
  * 2. 근거가 없으면 모델을 호출하지 않고 `no_source`로 응답(환각 차단 + 예산 절약)
- * 3. Gemma(OpenRouter) 우선, 실패 시 Workers AI. 성공 결과만 7일 캐시(`ai_summary:v3:{sha256}`)
+ * 3. Gemma(OpenRouter) 우선, 실패 시 Workers AI. 성공 결과만 7일 캐시(`ai_summary:v4:{sha256}`, 폴백 결과는 1시간)
  */
 import { sanitizeForPrompt } from './aiRecommend';
 import { searchBook, type LookupEnv } from './bookLookup';
 import { generateText, type ChatMessage, type GenerateEnv, type Provider } from './openrouter';
 
 export const SUMMARY_CACHE_TTL_SEC = 7 * 24 * 60 * 60;
+/** 폴백(Workers AI 8B) 결과는 짧게만 캐시 — Gemma가 다시 응답하면 곧 더 나은 요약으로 바뀌게 */
+export const SUMMARY_FALLBACK_CACHE_TTL_SEC = 60 * 60;
 export const MIN_DESCRIPTION_LEN = 20;
 /** 프롬프트에 넣는 소개 최대 길이 */
 const MAX_SOURCE_LEN = 1500;
@@ -64,7 +66,7 @@ export function cleanSummary(text: string): string {
 export async function summaryCacheKey(input: SummarizeInput, source: string): Promise<string> {
   const data = new TextEncoder().encode(`${input.isbn ?? ''}\u0000${input.title}\u0000${input.author}\u0000${source}`);
   const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', data));
-  return `ai_summary:v3:${Array.from(digest, (b) => b.toString(16).padStart(2, '0')).join('')}`;
+  return `ai_summary:v4:${Array.from(digest, (b) => b.toString(16).padStart(2, '0')).join('')}`;
 }
 
 /** 요약 근거(책 소개)를 구한다. 없으면 null. */
@@ -108,6 +110,6 @@ export async function summarizeBook(env: SummarizeEnv, input: SummarizeInput): P
   );
   const summary = cleanSummary(text).slice(0, MAX_SUMMARY_LEN);
   if (!summary) throw new Error('빈 요약 응답');
-  await env.KV.put(cacheKey, JSON.stringify({ summary, provider, source: resolved.source }), { expirationTtl: SUMMARY_CACHE_TTL_SEC });
+  await env.KV.put(cacheKey, JSON.stringify({ summary, provider, source: resolved.source }), { expirationTtl: provider === 'openrouter' ? SUMMARY_CACHE_TTL_SEC : SUMMARY_FALLBACK_CACHE_TTL_SEC });
   return { summary, cached: false, provider, grounded: true, source: resolved.source };
 }

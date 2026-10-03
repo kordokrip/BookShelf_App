@@ -278,7 +278,8 @@ aiRouter.get(
     const result = await buildLifeBooks(c.env, doneBooks, excluded);
     const payload = { data: result.data, cached: false, source: result.source, provider: result.provider };
     if (result.data.length > 0) {
-      await c.env.KV.put(cacheKey, JSON.stringify(payload), { expirationTtl: 86400 });
+      // Gemma 결과만 하루 캐시 — 폴백(8B·큐레이션)은 1시간 뒤 다시 시도해 더 나은 추천으로 바뀌게
+      await c.env.KV.put(cacheKey, JSON.stringify(payload), { expirationTtl: result.provider === 'openrouter' ? 86400 : 3600 });
     }
     return c.json(payload);
   },

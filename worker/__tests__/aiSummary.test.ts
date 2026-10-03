@@ -39,7 +39,7 @@ describe('summarizeBook', () => {
     const { env, kv } = makeEnv({ orKey: 'sk' });
     const first = await summarizeBook(env, { title: '데미안', author: '헤르만 헤세' });
     expect(first).toEqual({ summary: '요약 결과입니다.', cached: false, provider: 'openrouter', grounded: true, source: 'kakao' });
-    expect([...kv.keys()].some((k) => /^ai_summary:v3:[0-9a-f]{64}$/.test(k))).toBe(true);
+    expect([...kv.keys()].some((k) => /^ai_summary:v4:[0-9a-f]{64}$/.test(k))).toBe(true);
     const second = await summarizeBook(env, { title: '데미안', author: '헤르만 헤세' });
     expect(second).toMatchObject({ cached: true, provider: 'openrouter' });
   });
@@ -70,7 +70,7 @@ describe('summarizeBook', () => {
     const long = 'x'.repeat(400);
     const k1 = await summaryCacheKey(base, `${long}가`);
     const k2 = await summaryCacheKey(base, `${long}나`);
-    expect(k1).toMatch(/^ai_summary:v3:[0-9a-f]{64}$/);
+    expect(k1).toMatch(/^ai_summary:v4:[0-9a-f]{64}$/);
     expect(k1).not.toBe(k2);
     expect(await summaryCacheKey(base, `${long}가`)).toBe(k1);
   });

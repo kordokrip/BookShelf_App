@@ -48,9 +48,9 @@ describe('lifeBooks', () => {
     expect(user).toContain('책0 | 저 | 철학 | 별점 3/5');
   });
 
-  it('캐시 키: v2 + 전체 목록 해시(한 권만 달라져도 바뀜)', () => {
+  it('캐시 키: v3 + 전체 목록 해시(한 권만 달라져도 바뀜)', () => {
     const a = lifeBooksCacheKey('u1', done);
-    expect(a.startsWith('ai_lifebooks:v2:u1:')).toBe(true);
+    expect(a.startsWith('ai_lifebooks:v3:u1:')).toBe(true);
     expect(lifeBooksCacheKey('u1', [...done, { title: 'X', author: null, genre: null, rating: null }])).not.toBe(a);
   });
 

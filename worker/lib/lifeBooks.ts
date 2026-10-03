@@ -12,7 +12,7 @@ import { searchBook, type LookupEnv } from './bookLookup';
 import { generateText, type ChatMessage, type GenerateEnv, type Provider } from './openrouter';
 
 export const LIFEBOOKS_CACHE_TTL_SEC = 24 * 60 * 60;
-export const LIFEBOOKS_CACHE_VERSION = 'v2';
+export const LIFEBOOKS_CACHE_VERSION = 'v3';
 export const MAX_DONE_BOOKS = 200;
 export const CANDIDATE_COUNT = 10;
 export const RESULT_COUNT = 5;
