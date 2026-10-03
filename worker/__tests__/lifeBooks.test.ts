@@ -62,8 +62,10 @@ describe('lifeBooks', () => {
     const res = await buildLifeBooks(env(), done, excluded);
     expect(res.provider).toBe('openrouter');
     expect(res.source).toBe('openrouter');
-    expect(res.data.map((d) => d.title)).toEqual(['싯다르타', '변신', '이방인', '페스트', '죄와 벌']);
-    expect(res.data.every((d) => d.verified && d.thumbnail.startsWith('thumb-') && d.isbn === '9780000000001')).toBe(true);
+    // 후보 6권 중 서재·가짜를 빼고 4권이 검증 → 앞 4권은 AI 추천, 나머지는 큐레이션으로 채움
+    expect(res.data.slice(0, 4).map((d) => d.title)).toEqual(['싯다르타', '변신', '이방인', '페스트']);
+    expect(res.data.length).toBeLessThanOrEqual(5);
+    expect(res.data.slice(0, 4).every((d) => d.verified && d.thumbnail.startsWith('thumb-') && d.isbn === '9780000000001')).toBe(true);
   });
 
   it('검증 통과가 3권 미만이면 큐레이션으로 보충(서재 제외 유지)', async () => {

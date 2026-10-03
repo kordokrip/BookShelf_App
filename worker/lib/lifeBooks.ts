@@ -14,9 +14,14 @@ import { generateText, type ChatMessage, type GenerateEnv, type Provider } from 
 export const LIFEBOOKS_CACHE_TTL_SEC = 24 * 60 * 60;
 export const LIFEBOOKS_CACHE_VERSION = 'v4';
 export const MAX_DONE_BOOKS = 200;
-export const CANDIDATE_COUNT = 8;
+export const CANDIDATE_COUNT = 6;
 /** 후보 8권 × 짧은 2문장 이유(권당 ~120토큰) + JSON 오버헤드 */
-export const LIFEBOOKS_MAX_TOKENS = 1300;
+export const LIFEBOOKS_MAX_TOKENS = 800;
+/**
+ * Gemma 호출 제한 시간 — Workers의 waitUntil(응답 뒤 백그라운드)은 약 30초까지만 이어지므로
+ * 생성·검증이 그 안에 끝나야 한다. 출력(후보 6권 × 짧은 이유)을 줄여 보통 10~15초에 끝난다.
+ */
+export const LIFEBOOKS_TIMEOUT_MS = 22_000;
 export const RESULT_COUNT = 5;
 export const MIN_VERIFIED = 3;
 
@@ -79,7 +84,7 @@ export function buildLifeBookMessages(doneBooks: DoneBook[]): ChatMessage[] {
         '규칙:\n' +
         '- 한국에서 출간되어 서점에서 구할 수 있는 실제 책만, 정확한 한국어 제목과 저자로 쓰세요. 확실하지 않은 책은 제외하세요.\n' +
         '- 목록에 이미 있는 책은 절대 추천하지 마세요.\n' +
-        '- reason은 한국어 2문장(총 100자 이내)으로, 사용자가 읽은 구체적인 책 제목을 언급하며 왜 이 책이 어울리는지 연결하세요.\n' +
+        '- reason은 한국어 1~2문장(총 60자 이내)으로, 사용자가 읽은 구체적인 책 제목을 언급하며 왜 이 책이 어울리는지 연결하세요.\n' +
         '- 별점은 "내 별점 N점(5점 만점)" 형식입니다. reason에 별점 숫자를 쓰지 마세요(쓰려면 목록의 값을 정확히 그대로, 만점 기준은 5점). 별점을 잘못 옮기거나 "5점 만점으로 평가하신" 같은 표현을 쓰지 마세요.\n' +
         '- 다른 텍스트 없이 아래 JSON 형식으로만 응답하세요.\n' +
         '{"books":[{"title":"책 제목","author":"저자","reason":"추천 이유"}]}',
@@ -176,14 +181,29 @@ async function topUpCurated(env: LookupEnv, doneBooks: DoneBook[], excluded: Set
   });
 }
 
-export async function buildLifeBooks(env: LifeBooksEnv, doneBooks: DoneBook[], excluded: Set<string>): Promise<LifeBooksResult> {
+/**
+ * background: 응답 뒤 백그라운드 재생성 — 시간이 빠듯하므로 Workers AI 폴백(느리고 검증 통과율이 낮음)을 건너뛰고,
+ * 호출 측(lifeBooksSwr)은 Gemma 결과가 아니면 지난 추천을 덮어쓰지 않는다.
+ */
+export async function buildLifeBooks(
+  env: LifeBooksEnv,
+  doneBooks: DoneBook[],
+  excluded: Set<string>,
+  opts: { background?: boolean } = {},
+): Promise<LifeBooksResult> {
   let verified: LifeBookItem[] = [];
   let provider: Provider | null = null;
   try {
     const res = await generateText(
       env,
-      { messages: buildLifeBookMessages(doneBooks), maxTokens: LIFEBOOKS_MAX_TOKENS, temperature: 0.6, json: true },
-      { fallback: 'workers-ai' },
+      {
+        messages: buildLifeBookMessages(doneBooks),
+        maxTokens: LIFEBOOKS_MAX_TOKENS,
+        temperature: 0.6,
+        json: true,
+        timeoutMs: LIFEBOOKS_TIMEOUT_MS,
+      },
+      { fallback: opts.background ? 'none' : 'workers-ai' },
     );
     provider = res.provider;
     verified = await verifyCandidates(env, parseCandidates(res.text), excluded, RESULT_COUNT);
@@ -191,9 +211,10 @@ export async function buildLifeBooks(env: LifeBooksEnv, doneBooks: DoneBook[], e
     console.error('AI 인생책 추천 오류:', err);
   }
 
-  if (verified.length >= MIN_VERIFIED) {
+  if (verified.length >= RESULT_COUNT) {
     return { data: verified, source: provider ?? 'curated-fallback', provider };
   }
+  // 후보를 줄였으므로(생성 시간) 검증 통과가 5권에 못 미치면 큐레이션으로 채운다 — AI 추천이 앞에 온다
   const topUp = await topUpCurated(env, doneBooks, excluded, verified, RESULT_COUNT - verified.length);
   const data = [...verified, ...topUp];
   // AI 검증분이 하나도 없으면 전부 큐레이션 — provider도 null로 알린다

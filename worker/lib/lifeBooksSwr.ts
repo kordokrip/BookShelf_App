@@ -54,10 +54,12 @@ function parseStored(raw: string | null): Stored | null {
   } catch { return null; }
 }
 
-async function generateAndStore(deps: LifeBooksDeps, cacheKey: string): Promise<LifeBooksPayload> {
+async function generateAndStore(deps: LifeBooksDeps, cacheKey: string, background = false): Promise<LifeBooksPayload> {
   const { env, userId, doneBooks } = deps;
-  const result = await (deps.build ?? buildLifeBooks)(env, doneBooks, await deps.getExcluded());
+  const result = await (deps.build ?? buildLifeBooks)(env, doneBooks, await deps.getExcluded(), { background });
   const payload: LifeBooksPayload = { data: result.data, cached: false, source: result.source, provider: result.provider };
+  // 백그라운드에서 Gemma가 실패하면(큐레이션만 남음) 지난 AI 추천을 덮어쓰지 않는다 — 다음 조회 때 다시 시도
+  if (background && result.provider !== 'openrouter') return payload;
   if (result.data.length > 0) {
     const ttl = result.provider === 'openrouter' ? LIFEBOOKS_CACHE_TTL_SEC : FALLBACK_CACHE_TTL_SEC;
     await env.KV.put(cacheKey, JSON.stringify(payload), { expirationTtl: ttl });
@@ -86,7 +88,7 @@ export async function resolveLifeBooks(deps: LifeBooksDeps): Promise<LifeBooksRe
       if (!(await env.KV.get(lockKey)) && (await rate())) {
         await env.KV.put(lockKey, '1', { expirationTtl: LIFEBOOKS_LOCK_TTL_SEC });
         deps.waitUntil((async () => {
-          try { await generateAndStore(deps, cacheKey); }
+          try { await generateAndStore(deps, cacheKey, true); }
           catch (err) { console.error('인생책 백그라운드 재생성 실패:', err); }
           finally { await env.KV.delete(lockKey).catch(() => undefined); }
         })());
