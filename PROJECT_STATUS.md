@@ -217,7 +217,7 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 | 독서 세션 + 타이머 | ✅ 완료 |
 | 노트 CRUD + FTS5 검색 | ✅ 완료 |
 | 통계 + 연간결산 + 성취배지 | ✅ 완료 |
-| AI 요약·추천·OCR·인생책 추천·오늘의 명문장 | ✅ 2026-10-03 OpenRouter `google/gemma-4-26b-a4b-it:free` 우선 + Workers AI(`@cf/meta/llama-3.1-8b-instruct-fast`) 폴백. 요약은 책 소개 근거만, 인생책은 실재 검증. **무료 Gemma는 공용 풀 혼잡(429)이 잦아 폴백 비중이 높음** — 크레딧/BYOK로 개선 가능. 응답의 `provider`로 확인 |
+| AI 요약·추천·OCR·인생책 추천·오늘의 명문장 | ✅ 2026-10-03 OpenRouter 유료 `google/gemma-3-27b-it` 우선(모델명은 `worker/lib/openrouter.ts`의 `OPENROUTER_MODEL`) + Workers AI(`@cf/meta/llama-3.1-8b-instruct-fast`) 폴백. 요약은 책 소개 근거만, 인생책은 실재 검증. 일일 호출 상한으로 비용 제한, 응답의 `provider`로 실제 사용 모델 확인. 무료판은 공용 풀 혼잡으로 교체 |
 | 독서 모임 + 실시간 채팅(DO WebSocket) + 일정 | ✅ 완료 |
 | 통계 공유 | ✅ 2026-10-03 보고서 화면 → 독서 통계 '내 통계 공유'(이미지 Web Share/PNG)·'요약 복사'. `/api/share`는 데이터 보존용으로 남김 |
 | 관리자 대시보드 | ✅ 완료 |

@@ -1,23 +1,27 @@
 /**
- * OpenRouter(무료 Gemma) 클라이언트 + Workers AI 폴백.
+ * OpenRouter(Gemma, 유료) 클라이언트 + Workers AI 폴백.
  *
- * - 모델은 한국어 품질이 Workers AI 8B보다 낫고 환각이 적은 `google/gemma-4-26b-a4b-it:free`
- * - 무료 키 한도가 하루 ~50회(전 사용자 공유)라 KV 전역 예산(`or_budget:{KST 날짜}`)으로 선제 차단한다
- * - 무료 업스트림 풀은 429("temporarily rate-limited upstream")를 자주 돌려주므로 429/5xx는 한 번 재시도
+ * - 모델은 한국어 품질이 Workers AI 8B보다 낫고 환각이 적은 `google/gemma-3-27b-it`(유료).
+ *   무료판(`google/gemma-4-26b-a4b-it:free`)은 공용 풀 혼잡(429)·상류 오류(522)로 거의 응답하지 않아 2026-10-03 교체
+ * - 비용 상한: KV 전역 일일 예산(`or_budget:{KST 날짜}`)을 넘기면 호출하지 않고 폴백한다
+ * - 일시 오류(429/5xx)는 한 번 재시도
  * - 실패(키 없음·예산 초과·타임아웃·재시도 후에도 실패)는 OpenRouterError로 던져 호출 측이 폴백하게 한다
  */
 import { extractAiText } from './aiText';
 import { kstDateString } from './noteHelpers';
 
-export const OPENROUTER_MODEL = 'google/gemma-4-26b-a4b-it:free';
+export const OPENROUTER_MODEL = 'google/gemma-3-27b-it';
 export const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-/** 무료 키 한도(~50/일)보다 약간 낮게 — 남는 여유는 재시도·수동 확인용 */
-export const OPENROUTER_DAILY_BUDGET = 45;
+/**
+ * 하루 전체 호출 상한(전 사용자 합산) — 유료 모델의 비용 안전장치.
+ * 호출당 비용은 OpenRouter 응답 usage.cost 또는 대시보드(Activity)로 확인한다.
+ */
+export const OPENROUTER_DAILY_BUDGET = 1000;
 /**
  * 백그라운드성 호출(오늘의 명문장)이 쓸 수 있는 상한 — 전체 예산이 이만큼 쓰였으면 더 쓰지 않는다.
  * 사용자가 버튼을 눌러 요청하는 책 분석·추천 몫(전체 − 이 값)을 남겨 두기 위함.
  */
-export const OPENROUTER_BACKGROUND_BUDGET = 30;
+export const OPENROUTER_BACKGROUND_BUDGET = 600;
 export const OPENROUTER_TIMEOUT_MS = 20_000;
 export const OPENROUTER_RETRY_DELAY_MS = 1_800;
 export const WORKERS_AI_FALLBACK_MODEL = '@cf/meta/llama-3.1-8b-instruct-fast';

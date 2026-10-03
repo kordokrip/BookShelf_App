@@ -2,7 +2,7 @@
  * AI 책 요약 — "책 소개"를 근거로만 요약한다(제목·저자만 주고 소개를 시키면 8B 모델이 줄거리를 지어냈음).
  *
  * 1. 클라이언트가 20자 이상 description을 주면 그것을, 아니면 카카오/네이버에서 ISBN→제목+저자 순으로 소개를 조회
- * 2. 근거가 없으면 모델을 호출하지 않고 `no_source`로 응답(환각 차단 + 무료 예산 절약)
+ * 2. 근거가 없으면 모델을 호출하지 않고 `no_source`로 응답(환각 차단 + 예산 절약)
  * 3. Gemma(OpenRouter) 우선, 실패 시 Workers AI. 성공 결과만 7일 캐시(`ai_summary:v3:{sha256}`)
  */
 import { sanitizeForPrompt } from './aiRecommend';

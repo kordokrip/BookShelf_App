@@ -133,7 +133,7 @@ describe('generateText', () => {
   it('예산 초과·키 없음도 폴백, fetch 호출 없음', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
-    const a = makeEnv({ kv: { [budgetKey(NOW)]: '99' } });
+    const a = makeEnv({ kv: { [budgetKey(NOW)]: String(OPENROUTER_DAILY_BUDGET) } });
     expect((await generateText(a.env, OPTS, { fallback: 'workers-ai' }, NOW)).provider).toBe('workers-ai');
     const b = makeEnv({ key: null });
     expect((await generateText(b.env, OPTS, { fallback: 'workers-ai' }, NOW)).provider).toBe('workers-ai');
