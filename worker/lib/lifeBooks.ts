@@ -12,9 +12,11 @@ import { searchBook, type LookupEnv } from './bookLookup';
 import { generateText, type ChatMessage, type GenerateEnv, type Provider } from './openrouter';
 
 export const LIFEBOOKS_CACHE_TTL_SEC = 24 * 60 * 60;
-export const LIFEBOOKS_CACHE_VERSION = 'v3';
+export const LIFEBOOKS_CACHE_VERSION = 'v4';
 export const MAX_DONE_BOOKS = 200;
-export const CANDIDATE_COUNT = 10;
+export const CANDIDATE_COUNT = 8;
+/** 후보 8권 × 짧은 2문장 이유(권당 ~120토큰) + JSON 오버헤드 */
+export const LIFEBOOKS_MAX_TOKENS = 1300;
 export const RESULT_COUNT = 5;
 export const MIN_VERIFIED = 3;
 
@@ -54,7 +56,7 @@ export function lifeBooksCacheKey(userId: string, doneBooks: DoneBook[]): string
 export function buildLifeBookMessages(doneBooks: DoneBook[]): ChatMessage[] {
   const lines = doneBooks
     .slice(0, MAX_DONE_BOOKS)
-    .map((b) => `${sanitizeForPrompt(b.title)} | ${sanitizeForPrompt(b.author ?? '')} | ${sanitizeForPrompt(b.genre ?? '')} | ${b.rating ? `별점 ${b.rating}/5` : '별점 없음'}`)
+    .map((b) => `${sanitizeForPrompt(b.title)} | ${sanitizeForPrompt(b.author ?? '')} | ${sanitizeForPrompt(b.genre ?? '')} | ${b.rating ? `내 별점 ${b.rating}점(5점 만점)` : '별점 없음'}`)
     .join('\n');
   return [
     {
@@ -64,7 +66,8 @@ export function buildLifeBookMessages(doneBooks: DoneBook[]): ChatMessage[] {
         '규칙:\n' +
         '- 한국에서 출간되어 서점에서 구할 수 있는 실제 책만, 정확한 한국어 제목과 저자로 쓰세요. 확실하지 않은 책은 제외하세요.\n' +
         '- 목록에 이미 있는 책은 절대 추천하지 마세요.\n' +
-        '- reason은 한국어 2문장으로, 사용자가 읽은 구체적인 책 제목을 언급하며 왜 이 책이 어울리는지 연결하세요.\n' +
+        '- reason은 한국어 2문장(총 100자 이내)으로, 사용자가 읽은 구체적인 책 제목을 언급하며 왜 이 책이 어울리는지 연결하세요.\n' +
+        '- 별점은 "내 별점 N점(5점 만점)" 형식입니다. reason에 별점 숫자를 쓰지 마세요(쓰려면 목록의 값을 정확히 그대로, 만점 기준은 5점). 별점을 잘못 옮기거나 "5점 만점으로 평가하신" 같은 표현을 쓰지 마세요.\n' +
         '- 다른 텍스트 없이 아래 JSON 형식으로만 응답하세요.\n' +
         '{"books":[{"title":"책 제목","author":"저자","reason":"추천 이유"}]}',
     },
@@ -73,6 +76,18 @@ export function buildLifeBookMessages(doneBooks: DoneBook[]): ChatMessage[] {
 }
 
 export interface Candidate { title: string; author: string; reason: string }
+
+/**
+ * 모델이 프롬프트의 별점 표기를 그대로 옮겨 쓰는 경우("내 별점 5점(5점 만점)", "5점 만점으로 평가하신")를 지운다.
+ * 별점을 잘못 말하는 것보다 아예 언급하지 않는 편이 낫다.
+ */
+export function stripRatingEcho(reason: string): string {
+  return reason
+    .replace(/\(?\s*내\s*별점\s*\d\s*점\s*\(\s*5\s*점\s*만점\s*\)\s*\)?/g, '')
+    .replace(/[^.!?。]*\d\s*점\s*만점[^.!?。]*[.!?。]?/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
 
 export function parseCandidates(text: string): Candidate[] {
   const obj = extractJsonObject(text);
@@ -85,7 +100,7 @@ export function parseCandidates(text: string): Candidate[] {
     const r = raw as Record<string, unknown>;
     const title = typeof r.title === 'string' ? sanitizeForPrompt(r.title).trim() : '';
     const author = typeof r.author === 'string' ? sanitizeForPrompt(r.author).trim() : '';
-    const reason = typeof r.reason === 'string' ? sanitizeForPrompt(r.reason).trim() : '';
+    const reason = typeof r.reason === 'string' ? stripRatingEcho(sanitizeForPrompt(r.reason)) : '';
     const key = normalizeTitle(title);
     if (!title || !author || !reason || seen.has(key)) continue;
     seen.add(key);
@@ -154,7 +169,7 @@ export async function buildLifeBooks(env: LifeBooksEnv, doneBooks: DoneBook[], e
   try {
     const res = await generateText(
       env,
-      { messages: buildLifeBookMessages(doneBooks), maxTokens: 2200, temperature: 0.6, json: true },
+      { messages: buildLifeBookMessages(doneBooks), maxTokens: LIFEBOOKS_MAX_TOKENS, temperature: 0.6, json: true },
       { fallback: 'workers-ai' },
     );
     provider = res.provider;

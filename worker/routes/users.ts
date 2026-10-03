@@ -165,7 +165,10 @@ usersRouter.delete(
   '/me',
   rateLimit({ limit: 5, windowMs: 60_000, keyPrefix: 'delete_account' }),
   authMiddleware,
-  zValidator('json', deleteAccountSchema),
+  zValidator('json', deleteAccountSchema, (result, c) => {
+    // 본문이 없거나 비밀번호가 빠졌을 때 zod 원문 대신 안내 문구
+    if (!result.success) return c.json({ error: '계정을 삭제하려면 비밀번호를 입력해주세요.' }, 400);
+  }),
   async (c) => {
     const userId = c.get('userId');
     const { password } = c.req.valid('json');

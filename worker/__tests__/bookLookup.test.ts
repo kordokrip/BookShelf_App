@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { searchBook, titleSimilarity, authorsOverlap, pickIsbn } from '../lib/bookLookup';
+import { LOOKUP_TIMEOUT_MS, searchBook, titleSimilarity, authorsOverlap, pickIsbn } from '../lib/bookLookup';
 
 afterEach(() => { vi.unstubAllGlobals(); });
 
@@ -68,5 +68,25 @@ describe('searchBook', () => {
     const m = await searchBook({ ...ENV, NAVER_CLIENT_ID: 'a', NAVER_CLIENT_SECRET: 'b' }, { title: '데미안', author: '헤르만 헤세' });
     expect(m).toMatchObject({ title: '데미안', author: '헤르만 헤세, 전영애', source: 'naver' });
     expect(m?.contents).toBe('성장 소설 소개 문장입니다 충분히 길게.');
+  });
+
+  it('카카오가 맞으면 네이버는 호출하지 않는다', async () => {
+    const f = kakao([doc()]);
+    vi.stubGlobal('fetch', f);
+    await searchBook({ ...ENV, NAVER_CLIENT_ID: 'a', NAVER_CLIENT_SECRET: 'b' }, { title: '데미안', author: '헤르만 헤세' });
+    expect(f).toHaveBeenCalledTimes(1);
+  });
+
+  it('응답 없는 조회는 타임아웃(AbortController)으로 끊고 null', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.stubGlobal('fetch', vi.fn((_u: string, init?: RequestInit) => new Promise<Response>((_r, rej) => {
+        init?.signal?.addEventListener('abort', () => rej(new DOMException('aborted', 'AbortError')));
+      })));
+      const p = searchBook(ENV, { title: '데미안' });
+      await vi.advanceTimersByTimeAsync(LOOKUP_TIMEOUT_MS + 10);
+      expect(await p).toBeNull();
+      expect(LOOKUP_TIMEOUT_MS).toBeLessThanOrEqual(4000);
+    } finally { vi.useRealTimers(); }
   });
 });

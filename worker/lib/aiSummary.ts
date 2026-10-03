@@ -87,13 +87,18 @@ export async function resolveSource(
   return { text: sanitizeSource(match.contents), source: match.source };
 }
 
-export async function summarizeBook(env: SummarizeEnv, input: SummarizeInput): Promise<SummarizeResult> {
+/** opts.refresh=true면 KV 캐시 읽기를 건너뛰고 새로 생성한다(결과는 다시 캐시에 기록) */
+export async function summarizeBook(
+  env: SummarizeEnv,
+  input: SummarizeInput,
+  opts: { refresh?: boolean } = {},
+): Promise<SummarizeResult> {
   const safe = { ...input, title: sanitizeForPrompt(input.title), author: sanitizeForPrompt(input.author) };
   const resolved = await resolveSource(env, safe);
   if (!resolved) return { summary: null, reason: 'no_source', cached: false, provider: null };
 
   const cacheKey = await summaryCacheKey(safe, resolved.text);
-  const cachedRaw = await env.KV.get(cacheKey);
+  const cachedRaw = opts.refresh ? null : await env.KV.get(cacheKey);
   if (cachedRaw) {
     try {
       const c = JSON.parse(cachedRaw) as { summary?: string; provider?: Provider; source?: 'kakao' | 'naver' | 'client' };

@@ -18,6 +18,7 @@ import { Hono } from 'hono';
 import type { Bindings } from '../types';
 import { authMiddleware } from '../auth';
 import { rateLimit } from '../middleware/rateLimit';
+import { isPlausiblePubDate, isTradeBook } from '../lib/discoverFilter';
 
 /** 탐색 결과 단건 타입 */
 export interface DiscoverBook {
@@ -200,7 +201,7 @@ discoverRouter.get(
     const tab    = (c.req.query('tab') ?? 'bestseller') as 'new' | 'bestseller';
 
     // KV 캐시 (tab별로 구분)
-    const cacheKey = `ext_books:${tab}:v5`;
+    const cacheKey = `ext_books:${tab}:v6`;
     const cached   = await c.env.KV.get(cacheKey, 'json') as ExternalBooksResponse | null;
     if (cached) return c.json(cached);
 
@@ -235,6 +236,7 @@ discoverRouter.get(
             };
             for (const doc of data.documents) {
               if (new Date(doc.datetime) < twoWeeksAgo) continue;
+              if (!isPlausiblePubDate(doc.datetime) || !isTradeBook(doc)) continue;
               const parts = doc.isbn.trim().split(/\s+/);
               const isbn  = (parts.length >= 2 ? parts[1] : parts[0]) ?? '';
               const key   = isbn || doc.title;

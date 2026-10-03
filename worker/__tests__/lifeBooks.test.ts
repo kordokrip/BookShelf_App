@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { buildExcludedSet } from '../lib/aiRecommend';
 import {
-  buildLifeBooks, buildLifeBookMessages, parseCandidates, lifeBooksCacheKey, MAX_DONE_BOOKS, type DoneBook, type LifeBooksEnv,
+  buildLifeBooks, buildLifeBookMessages, parseCandidates, lifeBooksCacheKey, MAX_DONE_BOOKS, CANDIDATE_COUNT, LIFEBOOKS_MAX_TOKENS, type DoneBook, type LifeBooksEnv,
 } from '../lib/lifeBooks';
 
 afterEach(() => { vi.unstubAllGlobals(); });
@@ -33,11 +33,11 @@ function stubWorld(aiBooks: unknown[], real: string[]) {
 const cand = (title: string) => ({ title, author: '저자', reason: `${title} 이유 하나. 이유 둘.` });
 
 describe('lifeBooks', () => {
-  it('parseCandidates: 중복·필드 누락 제거, 최대 10', () => {
+  it('parseCandidates: 중복·필드 누락 제거, 최대 CANDIDATE_COUNT', () => {
     const text = JSON.stringify({ books: [cand('A책'), cand('A책'), { title: 'B', author: '', reason: 'r' }, ...Array.from({ length: 12 }, (_, i) => cand(`책${i}`))] });
     const out = parseCandidates(text);
     expect(out[0]!.title).toBe('A책');
-    expect(out).toHaveLength(10);
+    expect(out).toHaveLength(CANDIDATE_COUNT);
     expect(parseCandidates('json 아님')).toEqual([]);
   });
 
@@ -45,12 +45,14 @@ describe('lifeBooks', () => {
     const many = Array.from({ length: 250 }, (_, i) => ({ title: `책${i}`, author: '저', genre: '철학', rating: 3 }));
     const user = buildLifeBookMessages(many)[1]!.content;
     expect(user.split('\n').filter((l) => l.includes(' | ')).length).toBe(MAX_DONE_BOOKS);
-    expect(user).toContain('책0 | 저 | 철학 | 별점 3/5');
+    expect(user).toContain('책0 | 저 | 철학 | 내 별점 3점(5점 만점)');
+    expect(buildLifeBookMessages(many)[0]!.content).toContain('별점 숫자를 쓰지 마세요');
+    expect(LIFEBOOKS_MAX_TOKENS).toBeLessThanOrEqual(1300);
   });
 
-  it('캐시 키: v3 + 전체 목록 해시(한 권만 달라져도 바뀜)', () => {
+  it('캐시 키: v4 + 전체 목록 해시(한 권만 달라져도 바뀜)', () => {
     const a = lifeBooksCacheKey('u1', done);
-    expect(a.startsWith('ai_lifebooks:v3:u1:')).toBe(true);
+    expect(a.startsWith('ai_lifebooks:v4:u1:')).toBe(true);
     expect(lifeBooksCacheKey('u1', [...done, { title: 'X', author: null, genre: null, rating: null }])).not.toBe(a);
   });
 
@@ -82,5 +84,14 @@ describe('lifeBooks', () => {
     expect(res.provider).toBeNull();
     expect(res.data.length).toBeGreaterThan(0);
     expect(res.data.every((d) => d.verified === false)).toBe(true);
+  });
+});
+
+describe('stripRatingEcho', () => {
+  it('프롬프트 별점 표기를 옮겨 쓴 부분을 지운다', async () => {
+    const { stripRatingEcho } = await import('../lib/lifeBooks');
+    expect(stripRatingEcho('「데미안」 내 별점 5점(5점 만점)처럼 성장 이야기를 좋아하셨다면 어울립니다.')).toBe('「데미안」처럼 성장 이야기를 좋아하셨다면 어울립니다.');
+    expect(stripRatingEcho('5점 만점으로 평가하신 것을 보면 좋아하실 거예요. 섬세한 문장이 돋보입니다.')).toBe('섬세한 문장이 돋보입니다.');
+    expect(stripRatingEcho('섬세한 문장이 돋보이는 소설입니다.')).toBe('섬세한 문장이 돋보이는 소설입니다.');
   });
 });

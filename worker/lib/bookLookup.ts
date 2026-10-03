@@ -51,7 +51,8 @@ interface NaverItem {
   description?: string;
 }
 
-const LOOKUP_TIMEOUT_MS = 5000;
+/** 개별 조회 상한 — 인생책은 후보 수만큼 병렬 조회하므로 가장 느린 한 건이 전체 지연을 정한다 */
+export const LOOKUP_TIMEOUT_MS = 4000;
 /** 이 이상이면 제목만으로 같은 책으로 인정 */
 const TITLE_STRONG = 0.85;
 /** 이 이상이면 저자까지 겹칠 때 같은 책으로 인정 */
@@ -116,12 +117,16 @@ function pickBest(query: BookQuery, candidates: Candidate[]): BookMatch | null {
 }
 
 async function fetchJson<T>(url: string, headers: Record<string, string>): Promise<T | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), LOOKUP_TIMEOUT_MS);
   try {
-    const res = await fetch(url, { headers, signal: AbortSignal.timeout(LOOKUP_TIMEOUT_MS) });
+    const res = await fetch(url, { headers, signal: controller.signal });
     if (!res.ok) return null;
     return (await res.json()) as T;
   } catch {
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }
 

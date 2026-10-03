@@ -23,7 +23,7 @@ aiRouter.post(
   rateLimit({ limit: 5, windowMs: 60_000, keyPrefix: 'ai_sum', keyBy: 'user' }),
   async (c) => {
     const body = await c.req.json().catch(() => null) as {
-      description?: unknown; title?: unknown; author?: unknown; isbn?: unknown;
+      description?: unknown; title?: unknown; author?: unknown; isbn?: unknown; refresh?: unknown;
     } | null;
     const title = typeof body?.title === 'string' ? body.title.trim() : '';
     const author = typeof body?.author === 'string' ? body.author.trim() : '';
@@ -37,7 +37,7 @@ aiRouter.post(
         author,
         isbn: typeof body?.isbn === 'string' ? body.isbn : undefined,
         description: typeof body?.description === 'string' ? body.description : undefined,
-      });
+      }, { refresh: body?.refresh === true });
       return c.json(result);
     } catch (err) {
       console.error('AI 요약 오류:', err);

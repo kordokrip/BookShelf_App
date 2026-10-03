@@ -888,7 +888,7 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 | GET | `/api/books` | optionalAuth | `?status=&genre=&limit=&offset=` | `{data:Book[], count}` | `routes/books.ts` |
 | GET | `/api/books/:id` | optionalAuth | — | `{data: Book}` | `routes/books.ts` |
 | POST | `/api/books` | **authMiddleware** ✅ | CreateBookBody | `{data: Book}` 201 / `400`(wish 10권 초과) / `409`(wish 중복 제목) ★ | `routes/books.ts` |
-| PUT | `/api/books/:id` | **authMiddleware** ✅ | UpdateBookBody (partial) | `{data: Book}` | `routes/books.ts` |
+| PUT | `/api/books/:id` | **authMiddleware** ✅ | UpdateBookBody (partial) — **보낸 필드만 바뀐다**(기본값 없음, 2026-10-03 수정 전에는 장르·표지·현재 페이지·우선순위가 기본값으로 덮였음). 비울 수 있는 필드(출판사·ISBN·완독일·메모·목표일·별점·총 페이지·하루 목표·표지 이미지)는 `null` 허용 | `{data: Book}` | `routes/books.ts`, 스키마 `lib/bookSchemas.ts` |
 | DELETE | `/api/books/:id` | **authMiddleware** ✅ | — | `{success: true}` | `routes/books.ts` |
 | POST | `/api/books/:id/cover` | **authMiddleware** ✅ | ArrayBuffer (`Content-Type: image/*`) | `{success, r2Key, coverUrl}` | `routes/books.ts` |
 | GET | `/api/books/:id/cover` | 없음 | — | `image/*` binary 또는 redirect | `routes/books.ts` |
@@ -928,9 +928,9 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 
 | Method | 경로 | 인증 | 요청 | 응답 | 캐시 |
 |---|---|---|---|---|---|
-| POST | `/api/ai/summarize` | **authMiddleware** (한도는 사용자별 `ai_sum`, 5회/분) | `{title, author, isbn?, description?}` — 20자 이상 description이 없으면 서버가 카카오→네이버에서 책 소개 조회(ISBN 우선, 제목 유사도 검증) | 근거 있음: `{summary, cached, provider: 'openrouter'\|'workers-ai', grounded: true, source: 'kakao'\|'naver'\|'client'}` · 근거 없음(모델 미호출): `{summary: null, reason: 'no_source', cached: false, provider: null}` · 실패 500 | KV `ai_summary:v4:{SHA-256(isbn·제목·저자·소개 전체)}` 7일 — Workers AI 폴백 결과는 1시간(성공 결과만, 요약 800자 상한). `lib/aiSummary.ts` |
+| POST | `/api/ai/summarize` | **authMiddleware** (한도는 사용자별 `ai_sum`, 5회/분) | `{title, author, isbn?, description?, refresh?}` — `refresh: true`면 KV 캐시 읽기를 건너뛰고 재생성(결과는 다시 캐시에 기록, 사용자별 `ai_sum` 한도는 그대로 적용; 프론트 "다시 생성") · 20자 이상 description이 없으면 서버가 카카오→네이버에서 책 소개 조회(ISBN 우선, 제목 유사도 검증) | 근거 있음: `{summary, cached, provider: 'openrouter'\|'workers-ai', grounded: true, source: 'kakao'\|'naver'\|'client'}` · 근거 없음(모델 미호출): `{summary: null, reason: 'no_source', cached: false, provider: null}` · 실패 500 | KV `ai_summary:v4:{SHA-256(isbn·제목·저자·소개 전체)}` 7일 — Workers AI 폴백 결과는 1시간(성공 결과만, 요약 800자 상한). `lib/aiSummary.ts` |
 | GET | `/api/ai/recommend` | optionalAuth (Gemma 우선 → Workers AI 폴백, `source`에 `openrouter` 추가) | `?limit=5` (`&refresh=true` 지원 ★) | `{recommendations, topGenres, cached}` | KV 1시간 TTL |
-| GET | `/api/ai/lifebooks` | **authMiddleware** (한도는 사용자별 `ai_life`, 3회/10분) | `?refresh=true` | `{data: [{title, author, reason, thumbnail, publisher, isbn, url, verified}], cached, source: 'openrouter'\|'workers-ai'\|'curated-fallback', provider: 'openrouter'\|'workers-ai'\|null}` — 완독 전체(≤200권)로 후보 10권 → 서재 중복 제거 + 카카오/네이버 실존 검증 → 5권(3권 미만이면 큐레이션 보충, 400: 완독 2권 미만) | KV `ai_lifebooks:v3:{userId}:{hash(완독 전체)}` 24시간(Gemma 결과만 — 폴백·큐레이션은 1시간). `lib/lifeBooks.ts` |
+| GET | `/api/ai/lifebooks` | **authMiddleware** (한도는 사용자별 `ai_life`, 3회/10분) | `?refresh=true` | `{data: [{title, author, reason, thumbnail, publisher, isbn, url, verified}], cached, source: 'openrouter'\|'workers-ai'\|'curated-fallback', provider: 'openrouter'\|'workers-ai'\|null}` — 완독 전체(≤200권)로 후보 10권 → 서재 중복 제거 + 카카오/네이버 실존 검증 → 5권(3권 미만이면 큐레이션 보충, 400: 완독 2권 미만) | KV `ai_lifebooks:v4:{userId}:{hash(완독 전체)}` 24시간(Gemma 결과만 — 폴백·큐레이션은 1시간). `lib/lifeBooks.ts` |
 | POST | `/api/ai/ocr` | optionalAuth | FormData(`image` 파일, 최대 5MB) | `{text, confidence}` ★ (FEAT-102) | 없음 |
 
 ### 통계 (`/api/stats`) ★ 신규 (2026-03-28)
@@ -1007,7 +1007,7 @@ totals:       { totalPages: number; totalMinutes: number }
 | Method | 경로 | 인증 | 요청 | 응답 | 비고 |
 |---|---|---|---|---|---|
 | GET | `/api/discover` | **authMiddleware** | `?tab=popular\|new\|life&genre=&page=&size=` | `{data: DiscoverBook[]}` | 서재 데이터 집계 기반, rate limit 30회/60s |
-| GET | `/api/discover/external` | **authMiddleware** | `?tab=new\|bestseller` | `{books, fetchedAt}` | 카카오/네이버/알라딘 외부 API, KV 캐시, rate limit 20회/60s |
+| GET | `/api/discover/external` | **authMiddleware** | `?tab=new\|bestseller` | `{books, fetchedAt}` | 카카오/네이버/알라딘 외부 API, KV 캐시(`ext_books:{tab}:v6`), rate limit 20회/60s. `tab=new`는 출간일이 31일 넘게 미래이거나 없는 책, 저자 없는 책, 수험서 키워드(검정고시·기출문제 등) 제목을 거른다(`lib/discoverFilter.ts`) |
 
 ### 푸시 알림 (`/api/push`)
 

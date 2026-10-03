@@ -82,4 +82,19 @@ describe('summarizeBook', () => {
   it('cleanSummary', () => {
     expect(cleanSummary('## 제목\n**굵게**\n\n\n끝')).toBe('제목\n굵게\n끝');
   });
+
+  it('refresh=true면 캐시를 읽지 않고 새로 생성하며 결과는 다시 캐시에 기록', async () => {
+    const { env } = makeEnv({ orKey: 'or' });
+    vi.stubGlobal('fetch', route([kakaoDoc], '첫 요약입니다.'));
+    const first = await summarizeBook(env, { title: '데미안', author: '헤르만 헤세' });
+    expect(first).toMatchObject({ cached: false, summary: '첫 요약입니다.' });
+    const hit = await summarizeBook(env, { title: '데미안', author: '헤르만 헤세' });
+    expect(hit).toMatchObject({ cached: true });
+
+    vi.stubGlobal('fetch', route([kakaoDoc], '새 요약입니다.'));
+    const fresh = await summarizeBook(env, { title: '데미안', author: '헤르만 헤세' }, { refresh: true });
+    expect(fresh).toMatchObject({ cached: false, summary: '새 요약입니다.' });
+    const after = await summarizeBook(env, { title: '데미안', author: '헤르만 헤세' });
+    expect(after).toMatchObject({ cached: true, summary: '새 요약입니다.' });
+  });
 });
