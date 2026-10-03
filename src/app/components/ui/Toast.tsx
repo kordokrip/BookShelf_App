@@ -81,6 +81,8 @@ function ToastItem({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => vo
 
   return (
     <div
+      role={toast.type === "error" ? "alert" : "status"}
+      aria-live={toast.type === "error" ? "assertive" : "polite"}
       className="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl shadow-lg border w-full transition-all duration-300"
       style={{
         backgroundColor: c.bg,
@@ -90,7 +92,7 @@ function ToastItem({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => vo
         transform: visible ? "translateY(0)" : "translateY(16px)",
       }}
     >
-      {c.icon}
+      <span aria-hidden className="flex-shrink-0">{c.icon}</span>
       <span className="flex-1" style={{ fontSize: 14, fontWeight: 500 }}>
         {toast.message}
       </span>

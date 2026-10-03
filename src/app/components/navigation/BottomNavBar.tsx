@@ -60,7 +60,7 @@ export function BottomNavBar() {
             <Link
               key={item.path}
               to={item.path}
-              aria-label={item.label}
+              aria-label={item.badge != null && item.badge > 0 ? `${item.label} ${item.badge}권` : item.label}
               aria-current={isActive ? "page" : undefined}
               /* touch-action은 index.css의 a 선택자에서 일괄 적용
                  active:scale-[0.92]: 탭 피드백 애니메이션 */
@@ -90,7 +90,7 @@ export function BottomNavBar() {
                   <span
                     className="absolute -top-2 -right-3 min-w-[18px] h-[18px] px-1 rounded-full bg-[#DC2626] text-white flex items-center justify-center"
                     style={{ fontSize: 11, fontWeight: 700, lineHeight: 1 }}
-                    aria-label={`${item.badge}개`}
+                    aria-hidden
                   >
                     {item.badge > 99 ? "99+" : item.badge}
                   </span>

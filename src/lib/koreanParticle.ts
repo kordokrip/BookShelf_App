@@ -17,3 +17,15 @@ export function subjectParticle(word: string): '이' | '가' {
 export function copulaEnding(word: string): '이에요' | '예요' {
   return hasFinalConsonant(word) ? '이에요' : '예요';
 }
+
+/** 목적격: "「아몬드」를" / "「채식주의자」를" → 받침 있으면 '을', 없으면 '를' */
+export function objectParticle(word: string): '을' | '를' {
+  return hasFinalConsonant(word) ? '을' : '를';
+}
+
+/** 방향격: "관리자로" / "일반 회원으로" / "서울로" → 받침 없거나 ㄹ받침이면 '로', 그 외 '으로' */
+export function directionParticle(word: string): '으로' | '로' {
+  if (!hasFinalConsonant(word)) return '로';
+  const code = word.charCodeAt(word.length - 1) - 0xac00;
+  return code % 28 === 8 ? '로' : '으로';
+}

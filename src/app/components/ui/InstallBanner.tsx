@@ -58,6 +58,19 @@ export function InstallBanner() {
    */
   const BANNER_BOTTOM = "calc(var(--floating-bottom) + 3.5rem + 0.75rem)";
 
+  /** 닫힌 뒤에는 투명 래퍼가 FAB·하단 탭 터치를 가로채거나 a11y 트리에 남지 않도록 처리 */
+  function wrapperState(shown: boolean) {
+    return {
+      transform: shown ? "translateY(0)" : "translateY(100%)",
+      opacity: shown ? 1 : 0,
+      pointerEvents: shown ? ("auto" as const) : ("none" as const),
+      visibility: shown ? ("visible" as const) : ("hidden" as const),
+      transition: shown
+        ? "transform 0.3s ease, opacity 0.3s ease"
+        : "transform 0.3s ease, opacity 0.3s ease, visibility 0s linear 0.3s",
+    };
+  }
+
   function handleDismiss() {
     sessionStorage.setItem("install_banner_dismissed", "1");
     setVisible(false);
@@ -71,10 +84,9 @@ export function InstallBanner() {
         className="fixed left-0 right-0 z-40 flex justify-center px-4"
         style={{
           bottom: BANNER_BOTTOM,
-          transform: iosVisible ? "translateY(0)" : "translateY(100%)",
-          opacity: iosVisible ? 1 : 0,
-          transition: "transform 0.3s ease, opacity 0.3s ease",
+          ...wrapperState(iosVisible),
         }}
+        aria-hidden={!iosVisible}
       >
         <div className="w-full max-w-sm flex items-start gap-3 rounded-2xl px-4 py-3 shadow-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40">
           <Smartphone size={17} className="text-amber-500 mt-0.5 flex-shrink-0" />
@@ -105,10 +117,9 @@ export function InstallBanner() {
       className="fixed left-0 right-0 z-40 flex justify-center px-4"
       style={{
         bottom: BANNER_BOTTOM,
-        transform: visible ? "translateY(0)" : "translateY(100%)",
-        opacity: visible ? 1 : 0,
-        transition: "transform 0.3s ease, opacity 0.3s ease",
+        ...wrapperState(visible),
       }}
+      aria-hidden={!visible}
     >
       <div
         className="w-full max-w-sm flex items-center gap-3 rounded-2xl px-4 py-3 shadow-lg"

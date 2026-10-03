@@ -7,6 +7,10 @@ import { forwardRef, useImperativeHandle, useLayoutEffect, useRef } from "react"
 import { Bold, Highlighter } from "lucide-react";
 import { wrapSelection } from "../../../lib/noteMarkup";
 
+/** 키보드 단축키 안내는 마우스·트랙패드 기기에서만 — 터치 기기에서 "(⌘B)"는 의미가 없다 */
+const shortcutHint = (label: string, keys: string) =>
+  typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches ? label : `${label} (${keys})`;
+
 interface NoteEditorProps {
   value: string;
   onChange: (value: string) => void;
@@ -74,8 +78,8 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>(funct
           className={toolButton}
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => applyMarker("**")}
-          aria-label="굵게 (⌘B)"
-          title="굵게 (⌘B)"
+          aria-label="굵게"
+          title={shortcutHint("굵게", "⌘B")}
         >
           <Bold size={15} />
         </button>
@@ -84,8 +88,8 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>(funct
           className={toolButton}
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => applyMarker("==")}
-          aria-label="하이라이트 (⌘⇧H)"
-          title="하이라이트 (⌘⇧H)"
+          aria-label="하이라이트"
+          title={shortcutHint("하이라이트", "⌘⇧H")}
         >
           <Highlighter size={15} />
         </button>

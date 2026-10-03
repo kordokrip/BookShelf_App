@@ -6,9 +6,9 @@
  * - 프로필 이모지 선택 기능
  * - 로그아웃 버튼
  */
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect, forwardRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogOut, X, Camera, Sun, Moon, Clock, Palette, ChevronRight } from "lucide-react";
+import { LogOut, X, Camera, Sun, Moon, Clock, Palette, ChevronRight, Users, Sparkles, FolderOpen, CalendarRange } from "lucide-react";
 import { useAuthStore, type AuthUser } from "../../../stores/authStore";
 import { useUiStore } from "../../../stores/uiStore";
 import { usersApi } from "../../../lib/api";
@@ -17,6 +17,7 @@ import { PushNotificationToggle } from "./PushNotificationToggle";
 import { THEME_LABEL } from "../navigation/TopBar";
 import { useBackToClose } from "../../../hooks/useBackToClose";
 import { useNavigate } from "react-router";
+import { useDialogA11y } from "../../../hooks/useDialogA11y";
 
 /* ─── 인사말 생성 ─────────────────────────────────── */
 function getGreeting(name: string): string {
@@ -52,6 +53,42 @@ for (let h = 6; h < 24; h++) {
   }
 }
 
+const SHORTCUTS: { path: string; label: string; icon: React.ComponentType<{ size?: number; className?: string; "aria-hidden"?: boolean | "true" }> }[] = [
+  { path: "/groups", label: "독서 모임", icon: Users },
+  { path: "/lifebooks", label: "인생책", icon: Sparkles },
+  { path: "/collections", label: "컬렉션", icon: FolderOpen },
+  { path: "/yearly-review", label: "연간 결산", icon: CalendarRange },
+];
+
+/** 접근성 스위치 — 시각 트랙(w-10 h-5)과 별개로 44px 이상 히트 영역 확보 (전역 button min-height 영향 차단) */
+function SwitchButton({ checked, onClick, disabled, label }: {
+  checked: boolean;
+  onClick: () => void;
+  disabled?: boolean;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={onClick}
+      disabled={disabled}
+      className="flex items-center justify-center min-w-[44px] min-h-[44px] -my-2 -mr-1 bg-transparent disabled:opacity-60"
+    >
+      <span
+        aria-hidden="true"
+        className={`relative block w-10 h-5 min-h-0 rounded-full transition-colors ${checked ? "bg-indigo-600" : "bg-[#CBD5E1] dark:bg-[#475569]"}`}
+      >
+        <span
+          className={`absolute top-0.5 left-0 w-4 h-4 rounded-full bg-white dark:bg-[#1E293B] shadow transition-transform ${checked ? "translate-x-[22px]" : "translate-x-0.5"}`}
+        />
+      </span>
+    </button>
+  );
+}
+
 function EmojiPicker({
   onSelect,
   onClose,
@@ -65,21 +102,22 @@ function EmojiPicker({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       className="absolute left-1/2 -translate-x-1/2 top-full mt-2 bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-[#334155] shadow-xl p-3 z-10"
-      style={{ width: 240 }}
+      style={{ width: 264, maxWidth: "calc(100vw - 1rem)" }}
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-between mb-2">
         <p style={{ fontSize: 12, fontWeight: 700, color: "var(--text-secondary)" }}>프로필 이모지 선택</p>
-        <button onClick={onClose} aria-label="이모지 피커 닫기" className="text-[#64748B] dark:text-[#94A3B8] hover:text-[#64748B]">
+        <button onClick={onClose} aria-label="이모지 피커 닫기" className="w-11 h-11 -m-2 flex items-center justify-center text-[#64748B] dark:text-[#94A3B8] hover:text-[#64748B]">
           <X size={14} />
         </button>
       </div>
-      <div className="grid grid-cols-6 gap-1.5">
+      <div className="grid grid-cols-5 gap-1 justify-items-center">
         {EMOJI_OPTIONS.map((emoji) => (
           <button
             key={emoji}
             onClick={() => onSelect(emoji)}
-            className="w-8 h-8 rounded-lg hover:bg-indigo-50 flex items-center justify-center transition-colors"
+            aria-label={`이모지 ${emoji}`}
+            className="w-11 h-11 rounded-lg hover:bg-indigo-50 flex items-center justify-center transition-colors"
             style={{ fontSize: 18 }}
           >
             {emoji}
@@ -98,17 +136,21 @@ function EmojiPicker({
 }
 
 /* ─── 아바타 표시 컴포넌트 (공유) ──────────────────── */
-export function ProfileAvatar({
-  user,
-  size = 40,
-  fontSize = 16,
-  className = "",
-}: {
+type ProfileAvatarProps = Omit<React.HTMLAttributes<HTMLDivElement>, "className"> & {
   user: AuthUser | null;
   size?: number;
   fontSize?: number;
   className?: string;
-}) {
+};
+
+// forwardRef + rest props: Radix Slot(asChild, 예: TooltipTrigger)이 ref·이벤트 핸들러를 직접 전달한다
+export const ProfileAvatar = forwardRef<HTMLDivElement, ProfileAvatarProps>(function ProfileAvatar({
+  user,
+  size = 40,
+  fontSize = 16,
+  className = "",
+  ...rest
+}, ref) {
   const emoji = user?.profile_emoji;
   const avatarUrl = user?.avatar_url;
   const initial = user?.name?.[0] ?? "?";
@@ -116,6 +158,8 @@ export function ProfileAvatar({
   if (avatarUrl) {
     return (
       <div
+        {...rest}
+        ref={ref}
         className={`rounded-full overflow-hidden flex-shrink-0 ${className}`}
         style={{ width: size, height: size }}
       >
@@ -139,6 +183,8 @@ export function ProfileAvatar({
   if (emoji) {
     return (
       <div
+        {...rest}
+        ref={ref}
         className={`rounded-full flex items-center justify-center flex-shrink-0 ${className}`}
         style={{
           width: size,
@@ -154,6 +200,8 @@ export function ProfileAvatar({
 
   return (
     <div
+      {...rest}
+      ref={ref}
       className={`rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center flex-shrink-0 shadow-sm ${className}`}
       style={{ width: size, height: size }}
     >
@@ -162,7 +210,7 @@ export function ProfileAvatar({
       </span>
     </div>
   );
-}
+});
 
 /* ─── 메인 팝업 ───────────────────────────────────── */
 export function ProfilePopup({ onClose }: { onClose: () => void }) {
@@ -179,7 +227,8 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
   const [reminderTime, setReminderTime] = useState(user?.reminder_time ?? "17:00");
   const [weeklyReportEnabled, setWeeklyReportEnabled] = useState((user?.weekly_report_enabled ?? 1) !== 0);
   const [savingReminder, setSavingReminder] = useState(false);
-  const popupRef = useRef<HTMLDivElement>(null);
+  // 포커스 이동·Tab 트랩·ESC 닫기·포커스 복원
+  const popupRef = useDialogA11y<HTMLDivElement>(onClose);
 
   // 바깥 클릭으로 닫기
   useEffect(() => {
@@ -190,16 +239,7 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [onClose]);
-
-  // ESC 키로 닫기
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  }, [onClose, popupRef]);
 
   if (!user) return null;
 
@@ -273,12 +313,16 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
   return (
     <motion.div
       ref={popupRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="프로필"
+      tabIndex={-1}
       initial={{ opacity: 0, y: -8, scale: 0.96 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -8, scale: 0.96 }}
       transition={{ duration: 0.15, ease: "easeOut" }}
       // 화면 높이 안에서 내부 스크롤 — 작은 폰에서 하단 탭바가 로그아웃 버튼을 가리던 문제 (iPhone 15 Pro 에뮬레이션)
-      className="absolute right-0 top-full mt-2 bg-white dark:bg-[#1E293B] rounded-2xl shadow-2xl border border-[#E2E8F0] dark:border-[#334155] overflow-y-auto overscroll-contain z-50 max-h-[calc(var(--vp-h)-var(--topbar-h)-var(--bottomnav-h)-1rem)] md:max-h-[calc(var(--vp-h)-var(--topbar-h)-1.5rem)]"
+      className="absolute right-0 top-full mt-2 bg-white dark:bg-[#1E293B] rounded-2xl shadow-2xl border border-[#E2E8F0] dark:border-[#334155] overflow-y-auto overscroll-contain z-50 outline-none max-h-[calc(var(--vp-h)-var(--topbar-h)-var(--bottomnav-h)-1rem)] md:max-h-[calc(var(--vp-h)-var(--topbar-h)-1.5rem)]"
       style={{ width: 320, maxWidth: "calc(100vw - 1rem)" }}
       onClick={(e) => e.stopPropagation()}
     >
@@ -289,7 +333,8 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
         </p>
         <button
           onClick={onClose}
-          className="w-7 h-7 rounded-full flex items-center justify-center text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors"
+          aria-label="프로필 닫기"
+          className="w-11 h-11 -my-2 -mr-2 rounded-full flex items-center justify-center text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors"
         >
           <X size={16} />
         </button>
@@ -307,9 +352,11 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
           <button
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
             disabled={saving}
+            aria-label="프로필 이모지 변경"
+            aria-expanded={showEmojiPicker}
             className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-white dark:bg-[#334155] border border-[#E2E8F0] dark:border-[#475569] shadow-sm flex items-center justify-center hover:bg-[#F8FAFC] dark:hover:bg-[#475569] transition-colors"
           >
-            <Camera size={13} className="text-[#64748B] dark:text-[#94A3B8]" />
+            <Camera size={13} className="text-[#64748B] dark:text-[#94A3B8]" aria-hidden="true" />
           </button>
 
           {/* 이모지 피커 */}
@@ -354,6 +401,25 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
+        {/* 바로가기 — 모바일 하단 탭·상단바에 없는 화면으로 이동 */}
+        <nav aria-label="바로가기" className="space-y-0.5">
+          <p className="text-[#64748B] dark:text-[#94A3B8] px-1" style={{ fontSize: 11, fontWeight: 700 }}>바로가기</p>
+          {SHORTCUTS.map(({ path, label, icon: Icon }) => (
+            <button
+              key={path}
+              type="button"
+              onClick={() => { onClose(); navigate(path); }}
+              className="w-full min-h-[44px] flex items-center justify-between rounded-xl px-1 text-left hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors"
+            >
+              <span className="flex items-center gap-2 text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 13 }}>
+                <Icon size={18} className="text-indigo-600 dark:text-indigo-300" aria-hidden="true" />
+                {label}
+              </span>
+              <ChevronRight size={16} className="text-[#64748B] dark:text-[#94A3B8]" aria-hidden="true" />
+            </button>
+          ))}
+        </nav>
+
         {/* 앱 디자인 (강조색·화면 모드) */}
         <button
           onClick={() => { onClose(); navigate("/settings/appearance"); }}
@@ -374,15 +440,12 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
           {/* 독서 리마인더 토글 */}
           <div className="flex items-center justify-between">
             <span className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 13 }}>독서 리마인더</span>
-            <button
+            <SwitchButton
+              checked={reminderEnabled}
               onClick={handleReminderToggle}
               disabled={savingReminder}
-              className={`relative w-10 h-5 rounded-full transition-colors ${reminderEnabled ? "bg-indigo-600" : "bg-[#CBD5E1] dark:bg-[#475569]"}`}
-            >
-              <span
-                className={`absolute top-0.5 w-4 h-4 rounded-full bg-white dark:bg-[#1E293B] shadow transition-transform ${reminderEnabled ? "translate-x-5" : "translate-x-0.5"}`}
-              />
-            </button>
+              label="독서 리마인더"
+            />
           </div>
           {/* 알림 시각 */}
           {reminderEnabled && (
@@ -391,6 +454,7 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
               <select
                 value={reminderTime}
                 onChange={handleReminderTimeChange}
+                aria-label="리마인더 시간"
                 disabled={savingReminder}
                 className="rounded-lg border border-[#E2E8F0] dark:border-[#475569] bg-white dark:bg-[#334155] text-[#1E293B] dark:text-[#F8FAFC] px-2 py-1"
                 style={{ fontSize: 12 }}
@@ -404,15 +468,12 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
           {/* 주간 독서 리포트 */}
           <div className="flex items-center justify-between">
             <span className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 13 }}>주간 독서 리포트</span>
-            <button
+            <SwitchButton
+              checked={weeklyReportEnabled}
               onClick={handleWeeklyReportToggle}
               disabled={savingReminder}
-              className={`relative w-10 h-5 rounded-full transition-colors ${weeklyReportEnabled ? "bg-indigo-600" : "bg-[#CBD5E1] dark:bg-[#475569]"}`}
-            >
-              <span
-                className={`absolute top-0.5 w-4 h-4 rounded-full bg-white dark:bg-[#1E293B] shadow transition-transform ${weeklyReportEnabled ? "translate-x-5" : "translate-x-0.5"}`}
-              />
-            </button>
+              label="주간 독서 리포트"
+            />
           </div>
         </div>
 

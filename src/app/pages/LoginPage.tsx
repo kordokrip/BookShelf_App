@@ -205,7 +205,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
           }}
         />
         {emailError && (
-          <p className="mt-1.5 flex items-center gap-1" style={{ fontSize: 12, color: "#EF4444", fontFamily: "var(--font-pretendard)" }}>
+          <p role="alert" className="mt-1.5 flex items-center gap-1" style={{ fontSize: 12, color: "#EF4444", fontFamily: "var(--font-pretendard)" }}>
             <AlertCircle size={13} aria-hidden className="inline -mt-0.5 mr-1" />{emailError}
           </p>
         )}
@@ -246,7 +246,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
 
       {/* Auth error message */}
       {authError && (
-        <p className="flex items-center gap-1" style={{ fontSize: 13, color: "#EF4444", fontFamily: "var(--font-pretendard)" }}>
+        <p role="alert" className="flex items-center gap-1" style={{ fontSize: 13, color: "#EF4444", fontFamily: "var(--font-pretendard)" }}>
           <AlertCircle size={13} aria-hidden className="inline -mt-0.5 mr-1" />{authError}
         </p>
       )}

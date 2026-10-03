@@ -10,7 +10,7 @@ export function SafeAreaTop() {
   return (
     <div
       aria-hidden
-      className="sticky top-0 z-30 bg-background flex-shrink-0"
+      className="sticky top-0 z-30 bg-background dark:bg-[#0F172A] flex-shrink-0"
       style={{ height: "var(--safe-top)" }}
     />
   );

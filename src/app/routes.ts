@@ -1,5 +1,5 @@
 import { createElement, lazy, Suspense } from "react";
-import { createBrowserRouter, Navigate } from "react-router";
+import { createBrowserRouter, Navigate, Outlet, ScrollRestoration } from "react-router";
 import { Root } from "./Root";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { EntryGate } from "./components/auth/EntryGate";
@@ -71,7 +71,16 @@ const protected_ = (Page: React.ComponentType) => () =>
 // React Router v7: ErrorBoundary 컴포넌트 방식 (element 공유 문제 없음)
 const EB = RouteErrorFallback;
 
+// 모든 라우트(Root 레이아웃 + /register-flow·/notes-search 독립 라우트) 공통:
+// 새 이동은 맨 위로, 뒤로/앞으로(POP)는 이전 스크롤 위치 복원
+function ScrollLayout() {
+  return createElement("div", { style: { display: "contents" } }, createElement(Outlet), createElement(ScrollRestoration));
+}
+
 export const router = createBrowserRouter([
+  {
+    Component: ScrollLayout,
+    children: [
   // ─── 진입 게이트 ─────────────────────────────────────────
   {
     path: "/entry",
@@ -143,5 +152,7 @@ export const router = createBrowserRouter([
     path: "*",
     Component: withSuspense(LazyNotFoundPage),
     ErrorBoundary: EB,
+  },
+    ],
   },
 ]);

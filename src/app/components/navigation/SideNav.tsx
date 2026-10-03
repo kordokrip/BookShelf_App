@@ -76,6 +76,8 @@ export function SideNav() {
               <TooltipTrigger asChild>
                 <button
                   onClick={toggleSidebar}
+                  aria-label="사이드바 접기"
+                  aria-expanded={sidebarOpen}
                   className="hidden lg:flex w-8 h-8 rounded-lg items-center justify-center text-[#64748B] dark:text-[#94A3B8] hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900 transition-colors flex-shrink-0"
                 >
                   <ChevronsLeft size={18} />
@@ -89,6 +91,8 @@ export function SideNav() {
             <TooltipTrigger asChild>
               <button
                 onClick={toggleSidebar}
+                aria-label="사이드바 펼치기"
+                aria-expanded={sidebarOpen}
                 className="w-11 h-11 rounded-xl flex items-center justify-center bg-indigo-50 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-colors shadow-sm md:max-lg:hidden"
               >
                 <ChevronsRight size={20} />

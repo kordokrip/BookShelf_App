@@ -19,7 +19,10 @@ html {
   -webkit-text-size-adjust: 100%;
   -moz-text-size-adjust: 100%;
   text-size-adjust: 100%;
-  scroll-behavior: smooth;
+  /* scroll-behavior: smooth는 두지 않는다 — 화면 이동 시 맨 위로 되돌리는 스크롤까지 애니메이션돼 이전 화면 위치에서 미끄러져 올라온다.
+     부드러운 스크롤이 필요한 곳은 scrollTo({ behavior: 'smooth' })로 직접 지정 */
+  /* sticky TopBar 아래로 scrollIntoView·포커스 이동 시 가려지지 않게 */
+  scroll-padding-top: calc(var(--topbar-h, 56px) + 8px);
   /* 박스 크기 계산 통일 (서브픽셀 렌더링 방지) */
   box-sizing: border-box;
 }
@@ -63,24 +66,33 @@ body {
 }
 
 /* ── 2. 터치 최적화 ──────────────────────────────────────────── */
-button,
-a,
-[role="button"],
-input[type="submit"],
-input[type="button"],
-label {
-  /* 300ms 딜레이 제거 + 더블탭 줌 방지 */
-  touch-action: manipulation;
-  -webkit-user-select: none;
-  user-select: none;
-  /* 최소 터치 영역: Apple HIG 44pt / Google Material 48dp */
-  min-height: var(--touch-target-min, 44px);
-}
+/* @layer base: Tailwind 유틸리티(min-h-0, min-h-10 등)가 이 규칙을 덮어쓸 수 있게 한다
+   (unlayered 규칙은 유틸리티보다 항상 우선해 작은 스위치 등이 44px로 늘어났음) */
+@layer base {
+  button,
+  a,
+  [role="button"],
+  input[type="submit"],
+  input[type="button"],
+  label:has(input[type="checkbox"], input[type="radio"]) {
+    /* 300ms 딜레이 제거 + 더블탭 줌 방지 */
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+    /* 최소 터치 영역: Apple HIG 44pt / Google Material 48dp */
+    min-height: var(--touch-target-min, 44px);
+  }
 
-/* 인라인 요소(a, label)는 min-height 제외 — 레이아웃 왜곡 방지 */
-a:not([role]),
-span[role="button"] {
-  min-height: unset;
+  /* 일반 폼 레이블은 터치 영역·선택 불가 규칙 제외 (46px 높이·텍스트 선택 불가 방지) */
+  label {
+    touch-action: manipulation;
+  }
+
+  /* 인라인 요소(a)는 min-height 제외 — 레이아웃 왜곡 방지 */
+  a:not([role]),
+  span[role="button"] {
+    min-height: unset;
+  }
 }
 
 /* ── 3. 입력 필드 — iOS 줌 방지 ─────────────────────────────── */

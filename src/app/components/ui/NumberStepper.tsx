@@ -13,7 +13,7 @@ interface NumberStepperProps {
 /**
  * Shared NumberStepper component.
  * Used in: PageUpdateModal (ReadingPage), NoteInput screen (NotesSearchPage)
- * Spec: 40×40px circle buttons, 32px Bold number, unit text 14px #94A3B8
+ * Spec: 44×44px circle buttons, 32px Bold number, unit text 14px #94A3B8
  * BUG-002: 숫자 클릭 시 직접 입력 모드 지원
  */
 export function NumberStepper({ value, min = 0, max = 9999, onChange, unit = "페이지", label }: NumberStepperProps) {
@@ -56,13 +56,13 @@ export function NumberStepper({ value, min = 0, max = 9999, onChange, unit = "�
         justifyContent: "space-between",
       }}
     >
-      {/* Minus button: 40×40px circle */}
+      {/* Minus button: 44×44px circle */}
       <button
         onClick={decrement}
         disabled={value <= min}
         aria-label="감소"
         style={{
-          width: 40, height: 40, borderRadius: "50%",
+          width: 44, height: 44, borderRadius: "50%",
           border: "2px solid var(--border-color)", background: "var(--bg-card)",
           cursor: value <= min ? "default" : "pointer",
           opacity: value <= min ? 0.4 : 1,
@@ -133,13 +133,13 @@ export function NumberStepper({ value, min = 0, max = 9999, onChange, unit = "�
         )}
       </div>
 
-      {/* Plus button: 40×40px circle */}
+      {/* Plus button: 44×44px circle */}
       <button
         onClick={increment}
         disabled={value >= max}
         aria-label="증가"
         style={{
-          width: 40, height: 40, borderRadius: "50%",
+          width: 44, height: 44, borderRadius: "50%",
           border: "2px solid var(--border-color)", background: "var(--bg-card)",
           cursor: value >= max ? "default" : "pointer",
           opacity: value >= max ? 0.4 : 1,

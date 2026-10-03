@@ -25,7 +25,15 @@ const pageTitles: Record<string, string> = {
   '/notes-search': '노트 & 검색',
   '/groups': '독서 모임',
   '/admin': '관리자 대시보드',
+  '/lifebooks': '인생책',
+  '/collections': '컬렉션',
+  '/yearly-review': '연간 결산',
 };
+
+function resolveTitle(pathname: string): string {
+  if (pathname.startsWith('/book/')) return '책 상세';
+  return pageTitles[pathname] ?? 'BookShelf';
+}
 
 const DESKTOP_NAV_LINKS = [
   { to: '/', label: '완독' },
@@ -45,7 +53,7 @@ export const THEME_LABEL = {
 export function TopBar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const title = pageTitles[location.pathname] ?? 'BookShelf';
+  const title = resolveTitle(location.pathname);
   const user = useAuthStore((s) => s.user);
 
   const themeMode      = useUiStore((s) => s.themeMode);
@@ -74,14 +82,14 @@ export function TopBar() {
         3-column grid: 좌측(로고) | 중앙(타이틀) | 우측(액션)
         → 중앙 타이틀이 양 옆 영역을 침범하지 않아 겹침 방지
       */}
-      <div className="grid grid-cols-[auto_1fr_auto] items-center px-3 h-14 gap-2">
+      <div className="grid grid-cols-[auto_1fr_auto] items-center px-2 sm:px-3 h-14 gap-1 sm:gap-2">
 
         {/* ── 좌측: 로고 ── */}
         <div className="flex items-center">
           <Link
             to="/"
             aria-label="BookShelf 서재로"
-            className="lg:hidden flex items-center gap-1.5 no-underline flex-shrink-0"
+            className="lg:hidden flex items-center gap-1.5 no-underline flex-shrink-0 min-h-11 min-w-11"
           >
             <AppLogo size={32} className="flex-shrink-0 drop-shadow-sm" />
             <span className="hidden sm:block text-[#1E293B] dark:text-[#F8FAFC] text-base font-bold tracking-tight">
@@ -125,7 +133,7 @@ export function TopBar() {
               <button
                 onClick={cycleThemeMode}
                 aria-label={THEME_LABEL[themeMode]}
-                className="hidden sm:flex w-9 h-9 sm:w-11 sm:h-11 rounded-full items-center justify-center text-[#64748B] hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition-colors"
+                className="hidden sm:flex w-11 h-11 rounded-full items-center justify-center text-[#64748B] hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition-colors"
               >
                 {themeMode === 'auto'  ? <Clock size={19} /> :
                  themeMode === 'light' ? <Sun   size={19} /> :
@@ -141,7 +149,7 @@ export function TopBar() {
               <button
                 onClick={() => navigate('/notes-search')}
                 aria-label="노트 & 검색"
-                className="w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-[#64748B] hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition-colors"
+                className="w-11 h-11 rounded-full flex items-center justify-center text-[#64748B] hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition-colors"
               >
                 <FileSearch size={19} />
               </button>
@@ -156,7 +164,7 @@ export function TopBar() {
                 <button
                   onClick={() => navigate('/admin')}
                   aria-label="관리자 대시보드"
-                  className="w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                  className="w-11 h-11 rounded-full flex items-center justify-center text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
                 >
                   <UserCog size={19} />
                 </button>
@@ -182,7 +190,7 @@ export function TopBar() {
                   }}
                   aria-label={`알림${unreadCount > 0 ? ` (${unreadCount}건 미읽음)` : ''}`}
                   aria-expanded={notifOpen}
-                  className="w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center relative text-[#64748B] hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition-colors"
+                  className="w-11 h-11 rounded-full flex items-center justify-center relative text-[#64748B] hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition-colors"
                 >
                   <Bell size={19} />
                   {unreadCount > 0 && (
@@ -212,7 +220,7 @@ export function TopBar() {
               <TooltipTrigger asChild>
                 <button
                   onClick={() => setProfileOpen((v) => !v)}
-                  className="ml-1 flex-shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600"
+                  className="flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600"
                   aria-label="프로필"
                   aria-expanded={profileOpen}
                 >

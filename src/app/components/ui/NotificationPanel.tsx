@@ -55,6 +55,15 @@ export function NotificationPanel({ onClose }: Props) {
   const clearNotifications = useUiStore((s) => s.clearNotifications);
   const panelRef = useRef<HTMLDivElement>(null);
 
+  // 열릴 때 포커스 이동, 닫힐 때 트리거로 복원 (ESC는 아래 핸들러)
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    panelRef.current?.focus({ preventScroll: true });
+    return () => {
+      if (previous && document.contains(previous)) previous.focus({ preventScroll: true });
+    };
+  }, []);
+
   // 패널이 열리면 모두 읽음 처리
   useEffect(() => {
     markAllRead();
@@ -83,12 +92,13 @@ export function NotificationPanel({ onClose }: Props) {
       ref={panelRef}
       role="dialog"
       aria-label="알림 패널"
+      tabIndex={-1}
       className={[
         'absolute right-0 top-full mt-2 z-50',
         'w-80 sm:w-96 max-w-[calc(100vw-1rem)] max-h-[calc(var(--vp-h)-var(--topbar-h)-var(--bottomnav-h)-1rem)] md:max-h-[calc(var(--vp-h)-var(--topbar-h)-1.5rem)] flex flex-col',
         'bg-white dark:bg-[#1E293B]',
         'border border-[#E2E8F0] dark:border-[#334155]',
-        'rounded-2xl shadow-xl overflow-hidden',
+        'rounded-2xl shadow-xl overflow-hidden outline-none',
       ].join(' ')}
     >
       {/* Header */}
@@ -100,7 +110,7 @@ export function NotificationPanel({ onClose }: Props) {
               onClick={clearNotifications}
               aria-label="전체 삭제"
               title="전체 삭제"
-              className="w-8 h-8 flex items-center justify-center rounded-full text-[#64748B] dark:text-[#94A3B8] hover:text-[#EF4444] hover:bg-[#FEF2F2] transition-colors"
+              className="w-11 h-11 flex items-center justify-center rounded-full text-[#64748B] dark:text-[#94A3B8] hover:text-[#EF4444] hover:bg-[#FEF2F2] transition-colors"
             >
               <Trash2 size={15} />
             </button>
@@ -108,7 +118,7 @@ export function NotificationPanel({ onClose }: Props) {
           <button
             onClick={onClose}
             aria-label="닫기"
-            className="w-8 h-8 flex items-center justify-center rounded-full text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors"
+            className="w-11 h-11 flex items-center justify-center rounded-full text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors"
           >
             <X size={16} />
           </button>
