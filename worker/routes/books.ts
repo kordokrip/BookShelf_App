@@ -17,13 +17,13 @@
  */
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
 import { HTTPException } from 'hono/http-exception';
 import type { Bindings, DbBook } from '../types';
 import { authMiddleware } from '../auth';
 import { logActivity } from './admin';
 import { deriveFinishedDate } from '../lib/bookHelpers';
 import { achievementEventFor } from '../lib/achievementsDb';
+import { createBookSchema, updateBookSchema } from '../lib/bookSchemas';
 
 export const booksRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -61,27 +61,7 @@ function resolveBookCoverUrl(coverImage: string | null, bookId: string, origin: 
 
 
 // ─── 스키마 검증 ──────────────────────────────────────────────
-const createBookSchema = z.object({
-  title: z.string().min(1).max(200),
-  author: z.string().min(1).max(100),
-  publisher: z.string().max(100).optional(),
-  isbn: z.string().max(20).optional(),
-  genre: z.string().max(50).optional().default('기타'),
-  cover_emoji: z.string().optional().default('📚'),
-  cover_color: z.string().optional().default('from-indigo-500 to-violet-600'),
-  cover_image: z.string().url().optional(),
-  status: z.enum(['done', 'reading', 'wish']),
-  rating: z.number().int().min(1).max(5).optional(),
-  finished_date: z.string().optional(),
-  note: z.string().max(2000).optional(),
-  total_pages: z.number().int().positive().optional(),
-  current_page: z.number().int().min(0).optional().default(0),
-  goal_date: z.string().optional(),
-  daily_goal: z.number().int().positive().optional(),
-  priority: z.number().int().min(1).max(10).optional().default(5),
-});
 
-const updateBookSchema = createBookSchema.partial();
 
 // ─── POST /api/books/refresh-covers — 기존 책 표지 일괄 백필 ─
 // 1단계: 직접 CDN URL 저장된 책 → 프록시 URL로 교체 (CORS 해결)

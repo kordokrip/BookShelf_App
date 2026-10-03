@@ -19,13 +19,16 @@ import { authMiddleware } from '../auth';
 export const collectionsRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
 // ─── 스키마 검증 ──────────────────────────────────────────────
-const createCollectionSchema = z.object({
+// zod 4는 .partial()에서도 .default()를 유지하므로 수정 스키마는 기본값 없는 base에서 만든다
+const collectionBaseSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
+  emoji: z.string().max(4).optional(),
+});
+const createCollectionSchema = collectionBaseSchema.extend({
   emoji: z.string().max(4).optional().default('📚'),
 });
-
-const updateCollectionSchema = createCollectionSchema.partial();
+const updateCollectionSchema = collectionBaseSchema.partial();
 
 const addBookSchema = z.object({
   book_id: z.string().uuid(),

@@ -48,7 +48,7 @@ FAILED_TESTS=()
 if [[ "$READONLY" == true ]]; then
   TOTAL=3
 else
-  TOTAL=68
+  TOTAL=70
 fi
 
 # ── 시작 시각 ────────────────────────────────────────────────────
@@ -1374,6 +1374,58 @@ if [[ "$HTTP_CODE" == "200" && "$NO_SRC" == "True" ]]; then
   pass_test $T "$NAME" $ELAPSED
 else
   fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE}, no_source=${NO_SRC} (기대: 200 + summary null, reason no_source — 모델 호출 없이)"
+fi
+
+T=69; NAME="PUT /api/books/:id 부분 수정(rating만) → genre·current_page·priority 유지"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+curl -s -o "$TMPF" -X POST "${BASE_URL}/api/books" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"부분수정 회귀 테스트","author":"QA","status":"reading","genre":"해외문학","current_page":150,"total_pages":400,"priority":9}'
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+PARTIAL_BOOK_ID=$(json_val "$BODY" "d['data']['id']")
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+curl -s -o "$TMPF" -X PUT "${BASE_URL}/api/books/${PARTIAL_BOOK_ID}" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"rating":4}'
+rm -f "$TMPF"
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+curl -s -o "$TMPF" "${BASE_URL}/api/books/${PARTIAL_BOOK_ID}" \
+  -H "Authorization: Bearer ${TOKEN}"
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+KEPT=$(json_val "$BODY" "d['data']['genre'] == '해외문학' and d['data']['current_page'] == 150 and d['data']['priority'] == 9 and d['data']['rating'] == 4")
+if [[ "$KEPT" == "True" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "부분 PUT 후 필드 유지 실패 (genre=해외문학, current_page=150, priority=9, rating=4 기대)"
+fi
+
+T=70; NAME="PUT /api/books/:id {finished_date:null} → null 저장, 다른 필드 유지"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+curl -s -o "$TMPF" -X POST "${BASE_URL}/api/books" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"null 비우기 회귀 테스트","author":"QA","status":"done","genre":"해외문학","publisher":"테스트출판사","finished_date":"2026-01-02","priority":9}'
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+NULL_BOOK_ID=$(json_val "$BODY" "d['data']['id']")
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+curl -s -o "$TMPF" -X PUT "${BASE_URL}/api/books/${NULL_BOOK_ID}" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"finished_date":null}'
+rm -f "$TMPF"
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+curl -s -o "$TMPF" "${BASE_URL}/api/books/${NULL_BOOK_ID}" \
+  -H "Authorization: Bearer ${TOKEN}"
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+KEPT=$(json_val "$BODY" "d['data']['finished_date'] is None and d['data']['genre'] == '해외문학' and d['data']['publisher'] == '테스트출판사' and d['data']['priority'] == 9 and d['data']['status'] == 'done'")
+if [[ "$KEPT" == "True" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "finished_date null 저장 또는 다른 필드 유지 실패"
 fi
 
 # ================================================================
