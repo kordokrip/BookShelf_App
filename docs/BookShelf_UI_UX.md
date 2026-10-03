@@ -436,6 +436,7 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 - **위치**: `absolute right-0 top-full mt-2`, `w-80 sm:w-96 max-h-[70vh]`
 - **배경**: `bg-white rounded-2xl shadow-xl border border-[#E2E8F0]`
 - **닫기**: 외부 클릭 (`mousedown`) 또는 Escape 키
+- **포커스(2026-10-03)**: 비모달 팝오버 — `role="dialog"`(aria-modal 없음). 열리면 패널로 포커스, Esc·닫기·Shift+Tab은 패널을 닫고 벨로 포커스를 돌려준다. Tab으로 패널을 벗어나면 닫힌다. 벨을 다시 누르면 닫힌다
 
 **헤더**: "알림" + 전체 삭제(`Trash2` 15px) + 닫기(`X` 16px)
 - 열리면 자동으로 `markAllRead()` 호출
@@ -735,6 +736,8 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 - **파일**: `src/app/pages/LibraryPage.tsx` (~480줄)
 - **경로**: `/` (메인 홈)
 - **보호**: ProtectedRoute
+
+**장르 다시 찾기 배너** (2026-10-03, `components/library/GenreRecoveryBanner.tsx`·`GenreRecoverySheet.tsx`): 장르가 '기타'인 책이 있으면 "장르가 '기타'인 책이 N권 있어요" + [AI로 장르 찾기]. 예전 버그(일부 수정 시 장르가 '기타'로 덮임)로 잃은 장르를 사용자가 확인해 되찾게 한다. 시트에서 `POST /api/books/genre-suggestions`(책 소개 근거 AI 추천, 한 번에 40권) → 확실한 추천은 기본 선택, 불확실은 "확실하지 않음" 표시·미선택 → [장르 바꾸기]로 직접 고르기 → [선택한 N권 적용](`PUT {genre}`만, 동시 4개). 닫으면(X) 현재 개수를 기억해 개수가 늘 때만 다시 보인다. AI 추천은 틀릴 수 있어 책 정보 수정으로도 고칠 수 있다고 안내
 
 #### State (6개)
 
@@ -1557,6 +1560,7 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 
 - **헤더**: Sparkles 아이콘 + "나의 인생책" 타이틀, 부제 안내 문구, 새로고침 버튼(추천 결과 있을 때만 노출)
 - **캐시 배지**: `data.cached === true`이면 "캐시된 결과 · 24시간 유지" 안내
+- **지난 추천(2026-10-03)**: 완독 목록이 바뀌어 캐시가 없으면 서버가 직전 추천을 바로 돌려주고(`stale: true`) 백그라운드에서 새로 만든다. 화면은 "지난 추천이에요 · 새 완독 기록으로 다시 고르는 중"을 보여 주고 30초 간격으로 최대 2번 다시 불러와 새 추천으로 조용히 바꾼다. 처음 한 번만 생성(10~30초)을 기다린다
 - **로딩**: 카드 5개 스켈레톤(표지 16×24 + 텍스트 라인 4줄, `animate-pulse`)
 - **완독 2권 미만(400 에러)**: BookOpen 아이콘 + "완독한 책이 2권 이상 필요해요" 안내 + "서재로 이동" CTA(`Link to="/"`)
 - **일반 오류**: 안내 텍스트 + "다시 시도" 버튼(`refreshMutation.mutate()`)
