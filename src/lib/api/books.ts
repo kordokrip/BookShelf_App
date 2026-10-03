@@ -2,6 +2,20 @@ import type { ApiResponse, Book, BookStatus, CreateBookInput, UpdateBookInput } 
 import { ApiError, apiFetch } from './client';
 import type { WithAchievementEvent } from './achievements';
 
+export interface GenreSuggestion {
+  id: string;
+  title: string;
+  author: string;
+  current_genre: string;
+  suggested_genre: string;
+  confidence: 'high' | 'low';
+}
+
+export interface GenreSuggestionsResponse {
+  data: GenreSuggestion[];
+  provider: 'openrouter' | 'workers-ai' | null;
+}
+
 export const booksApi = {
   /** 책 목록 조회 */
   list: (params: {
@@ -39,6 +53,13 @@ export const booksApi = {
     apiFetch<WithAchievementEvent<ApiResponse<Book>>>(`/api/books/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
+    }),
+
+  /** '기타' 장르 책의 AI 장르 추천 (사용자당 10분 3회, 초과 시 429) */
+  genreSuggestions: (bookIds?: string[]) =>
+    apiFetch<GenreSuggestionsResponse>('/api/books/genre-suggestions', {
+      method: 'POST',
+      body: JSON.stringify(bookIds && bookIds.length > 0 ? { book_ids: bookIds } : {}),
     }),
 
   /** 책 삭제 */

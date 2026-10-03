@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { providerLabel, lifeBooksSourceLabel, RATE_LIMIT_RETRY_COPY } from '../useAI';
+import { providerLabel, lifeBooksSourceLabel, RATE_LIMIT_RETRY_COPY, lifeBooksRefetchInterval } from '../useAI';
 
 describe('AI 라벨 헬퍼', () => {
   it('provider 캡션', () => {
@@ -15,5 +15,17 @@ describe('AI 라벨 헬퍼', () => {
   });
   it('429 문구는 10분', () => {
     expect(RATE_LIMIT_RETRY_COPY).toContain('10분');
+  });
+});
+
+describe('lifeBooksRefetchInterval', () => {
+  it('stale이면 30초, 최대 2회 재조회 후 중단', () => {
+    expect(lifeBooksRefetchInterval({ stale: true }, 1)).toBe(30_000);
+    expect(lifeBooksRefetchInterval({ stale: true }, 2)).toBe(30_000);
+    expect(lifeBooksRefetchInterval({ stale: true }, 3)).toBe(false);
+  });
+  it('fresh/없음이면 중단', () => {
+    expect(lifeBooksRefetchInterval({ stale: false }, 1)).toBe(false);
+    expect(lifeBooksRefetchInterval(undefined, 0)).toBe(false);
   });
 });

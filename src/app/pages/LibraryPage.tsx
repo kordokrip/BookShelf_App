@@ -17,6 +17,7 @@ import { AddBookFab } from "../components/ui/Buttons";
 import { useNavigate, Link } from "react-router";
 import { BookCardSkeleton, ErrorState } from "../components/ui/skeleton";
 import { BookCover } from "../components/books/BookCard";
+import { GenreRecoveryBanner } from "../components/library/GenreRecoveryBanner";
 
 /* ─── helpers ─────────────────────────────────────── */
 function getMonthLabel(dateStr: string) {
@@ -306,6 +307,7 @@ export function LibraryPage() {
 
   return (
     <div className="pb-[var(--page-pb)] lg:pb-8">
+      <GenreRecoveryBanner />
       {/* ── Header row ── */}
       <div className="flex items-start sm:items-center justify-between gap-3 px-3 xs:px-4 sm:px-6 pt-4 sm:pt-5 pb-3 flex-col sm:flex-row">
         <div className="flex items-center gap-2 min-w-0">

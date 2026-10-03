@@ -1,6 +1,6 @@
 import { RefreshCw, Sparkles, BookOpen, ExternalLink, CloudOff } from "lucide-react";
 import { Link } from "react-router";
-import { useLifeBooks, useRefreshLifeBooks, lifeBooksSourceLabel, RATE_LIMIT_RETRY_COPY } from "../../../hooks/useAI";
+import { useLifeBooks, useRefreshLifeBooks, lifeBooksSourceLabel, LIFEBOOKS_STALE_COPY, RATE_LIMIT_RETRY_COPY } from "../../../hooks/useAI";
 import { ApiError } from "../../../lib/api";
 import { useToast } from "../ui/Toast";
 
@@ -47,6 +47,9 @@ export function RecommendSection({ wishTitleSet: _wishTitleSet }: { wishTitleSet
           <p className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 12, marginTop: 2 }}>
             {data?.cached ? "캐시된 결과 · 24시간 유지" : "완독 이력 기반 인생책 추천"}
           </p>
+          {data?.stale && (
+            <p role="status" className="text-indigo-600 dark:text-indigo-300" style={{ fontSize: 11, marginTop: 2 }}>{LIFEBOOKS_STALE_COPY}</p>
+          )}
           {books.length > 0 && (sourceLabel || hasVerified) && (
             <p className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 11, marginTop: 2 }}>
               {sourceLabel}

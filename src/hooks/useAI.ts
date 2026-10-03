@@ -20,7 +20,23 @@ export interface LifeBooksResponse {
   cached: boolean;
   source?: 'openrouter' | 'workers-ai' | 'curated-fallback' | (string & {});
   provider?: AIProvider | null;
+  /** true면 지난 추천을 먼저 돌려주고 서버가 새 추천을 백그라운드로 만드는 중 */
+  stale?: boolean;
   error?: string;
+}
+
+/** 지난 추천 안내 캡션 */
+export const LIFEBOOKS_STALE_COPY = '지난 추천이에요 · 새 완독 기록으로 다시 고르는 중';
+const LIFEBOOKS_STALE_POLL_MS = 30_000;
+/** stale 응답 뒤 최초 1회 + 추가 1회까지만 다시 가져온다 (최초 응답 포함 최대 3회 성공) */
+const LIFEBOOKS_MAX_UPDATES = 3;
+
+/** stale이면 30초 뒤 재조회(최대 2회), 아니면 중단 — 무한 루프 방지 */
+export function lifeBooksRefetchInterval(
+  data: Pick<LifeBooksResponse, 'stale'> | undefined,
+  dataUpdateCount: number,
+): number | false {
+  return data?.stale && dataUpdateCount < LIFEBOOKS_MAX_UPDATES ? LIFEBOOKS_STALE_POLL_MS : false;
 }
 
 /** AI 제공자 캡션 — 어떤 모델이 만든 결과인지 알려 신뢰도를 가늠하게 한다 */
@@ -110,6 +126,7 @@ export function useLifeBooks() {
     queryFn: () => apiFetch<LifeBooksResponse>('/api/ai/lifebooks'),
     staleTime: 24 * 60 * 60 * 1000, // 24시간
     retry: false,
+    refetchInterval: (query) => lifeBooksRefetchInterval(query.state.data, query.state.dataUpdateCount),
   });
 }
 

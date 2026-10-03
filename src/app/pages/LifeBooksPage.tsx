@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import { RefreshCw, Sparkles, BookOpen, ExternalLink } from "lucide-react";
-import { useLifeBooks, useRefreshLifeBooks, lifeBooksSourceLabel, RATE_LIMIT_RETRY_COPY } from "../../hooks/useAI";
+import { useLifeBooks, useRefreshLifeBooks, lifeBooksSourceLabel, LIFEBOOKS_STALE_COPY, RATE_LIMIT_RETRY_COPY } from "../../hooks/useAI";
 import { ApiError } from "../../lib/api";
 import { useToast } from "../components/ui/Toast";
 
@@ -52,6 +52,9 @@ export function LifeBooksPage() {
             </button>
           )}
         </div>
+        {data?.stale && (
+          <p role="status" className="mt-1.5 text-xs text-indigo-600 dark:text-indigo-300">{LIFEBOOKS_STALE_COPY}</p>
+        )}
         {data?.cached && (
           <p className="mt-1.5 text-xs text-[#64748B] dark:text-[#94A3B8]">캐시된 결과 · 24시간 유지</p>
         )}
