@@ -4,6 +4,8 @@
  * - 집중 목표 도달 시 자동 정지 → 기존 "기록할까요?" 프롬프트 (useReadingTimer)
  * - 타이머 동안 책 상세에서 작성한 메모 수 표시 → 세션 저장 시 "몰입 구간 메모"로 연결
  */
+import { useState } from "react";
+import { TimerResetConfirm } from "./TimerDialogs";
 import { Pause, Play, RotateCcw, Timer } from "lucide-react";
 import type { UseReadingTimerReturn } from "../../../hooks/useReadingTimer";
 import { useTimerStore } from "../../../stores/timerStore";
@@ -13,11 +15,14 @@ import type { UIBook } from "../../../types/book";
 interface FocusTimerProps {
   timer: UseReadingTimerReturn;
   timerBook: UIBook | null;
+  /** 초기화 확인에서 "기록하기" 선택 시 (분) — 정지 상태 타이머를 기록 프롬프트로 연결 */
+  onRecord?: (minutes: number) => void;
 }
 
 const RING = 2 * Math.PI * 44;
 
-export function FocusTimer({ timer, timerBook }: FocusTimerProps) {
+export function FocusTimer({ timer, timerBook, onRecord }: FocusTimerProps) {
+  const [confirmReset, setConfirmReset] = useState(false);
   const setMode = useTimerStore((s) => s.setMode);
   const noteCount = useTimerStore((s) => (timerBook && s.bookId === timerBook.id ? s.sessionNoteIds.length : 0));
   const locked = timer.isRunning || timer.elapsed > 0; // 진행 중에는 모드 변경 불가
@@ -118,13 +123,13 @@ export function FocusTimer({ timer, timerBook }: FocusTimerProps) {
               type="button"
               onClick={timer.isRunning ? timer.pause : timer.start}
               className="w-11 h-11 rounded-full flex items-center justify-center bg-white/20 hover:bg-white/30 active:scale-95 transition-all"
-              aria-label={timer.isRunning ? "일시정지" : "시작"}
+              aria-label={timer.isRunning ? "일시정지" : timer.elapsed > 0 ? "재개" : "시작"}
             >
               {timer.isRunning ? <Pause size={18} fill="white" /> : <Play size={18} fill="white" />}
             </button>
             <button
               type="button"
-              onClick={timer.reset}
+              onClick={() => (timer.elapsed >= 60 ? setConfirmReset(true) : timer.reset())}
               disabled={!locked}
               className="w-11 h-11 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 active:scale-95 transition-all disabled:opacity-40"
               aria-label="초기화"
@@ -134,6 +139,18 @@ export function FocusTimer({ timer, timerBook }: FocusTimerProps) {
           </div>
         </div>
       </div>
+      {confirmReset && (
+        <TimerResetConfirm
+          minutes={Math.floor(timer.elapsed / 60)}
+          onCancel={() => setConfirmReset(false)}
+          onDiscard={() => { setConfirmReset(false); timer.reset(); }}
+          onRecord={() => {
+            setConfirmReset(false);
+            if (timer.isRunning) timer.pause(); // onStop → 기록 프롬프트
+            else onRecord?.(Math.floor(timer.elapsed / 60));
+          }}
+        />
+      )}
     </section>
   );
 }

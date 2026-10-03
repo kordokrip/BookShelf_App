@@ -2,16 +2,18 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Calendar, Trash2, Clock, MapPin, BookOpen } from 'lucide-react';
 import { FeedbackSection } from './FeedbackSection';
 import type { GroupMeeting } from '../../../lib/api';
+import { localDateString } from '../../../lib/localDate';
 
 export function MeetingCard({ meeting, groupId, isLeader, expanded, onToggle, onDelete }: {
   meeting: GroupMeeting; groupId: string; isLeader: boolean; expanded: boolean;
   onToggle: () => void; onDelete: () => void;
 }) {
-  const isPast = meeting.meeting_date < (new Date().toISOString().split('T')[0] ?? '');
+  const isPast = meeting.meeting_date < localDateString();
 
   return (
     <div className="bg-white dark:bg-[#1E293B] rounded-xl border border-[#E2E8F0] dark:border-[#334155] overflow-hidden">
-      <button onClick={onToggle} className="w-full text-left p-4">
+      <div className="relative">
+      <button onClick={onToggle} aria-expanded={expanded} className="w-full text-left p-4">
         <div className="flex items-start gap-3">
           <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
             isPast ? 'bg-[#F1F5F9] dark:bg-[#0F172A]' : 'bg-indigo-50 dark:bg-indigo-900'
@@ -30,15 +32,17 @@ export function MeetingCard({ meeting, groupId, isLeader, expanded, onToggle, on
               </p>
             )}
           </div>
-          {isLeader && (
-            <button onClick={(e) => { e.stopPropagation(); onDelete(); }}
-              aria-label="모임 일정 삭제"
-              className="p-1 text-[#EF4444] hover:bg-[#FEF2F2] dark:hover:bg-[#450A0A] rounded-lg transition-colors flex-shrink-0">
-              <Trash2 size={14} />
-            </button>
-          )}
+          {isLeader && <span className="w-8 flex-shrink-0" aria-hidden />}
         </div>
       </button>
+      {isLeader && (
+        <button type="button" onClick={onDelete}
+          aria-label={`${meeting.title} 일정 삭제`}
+          className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-[#EF4444] hover:bg-[#FEF2F2] dark:hover:bg-[#450A0A] rounded-lg transition-colors">
+          <Trash2 size={14} />
+        </button>
+      )}
+      </div>
       <AnimatePresence>
         {expanded && (
           <motion.div

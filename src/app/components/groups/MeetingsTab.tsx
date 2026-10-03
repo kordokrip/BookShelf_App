@@ -3,7 +3,9 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import { useGroupMeetings, useCreateMeeting, useDeleteMeeting } from '../../../hooks/useGroups';
 import { MeetingCard } from './MeetingCard';
+import { ConfirmDialog } from './ConfirmDialog';
 import { useToast } from '../ui/Toast';
+import { localDateString } from '../../../lib/localDate';
 import type { GroupMeeting } from '../../../lib/api';
 
 export function MeetingsTab({ groupId, isLeader }: { groupId: string; isLeader: boolean }) {
@@ -12,6 +14,9 @@ export function MeetingsTab({ groupId, isLeader }: { groupId: string; isLeader: 
   const deleteMeeting = useDeleteMeeting(groupId);
   const { showToast } = useToast();
   const [showCreate, setShowCreate] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<GroupMeeting | null>(null);
+  const [dateError, setDateError] = useState('');
+  const today = localDateString();
   const [expandedMeetingId, setExpandedMeetingId] = useState<string | null>(null);
   const [form, setForm] = useState({
     title: '', description: '', book_title: '', book_author: '',
@@ -20,6 +25,7 @@ export function MeetingsTab({ groupId, isLeader }: { groupId: string; isLeader: 
 
   const handleCreate = async () => {
     if (!form.title.trim() || !form.meeting_date) return;
+    if (form.meeting_date < today) { setDateError('오늘 이후 날짜를 선택해주세요.'); return; }
     try {
       await createMeeting.mutateAsync(form);
       setForm({ title: '', description: '', book_title: '', book_author: '', location: '', meeting_date: '', meeting_time: '' });
@@ -65,13 +71,14 @@ export function MeetingsTab({ groupId, isLeader }: { groupId: string; isLeader: 
                 value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })}
                 className="w-full px-3 py-2 rounded-lg bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600/30" />
               <div className="grid grid-cols-2 gap-2">
-                <input type="date"
-                  value={form.meeting_date} onChange={(e) => setForm({ ...form, meeting_date: e.target.value })}
+                <input type="date" min={today} aria-label="모임 날짜" aria-invalid={!!dateError}
+                  value={form.meeting_date} onChange={(e) => { setDateError(''); setForm({ ...form, meeting_date: e.target.value }); }}
                   className="px-3 py-2 rounded-lg bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600/30" />
-                <input type="time"
+                <input type="time" aria-label="모임 시간"
                   value={form.meeting_time} onChange={(e) => setForm({ ...form, meeting_time: e.target.value })}
                   className="px-3 py-2 rounded-lg bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600/30" />
               </div>
+              {dateError && <p role="alert" className="text-xs text-[#EF4444]">{dateError}</p>}
               <div className="flex gap-2">
                 <button onClick={() => setShowCreate(false)}
                   className="flex-1 py-2 rounded-lg text-sm text-[#64748B] bg-[#E2E8F0] dark:bg-[#334155] hover:bg-[#CBD5E1] transition-colors">
@@ -99,11 +106,23 @@ export function MeetingsTab({ groupId, isLeader }: { groupId: string; isLeader: 
           isLeader={isLeader}
           expanded={expandedMeetingId === meeting.id}
           onToggle={() => setExpandedMeetingId(expandedMeetingId === meeting.id ? null : meeting.id)}
-          onDelete={() => deleteMeeting.mutate(meeting.id, {
-            onError: () => showToast('삭제에 실패했어요. 다시 시도해주세요.', 'error'),
-          })}
+          onDelete={() => setDeleteTarget(meeting)}
         />
       ))}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="일정을 삭제할까요?"
+        description={deleteTarget ? `"${deleteTarget.title}" 일정과 피드백이 삭제됩니다.` : undefined}
+        confirmLabel="삭제"
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          const t = deleteTarget;
+          setDeleteTarget(null);
+          if (t) deleteMeeting.mutate(t.id, {
+            onError: () => showToast('삭제에 실패했어요. 다시 시도해주세요.', 'error'),
+          });
+        }}
+      />
     </div>
   );
 }

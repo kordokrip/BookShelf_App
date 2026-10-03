@@ -14,11 +14,12 @@ import { useBooks } from "../../hooks/useBooks";
 import { BookStack } from "../components/stats/BookStack";
 import { AchievementsSection } from "../components/characters/AchievementsSection";
 import type { UISession } from "../../types/book";
-import { GENRE_CONFIG } from "../../types/book";
+import { GENRE_CONFIG, normalizeGenre } from "../../types/book";
 import { useAuthStore } from "../../stores/authStore";
 import { statsApi } from "../../lib/api";
-import { collectShareData, shareStatsImage, copyStatsSummary } from "../../lib/statsShareImage";
+import { collectShareData, sumPagesRead, shareStatsImage, copyStatsSummary } from "../../lib/statsShareImage";
 import { useToast } from "../components/ui/Toast";
+import { localDateString } from "../../lib/localDate";
 
 /* ─── 장르별 색상 매핑 (GENRE_CONFIG 기반 — 19종 전체 커버) */
 const GENRE_COLORS: Record<string, string> = Object.fromEntries(
@@ -47,7 +48,13 @@ function buildMonthlyFromStats(monthly: { month: string; count: number }[]) {
 
 /** stats.genres → GenreDonutChart 데이터 변환 */
 function buildGenreFromStats(genres: { genre: string; count: number }[]) {
-  return genres.map(({ genre, count }) => ({
+  // 레거시 장르 문자열("소설", "과학" 등)은 서재와 같은 별칭 규칙으로 표준 장르에 합산
+  const merged = new Map<string, number>();
+  for (const { genre, count } of genres) {
+    const key = normalizeGenre(genre);
+    merged.set(key, (merged.get(key) ?? 0) + count);
+  }
+  return [...merged].map(([genre, count]) => ({
     genre,
     count,
     color: GENRE_COLORS[genre] ?? "#94A3B8",
@@ -69,6 +76,7 @@ function buildSyntheticSessions(sessionDates: string[]): UISession[] {
 export function StatsPage() {
   const { data: stats, isLoading, isError } = useStats();
   const { data: doneBooks = [] } = useBooks({ status: "done" });
+  const { data: readingBooks = [] } = useBooks({ status: "reading" });
   const user = useAuthStore((s) => s.user);
   const readingGoal = user?.reading_goal;
 
@@ -127,7 +135,7 @@ export function StatsPage() {
   const totalDone = stats?.statusCounts.done ?? 0;
   const totalReading = stats?.statusCounts.reading ?? 0;
   const totalWish = stats?.statusCounts.wish ?? 0;
-  const totalPages = stats?.totals.totalPages ?? 0;
+  const totalPages = sumPagesRead(doneBooks) + sumPagesRead(readingBooks);
   const goalAchievementRate = readingGoal && readingGoal > 0
     ? Math.min(Math.round((totalDone / readingGoal) * 100), 100)
     : null;
@@ -387,7 +395,7 @@ export function StatsPage() {
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement("a");
                   a.href = url;
-                  a.download = `bookshelf_export_${new Date().toISOString().slice(0, 10)}.csv`;
+                  a.download = `bookshelf_export_${localDateString()}.csv`;
                   a.click();
                   URL.revokeObjectURL(url);
                 } catch {

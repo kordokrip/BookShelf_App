@@ -5,6 +5,8 @@
  * - 읽기 목표(읽는 중 도서 제한) 설정
  */
 import { useState, useEffect, useRef } from "react";
+import { useDialogA11y } from "../../hooks/useDialogA11y";
+import { objectParticle } from "../../lib/koreanParticle";
 import { X, Target, BookOpen, Timer, ChevronDown, RefreshCw, CheckCircle2, CalendarDays } from "lucide-react";
 import type { UIBook, GenreKey } from "../../types/book";
 import { ALL_GENRES } from "../../types/book";
@@ -20,7 +22,7 @@ import {
   AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "../components/ui/alert-dialog";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { useBooks, useUpdateBook, useRefreshBookCovers, useDeleteBook } from "../../hooks/useBooks";
 import { useAddSession } from "../../hooks/useSessions";
 import { useReadingTimer } from "../../hooks/useReadingTimer";
@@ -29,6 +31,7 @@ import { usersApi, queryKeys, searchApi } from "../../lib/api";
 import { useAuthStore } from "../../stores/authStore";
 import { useStats } from "../../hooks/useStats";
 import { FocusTimer } from "../components/reading/FocusTimer";
+import { TimerRecordPrompt } from "../components/reading/TimerDialogs";
 import { useTimerStore } from "../../stores/timerStore";
 import { useBackToClose } from "../../hooks/useBackToClose";
 import { celebrateCompletion } from "../../lib/celebrate";
@@ -48,6 +51,7 @@ function PageUpdateModal({
   onComplete: (page: number, newTotalPages?: number) => void;
 }) {
   useBackToClose(true, onClose);
+  const dialogRef = useDialogA11y(onClose);
   const [page, setPage] = useState(book.currentPage ?? 0);
   const [localTotalPages, setLocalTotalPages] = useState(book.totalPages ?? 0);
   const [localGoalDate, setLocalGoalDate] = useState(book.goalDate ?? '');
@@ -64,6 +68,7 @@ function PageUpdateModal({
 
   const today = new Date();
   const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
+  const todayLocalStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   const dateStr = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일 (${dayNames[today.getDay()]})`;
 
   /** Google Books → Open Library 순서로 총 페이지 수 조회 */
@@ -93,26 +98,26 @@ function PageUpdateModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end lg:items-center lg:justify-center">
+    <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="독서 진행 업데이트" tabIndex={-1} className="fixed inset-0 z-50 flex flex-col justify-end lg:items-center lg:justify-center outline-none">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
 
       {/* Sheet */}
       <div
-        className="relative bg-white dark:bg-[#1E293B] rounded-t-2xl lg:rounded-3xl w-full lg:max-w-md lg:mx-4 z-10"
-        style={{ boxShadow: "0 -8px 40px rgba(0,0,0,0.12)" }}
+        className="relative flex flex-col bg-white dark:bg-[#1E293B] rounded-t-2xl lg:rounded-3xl w-full lg:max-w-md lg:mx-4 z-10"
+        style={{ boxShadow: "0 -8px 40px rgba(0,0,0,0.12)", maxHeight: "calc(100dvh - var(--safe-top) - 12px)" }}
       >
         {/* Handle bar: 4×32px, bg #D1D5DB, centered */}
-        <div className="flex justify-center pt-3 pb-2 lg:hidden">
+        <div className="flex justify-center pt-3 pb-2 lg:hidden shrink-0">
           <div className="rounded-full bg-[#D1D5DB] dark:bg-[#475569]" style={{ width: 32, height: 4 }} />
         </div>
 
-        <div className="px-5 pb-6 pt-4">
+        <div className="px-5 pt-4 flex-1 min-h-0 overflow-y-auto overscroll-contain" style={{ paddingBottom: "calc(1.5rem + var(--safe-bottom))" }}>
           {/* Close (desktop) */}
           <button
             aria-label="닫기"
             onClick={onClose}
-            className="hidden lg:flex absolute top-4 right-4 w-11 h-11 items-center justify-center rounded-full hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors text-[#64748B] dark:text-[#94A3B8]"
+            className="flex absolute top-4 right-4 w-11 h-11 items-center justify-center rounded-full hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors text-[#64748B] dark:text-[#94A3B8]"
           >
             <X size={18} />
           </button>
@@ -199,7 +204,7 @@ function PageUpdateModal({
             <input
               type="date"
               value={localGoalDate}
-              min={new Date().toISOString().split('T')[0]}
+              min={todayLocalStr}
               onChange={(e) => setLocalGoalDate(e.target.value)}
               aria-label="완독 목표일 입력"
               title="완독 목표일"
@@ -260,7 +265,7 @@ function PageUpdateModal({
               style={{ background: "linear-gradient(135deg, #F0FDF4, #DCFCE7)", border: "1.5px solid #10B981" }}
             >
               <p className="text-center mb-3" style={{ fontSize: 14, fontWeight: 700, color: "#065F46" }}>
-                📚 「{book.title}」을 완독 처리할까요?
+                📚 「{book.title}」{objectParticle(book.title)} 완독 처리할까요?
               </p>
               <p className="text-center mb-4" style={{ fontSize: 12, color: "#16A34A" }}>
                 완독 목록으로 이동되고 읽는 중 목록에서 제거됩니다
@@ -422,6 +427,7 @@ function LogTodayModal({
   const selectedBook = books.find((b) => b.id === selectedBookId) ?? books[0];
 
   // 남은 페이지 계산 (totalPages 없으면 제한 없음)
+  const dialogRef = useDialogA11y(onClose);
   const maxPages =
     selectedBook?.totalPages != null
       ? Math.max(0, selectedBook.totalPages - (selectedBook.currentPage ?? 0))
@@ -462,11 +468,11 @@ function LogTodayModal({
 
   if (books.length === 0) {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col justify-end lg:items-center lg:justify-center">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="오늘 독서 기록" tabIndex={-1} className="fixed inset-0 z-50 flex flex-col justify-end lg:items-center lg:justify-center outline-none">
         <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
         <div
-          className="relative bg-white dark:bg-[#1E293B] rounded-t-2xl lg:rounded-3xl w-full lg:max-w-md lg:mx-4 z-10 px-5 py-8 text-center"
-          style={{ boxShadow: "0 -8px 40px rgba(0,0,0,0.12)" }}
+          className="relative bg-white dark:bg-[#1E293B] rounded-t-2xl lg:rounded-3xl w-full lg:max-w-md lg:mx-4 z-10 px-5 pt-8 text-center overflow-y-auto"
+          style={{ boxShadow: "0 -8px 40px rgba(0,0,0,0.12)", maxHeight: "calc(100dvh - var(--safe-top) - 12px)", paddingBottom: "calc(2rem + var(--safe-bottom))" }}
         >
           <p style={{ fontSize: 15, color: "var(--text-secondary)" }}>읽는 중인 책이 없어요.<br />먼저 책을 추가해주세요!</p>
           <button
@@ -480,26 +486,26 @@ function LogTodayModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end lg:items-center lg:justify-center">
+    <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="log-today-title" tabIndex={-1} className="fixed inset-0 z-50 flex flex-col justify-end lg:items-center lg:justify-center outline-none">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div
-        className="relative bg-white dark:bg-[#1E293B] rounded-t-2xl lg:rounded-3xl w-full lg:max-w-md lg:mx-4 z-10"
-        style={{ boxShadow: "0 -8px 40px rgba(0,0,0,0.12)" }}
+        className="relative flex flex-col bg-white dark:bg-[#1E293B] rounded-t-2xl lg:rounded-3xl w-full lg:max-w-md lg:mx-4 z-10"
+        style={{ boxShadow: "0 -8px 40px rgba(0,0,0,0.12)", maxHeight: "calc(100dvh - var(--safe-top) - 12px)" }}
       >
-        <div className="flex justify-center pt-3 pb-2 lg:hidden">
+        <div className="flex justify-center pt-3 pb-2 lg:hidden shrink-0">
           <div className="rounded-full bg-[#D1D5DB]" style={{ width: 32, height: 4 }} />
         </div>
-        <div className="px-5 pb-6 pt-2">
+        <div className="px-5 pt-2 flex-1 min-h-0 overflow-y-auto overscroll-contain" style={{ paddingBottom: "calc(1.5rem + var(--safe-bottom))" }}>
           <button
             aria-label="닫기"
             onClick={onClose}
-            className="hidden lg:flex absolute top-4 right-4 w-11 h-11 items-center justify-center rounded-full hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors"
+            className="flex absolute top-4 right-4 w-11 h-11 items-center justify-center rounded-full hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors"
             style={{ color: "var(--text-secondary)" }}
           >
             <X size={18} />
           </button>
 
-          <h2 className="text-[#1E293B] dark:text-[#F8FAFC] mb-1" style={{ fontSize: 18, fontWeight: 800 }}>
+          <h2 id="log-today-title" className="text-[#1E293B] dark:text-[#F8FAFC] mb-1 pr-12" style={{ fontSize: 18, fontWeight: 800 }}>
             오늘 독서 기록
           </h2>
           {initialDuration && initialDuration > 0 && (
@@ -623,6 +629,7 @@ function GoalModal({
   currentDone: number;
   onClose: () => void;
 }) {
+  const dialogRef = useDialogA11y(onClose);
   useBackToClose(true, onClose);
   const [goal, setGoal] = useState(currentGoal ?? 12);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -651,26 +658,26 @@ function GoalModal({
   const achievementRate = goal > 0 ? Math.round((currentDone / goal) * 100) : 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end lg:items-center lg:justify-center">
+    <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="goal-modal-title" tabIndex={-1} className="fixed inset-0 z-50 flex flex-col justify-end lg:items-center lg:justify-center outline-none">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div
-        className="relative bg-white dark:bg-[#1E293B] rounded-t-2xl lg:rounded-3xl w-full lg:max-w-md lg:mx-4 z-10"
-        style={{ boxShadow: "0 -8px 40px rgba(0,0,0,0.12)" }}
+        className="relative flex flex-col bg-white dark:bg-[#1E293B] rounded-t-2xl lg:rounded-3xl w-full lg:max-w-md lg:mx-4 z-10"
+        style={{ boxShadow: "0 -8px 40px rgba(0,0,0,0.12)", maxHeight: "calc(100dvh - var(--safe-top) - 12px)" }}
       >
-        <div className="flex justify-center pt-3 pb-2 lg:hidden">
+        <div className="flex justify-center pt-3 pb-2 lg:hidden shrink-0">
           <div className="rounded-full bg-[#D1D5DB]" style={{ width: 32, height: 4 }} />
         </div>
-        <div className="px-5 pb-6 pt-2">
+        <div className="px-5 pt-2 flex-1 min-h-0 overflow-y-auto overscroll-contain" style={{ paddingBottom: "calc(1.5rem + var(--safe-bottom))" }}>
           <button
             aria-label="닫기"
             onClick={onClose}
-            className="hidden lg:flex absolute top-4 right-4 w-11 h-11 items-center justify-center rounded-full hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors"
+            className="flex absolute top-4 right-4 w-11 h-11 items-center justify-center rounded-full hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors"
             style={{ color: "var(--text-secondary)" }}
           >
             <X size={18} />
           </button>
 
-          <h2 className="text-[#1E293B] dark:text-[#F8FAFC] mb-1" style={{ fontSize: 18, fontWeight: 800 }}>
+          <h2 id="goal-modal-title" className="text-[#1E293B] dark:text-[#F8FAFC] mb-1 pr-12" style={{ fontSize: 18, fontWeight: 800 }}>
             올해 독서 목표
           </h2>
           <p className="text-[#64748B] dark:text-[#94A3B8] mb-4" style={{ fontSize: 13 }}>
@@ -802,6 +809,15 @@ export function ReadingPage() {
   const timerStoreBookId = useTimerStore((s) => s.bookId);
   const [logModalOpen, setLogModalOpen] = useState(false);
   const [goalModalOpen, setGoalModalOpen] = useState(false);
+  // /reading?action=goal (통계 화면의 "독서 목표 설정" 링크) → 목표 다이얼로그를 한 번 열고 파라미터 제거
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get('action') !== 'goal') return;
+    setGoalModalOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('action');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
   const [timerPromptMinutes, setTimerPromptMinutes] = useState<number | null>(null);
   // 뒤로 가기로 타이머 기록 프롬프트 닫기(= 나중에)
   useBackToClose(timerPromptMinutes !== null, () => setTimerPromptMinutes(null));
@@ -872,7 +888,8 @@ export function ReadingPage() {
   function handleComplete(page: number, newTotalPages?: number) {
     if (!selectedBook) return;
     const startPage = selectedBook.currentPage ?? 0;
-    const today = new Date().toISOString().split("T")[0];
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
     if (page > startPage) {
       addSession.mutate({
@@ -974,7 +991,7 @@ export function ReadingPage() {
 
       {/* 독서 타이머 위젯 — 몰입 타이머(스톱워치·집중 카운트다운) */}
       <div ref={timerRef}>
-        <FocusTimer timer={timer} timerBook={timerBook} />
+        <FocusTimer timer={timer} timerBook={timerBook} onRecord={setTimerPromptMinutes} />
       </div>
 
       {/* Section header row */}
@@ -1048,7 +1065,7 @@ export function ReadingPage() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>"{deleteTarget?.title}"을(를) 삭제할까요?</AlertDialogTitle>
+            <AlertDialogTitle>「{deleteTarget?.title}」{objectParticle(deleteTarget?.title ?? '')} 삭제할까요?</AlertDialogTitle>
             <AlertDialogDescription>노트와 독서 세션도 함께 삭제됩니다.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1097,47 +1114,11 @@ export function ReadingPage() {
 
       {/* Timer auto-record prompt */}
       {timerPromptMinutes !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={handleTimerPromptSkip} />
-          <div
-            className="relative bg-white dark:bg-[#1E293B] rounded-3xl w-[calc(100%-2rem)] max-w-sm mx-4 p-6 text-center"
-            style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.15)" }}
-          >
-            <div
-              className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
-              style={{ background: "linear-gradient(135deg, var(--brand-50), var(--brand-200))" }}
-            >
-              <Timer size={24} style={{ color: "var(--brand-600)" }} />
-            </div>
-            <h3 className="text-[#1E293B] dark:text-[#F8FAFC] mb-2" style={{ fontSize: 17, fontWeight: 800 }}>
-              독서 {timerPromptMinutes}분을 기록할까요?
-            </h3>
-            <p className="text-[#64748B] dark:text-[#94A3B8] mb-6" style={{ fontSize: 13 }}>
-              타이머 기록을 독서 세션에 자동으로 반영합니다
-            </p>
-            <div className="flex flex-col gap-2.5">
-              <button
-                onClick={handleTimerPromptRecord}
-                className="w-full rounded-2xl text-white transition-opacity hover:opacity-90 active:scale-[0.98]"
-                style={{
-                  height: 48,
-                  background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))",
-                  fontSize: 15,
-                  fontWeight: 700,
-                }}
-              >
-                기록하기
-              </button>
-              <button
-                onClick={handleTimerPromptSkip}
-                className="w-full rounded-2xl border border-[#E2E8F0] dark:border-[#334155] transition-colors hover:bg-[#F8FAFC] dark:hover:bg-[#1E293B]"
-                style={{ height: 44, fontSize: 14, fontWeight: 600, color: "var(--text-secondary)" }}
-              >
-                건너뛰기
-              </button>
-            </div>
-          </div>
-        </div>
+        <TimerRecordPrompt
+          minutes={timerPromptMinutes}
+          onRecord={handleTimerPromptRecord}
+          onSkip={handleTimerPromptSkip}
+        />
       )}
     </div>
   );

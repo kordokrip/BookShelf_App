@@ -12,8 +12,8 @@ import { useStats } from "../../hooks/useStats";
 import { useBooks } from "../../hooks/useBooks";
 import { BookStack } from "../components/stats/BookStack";
 import { useAuthStore } from "../../stores/authStore";
-import { GENRE_CONFIG } from "../../types/book";
-import { collectShareData, shareStatsImage, copyStatsSummary } from "../../lib/statsShareImage";
+import { GENRE_CONFIG, normalizeGenre } from "../../types/book";
+import { collectShareData, sumPagesRead, shareStatsImage, copyStatsSummary } from "../../lib/statsShareImage";
 import { calcReadingStreak } from "../components/stats/StatsComponents";
 import { useToast } from "../components/ui/Toast";
 
@@ -102,15 +102,24 @@ export function YearlyReviewPage() {
     [allBooks],
   );
 
-  const totalDone = stats?.statusCounts.done ?? 0;
-  const totalPages = stats?.totals.totalPages ?? 0;
+  // 올해 완독 기준 집계 (히어로·목표·장르 모두 같은 기준)
+  const totalDone = thisYearDone.length;
+  const totalPages = useMemo(() => sumPagesRead(thisYearDone), [thisYearDone]);
   const totalMinutes = stats?.totals.totalMinutes ?? 0;
   const totalHours = Math.round(totalMinutes / 60);
   const readingGoal = user?.reading_goal;
   const goalRate = readingGoal ? Math.min(Math.round((totalDone / readingGoal) * 100), 100) : null;
 
   // 가장 많이 읽은 장르
-  const topGenre = stats?.genres?.[0];
+  const yearGenres = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const b of thisYearDone) {
+      const g = normalizeGenre(b.genre);
+      m.set(g, (m.get(g) ?? 0) + 1);
+    }
+    return [...m].map(([genre, count]) => ({ genre, count })).sort((a, b) => b.count - a.count);
+  }, [thisYearDone]);
+  const topGenre = yearGenres[0];
 
   // 베스트 책 (별점 최고)
   const bestBook = useMemo(() => {
@@ -256,13 +265,13 @@ export function YearlyReviewPage() {
           )}
 
           {/* 좋아하는 장르 */}
-          {stats?.genres && stats.genres.length > 0 && (
+          {yearGenres.length > 0 && (
             <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-3 border border-[#E2E8F0] dark:border-[#334155]">
               <div className="flex items-center gap-2 mb-3">
                 <FileText size={16} className="text-violet-500" />
                 <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>좋아하는 장르 TOP 3</span>
               </div>
-              <GenreSummary genres={stats.genres} />
+              <GenreSummary genres={yearGenres} />
             </div>
           )}
 

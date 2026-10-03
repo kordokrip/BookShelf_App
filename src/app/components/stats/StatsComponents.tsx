@@ -151,6 +151,10 @@ export function MonthlyBarChart({ data: monthlyData }: { data: { month: string; 
         </span>
       </div>
 
+      <div
+        role="img"
+        aria-label={`${currentYear}년 월별 독서 현황: ${monthlyData.filter(d => d.books > 0).map(d => `${d.month} ${d.books}권`).join(", ") || "완독 기록 없음"}`}
+      >
       <ResponsiveContainer width="100%" height={180}>
         <BarChart
           data={monthlyData}
@@ -164,6 +168,8 @@ export function MonthlyBarChart({ data: monthlyData }: { data: { month: string; 
         >
           <XAxis
             dataKey="month"
+            interval={0}
+            tickFormatter={(m: string) => m.replace("월", "")}
             tick={{ fontSize: 11, fill: C.slate6 }}
             axisLine={false}
             tickLine={false}
@@ -192,6 +198,7 @@ export function MonthlyBarChart({ data: monthlyData }: { data: { month: string; 
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+      </div>
 
       {/* Selected month detail card */}
       <AnimatePresence>
@@ -301,6 +308,11 @@ export function GenreDonutChart({ allData, doneData, readingData }: GenreDonutCh
 
       {/* Donut chart */}
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <div
+          role="img"
+          aria-label={`장르 분포(${activeTab}): ${sortedGenres.map(g => `${g.genre} ${g.count}권`).join(", ") || "데이터 없음"}`}
+          style={{ width: "100%" }}
+        >
         <ResponsiveContainer width="100%" height={180}>
           <PieChart>
             <Pie
@@ -321,6 +333,7 @@ export function GenreDonutChart({ allData, doneData, readingData }: GenreDonutCh
             {/* Center label via custom component rendered as absolute */}
           </PieChart>
         </ResponsiveContainer>
+        </div>
 
         {/* Center text overlay (absolute positioned) */}
         <div style={{
@@ -382,6 +395,17 @@ export function GenreDonutChart({ allData, doneData, readingData }: GenreDonutCh
 
 const HEATMAP_LEVELS = ["var(--bg-muted)", "var(--brand-200)", "var(--brand-400)", "var(--brand-600)", "var(--brand-900)"];
 const WEEK_DAYS = ["일", "월", "화", "수", "목", "금", "토"];
+/** 로컬(KST 등) 기준 YYYY-MM-DD — toISOString()은 UTC라 날짜가 하루 밀린다 */
+function toDateStr(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function sessionDayKey(s: UISession): string {
+  if (s.sessionDate) return s.sessionDate;
+  const d = new Date(s.createdAt);
+  return Number.isNaN(d.getTime()) ? (s.createdAt.split("T")[0] ?? "") : toDateStr(d);
+}
+
 const MONTH_LABELS = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
 
 /** sessions 배열을 받아 오늘 기준 52주 히트맵 그리드(level 0~4) 생성 */
@@ -389,7 +413,7 @@ function buildHeatmapFromSessions(sessions: UISession[]): number[][] {
   // 날짜별 페이지 수 집계
   const dateMap = new Map<string, number>();
   for (const s of sessions) {
-    const date = s.sessionDate ?? s.createdAt.split("T")[0];
+    const date = sessionDayKey(s);
     dateMap.set(date, (dateMap.get(date) ?? 0) + (s.pagesRead ?? 0));
   }
 
@@ -413,7 +437,7 @@ function buildHeatmapFromSessions(sessions: UISession[]): number[][] {
         week.push(0);
         continue;
       }
-      const key = cur.toISOString().split("T")[0] ?? "";
+      const key = toDateStr(cur);
       const pages = dateMap.get(key) ?? 0;
       let level = 0;
       if (pages > 0) {
@@ -430,14 +454,14 @@ function buildHeatmapFromSessions(sessions: UISession[]): number[][] {
 /** 연속 독서일(현재 스트릭) 계산 */
 function calculateStreak(sessions: UISession[]): number {
   const dateSet = new Set(
-    sessions.map((s) => s.sessionDate ?? s.createdAt.split("T")[0])
+    sessions.map((s) => sessionDayKey(s))
   );
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   let streak = 0;
   const cur = new Date(today);
   while (true) {
-    const key = cur.toISOString().split("T")[0] ?? "";
+    const key = toDateStr(cur);
     if (!dateSet.has(key)) break;
     streak++;
     cur.setDate(cur.getDate() - 1);
@@ -449,7 +473,7 @@ function calculateStreak(sessions: UISession[]): number {
 function calculateMaxStreak(sessions: UISession[]): number {
   if (sessions.length === 0) return 0;
   const dateSet = new Set(
-    sessions.map((s) => s.sessionDate ?? s.createdAt.split("T")[0])
+    sessions.map((s) => sessionDayKey(s))
   );
   const sortedDates = Array.from(dateSet).sort();
   let max = 1, cur = 1;
@@ -496,7 +520,7 @@ export function ReadingHeatmap({ sessions }: ReadingHeatmapProps) {
   const streak = calculateStreak(sessions);
   const maxStreak = calculateMaxStreak(sessions);
   const totalDays = new Set(
-    sessions.map((s) => s.sessionDate ?? s.createdAt.split("T")[0])
+    sessions.map((s) => sessionDayKey(s))
   ).size;
   const monthStarts = buildMonthStarts();
 
@@ -605,7 +629,7 @@ export function calcReadingStreak(sessions: UISession[]): {
   if (sessions.length === 0) return { currentStreak: 0, longestStreak: 0, totalDays: 0 };
 
   const uniqueDates = [
-    ...new Set(sessions.map((s) => s.sessionDate)),
+    ...new Set(sessions.map((s) => sessionDayKey(s))),
   ].sort((a, b) => b.localeCompare(a));
 
   const totalDays = uniqueDates.length;
@@ -613,10 +637,10 @@ export function calcReadingStreak(sessions: UISession[]): {
   // currentStreak: 오늘 또는 어제부터 역방향 계산
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const todayStr = today.toISOString().slice(0, 10);
+  const todayStr = toDateStr(today);
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().slice(0, 10);
+  const yesterdayStr = toDateStr(yesterday);
 
   let currentStreak = 0;
   if (uniqueDates[0] === todayStr || uniqueDates[0] === yesterdayStr) {
@@ -752,9 +776,6 @@ function getWeeksInMonth(year: number, month: number): (Date | null)[][] {
   return weeks;
 }
 
-function toDateStr(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
 
 export function ReadingCalendar({ doneBooks, sessionDates = [] }: ReadingCalendarProps) {
   const now = new Date();
@@ -800,14 +821,16 @@ export function ReadingCalendar({ doneBooks, sessionDates = [] }: ReadingCalenda
       <div className="flex items-center justify-between px-4 py-3 border-b border-[#F1F5F9] dark:border-[#334155]">
         <button
           onClick={prevMonth}
-          className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors"
+          aria-label="이전 달"
+          className="w-11 h-11 flex items-center justify-center rounded-xl hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors"
         >
           <ChevronLeft size={16} color="var(--text-secondary)" />
         </button>
         <span style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>{monthStr}</span>
         <button
           onClick={nextMonth}
-          className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors"
+          aria-label="다음 달"
+          className="w-11 h-11 flex items-center justify-center rounded-xl hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors"
           disabled={year === now.getFullYear() && month === now.getMonth()}
           style={{ opacity: year === now.getFullYear() && month === now.getMonth() ? 0.35 : 1 }}
         >
@@ -850,6 +873,8 @@ export function ReadingCalendar({ doneBooks, sessionDates = [] }: ReadingCalenda
                 <button
                   key={di}
                   onClick={() => setSelectedDate(isSelected ? null : dateStr)}
+                  aria-label={`${day.getMonth() + 1}월 ${day.getDate()}일${hasDoneBook ? `, 완독 ${booksOnDay.length}권` : ""}${hasSession ? ", 독서 기록 있음" : ""}`}
+                  aria-pressed={isSelected}
                   style={{
                     display: "flex",
                     flexDirection: "column",
@@ -928,17 +953,16 @@ export function ReadingCalendar({ doneBooks, sessionDates = [] }: ReadingCalenda
                       ))}
                       {booksOnDay.length > 2 && (
                         <div
+                          className="bg-[#E2E8F0] text-[#334155] dark:bg-[#475569] dark:text-[#F8FAFC]"
                           style={{
                             width: 18,
                             height: 24,
                             borderRadius: 3,
-                            backgroundColor: "var(--bg-muted)",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
                             fontSize: 11,
                             fontWeight: 700,
-                            color: "var(--text-secondary)",
                           }}
                         >
                           +{booksOnDay.length - 2}

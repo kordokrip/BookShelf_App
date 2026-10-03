@@ -14,6 +14,12 @@ import { adminApi, type AdminUser, type AdminUserDetail } from "../../lib/api";
 import { useAuthStore } from "../../stores/authStore";
 import { useNavigate } from "react-router";
 import { useToast } from "../components/ui/Toast";
+import { directionParticle } from "../../lib/koreanParticle";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "../components/ui/alert-dialog";
 import { useBackToClose } from "../../hooks/useBackToClose";
 
 // ─── 쿼리 키 ─────────────────────────────────────────────────
@@ -102,8 +108,8 @@ function UserDetailModal({
       >
         {/* 헤더 */}
         <div className="sticky top-0 bg-white dark:bg-[#1E293B] border-b border-[#E2E8F0] dark:border-[#334155] px-5 py-4 flex items-center gap-3">
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#334155]">
-            <X size={18} />
+          <button onClick={onClose} aria-label="닫기" className="p-1.5 rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#334155]">
+            <X size={18} aria-hidden />
           </button>
           <h2 className="font-bold text-[#0F172A] dark:text-white">회원 상세</h2>
         </div>
@@ -361,11 +367,11 @@ function UsersTab() {
   const users = data?.data ?? [];
   const meta  = data?.meta;
 
+  const [pendingRole, setPendingRole] = useState<{ id: string; newRole: "admin" | "user" } | null>(null);
   const handleRoleChange = useCallback((id: string, newRole: "admin" | "user") => {
-    if (!confirm(`이 회원의 역할을 "${newRole === "admin" ? "관리자" : "일반 회원"}"으로 변경하시겠습니까?`)) return;
-    roleMutation.mutate({ id, newRole });
-    setSelectedId(null);
-  }, [roleMutation]);
+    setPendingRole({ id, newRole });
+  }, []);
+  const pendingRoleLabel = pendingRole?.newRole === "admin" ? "관리자" : "일반 회원";
 
   return (
     <div className="space-y-4 pb-8">
@@ -474,6 +480,7 @@ function UsersTab() {
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page <= 1}
+            aria-label="이전 페이지"
             className="p-2 rounded-lg border border-[#E2E8F0] dark:border-[#334155] disabled:opacity-40"
           >
             <ChevronLeft size={16} />
@@ -484,12 +491,36 @@ function UsersTab() {
           <button
             onClick={() => setPage((p) => Math.min(meta.pages, p + 1))}
             disabled={page >= meta.pages}
+            aria-label="다음 페이지"
             className="p-2 rounded-lg border border-[#E2E8F0] dark:border-[#334155] disabled:opacity-40"
           >
             <ChevronRight size={16} />
           </button>
         </div>
       )}
+
+      <AlertDialog open={!!pendingRole} onOpenChange={(o) => { if (!o) setPendingRole(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>역할 변경</AlertDialogTitle>
+            <AlertDialogDescription>
+              이 회원의 역할을 "{pendingRoleLabel}"{directionParticle(pendingRoleLabel)} 변경하시겠습니까?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingRole) roleMutation.mutate(pendingRole);
+                setPendingRole(null);
+                setSelectedId(null);
+              }}
+            >
+              변경
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* 상세 모달 */}
       {selectedId && (
@@ -775,6 +806,7 @@ function MessagesHistoryTab() {
           <button
             onClick={() => setOffset((o) => Math.max(0, o - SIZE))}
             disabled={currentPage <= 1}
+            aria-label="이전 페이지"
             className="p-2 rounded-lg border border-[#E2E8F0] dark:border-[#334155] disabled:opacity-40"
           >
             <ChevronLeft size={16} />
@@ -783,6 +815,7 @@ function MessagesHistoryTab() {
           <button
             onClick={() => setOffset((o) => o + SIZE)}
             disabled={currentPage >= totalPages}
+            aria-label="다음 페이지"
             className="p-2 rounded-lg border border-[#E2E8F0] dark:border-[#334155] disabled:opacity-40"
           >
             <ChevronRight size={16} />
@@ -808,6 +841,20 @@ export function AdminPage() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<AdminTab>("dashboard");
 
+  const handleTabKey = (e: React.KeyboardEvent) => {
+    const i = TABS.findIndex((t) => t.id === tab);
+    let n = -1;
+    if (e.key === "ArrowRight") n = (i + 1) % TABS.length;
+    else if (e.key === "ArrowLeft") n = (i - 1 + TABS.length) % TABS.length;
+    else if (e.key === "Home") n = 0;
+    else if (e.key === "End") n = TABS.length - 1;
+    if (n < 0) return;
+    e.preventDefault();
+    const next = TABS[n]!.id;
+    setTab(next);
+    document.getElementById(`admin-tab-${next}`)?.focus();
+  };
+
   // 관리자가 아니면 홈으로
   if (user && user.role !== "admin") {
     navigate("/", { replace: true });
@@ -821,6 +868,7 @@ export function AdminPage() {
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
           <button
             onClick={() => navigate("/")}
+            aria-label="뒤로 가기"
             className="p-2 rounded-xl hover:bg-[#F1F5F9] dark:hover:bg-[#334155] text-[#64748B]"
           >
             <ArrowLeft size={20} />
@@ -834,10 +882,15 @@ export function AdminPage() {
         </div>
 
         {/* 탭 바 */}
-        <div className="max-w-2xl mx-auto px-4 flex gap-1 pb-2">
+        <div role="tablist" aria-label="관리자 메뉴" className="max-w-2xl mx-auto px-4 flex gap-1 pb-2" onKeyDown={handleTabKey}>
           {TABS.map(({ id, label, icon }) => (
             <button
               key={id}
+              id={`admin-tab-${id}`}
+              role="tab"
+              aria-selected={tab === id}
+              aria-controls={`admin-panel-${id}`}
+              tabIndex={tab === id ? 0 : -1}
               onClick={() => setTab(id)}
               className={`flex-1 flex flex-col items-center gap-0.5 py-2 rounded-xl text-xs font-medium transition-colors ${
                 tab === id
@@ -853,12 +906,12 @@ export function AdminPage() {
       </header>
 
       {/* 콘텐츠 */}
-      <main className="max-w-2xl mx-auto px-4 pt-5">
+      <div role="tabpanel" id={`admin-panel-${tab}`} aria-labelledby={`admin-tab-${tab}`} tabIndex={0} className="max-w-2xl mx-auto px-4 pt-5 outline-none">
         {tab === "dashboard" && <DashboardTab />}
         {tab === "users"     && <UsersTab />}
         {tab === "send"      && <SendNotifTab />}
         {tab === "history"   && <MessagesHistoryTab />}
-      </main>
+      </div>
     </div>
   );
 }

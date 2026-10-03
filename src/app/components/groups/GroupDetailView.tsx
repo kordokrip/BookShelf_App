@@ -65,7 +65,7 @@ export function GroupDetailView({ groupId, onBack }: { groupId: string; onBack: 
         </div>
         <div className="flex-1 min-w-0">
           <h2 className="text-base font-bold text-[#1E293B] dark:text-[#F8FAFC] truncate">{group.name}</h2>
-          <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">멤버 {group.members?.length ?? 0}명</p>
+          <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">멤버 {approvedMembers.length}명</p>
         </div>
       </div>
 

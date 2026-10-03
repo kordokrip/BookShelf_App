@@ -65,7 +65,8 @@ export function BookStack({ books, title, maxVisible = 40 }: BookStackProps) {
       <div className="w-full max-w-[360px] mx-auto">
         <ol className="flex flex-col items-center" aria-label={`${title} ${books.length}권, 위가 최근 완독`}>
           {visibleTopFirst.map((book, i) => {
-            const height = spineHeightPx(book.totalPages);
+            // 터치 타깃 최소 24px(WCAG 2.5.8) — 얇은 책등도 24px 아래로 내려가지 않게 한다
+            const height = Math.max(spineHeightPx(book.totalPages), 24);
             const { widthPct, offsetPx } = spineLayout(book.id);
             // 아래 책부터 차례로 떨어지도록 지연 (최대 1.2초)
             const delay = Math.min((count - 1 - i) * 0.03, 1.2);

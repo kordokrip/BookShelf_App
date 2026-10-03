@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Star } from 'lucide-react';
+import { StarRadioGroup } from '../books/StarRadioGroup';
 import { useMeetingFeedbacks, useCreateFeedback } from '../../../hooks/useGroups';
 import { useAuthStore } from '../../../stores/authStore';
 import { useToast } from '../ui/Toast';
@@ -55,14 +56,8 @@ export function FeedbackSection({ groupId, meetingId }: { groupId: string; meeti
       {!alreadyFeedbacked && (
         <div className="space-y-2 pt-2 border-t border-[#E2E8F0] dark:border-[#334155]">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-[#64748B]">평점:</span>
-            <div className="flex gap-1">
-              {[1, 2, 3, 4, 5].map((v) => (
-                <button key={v} onClick={() => setRating(v)}>
-                  <Star size={16} className={v <= rating ? 'text-amber-400 fill-amber-400' : 'text-[#CBD5E1]'} />
-                </button>
-              ))}
-            </div>
+            <span className="text-xs text-[#64748B] dark:text-[#94A3B8]" aria-hidden>평점:</span>
+            <StarRadioGroup value={rating} onChange={setRating} fontSize={18} label="평점" />
           </div>
           <div className="flex gap-2">
             <input

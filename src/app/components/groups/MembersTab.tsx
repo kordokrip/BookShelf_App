@@ -1,6 +1,8 @@
 import { Crown, Trash2, LogOut, UserMinus, ArrowRightLeft, Check, X } from 'lucide-react';
 import { useLeaveGroup, useDeleteGroup, useRemoveMember, useTransferLeader, useApproveMember, useRejectMember } from '../../../hooks/useGroups';
 import { useAuthStore } from '../../../stores/authStore';
+import { ConfirmDialog } from './ConfirmDialog';
+import { useState } from 'react';
 import { useToast } from '../ui/Toast';
 
 export function MembersTab({ groupId, members, isLeader, onBack, onlineSet }: {
@@ -19,12 +21,14 @@ export function MembersTab({ groupId, members, isLeader, onBack, onlineSet }: {
   const rejectMember = useRejectMember();
   const { showToast } = useToast();
 
+  const [confirmKind, setConfirmKind] = useState<'leave' | 'delete' | null>(null);
+
   const approvedMembers = members.filter((m) => m.status === 'approved');
   const pendingMembers = members.filter((m) => m.status === 'pending');
   const onlineCount = approvedMembers.filter((m) => onlineSet.has(m.user_id)).length;
 
   const handleLeave = async () => {
-    if (!confirm('정말 이 모임을 나가시겠습니까?')) return;
+    setConfirmKind(null);
     try {
       await leaveGroup.mutateAsync(groupId);
       onBack();
@@ -34,7 +38,7 @@ export function MembersTab({ groupId, members, isLeader, onBack, onlineSet }: {
   };
 
   const handleDelete = async () => {
-    if (!confirm('정말 이 모임을 삭제하시겠습니까? 모든 데이터가 삭제됩니다.')) return;
+    setConfirmKind(null);
     try {
       await deleteGroup.mutateAsync(groupId);
       onBack();
@@ -180,19 +184,27 @@ export function MembersTab({ groupId, members, isLeader, onBack, onlineSet }: {
       {/* 액션 버튼 */}
       <div className="pt-4 space-y-2">
         {isLeader ? (
-          <button onClick={handleDelete}
+          <button onClick={() => setConfirmKind('delete')}
             className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium text-[#EF4444] bg-[#FEF2F2] dark:bg-[#450A0A]/30 hover:bg-[#FEE2E2] transition-colors">
             <Trash2 size={16} />
             모임 삭제
           </button>
         ) : (
-          <button onClick={handleLeave}
+          <button onClick={() => setConfirmKind('leave')}
             className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium text-[#EF4444] bg-[#FEF2F2] dark:bg-[#450A0A]/30 hover:bg-[#FEE2E2] transition-colors">
             <LogOut size={16} />
             모임 나가기
           </button>
         )}
       </div>
+      <ConfirmDialog
+        open={confirmKind !== null}
+        title={confirmKind === 'delete' ? '모임을 삭제할까요?' : '모임을 나갈까요?'}
+        description={confirmKind === 'delete' ? '모든 대화·일정·피드백이 삭제되며 되돌릴 수 없습니다.' : '나간 뒤에는 다시 가입 신청을 해야 합니다.'}
+        confirmLabel={confirmKind === 'delete' ? '삭제' : '나가기'}
+        onCancel={() => setConfirmKind(null)}
+        onConfirm={confirmKind === 'delete' ? handleDelete : handleLeave}
+      />
     </div>
   );
 }

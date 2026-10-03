@@ -71,6 +71,18 @@ export function buildShareLayout(data: StatsShareData): ShareLayout {
   return { title: 'BookShelf', year: `${data.year}`, stats, genres, covers, summaryText: lines.join('\n') };
 }
 
+/** 읽은 페이지 규칙: 완독은 총 페이지(없으면 현재 페이지), 읽는 중은 현재 페이지, 그 외 0 */
+export function bookPagesRead(b: Pick<UIBook, 'status' | 'totalPages' | 'currentPage'>): number {
+  if (b.status === 'done') return b.totalPages || b.currentPage || 0;
+  if (b.status === 'reading') return b.currentPage ?? 0;
+  return 0;
+}
+
+/** 도서 목록의 읽은 페이지 합계 */
+export function sumPagesRead(books: UIBook[]): number {
+  return books.reduce((sum, b) => sum + bookPagesRead(b), 0);
+}
+
 /** 완독 도서 목록 → 올해 기준 공유 데이터 (장르/페이지/최근 표지 집계) */
 export function collectShareData(
   doneBooks: UIBook[],
@@ -85,7 +97,7 @@ export function collectShareData(
   return {
     year,
     doneThisYear: mine.length,
-    totalPages: mine.reduce((sum, b) => sum + (b.totalPages ?? 0), 0),
+    totalPages: sumPagesRead(mine),
     currentStreak: streak?.currentStreak,
     longestStreak: streak?.longestStreak,
     genres: [...genreMap.entries()].map(([genre, count]) => ({ genre, count })).sort((a, b) => b.count - a.count),
@@ -240,6 +252,8 @@ export async function renderStatsShareImage(data: StatsShareData): Promise<Blob>
   });
 }
 
+const SHARE_UI_TIMEOUT_MS = 4000;
+
 export type ShareResult = 'shared' | 'downloaded' | 'cancelled';
 
 /** 이미지를 만들어 Web Share(파일)로 공유하고, 불가하면 PNG를 내려받는다. 사용자 취소는 'cancelled' */
@@ -252,7 +266,16 @@ export async function shareStatsImage(data: StatsShareData): Promise<ShareResult
 
   if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
     try {
-      await navigator.share({ files: [file], title, text: summaryText });
+      // 일부 환경(헤드리스 등)에서 share()가 영영 끝나지 않을 수 있어, 시트가 뜬 뒤에는 UI를 붙잡지 않는다.
+      const shared = navigator.share({ files: [file], title, text: summaryText });
+      const outcome = await Promise.race([
+        shared.then(() => 'shared' as const),
+        new Promise<'pending'>((resolve) => setTimeout(() => resolve('pending'), SHARE_UI_TIMEOUT_MS)),
+      ]);
+      if (outcome === 'pending') {
+        shared.catch(() => {}); // 늦게 도착하는 AbortError 등은 조용히 무시
+        return 'shared';
+      }
       return 'shared';
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') return 'cancelled';

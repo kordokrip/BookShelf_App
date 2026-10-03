@@ -86,7 +86,12 @@ export function useLeaveGroup() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (groupId: string) => groupsApi.leave(groupId),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.groups.all }); },
+    onSuccess: (_d, groupId) => {
+      // 모임의 상세·채팅·일정·피드백 쿼리는 제거(재조회 시 404 방지) 후 목록만 갱신
+      qc.removeQueries({ queryKey: queryKeys.groups.detail(groupId) });
+      qc.removeQueries({ queryKey: [...queryKeys.groups.all, groupId] });
+      qc.invalidateQueries({ queryKey: queryKeys.groups.lists() });
+    },
   });
 }
 
@@ -94,7 +99,12 @@ export function useDeleteGroup() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (groupId: string) => groupsApi.delete(groupId),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.groups.all }); },
+    onSuccess: (_d, groupId) => {
+      // 모임의 상세·채팅·일정·피드백 쿼리는 제거(재조회 시 404 방지) 후 목록만 갱신
+      qc.removeQueries({ queryKey: queryKeys.groups.detail(groupId) });
+      qc.removeQueries({ queryKey: [...queryKeys.groups.all, groupId] });
+      qc.invalidateQueries({ queryKey: queryKeys.groups.lists() });
+    },
   });
 }
 
