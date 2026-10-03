@@ -108,6 +108,10 @@ async function postOnce(env: OpenRouterEnv, opts: ChatOptions): Promise<Response
         max_tokens: opts.maxTokens,
         temperature: opts.temperature,
         ...(opts.json ? { response_format: { type: 'json_object' } } : {}),
+        // 기본 라우팅은 가격 우선이라 처리 속도가 가장 느린 공급자(초당 ~21토큰)로 자주 가서 인생책처럼 긴 응답이
+        // 20초를 넘겼다. 처리량 우선(초당 35~40토큰, 비용 차이는 호출당 $0.0001 수준)으로 고르고,
+        // JSON 모드가 필요하면 그 기능을 지원하는 공급자만 쓴다. 공급자별 지표: /api/v1/models/{model}/endpoints
+        provider: { sort: 'throughput', ...(opts.json ? { require_parameters: true } : {}) },
       }),
     });
   } finally {

@@ -42,6 +42,7 @@ describe('chatCompletion', () => {
     expect(headers['X-Title']).toBe('BookShelf');
     const body = JSON.parse(init.body as string);
     expect(body.model).toBe(OPENROUTER_MODEL);
+    expect(body.provider).toMatchObject({ sort: 'throughput' });
     expect(body.max_tokens).toBe(100);
     expect(body.response_format).toEqual({ type: 'json_object' });
     expect(kv.get(budgetKey(NOW))).toBe('1');

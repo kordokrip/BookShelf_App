@@ -29,3 +29,11 @@ describe('lifeBooksRefetchInterval', () => {
     expect(lifeBooksRefetchInterval(undefined, 0)).toBe(false);
   });
 });
+
+describe('lifeBooksStaleCopy', () => {
+  it('다시 불러오기 중에는 진행형, 시도를 다 쓰면 새로고침 안내', async () => {
+    const { lifeBooksStaleCopy, LIFEBOOKS_STALE_COPY, LIFEBOOKS_STALE_DONE_COPY } = await import('../useAI');
+    expect(lifeBooksStaleCopy(1)).toBe(LIFEBOOKS_STALE_COPY);
+    expect(lifeBooksStaleCopy(3)).toBe(LIFEBOOKS_STALE_DONE_COPY);
+  });
+});

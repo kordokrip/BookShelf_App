@@ -26,10 +26,17 @@ export interface LifeBooksResponse {
 }
 
 /** 지난 추천 안내 캡션 */
+const LIFEBOOKS_MAX_UPDATES = 3;
 export const LIFEBOOKS_STALE_COPY = '지난 추천이에요 · 새 완독 기록으로 다시 고르는 중';
+/** 다시 불러오기를 다 써도 여전히 지난 추천일 때(백그라운드 생성 실패) — '고르는 중'이라고 계속 말하지 않는다 */
+export const LIFEBOOKS_STALE_DONE_COPY = '지난 추천이에요 · 새로고침을 누르면 새로 받아요';
+
+/** 지난 추천 안내 문구 — 아직 다시 불러오는 중이면 진행형, 시도를 다 썼으면 새로고침 안내 */
+export function lifeBooksStaleCopy(dataUpdateCount: number): string {
+  return dataUpdateCount < LIFEBOOKS_MAX_UPDATES ? LIFEBOOKS_STALE_COPY : LIFEBOOKS_STALE_DONE_COPY;
+}
 const LIFEBOOKS_STALE_POLL_MS = 30_000;
 /** stale 응답 뒤 최초 1회 + 추가 1회까지만 다시 가져온다 (최초 응답 포함 최대 3회 성공) */
-const LIFEBOOKS_MAX_UPDATES = 3;
 
 /** stale이면 30초 뒤 재조회(최대 2회), 아니면 중단 — 무한 루프 방지 */
 export function lifeBooksRefetchInterval(
@@ -121,13 +128,16 @@ export function useAIRecommendations() {
 
 /** 인생책 AI 추천 */
 export function useLifeBooks() {
-  return useQuery({
+  const queryClient = useQueryClient();
+  const query = useQuery({
     queryKey: queryKeys.ai.lifeBooks(),
     queryFn: () => apiFetch<LifeBooksResponse>('/api/ai/lifebooks'),
     staleTime: 24 * 60 * 60 * 1000, // 24시간
     retry: false,
-    refetchInterval: (query) => lifeBooksRefetchInterval(query.state.data, query.state.dataUpdateCount),
+    refetchInterval: (q) => lifeBooksRefetchInterval(q.state.data, q.state.dataUpdateCount),
   });
+  const updates = queryClient.getQueryState(queryKeys.ai.lifeBooks())?.dataUpdateCount ?? 0;
+  return { ...query, staleCopy: query.data?.stale ? lifeBooksStaleCopy(updates) : null };
 }
 
 /** 인생책 강제 새로고침 (KV 캐시 무효화) */
