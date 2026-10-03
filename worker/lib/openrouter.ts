@@ -1,8 +1,11 @@
 /**
- * OpenRouter(Gemma, 유료) 클라이언트 + Workers AI 폴백.
+ * OpenRouter(유료) 클라이언트 + Workers AI 폴백.
  *
- * - 모델은 한국어 품질이 Workers AI 8B보다 낫고 환각이 적은 `google/gemma-3-27b-it`(유료).
- *   무료판(`google/gemma-4-26b-a4b-it:free`)은 공용 풀 혼잡(429)·상류 오류(522)로 거의 응답하지 않아 2026-10-03 교체
+ * - 모델: `google/gemini-3.8-flash` (2026-10-04). 실제 앱 프롬프트로 13개 모델을 비교한 결과
+ *   인생책 응답 2~3초·실재하고 안 읽은 책 6권 중 5~6권, 명문장 원문 재현·책 소개 근거 요약이 가장 좋았다.
+ *   이전 `google/gemma-3-27b-it`은 공급자에 따라 10~42초로 들쭉날쭉했고(가격 우선 라우팅이 느린 공급자로 감),
+ *   그 전 무료판 `google/gemma-4-26b-a4b-it:free`는 공용 풀 혼잡으로 거의 응답하지 않았다.
+ *   비교 방법·결과: docs/sessions/2026-10-04-ai-model-switch.md
  * - 비용 상한: KV 전역 일일 예산(`or_budget:{KST 날짜}`)을 넘기면 호출하지 않고 폴백한다
  * - 일시 오류(429/5xx)는 한 번 재시도
  * - 실패(키 없음·예산 초과·타임아웃·재시도 후에도 실패)는 OpenRouterError로 던져 호출 측이 폴백하게 한다
@@ -10,7 +13,12 @@
 import { extractAiText } from './aiText';
 import { kstDateString } from './noteHelpers';
 
-export const OPENROUTER_MODEL = 'google/gemma-3-27b-it';
+export const OPENROUTER_MODEL = 'google/gemini-3.8-flash';
+/**
+ * 추론(thinking) 정도 — 이 앱의 작업(요약·추천·인용 JSON)은 추론이 필요 없고, 켜 두면 응답이 느려지고
+ * 추론 토큰이 출력 요금으로 청구된다. 'minimal'에서 추론 토큰 0을 확인(응답 usage.completion_tokens_details).
+ */
+export const OPENROUTER_REASONING_EFFORT = 'minimal';
 export const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 /**
  * 하루 전체 호출 상한(전 사용자 합산) — 유료 모델의 비용 안전장치.
@@ -112,6 +120,7 @@ async function postOnce(env: OpenRouterEnv, opts: ChatOptions): Promise<Response
         // 20초를 넘겼다. 처리량 우선(초당 35~40토큰, 비용 차이는 호출당 $0.0001 수준)으로 고르고,
         // JSON 모드가 필요하면 그 기능을 지원하는 공급자만 쓴다. 공급자별 지표: /api/v1/models/{model}/endpoints
         provider: { sort: 'throughput', ...(opts.json ? { require_parameters: true } : {}) },
+        reasoning: { effort: OPENROUTER_REASONING_EFFORT },
       }),
     });
   } finally {

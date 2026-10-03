@@ -266,7 +266,7 @@ notesRouter.get('/random', authMiddleware, async (c) => {
 
 // ─── GET /api/notes/daily-quote ──────────────────────────────
 // 오늘의 문장: 사용자·KST 날짜별 하루 고정 카드. 출처는 FNV 해시로 결정 — 내 quote 노트('note') 또는
-// AI가 완독한 책에서 소개하는 대표 문장('ai'). AI는 인용구 환각 위험 때문에 Gemma 전용(Workers AI 폴백 없음).
+// AI가 완독한 책에서 소개하는 대표 문장('ai'). AI는 인용구 환각 위험 때문에 OpenRouter 전용(Workers AI 폴백 없음).
 // 두 출처 모두 KV에 캐시(26h)해 하루 동안 카드가 바뀌지 않는다. /:id 보다 앞에 선언.
 notesRouter.get('/daily-quote', authMiddleware, async (c) => {
   const userId = c.get('userId');

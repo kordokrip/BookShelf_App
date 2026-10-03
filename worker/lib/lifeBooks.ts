@@ -1,5 +1,5 @@
 /**
- * 인생책 추천 — 완독 전체 이력을 Gemma에 주고 후보 10권을 받은 뒤, 실존 검증·서재 중복 제거·표지 보강을 거쳐 5권으로 줄인다.
+ * 인생책 추천 — 완독 전체 이력을 OpenRouter 모델에 주고 후보 10권을 받은 뒤, 실존 검증·서재 중복 제거·표지 보강을 거쳐 5권으로 줄인다.
  *
  * 모델 출력은 그대로 믿지 않는다: 이미 서재에 있는 책은 버리고, 카카오/네이버에서 제목이 일치하는 책이 확인된 후보만 남긴다.
  * 검증을 통과한 책이 3권 미만이면 큐레이션 목록(서재 제외 적용)으로 채운다.
@@ -12,13 +12,13 @@ import { searchBook, type LookupEnv } from './bookLookup';
 import { generateText, type ChatMessage, type GenerateEnv, type Provider } from './openrouter';
 
 export const LIFEBOOKS_CACHE_TTL_SEC = 24 * 60 * 60;
-export const LIFEBOOKS_CACHE_VERSION = 'v4';
+export const LIFEBOOKS_CACHE_VERSION = 'v5';
 export const MAX_DONE_BOOKS = 200;
 export const CANDIDATE_COUNT = 6;
 /** 후보 8권 × 짧은 2문장 이유(권당 ~120토큰) + JSON 오버헤드 */
 export const LIFEBOOKS_MAX_TOKENS = 800;
 /**
- * Gemma 호출 제한 시간 — Workers의 waitUntil(응답 뒤 백그라운드)은 약 30초까지만 이어지므로
+ * OpenRouter 호출 제한 시간 — Workers의 waitUntil(응답 뒤 백그라운드)은 약 30초까지만 이어지므로
  * 생성·검증이 그 안에 끝나야 한다. 출력(후보 6권 × 짧은 이유)을 줄여 보통 10~15초에 끝난다.
  */
 export const LIFEBOOKS_TIMEOUT_MS = 22_000;
@@ -182,9 +182,9 @@ async function topUpCurated(env: LookupEnv, doneBooks: DoneBook[], excluded: Set
 }
 
 /**
- * Gemma만 쓴다(Workers AI 폴백 없음) — 8B 모델 후보는 실재 검증을 거의 통과하지 못해 결국 큐레이션이 되면서
- * 대기만 20초가량 늘렸다(스테이징 실측 41초). Gemma가 실패하면 바로 큐레이션.
- * background: 응답 뒤 백그라운드 재생성 — 호출 측(lifeBooksSwr)은 Gemma 결과가 아니면 지난 추천을 덮어쓰지 않는다.
+ * OpenRouter 모델만 쓴다(Workers AI 폴백 없음) — 8B 모델 후보는 실재 검증을 거의 통과하지 못해 결국 큐레이션이 되면서
+ * 대기만 20초가량 늘렸다(스테이징 실측 41초). OpenRouter 모델이 실패하면 바로 큐레이션.
+ * background: 응답 뒤 백그라운드 재생성 — 호출 측(lifeBooksSwr)은 OpenRouter 결과가 아니면 지난 추천을 덮어쓰지 않는다.
  */
 export async function buildLifeBooks(
   env: LifeBooksEnv,

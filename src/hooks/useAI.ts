@@ -48,7 +48,7 @@ export function lifeBooksRefetchInterval(
 
 /** AI 제공자 캡션 — 어떤 모델이 만든 결과인지 알려 신뢰도를 가늠하게 한다 */
 export function providerLabel(provider?: AIProvider | string | null): string | null {
-  if (provider === 'openrouter') return 'Gemma · OpenRouter';
+  if (provider === 'openrouter') return 'Gemini · OpenRouter';
   if (provider === 'workers-ai') return 'Workers AI';
   return null;
 }

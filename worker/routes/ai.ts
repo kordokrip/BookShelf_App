@@ -155,7 +155,7 @@ aiRouter.get('/recommend', rateLimit({ limit: 10, windowMs: 60_000, keyPrefix: '
 [{"title":"책제목","author":"저자","reason":"추천 이유(사용자가 읽은 '${topBookTitle}'처럼 구체적인 책 이름을 언급하며 1~2문장으로 개인화하여 작성)","genre":"장르"}]
 ${excludePrompt}
 추천 책은 실제 존재하는 책이어야 하며, 이미 읽은 책, 읽는 중인 책, 위시리스트에 있는 책은 절대 추천하지 마세요.`;
-    // Gemma(OpenRouter) 우선, 실패 시 Workers AI 폴백
+    // OpenRouter 모델 우선, 실패 시 Workers AI 폴백
     const { text, provider } = await generateText(
       c.env,
       {
@@ -229,7 +229,7 @@ ${excludePrompt}
 });
 
 // ─── GET /api/ai/lifebooks — 완독 이력 기반 인생책 추천 ────────
-// 완독 전체(최대 200권)를 Gemma에 주고 후보 10권 → 서재 중복 제거 + 카카오/네이버 실존 검증 → 5권. (worker/lib/lifeBooks.ts)
+// 완독 전체(최대 200권)를 OpenRouter 모델에 주고 후보 10권 → 서재 중복 제거 + 카카오/네이버 실존 검증 → 5권. (worker/lib/lifeBooks.ts)
 // stale-while-revalidate: 지문이 바뀌면 직전 결과를 즉시(stale:true) 주고 백그라운드 재생성. (worker/lib/lifeBooksSwr.ts)
 // 한도(ai_life, 3회/10분, 사용자별)는 미들웨어가 아니라 resolveLifeBooks 안에서 "실제 생성" 때만 센다.
 aiRouter.get(

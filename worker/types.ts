@@ -158,6 +158,6 @@ export interface Bindings {
   VAPID_SUBJECT?: string;      // 'mailto:admin@example.com'
   // 알라딘 오픈API (선택 - wrangler secret put ALADIN_TTB_KEY)
   ALADIN_TTB_KEY?: string;     // 알라딘 TTB API 키 (실제 베스트셀러 순위 조회용)
-  // OpenRouter Gemma 유료 모델 (wrangler secret put OPENROUTER_API_KEY) — AI 요약·인생책·오늘의 문장
+  // OpenRouter 유료 모델(lib/openrouter.ts OPENROUTER_MODEL) (wrangler secret put OPENROUTER_API_KEY) — AI 요약·인생책·오늘의 문장
   OPENROUTER_API_KEY?: string;
 }

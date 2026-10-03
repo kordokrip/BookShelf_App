@@ -3,14 +3,14 @@
  *
  * 1. 클라이언트가 20자 이상 description을 주면 그것을, 아니면 카카오/네이버에서 ISBN→제목+저자 순으로 소개를 조회
  * 2. 근거가 없으면 모델을 호출하지 않고 `no_source`로 응답(환각 차단 + 예산 절약)
- * 3. Gemma(OpenRouter) 우선, 실패 시 Workers AI. 성공 결과만 7일 캐시(`ai_summary:v4:{sha256}`, 폴백 결과는 1시간)
+ * 3. OpenRouter 모델 우선, 실패 시 Workers AI. 성공 결과만 7일 캐시(`ai_summary:v4:{sha256}`, 폴백 결과는 1시간)
  */
 import { sanitizeForPrompt } from './aiRecommend';
 import { searchBook, type LookupEnv } from './bookLookup';
 import { generateText, type ChatMessage, type GenerateEnv, type Provider } from './openrouter';
 
 export const SUMMARY_CACHE_TTL_SEC = 7 * 24 * 60 * 60;
-/** 폴백(Workers AI 8B) 결과는 짧게만 캐시 — Gemma가 다시 응답하면 곧 더 나은 요약으로 바뀌게 */
+/** 폴백(Workers AI 8B) 결과는 짧게만 캐시 — OpenRouter 모델이 다시 응답하면 곧 더 나은 요약으로 바뀌게 */
 export const SUMMARY_FALLBACK_CACHE_TTL_SEC = 60 * 60;
 export const MIN_DESCRIPTION_LEN = 20;
 /** 프롬프트에 넣는 소개 최대 길이 */

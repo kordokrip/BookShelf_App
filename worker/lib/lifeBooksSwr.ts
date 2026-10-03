@@ -1,6 +1,6 @@
 /**
  * 인생책 stale-while-revalidate — 완독이 늘어 지문이 바뀌면 캐시 미스지만, 직전 결과(latest)를 즉시 돌려주고
- * 새 결과는 백그라운드에서 만든다(유료 Gemma 첫 생성은 10~30초). 맨 처음(latest 없음)·refresh=true만 동기 생성한다.
+ * 새 결과는 백그라운드에서 만든다(첫 생성은 몇 초~수십 초). 맨 처음(latest 없음)·refresh=true만 동기 생성한다.
  *
  * 한도(`ai_life` 3회/10분)는 "실제로 생성하는 요청"만 센다 — 캐시 적중·stale 응답은 소모하지 않는다
  * (프론트가 stale 응답 뒤 한 번 더 refetch하므로).
@@ -58,7 +58,7 @@ async function generateAndStore(deps: LifeBooksDeps, cacheKey: string, backgroun
   const { env, userId, doneBooks } = deps;
   const result = await (deps.build ?? buildLifeBooks)(env, doneBooks, await deps.getExcluded(), { background });
   const payload: LifeBooksPayload = { data: result.data, cached: false, source: result.source, provider: result.provider };
-  // 백그라운드에서 Gemma가 실패하면(큐레이션만 남음) 지난 AI 추천을 덮어쓰지 않는다 — 다음 조회 때 다시 시도
+  // 백그라운드에서 OpenRouter 모델이 실패하면(큐레이션만 남음) 지난 AI 추천을 덮어쓰지 않는다 — 다음 조회 때 다시 시도
   if (background && result.provider !== 'openrouter') return payload;
   if (result.data.length > 0) {
     const ttl = result.provider === 'openrouter' ? LIFEBOOKS_CACHE_TTL_SEC : FALLBACK_CACHE_TTL_SEC;
