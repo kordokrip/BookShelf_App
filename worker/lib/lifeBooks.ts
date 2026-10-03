@@ -182,14 +182,15 @@ async function topUpCurated(env: LookupEnv, doneBooks: DoneBook[], excluded: Set
 }
 
 /**
- * background: 응답 뒤 백그라운드 재생성 — 시간이 빠듯하므로 Workers AI 폴백(느리고 검증 통과율이 낮음)을 건너뛰고,
- * 호출 측(lifeBooksSwr)은 Gemma 결과가 아니면 지난 추천을 덮어쓰지 않는다.
+ * Gemma만 쓴다(Workers AI 폴백 없음) — 8B 모델 후보는 실재 검증을 거의 통과하지 못해 결국 큐레이션이 되면서
+ * 대기만 20초가량 늘렸다(스테이징 실측 41초). Gemma가 실패하면 바로 큐레이션.
+ * background: 응답 뒤 백그라운드 재생성 — 호출 측(lifeBooksSwr)은 Gemma 결과가 아니면 지난 추천을 덮어쓰지 않는다.
  */
 export async function buildLifeBooks(
   env: LifeBooksEnv,
   doneBooks: DoneBook[],
   excluded: Set<string>,
-  opts: { background?: boolean } = {},
+  _opts: { background?: boolean } = {}, // 호출 측 구분용(지금은 같은 경로) — 백그라운드 저장 정책은 lifeBooksSwr
 ): Promise<LifeBooksResult> {
   let verified: LifeBookItem[] = [];
   let provider: Provider | null = null;
@@ -203,7 +204,7 @@ export async function buildLifeBooks(
         json: true,
         timeoutMs: LIFEBOOKS_TIMEOUT_MS,
       },
-      { fallback: opts.background ? 'none' : 'workers-ai' },
+      { fallback: 'none' },
     );
     provider = res.provider;
     verified = await verifyCandidates(env, parseCandidates(res.text), excluded, RESULT_COUNT);
