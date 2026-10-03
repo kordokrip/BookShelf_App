@@ -269,7 +269,7 @@ export function ReadingBookCard({
           <button
             onClick={(e) => e.stopPropagation()}
             aria-label="책 옵션 더보기"
-            className="absolute top-2.5 right-2.5 z-10 w-7 h-7 rounded-full flex items-center justify-center text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F1F5F9] dark:hover:bg-[#334155] hover:text-[#1E293B] dark:hover:text-[#F8FAFC] transition-colors"
+            className="absolute top-0 right-0 z-10 w-11 h-11 rounded-full flex items-center justify-center text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F1F5F9] dark:hover:bg-[#334155] hover:text-[#1E293B] dark:hover:text-[#F8FAFC] transition-colors"
           >
             <MoreVertical size={16} />
           </button>

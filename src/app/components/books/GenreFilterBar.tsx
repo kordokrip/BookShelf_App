@@ -29,6 +29,7 @@ export function GenreFilterBar({
       {/* 전체 chip */}
       {/* 색은 theme.css 변수 — 다크 모드에서 흰 칩 + 옅은 회색 숫자(대비 2.56)로 남던 문제 */}
       <button
+        aria-pressed={selectedGenre === null}
         onClick={() => onSelect(null)}
         className="flex-shrink-0 flex items-center gap-1 rounded-full border transition-all"
         style={{
@@ -65,6 +66,7 @@ export function GenreFilterBar({
         return (
           <button
             key={genre}
+            aria-pressed={active}
             onClick={() => onSelect(active ? null : genre)}
             className="flex-shrink-0 flex items-center gap-1 rounded-full border transition-all"
             style={{

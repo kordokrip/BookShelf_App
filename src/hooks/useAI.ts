@@ -76,15 +76,17 @@ interface RecommendResponse {
 /** 책 설명 요약 */
 export function useBookSummary() {
   return useMutation({
-    mutationFn: ({ description, title, author, isbn }: {
+    mutationFn: ({ description, title, author, isbn, refresh }: {
       description?: string;
       title: string;
       author: string;
       isbn?: string;
+      /** true면 서버 캐시를 건너뛰고 다시 생성 */
+      refresh?: boolean;
     }) =>
       apiFetch<SummarizeResponse>('/api/ai/summarize', {
         method: 'POST',
-        body: JSON.stringify({ description, title, author, isbn }),
+        body: JSON.stringify({ description, title, author, isbn, ...(refresh ? { refresh: true } : {}) }),
       }),
     retry: false,
   });

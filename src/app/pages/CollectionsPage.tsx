@@ -6,112 +6,29 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, BookOpen, Plus, FolderOpen, Trash2, Layers } from "lucide-react";
+import { ChevronLeft, BookOpen, Plus, FolderOpen, Trash2, Layers, Pencil, X } from "lucide-react";
 import {
   useCollections,
-  useCreateCollection,
   useDeleteCollection,
   useCollectionDetail,
+  useRemoveBookFromCollection,
 } from "../../hooks/useCollections";
+import { CollectionFormDialog } from "../components/collections/CollectionFormDialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "../components/ui/alert-dialog";
 import { useToast } from "../components/ui/Toast";
 import { useBackToClose } from "../../hooks/useBackToClose";
-
-/* ─── 컬렉션 생성 모달 ──────────────────────────────────────── */
-function CreateCollectionDialog({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
-  useBackToClose(true, onClose);
-  const [name, setName] = useState("");
-  const [emoji, setEmoji] = useState("📚");
-  const [description, setDescription] = useState("");
-  const createMutation = useCreateCollection();
-  const { showToast } = useToast();
-
-  const handleSubmit = () => {
-    if (!name.trim()) return;
-    createMutation.mutate(
-      { name: name.trim(), emoji, description: description.trim() || undefined },
-      {
-        onSuccess: () => {
-          setName("");
-          setEmoji("📚");
-          setDescription("");
-          onClose();
-        },
-        onError: () => showToast("생성에 실패했어요. 다시 시도해주세요.", "error"),
-      },
-    );
-  };
-
-  if (!open) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 mx-4 w-full max-w-sm shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 16 }}>
-          새 컬렉션 만들기
-        </h3>
-        <div className="flex gap-3 mb-3">
-          <input
-            value={emoji}
-            onChange={(e) => setEmoji(e.target.value)}
-            className="w-12 h-12 text-center rounded-xl border border-[#E2E8F0] dark:border-[#334155] text-2xl"
-            maxLength={4}
-          />
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="컬렉션 이름"
-            className="flex-1 rounded-xl border border-[#E2E8F0] dark:border-[#334155] px-3 py-2"
-            style={{ fontSize: 14 }}
-            maxLength={100}
-          />
-        </div>
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="설명 (선택)"
-          className="w-full rounded-xl border border-[#E2E8F0] dark:border-[#334155] px-3 py-2 mb-4 resize-none"
-          style={{ fontSize: 13 }}
-          rows={2}
-          maxLength={500}
-        />
-        <div className="flex gap-2">
-          <button
-            onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-[#334155] text-[#64748B] dark:text-[#94A3B8]"
-            style={{ fontSize: 13, fontWeight: 600 }}
-          >
-            취소
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={!name.trim() || createMutation.isPending}
-            className="flex-1 py-2.5 rounded-xl text-white disabled:opacity-50"
-            style={{ fontSize: 13, fontWeight: 600, background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))" }}
-          >
-            {createMutation.isPending ? "생성 중..." : "만들기"}
-          </button>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
 
 /* ─── 컬렉션 상세 보기 ──────────────────────────────────────── */
 function CollectionDetailView({ id, onBack }: { id: string; onBack: () => void }) {
   const navigate = useNavigate();
   const { data: detail, isLoading } = useCollectionDetail(id);
+  const removeBook = useRemoveBookFromCollection();
+  const { showToast } = useToast();
+  const [editing, setEditing] = useState(false);
 
   if (isLoading) {
     return (
@@ -135,12 +52,20 @@ function CollectionDetailView({ id, onBack }: { id: string; onBack: () => void }
       </button>
       <div className="flex items-center gap-3 mb-4">
         <span style={{ fontSize: 32 }}>{detail.emoji}</span>
-        <div>
+        <div className="flex-1 min-w-0">
           <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)" }}>{detail.name}</h2>
           {detail.description && (
             <p style={{ fontSize: 13, color: "var(--text-secondary)", marginTop: 2 }}>{detail.description}</p>
           )}
         </div>
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          aria-label={`${detail.name} 컬렉션 수정`}
+          className="flex items-center justify-center w-11 h-11 rounded-full hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors flex-shrink-0"
+        >
+          <Pencil size={18} className="text-[#64748B] dark:text-[#94A3B8]" />
+        </button>
       </div>
       {detail.books.length === 0 ? (
         <div className="text-center py-12">
@@ -153,10 +78,13 @@ function CollectionDetailView({ id, onBack }: { id: string; onBack: () => void }
       ) : (
         <div className="flex flex-col gap-2">
           {detail.books.map((book) => (
-            <button
+            <div
               key={book.id}
+              className="flex items-center gap-1 pr-1 rounded-xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] hover:border-indigo-600 transition-colors"
+            >
+            <button
               onClick={() => navigate(`/book/${book.id}`)}
-              className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] hover:border-indigo-600 transition-colors text-left"
+              className="flex flex-1 min-w-0 items-center gap-3 p-3 text-left"
             >
               <div
                 className="w-10 h-14 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -182,9 +110,30 @@ function CollectionDetailView({ id, onBack }: { id: string; onBack: () => void }
                 {book.status === "done" ? "완독" : book.status === "reading" ? "읽는 중" : "위시"}
               </span>
             </button>
+            <button
+              type="button"
+              disabled={removeBook.isPending}
+              onClick={() =>
+                removeBook.mutate(
+                  { collectionId: id, bookId: book.id },
+                  {
+                    onSuccess: () => showToast("컬렉션에서 뺐어요", "success"),
+                    onError: () => showToast("빼지 못했어요. 다시 시도해주세요.", "error"),
+                  },
+                )
+              }
+              aria-label={`${book.title} 컬렉션에서 빼기`}
+              className="flex items-center justify-center w-11 h-11 rounded-full hover:bg-red-50 dark:hover:bg-[#334155] transition-colors flex-shrink-0 disabled:opacity-50"
+            >
+              <X size={18} className="text-[#64748B] dark:text-[#94A3B8]" />
+            </button>
+            </div>
           ))}
         </div>
       )}
+      <AnimatePresence>
+        {editing && <CollectionFormDialog collection={detail} onClose={() => setEditing(false)} />}
+      </AnimatePresence>
     </div>
   );
 }
@@ -197,6 +146,7 @@ export function CollectionsPage() {
   const { showToast } = useToast();
   const [showCreate, setShowCreate] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   // 뒤로 가기: 컬렉션 상세 → 목록 (상세는 라우트가 아니라 화면 내부 상태)
   useBackToClose(!!selectedId, () => setSelectedId(null));
 
@@ -270,16 +220,23 @@ export function CollectionsPage() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, x: -100 }}
-                className="flex items-center gap-3 p-4 rounded-2xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] hover:border-indigo-200 transition-colors cursor-pointer"
-                onClick={() => setSelectedId(col.id)}
+                className="relative flex items-center gap-3 p-4 rounded-2xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] hover:border-indigo-200 transition-colors"
               >
+                {/* 카드 전체를 덮는 실제 버튼 — 키보드 포커스·Enter/Space·포커스 링 */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedId(col.id)}
+                  aria-label={`${col.name} 컬렉션, ${col.book_count}권`}
+                  className="absolute inset-0 rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                  style={{ minHeight: 0 }}
+                />
                 <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                  className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 pointer-events-none"
                   style={{ backgroundColor: "var(--bg-accent-soft)" }}
                 >
                   <span style={{ fontSize: 24 }}>{col.emoji}</span>
                 </div>
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 pointer-events-none">
                   <p className="truncate" style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>
                     {col.name}
                   </p>
@@ -289,15 +246,9 @@ export function CollectionsPage() {
                   </p>
                 </div>
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (confirm(`"${col.name}" 컬렉션을 삭제하시겠습니까?`)) {
-                      deleteMutation.mutate(col.id, {
-                        onError: () => showToast("삭제에 실패했어요. 다시 시도해주세요.", "error"),
-                      });
-                    }
-                  }}
-                  className="p-2 rounded-lg hover:bg-red-50 transition-colors flex-shrink-0"
+                  onClick={() => setDeleteTarget({ id: col.id, name: col.name })}
+                  aria-label={`${col.name} 컬렉션 삭제`}
+                  className="relative flex items-center justify-center w-11 h-11 rounded-lg hover:bg-red-50 dark:hover:bg-[#334155] transition-colors flex-shrink-0"
                 >
                   <Trash2 size={16} className="text-[#64748B] dark:text-[#94A3B8] hover:text-red-500" />
                 </button>
@@ -340,9 +291,33 @@ export function CollectionsPage() {
       {/* Create dialog */}
       <AnimatePresence>
         {showCreate && (
-          <CreateCollectionDialog open={showCreate} onClose={() => setShowCreate(false)} />
+          <CollectionFormDialog onClose={() => setShowCreate(false)} />
         )}
       </AnimatePresence>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>「{deleteTarget?.name}」 컬렉션을 삭제할까요?</AlertDialogTitle>
+            <AlertDialogDescription>컬렉션만 삭제되고, 담겨 있던 책은 그대로 유지됩니다.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!deleteTarget) return;
+                deleteMutation.mutate(deleteTarget.id, {
+                  onError: () => showToast("삭제에 실패했어요. 다시 시도해주세요.", "error"),
+                });
+                setDeleteTarget(null);
+              }}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              삭제
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

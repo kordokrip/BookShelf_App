@@ -307,6 +307,8 @@ export interface BookNote {
   /** Phase 4: AI 태그 (notes.tags JSON 배열) */
   tags: string[];
   date: string;
+  /** 소속 책 id (notes.book_id) — 노트 검색 결과에서 책 링크용 */
+  bookId?: string;
 }
 
 /* ─── API BookNote → UI BookNote 변환 ────────────────────── */
@@ -346,5 +348,6 @@ export function normalizeBookNote(api: ApiBookNote): BookNote {
     sessionId: api.session_id ?? undefined,
     tags: parseNoteTags(api.tags),
     date: api.created_at.slice(0, 10).replace(/-/g, '.'),
+    bookId: api.book_id,
   };
 }

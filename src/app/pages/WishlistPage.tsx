@@ -74,12 +74,12 @@ export function WishlistPage() {
       </div>
 
       {/* 탭 바 */}
-      <div className="flex border-b border-[#E2E8F0] dark:border-[#334155] px-4 overflow-x-auto">
+      <div className="flex border-b border-[#E2E8F0] dark:border-[#334155] px-2 overflow-x-auto">
         {TABS.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`shrink-0 mr-5 pb-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            className={`shrink-0 mr-1 px-2 min-h-11 pt-1 pb-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
               activeTab === tab.key
                 ? 'border-indigo-600 text-indigo-600 dark:text-indigo-300 dark:border-indigo-300'
                 : 'border-transparent text-[#64748B] dark:text-[#94A3B8] hover:text-[#475569] dark:hover:text-[#CBD5E1]'

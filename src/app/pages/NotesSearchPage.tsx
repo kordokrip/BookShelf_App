@@ -5,10 +5,12 @@
  * - 검색결과 노트 수정·삭제
  */
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { ArrowLeft, Search, X, Clock, Pencil, Trash2, SearchX, NotebookPen } from "lucide-react";
 import { useBack } from "../../hooks/useBack";
+import { useBackToClose } from "../../hooks/useBackToClose";
 import { useNotes, useUpdateNote, useDeleteNote } from "../../hooks/useNotes";
+import { useBooks } from "../../hooks/useBooks";
 import { useRecentSearches } from "../../hooks/useRecentSearches";
 import { useToast } from "../components/ui/Toast";
 import { stripNoteMarkup, formatNotePages } from "../../lib/noteMarkup";
@@ -20,7 +22,7 @@ const NOTES_RECENT_KEY = "notes_recent_searches";
 import type { BookNote } from "../../types/book";
 import { Skeleton } from "../components/ui/skeleton";
 import {
-  Sheet, SheetContent, SheetHeader, SheetTitle,
+  Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle,
 } from "../components/ui/sheet";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -82,6 +84,9 @@ export function NotesSearchPage() {
   const [isEditSheetOpen, setIsEditSheetOpen]       = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
+  // 뒤로 가기로 편집 시트 닫기
+  useBackToClose(isEditSheetOpen, () => { setIsEditSheetOpen(false); setEditingNote(null); });
+
   const { recents, addSearch, removeSearch, clearAll } = useRecentSearches(NOTES_RECENT_KEY, 5);
 
   useEffect(() => {
@@ -110,17 +115,20 @@ export function NotesSearchPage() {
     ...(activeTag                          && { tag: activeTag }),
   };
   const { data: notes = [], isLoading, isError } = useNotes(notesFilter);
+  // 노트 목록 API는 책 제목을 주지 않아 서재 캐시로 bookId → 제목 매핑
+  const { data: allBooks = [] } = useBooks();
+  const bookTitleById = new Map(allBooks.map((b) => [b.id, b.title]));
   const updateNoteMutation = useUpdateNote();
   const deleteNoteMutation = useDeleteNote();
   const { showToast } = useToast();
 
   return (
-    <div className="min-h-[var(--vp-h)] bg-background">
+    <div className="min-h-[var(--vp-h)] bg-background dark:bg-[#0F172A]">
       {/* 데스크톱 Side Nav — Root 밖 독립 라우트라 여기서 직접 마운트 (모바일은 컴포넌트 자체 hidden) */}
       <SideNav />
 
       <div className={`md:ml-20 ${sidebarOpen ? "lg:ml-60" : "lg:ml-[72px]"} transition-all duration-300 ease-in-out`}>
-      <main className="flex flex-col min-h-[var(--vp-h)] bg-background">
+      <main className="flex flex-col min-h-[var(--vp-h)] bg-background dark:bg-[#0F172A]">
       {/* iOS 노치 / Dynamic Island / PWA standalone 상단 안전 영역 — 스크롤해도 콘텐츠가 노치 아래로 비치지 않게 고정 */}
       <SafeAreaTop />
 
@@ -138,7 +146,7 @@ export function NotesSearchPage() {
       </div>
 
       {/* ── 검색 + 필터 (sticky) — 데스크톱에서는 BookDetailPage와 동일하게 중앙 폭 제한 ── */}
-      <div className="w-full max-w-2xl mx-auto lg:max-w-3xl sticky top-[var(--safe-top)] z-10 bg-background border-b border-border px-4 pb-3 pt-3 flex-shrink-0">
+      <div className="w-full max-w-2xl mx-auto lg:max-w-3xl sticky top-[var(--safe-top)] z-10 bg-background dark:bg-[#0F172A] border-b border-border px-4 pb-3 pt-3 flex-shrink-0">
         <div className="relative mb-3">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <input
@@ -199,7 +207,7 @@ export function NotesSearchPage() {
           <p className="text-xs text-muted-foreground mt-2">
             {debouncedQuery.trim().length >= 2
               ? `"${debouncedQuery.trim()}" 검색 결과 ${notes.length}개`
-              : `전체 ${notes.length}개`}
+              : `${{ all: "전체", memo: "메모", review: "리뷰", quote: "문구" }[activeType]} ${notes.length}개`}
           </p>
         )}
         {searchQuery.trim().length === 1 && (
@@ -287,6 +295,14 @@ export function NotesSearchPage() {
                 key={note.id}
                 className="bg-card rounded-xl p-4 border border-border/50 shadow-sm"
               >
+                {note.bookId && (
+                <Link
+                  to={`/book/${note.bookId}`}
+                  className="mb-2 flex items-center min-h-11 -mt-1 text-sm font-semibold text-foreground hover:text-primary hover:underline truncate"
+                >
+                  <span className="truncate">{bookTitleById.get(note.bookId) ?? "책 보기"}</span>
+                </Link>
+                )}
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">
                     <NoteTypeLabel type={note.type} size={12} />
@@ -312,7 +328,7 @@ export function NotesSearchPage() {
                         setEditingNote({ ...note });
                         setIsEditSheetOpen(true);
                       }}
-                      className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                      className="min-w-11 min-h-11 flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
                       aria-label="노트 편집"
                     >
                       <Pencil className="h-4 w-4 text-muted-foreground" />
@@ -322,10 +338,10 @@ export function NotesSearchPage() {
                         setDeletingNoteId(note.id);
                         setIsDeleteDialogOpen(true);
                       }}
-                      className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors"
+                      className="min-w-11 min-h-11 flex items-center justify-center rounded-lg hover:bg-destructive/10 transition-colors"
                       aria-label="노트 삭제"
                     >
-                      <Trash2 className="h-4 w-4 text-destructive/70" />
+                      <Trash2 className="h-4 w-4 text-destructive dark:text-[#F87171]" />
                     </button>
                   </div>
                 </div>
@@ -341,9 +357,10 @@ export function NotesSearchPage() {
         <SheetContent side="bottom" className="h-[70vh]">
           <SheetHeader>
             <SheetTitle>노트 편집</SheetTitle>
+            <SheetDescription className="sr-only">노트의 종류, 내용, 페이지, 색상을 수정합니다.</SheetDescription>
           </SheetHeader>
           {editingNote && (
-            <div className="mt-4 space-y-4 overflow-y-auto pb-4">
+            <div className="mt-2 space-y-4 overflow-y-auto px-4" style={{ paddingBottom: "1rem" }} /* 하단 안전 영역은 공용 SheetContent(bottom)가 더한다 */>
               <div className="flex gap-2">
                 {(["memo", "review", "quote"] as const).map((type) => (
                   <button

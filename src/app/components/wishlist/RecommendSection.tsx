@@ -75,7 +75,11 @@ export function RecommendSection({ wishTitleSet: _wishTitleSet }: { wishTitleSet
 
       {/* 로딩 스켈레톤 */}
       {(isLoading || refresh.isPending) && (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3" role="status" aria-live="polite">
+          <p className="flex items-center gap-2 text-sm text-[#64748B] dark:text-[#94A3B8]">
+            <RefreshCw size={14} className="animate-spin" aria-hidden="true" />
+            AI가 완독 기록을 살펴보는 중이에요…
+          </p>
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 shadow-sm animate-pulse">
               <div className="flex gap-3">

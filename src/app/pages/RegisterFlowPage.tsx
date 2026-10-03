@@ -237,7 +237,7 @@ function StepSearch({
       </div>
 
       {/* 직접 입력 버튼 */}
-      <div className="px-4 py-4 flex-shrink-0 border-t border-border">
+      <div className="px-4 pt-4 flex-shrink-0 border-t border-border" style={{ paddingBottom: "calc(1rem + var(--safe-bottom))" }}>
         <button
           onClick={onManual}
           className="w-full h-11 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:bg-muted transition-colors flex items-center justify-center gap-2"
@@ -371,6 +371,9 @@ function StepBookInfo({
               <input
                 type="number"
                 min={1}
+                max={99999}
+                aria-valuemin={1}
+                aria-valuemax={99999}
                 value={form.totalPages}
                 onChange={(e) => update({ totalPages: e.target.value })}
                 placeholder="페이지 수 (선택)"
@@ -461,7 +464,7 @@ function StepBookInfo({
         </div>
       </div>
 
-      <div className="px-4 py-4 flex-shrink-0 border-t border-border">
+      <div className="px-4 pt-4 flex-shrink-0 border-t border-border" style={{ paddingBottom: "calc(1rem + var(--safe-bottom))" }}>
         <button
           onClick={onNext}
           disabled={!canNext}
@@ -484,6 +487,8 @@ function StepStatusCover({
   update: (patch: Partial<FormState>) => void;
   onNext: () => void;
 }) {
+  const today = localToday();
+  const futureFinished = form.status === "done" && !!form.finishedDate && form.finishedDate > today;
   const STATUS_OPTIONS: { value: BookStatus; label: string; Icon: typeof BookOpen }[] = [
     { value: "reading", label: "읽는 중",   Icon: BookOpen },
     { value: "done",    label: "완독",       Icon: BookCheck },
@@ -530,6 +535,9 @@ function StepStatusCover({
               <input
                 type="number"
                 min={0}
+                max={99999}
+                aria-valuemin={0}
+                aria-valuemax={99999}
                 value={form.currentPage}
                 onChange={(e) => update({ currentPage: e.target.value })}
                 placeholder="현재 읽은 페이지 (선택)"
@@ -560,16 +568,25 @@ function StepStatusCover({
                 type="date"
                 value={form.finishedDate}
                 onChange={(e) => update({ finishedDate: e.target.value })}
+                max={today}
                 title="완독일"
+                aria-invalid={futureFinished}
                 className={inputClass}
               />
+              {futureFinished && (
+                <p role="alert" className="mt-1.5 text-xs text-destructive">
+                  완독일은 오늘 이후로 설정할 수 없어요.
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">별점</label>
-              <div className="flex gap-2">
+              <div className="flex">
                 {[1, 2, 3, 4, 5].map((n) => (
                   <button
                     key={n}
+                    type="button"
+                    className="min-w-11 min-h-11 flex items-center justify-center"
                     onClick={() => update({ rating: n === form.rating ? 0 : n })}
                     aria-label={`${n}점`}
                   >
@@ -591,10 +608,11 @@ function StepStatusCover({
 
       </div>
 
-      <div className="px-4 py-4 flex-shrink-0 border-t border-border">
+      <div className="px-4 pt-4 flex-shrink-0 border-t border-border" style={{ paddingBottom: "calc(1rem + var(--safe-bottom))" }}>
         <button
           onClick={onNext}
-          className="w-full h-12 rounded-xl bg-primary text-primary-foreground text-sm font-semibold"
+          disabled={futureFinished}
+          className="w-full h-12 rounded-xl bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-40 transition-opacity"
         >
           다음
         </button>
@@ -700,7 +718,7 @@ function StepConfirm({
         )}
       </div>
 
-      <div className="px-4 py-4 flex-shrink-0 border-t border-border">
+      <div className="px-4 pt-4 flex-shrink-0 border-t border-border" style={{ paddingBottom: "calc(1rem + var(--safe-bottom))" }}>
         <button
           onClick={onSubmit}
           disabled={isLoading}
@@ -711,6 +729,14 @@ function StepConfirm({
       </div>
     </div>
   );
+}
+
+/** 로컬 기준 오늘(YYYY-MM-DD) — toISOString은 UTC라 KST 새벽에 하루 전 날짜가 됨 */
+function localToday(): string {
+  const d = new Date();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${day}`;
 }
 
 /* ─── 메인 페이지 ───────────────────────────────────────────── */
@@ -761,7 +787,8 @@ export function RegisterFlowPage() {
         rating:
           form.status === "done" && form.rating > 0 ? form.rating : undefined,
       });
-      navigate("/");
+      // 등록한 상태에 맞는 목록으로 이동 (wish → 위시리스트, reading → 읽는 중, done → 서재)
+      navigate(form.status === "wish" ? "/wishlist" : form.status === "reading" ? "/reading" : "/");
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : "등록에 실패했습니다. 다시 시도해주세요.");
     }
@@ -775,7 +802,7 @@ export function RegisterFlowPage() {
   };
 
   return (
-    <main className="flex flex-col min-h-[var(--vp-h)] bg-background">
+    <main className="flex flex-col min-h-[var(--vp-h)] bg-background dark:bg-[#0F172A]">
       {/* iOS 노치 / Dynamic Island / PWA standalone 상단 안전 영역 — 스크롤해도 콘텐츠가 노치 아래로 비치지 않게 고정 */}
       <SafeAreaTop />
 

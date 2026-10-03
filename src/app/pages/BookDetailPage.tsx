@@ -7,9 +7,10 @@
  */
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useParams } from "react-router";
+import { useParams, useNavigate } from "react-router";
 import { useBack } from "../../hooks/useBack";
-import { ChevronLeft, MoreVertical, FileText, AlignLeft, Camera, Pencil, Trash2, BookMarked, BookOpen, Heart, ScanLine, Clock, Search, Share2, Sparkles, RefreshCw, Zap } from "lucide-react";
+import { useBackToClose } from "../../hooks/useBackToClose";
+import { ChevronLeft, MoreVertical, FileText, AlignLeft, Camera, Pencil, Trash2, BookMarked, BookOpen, Heart, ScanLine, Clock, Search, Share2, Sparkles, RefreshCw, Zap, PencilLine, FolderPlus } from "lucide-react";
 import type { BookNote } from "../../types/book";
 import type { UIBook } from "../../types/book";
 import { BookCover } from "../components/books/BookCard";
@@ -21,7 +22,7 @@ import { useSessions, useDeleteSession } from "../../hooks/useSessions";
 import { useBookSummary as useBookSummaryMutation, providerLabel, RATE_LIMIT_RETRY_COPY } from "../../hooks/useAI";
 import { ApiError, coverApi, queryKeys } from "../../lib/api";
 import { useQueryClient } from "@tanstack/react-query";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../components/ui/sheet";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -29,6 +30,9 @@ import {
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { cn } from "../components/ui/utils";
+import { EditBookSheet } from "../components/books/EditBookSheet";
+import { AddToCollectionSheet } from "../components/collections/AddToCollectionSheet";
+import { StarRadioGroup } from "../components/books/StarRadioGroup";
 import { CameraOCRSheet } from "../components/books/CameraOCRSheet";
 import { NoteContent } from "../components/notes/NoteContent";
 import { NoteEditor } from "../components/notes/NoteEditor";
@@ -42,35 +46,25 @@ import {
 } from "../components/ui/alert-dialog";
 import { NoteTypeLabel } from "../components/notes/noteTypes";
 import { celebrateCompletion } from "../../lib/celebrate";
+import { objectParticle } from "../../lib/koreanParticle";
 
 /* ─── Star display / input ──────────────────────────────────── */
 function StarRow({ value, onRate }: { value: number; onRate?: (n: number) => void }) {
-  const [hover, setHover] = useState(0);
-  const display = hover || value;
   return (
     <div className="flex items-center gap-1">
-      {[1, 2, 3, 4, 5].map((i) => {
-        const lit = i <= Math.round(display);
-        const color = lit ? "text-[#F59E0B]" : "text-[#E2E8F0] dark:text-[#475569]";
-        // 별점을 매길 수 있으면 버튼(키보드·스크린리더로도 선택) — 전에는 클릭만 되는 span이었다
-        return onRate ? (
-          <button
+      {onRate ? (
+        // 별점을 매길 수 있으면 radiogroup(키보드 좌우 방향키·스크린리더, 터치 영역 44px)
+        <StarRadioGroup value={value} onChange={onRate} fontSize={18} />
+      ) : (
+        [1, 2, 3, 4, 5].map((i) => (
+          <span
             key={i}
-            type="button"
-            className={`${color} leading-none`}
-            style={{ fontSize: 18, minWidth: 24, minHeight: 24 }}
-            aria-label={`${i}점`}
-            aria-pressed={i <= Math.round(value)}
-            onMouseEnter={() => setHover(i)}
-            onMouseLeave={() => setHover(0)}
-            onFocus={() => setHover(i)}
-            onBlur={() => setHover(0)}
-            onClick={() => onRate(i)}
-          >★</button>
-        ) : (
-          <span key={i} aria-hidden className={color} style={{ fontSize: 18 }}>★</span>
-        );
-      })}
+            aria-hidden
+            className={i <= Math.round(value) ? "text-[#F59E0B]" : "text-[#E2E8F0] dark:text-[#475569]"}
+            style={{ fontSize: 18 }}
+          >★</span>
+        ))
+      )}
       <span className="ml-1 text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 14, fontWeight: 600 }}>
         {value.toFixed(1)}
       </span>
@@ -261,10 +255,16 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
     }
   }, [handleQuickSave]);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("이 노트를 삭제할까요?")) return;
+  const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
+  // 뒤로 가기로 노트 시트 닫기
+  useBackToClose(isSheetOpen, closeSheet);
+
+  const handleDelete = async () => {
+    const id = deletingNoteId;
+    if (!id) return;
     try {
       await deleteMutation.mutateAsync(id);
+      setDeletingNoteId(null);
     } catch {
       showToast("삭제에 실패했어요. 다시 시도해주세요.", "error");
     }
@@ -310,14 +310,14 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
       <div className="flex items-center justify-end gap-1 mt-2">
         <button
           onClick={() => openEdit(note)}
-          className="p-1.5 rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors"
+          className="min-w-11 min-h-11 flex items-center justify-center rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors"
           aria-label="편집"
         >
           <Pencil size={13} className="text-[#64748B] dark:text-[#94A3B8]" />
         </button>
         <button
-          onClick={() => handleDelete(note.id)}
-          className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+          onClick={() => setDeletingNoteId(note.id)}
+          className="min-w-11 min-h-11 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
           disabled={deleteMutation.isPending}
           aria-label="삭제"
         >
@@ -529,9 +529,10 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
         <SheetContent side="bottom" className="h-[70vh] flex flex-col">
           <SheetHeader>
             <SheetTitle>{editingNote ? "노트 편집" : "노트 추가"}</SheetTitle>
+            <SheetDescription className="sr-only">노트의 종류, 내용, 페이지를 입력합니다.</SheetDescription>
           </SheetHeader>
 
-          <div className="flex-1 overflow-y-auto mt-4 space-y-3">
+          <div className="flex-1 overflow-y-auto px-4 space-y-3" style={{ paddingBottom: "1rem" }} /* 하단 안전 영역은 공용 SheetContent(bottom)가 더한다 */>
             {/* 타입 선택 */}
             <div className="flex gap-2">
               {NOTE_TYPES.map((t) => (
@@ -596,6 +597,25 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* 노트 삭제 확인 */}
+      <AlertDialog open={deletingNoteId !== null} onOpenChange={(o) => { if (!o) setDeletingNoteId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>이 노트를 삭제할까요?</AlertDialogTitle>
+            <AlertDialogDescription>삭제한 노트는 되돌릴 수 없어요.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); void handleDelete(); }}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              {deleteMutation.isPending ? "삭제 중..." : "삭제"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
@@ -617,12 +637,12 @@ function BookInfoTab({ book }: { book: UIBook }) {
 
   const rows = [
     { label: "저자", value: book.author },
-    { label: "출판사", value: book.publisher },
+    { label: "출판사", value: book.publisher || "-" },
     { label: "장르", value: book.genre },
     { label: "총 페이지", value: book.totalPages ? `${book.totalPages}p` : "-" },
     { label: "상태", value: book.status === "done" ? "완독" : book.status === "reading" ? "읽는 중" : "위시리스트" },
     { label: "등록일", value: book.addedDate.replace(/-/g, ".") },
-    ...(book.finishedDate ? [{ label: "완독일", value: book.finishedDate.replace(/-/g, ".") }] : []),
+    ...(book.status === "done" && book.finishedDate ? [{ label: "완독일", value: book.finishedDate.replace(/-/g, ".") }] : []),
   ];
 
   // 타이핑 애니메이션 효과
@@ -646,7 +666,7 @@ function BookInfoTab({ book }: { book: UIBook }) {
     return () => clearInterval(timer);
   }, [summaryResult]);
 
-  const handleSummarize = async () => {
+  const handleSummarize = async (refresh = false) => {
     setSummaryResult(null);
     setNoSource(false);
     try {
@@ -654,6 +674,7 @@ function BookInfoTab({ book }: { book: UIBook }) {
         title: book.title,
         author: book.author,
         ...(book.isbn ? { isbn: book.isbn } : {}),
+        ...(refresh ? { refresh: true } : {}),
       });
       if (res.summary) setSummaryResult(res.summary);
       else setNoSource(true);
@@ -803,7 +824,7 @@ function BookInfoTab({ book }: { book: UIBook }) {
           </div>
           {summaryResult && !summarizeMutation.isPending && (
             <button
-              onClick={() => void handleSummarize()}
+              onClick={() => void handleSummarize(true)}
               className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-violet-600 dark:text-[color:var(--brand-200)] hover:bg-white/60 dark:hover:bg-white/10 transition-colors"
               style={{ fontSize: 11, fontWeight: 600 }}
             >
@@ -822,21 +843,23 @@ function BookInfoTab({ book }: { book: UIBook }) {
                 className="rounded-xl p-3 border border-violet-200 bg-white/70 dark:bg-white/10 dark:border-white/20 text-violet-900 dark:text-violet-100"
                 style={{ fontSize: 12, lineHeight: 1.65 }}
               >
-                이 책의 소개 정보를 찾지 못해 AI 분석을 하지 않았어요. 잘못된 내용을 지어내지 않도록 소개가 있는 책만 분석해요.
+                이 책의 소개 정보를 찾지 못해 AI 분석을 하지 않았어요. 잘못된 내용을 지어내지 않도록 소개가 있는 책만 분석해요. 책 정보 수정에서 제목·저자를 정확히 고치면 다음에 분석할 수 있을 수도 있어요.
               </p>
             ) : (
               <p className="text-[color:var(--brand2-700)] dark:text-[color:var(--brand-200)]" style={{ fontSize: 12, lineHeight: 1.65 }}>
                 AI가 이 책의 핵심 내용과 읽어야 할 이유를 분석해 드립니다
               </p>
             )}
-            <button
-              onClick={() => void handleSummarize()}
-              className="flex items-center justify-center gap-2 py-3 rounded-xl text-white transition-all active:scale-[0.98]"
-              style={{ background: "linear-gradient(135deg, var(--brand2-600), var(--brand-600))", fontSize: 14, fontWeight: 700 }}
-            >
-              <Sparkles size={15} />
-              {noSource ? "다시 시도" : "AI 분석 시작"}
-            </button>
+            {!noSource && (
+              <button
+                onClick={() => void handleSummarize()}
+                className="flex items-center justify-center gap-2 py-3 rounded-xl text-white transition-all active:scale-[0.98]"
+                style={{ background: "linear-gradient(135deg, var(--brand2-600), var(--brand-600))", fontSize: 14, fontWeight: 700 }}
+              >
+                <Sparkles size={15} />
+                AI 분석 시작
+              </button>
+            )}
           </div>
         )}
 
@@ -906,6 +929,9 @@ function BookInfoTab({ book }: { book: UIBook }) {
 export function BookDetailPage() {
   const { id } = useParams();
   const back = useBack();
+  const navigate = useNavigate();
+  const [showEdit, setShowEdit] = useState(false);
+  const [showCollections, setShowCollections] = useState(false);
   const [activeTab, setActiveTab] = useState<"notes" | "info">("notes");
   const { showToast } = useToast();
   const qc = useQueryClient();
@@ -929,7 +955,10 @@ export function BookDetailPage() {
     try {
       await deleteBook.mutateAsync(book.id);
       setShowDeleteConfirm(false);
-      back();
+      // 앱 안 이동 기록이 있을 때만 뒤로, 딥링크로 바로 열었다면 서재로
+      const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
+      if (idx > 0) back();
+      else navigate('/', { replace: true });
       showToast('책이 삭제됐어요', 'success');
     } catch {
       showToast('삭제에 실패했어요. 다시 시도해주세요.', 'error');
@@ -955,16 +984,24 @@ export function BookDetailPage() {
   // FEAT-103: Web Share API
   const handleShare = async () => {
     if (!book) return;
-    const text = `📚 "${book.title}"${book.author ? ` - ${book.author}` : ''} 완독했어요! BookShelf에서 기록 중 🎉`;
+    const statusText =
+      book.status === 'done' ? '완독했어요!' : book.status === 'reading' ? '읽고 있어요!' : '읽고 싶은 책이에요!';
+    const text = `📚 "${book.title}"${book.author ? ` - ${book.author}` : ''} ${statusText} BookShelf에서 기록 중 🎉`;
     if (navigator.share) {
       try {
         await navigator.share({ title: book.title, text });
-      } catch {
-        // 사용자가 취소한 경우 무시
+        showToast('공유했어요', 'success');
+      } catch (err) {
+        // 사용자가 취소한 경우(AbortError)는 조용히 무시
+        if ((err as Error)?.name !== 'AbortError') showToast('공유하지 못했어요. 다시 시도해주세요.', 'error');
       }
     } else {
-      await navigator.clipboard.writeText(text);
-      showToast('독서 카드가 클립보드에 복사됐어요 📋', 'success');
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast('독서 카드가 클립보드에 복사됐어요 📋', 'success');
+      } catch {
+        showToast('복사하지 못했어요. 브라우저 권한을 확인해주세요.', 'error');
+      }
     }
   };
 
@@ -1068,6 +1105,14 @@ export function BookDetailPage() {
                 위시리스트로 변경
               </DropdownMenuItem>
             )}
+            <DropdownMenuItem onClick={() => setShowEdit(true)}>
+              <PencilLine size={14} className="mr-2 text-indigo-600" />
+              책 정보 수정
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setShowCollections(true)}>
+              <FolderPlus size={14} className="mr-2 text-indigo-600" />
+              컬렉션에 추가
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={handleDeleteBook}
@@ -1122,7 +1167,7 @@ export function BookDetailPage() {
             <p className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 14 }}>{book.author}</p>
             {/* 출판사 · 연도 · 페이지수: 12px #94A3B8, · separator */}
             <p className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 12 }}>
-              {book.publisher} · {book.finishedDate?.slice(0, 4) ?? book.addedDate.slice(0, 4)}{book.totalPages ? ` · ${book.totalPages}p` : ''}
+              {[book.publisher, book.totalPages ? `${book.totalPages}p` : ""].filter(Boolean).join(" · ")}
             </p>
             {/* Genre badge: centered, md variant (28px height) */}
             <GenreBadge genre={book.genre} size="lg" />
@@ -1195,11 +1240,14 @@ export function BookDetailPage() {
         </div>
       </div>
 
+      <EditBookSheet book={book} open={showEdit} onClose={() => setShowEdit(false)} />
+      <AddToCollectionSheet bookId={book.id} bookTitle={book.title} open={showCollections} onClose={() => setShowCollections(false)} />
+
       {/* 책 삭제 확인 다이얼로그 */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>"{book.title}"을(를) 삭제할까요?</AlertDialogTitle>
+            <AlertDialogTitle>「{book.title}」{objectParticle(book.title)} 삭제할까요?</AlertDialogTitle>
             <AlertDialogDescription>노트와 독서 세션도 함께 삭제됩니다.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -58,8 +58,10 @@ export function useDeleteCollection() {
   const addNotification = useUiStore((s) => s.addNotification);
   return useMutation({
     mutationFn: (id: string) => collectionsApi.delete(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.collections.all });
+    onSuccess: (_res, id) => {
+      // 삭제된 컬렉션의 상세 쿼리는 지워서 다시 불러오지 않는다(404 방지) — 목록만 갱신
+      qc.removeQueries({ queryKey: queryKeys.collections.detail(id) });
+      qc.invalidateQueries({ queryKey: queryKeys.collections.lists() });
       addNotification('collection_deleted', '컬렉션을 삭제했습니다', '');
     },
   });

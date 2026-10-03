@@ -108,8 +108,14 @@ export function useDeleteBook() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => booksApi.delete(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.books.all });
+    onSuccess: (_res, id) => {
+      // 삭제된 책의 상세 쿼리는 다시 부르지 않는다(404). 상세 화면이 아직 떠 있는 동안 removeQueries를 하면
+      // 관찰자가 쿼리를 새로 만들어 곧바로 조회하므로, 무효화 대상에서만 빼고 캐시는 gc에 맡긴다.
+      const deletedDetail = queryKeys.books.detail(id);
+      qc.invalidateQueries({
+        queryKey: queryKeys.books.all,
+        predicate: (q) => !(q.queryKey.length === deletedDetail.length && q.queryKey.every((k, i) => k === deletedDetail[i])),
+      });
       qc.invalidateQueries({ queryKey: queryKeys.stats.all });
       // D1 FK cascade로 서버에서 notes/collection_books도 함께 삭제되므로
       // 클라이언트 캐시도 맞춰 무효화한다.

@@ -205,9 +205,9 @@ function MonthGroupHeader({ label, count }: { label: string; count: number }) {
       className="flex items-center px-4 w-full sticky z-10 bg-[#F8FAFC] dark:bg-[#0F172A]"
       style={{ height: 36, top: "var(--topbar-h)" }}
     >
-      <span className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 13, fontWeight: 600 }}>
+      <h2 className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 13, fontWeight: 600, margin: 0 }}>
         {label} · {count}권
-      </span>
+      </h2>
     </div>
   );
 }
@@ -338,11 +338,17 @@ export function LibraryPage() {
                 key={v}
                 onClick={() => setViewMode(v)}
                 aria-label={label}
+                aria-pressed={viewMode === v}
                 title={label}
-                className={`flex items-center justify-center rounded-lg transition-all ${viewMode === v ? 'bg-white dark:bg-[#1E293B] shadow-sm text-indigo-600 dark:text-indigo-300' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
-                style={{ width: 30, height: 28 }}
+                className="flex items-center justify-center -my-2"
+                style={{ width: 44, height: 44 }}
               >
-                {icon}
+                <span
+                  className={`flex items-center justify-center rounded-lg transition-all ${viewMode === v ? 'bg-white dark:bg-[#1E293B] shadow-sm text-indigo-600 dark:text-indigo-300' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
+                  style={{ width: 30, height: 28 }}
+                >
+                  {icon}
+                </span>
               </button>
             ))}
           </div>
@@ -469,6 +475,7 @@ export function LibraryPage() {
                   ))
                 ) : (
                   <div className="px-4 py-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <h2 className="sr-only">완독한 책 목록</h2>
                     {filtered.map((book) => (
                       <DoneBookCard
                         key={book.id}
@@ -488,7 +495,7 @@ export function LibraryPage() {
                     {visibleKeys.map((key) => (
                       <div key={key}>
                         <MonthGroupHeader label={key} count={grouped.get(key)!.length} />
-                        <div className={`px-4 py-3 ${viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" : "flex flex-col gap-3"}` }>
+                        <div className={`px-4 py-3 ${viewMode === "grid" ? "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3" : "flex flex-col gap-3"}` }>
                           {grouped.get(key)!.map((book) => (
                             <DoneBookCard
                               key={book.id}
@@ -513,7 +520,8 @@ export function LibraryPage() {
                     )}
                   </>
                 ) : (
-                  <div className={`px-4 py-2 ${viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" : "flex flex-col gap-3"}`}>
+                  <div className={`px-4 py-2 ${viewMode === "grid" ? "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3" : "flex flex-col gap-3"}`}>
+                    <h2 className="sr-only">완독한 책 목록</h2>
                     {filtered.map((book) => (
                       <DoneBookCard
                         key={book.id}
