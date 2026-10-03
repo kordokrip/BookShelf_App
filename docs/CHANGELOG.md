@@ -4,6 +4,16 @@
 
 ---
 
+## 37차 (2026-10-04) — AI 모델 교체: Gemma 3 27B → Gemini 3.8 Flash
+
+상세 경위: `docs/sessions/2026-10-04-ai-model-switch.md` (비교 스크립트 `scripts/ai-bench/`)
+
+- 실제 앱 프롬프트로 13개 모델 비교 → `google/gemini-3.8-flash`(추론 minimal): 인생책 2~3초·실재하고 안 읽은 책 6권 중 5~6권, 명문장 원문 재현 최상 (Gemma는 10~42초, 사용 가능 0~4권)
+- 비용은 약 4배(인생책 호출당 약 $0.0017) — 일일 호출 상한으로 최악 하루 약 $1.7
+- 인생책 캐시 v5, 화면 표기 "Gemini · OpenRouter"
+
+---
+
 ## 36차 (2026-10-03) — 35차 남은 일 해결
 
 상세 경위: `docs/sessions/2026-10-03-full-ui-qa.md`의 "후속 (36차)"

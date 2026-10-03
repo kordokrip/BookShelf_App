@@ -66,7 +66,7 @@ PWA 정적 자산(아이콘, iOS startup 이미지, `sw.js`/workbox 프리캐시
 
 **스테이징 사용 절차:** `git push origin main:staging`(또는 작업 브랜치를 `staging`에 push) → CI가 마이그레이션 + 배포 → `bash scripts/e2e-api-test.sh --url https://bookshelf-api-staging.kordokrip.workers.dev`. 스테이징 worker 시크릿은 프로덕션과 별도이며 이름은 `npx wrangler secret list --env staging`으로 확인한다.
 
-**OpenRouter 시크릿**: AI 요약·인생책 추천·오늘의 문장은 OpenRouter Gemma 유료 모델(`worker/lib/openrouter.ts`의 `OPENROUTER_MODEL`, OpenRouter 크레딧에서 차감)을 우선 쓰고, 키가 없거나 일일 예산(KV `or_budget:{KST 날짜}`, 상한은 `worker/lib/openrouter.ts`의 `OPENROUTER_DAILY_BUDGET`)을 넘기면 Workers AI로 폴백한다(오늘의 문장은 폴백 없이 노트로 대체). 오늘의 문장은 사용자가 요청하지 않은 백그라운드 호출이라 예산 중 `OPENROUTER_BACKGROUND_BUDGET`까지만 쓰고, 나머지는 책 분석·추천 몫으로 남긴다. 시크릿 이름은 `OPENROUTER_API_KEY` — production/staging 각각 `npx wrangler secret put OPENROUTER_API_KEY [--env staging]`로 등록하고 `npx wrangler secret list`로 확인한다. 로컬 개발은 `.dev.vars`에 같은 이름으로 둔다(커밋 금지).
+**OpenRouter 시크릿**: AI 요약·인생책 추천·오늘의 문장은 OpenRouter 유료 모델(현재 모델명은 `worker/lib/openrouter.ts`의 `OPENROUTER_MODEL`, OpenRouter 크레딧에서 차감)을 우선 쓰고, 키가 없거나 일일 예산(KV `or_budget:{KST 날짜}`, 상한은 `worker/lib/openrouter.ts`의 `OPENROUTER_DAILY_BUDGET`)을 넘기면 Workers AI로 폴백한다(오늘의 문장은 폴백 없이 노트로 대체). 오늘의 문장은 사용자가 요청하지 않은 백그라운드 호출이라 예산 중 `OPENROUTER_BACKGROUND_BUDGET`까지만 쓰고, 나머지는 책 분석·추천 몫으로 남긴다. 시크릿 이름은 `OPENROUTER_API_KEY` — production/staging 각각 `npx wrangler secret put OPENROUTER_API_KEY [--env staging]`로 등록하고 `npx wrangler secret list`로 확인한다. 로컬 개발은 `.dev.vars`에 같은 이름으로 둔다(커밋 금지).
 
 > 최초 부트스트랩 예외: 2026-09-27 스테이징 D1을 만든 직후 0001~0014 마이그레이션을 로컬에서 `--remote --env staging`으로 1회 직접 적용했다(빈 DB 초기화). 이후 스테이징 D1 변경도 CI 경로로만 한다.
 >

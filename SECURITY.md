@@ -105,7 +105,7 @@ OWASP 권장 반복 횟수는 600,000+ 이지만, Cloudflare Workers의 CPU 시�
 | NAVER_CLIENT_ID | 네이버 도서 검색 | 필요 시 |
 | NAVER_CLIENT_SECRET | 네이버 도서 검색 | 90일 권장 |
 | ALLOWED_EMAILS | 가입 허용 이메일 | 필요 시 |
-| OPENROUTER_API_KEY | AI 요약·인생책·오늘의 문장(OpenRouter Gemma 유료 모델 — 키 노출 시 크레딧 도용 위험). 등록 여부는 `npx wrangler secret list`(스테이징은 `--env staging`)로 확인. 로컬은 `.dev.vars` | 노출 시 즉시 |
+| OPENROUTER_API_KEY | AI 요약·인생책·오늘의 문장(OpenRouter 유료 모델 — 키 노출 시 크레딧 도용 위험). 등록 여부는 `npx wrangler secret list`(스테이징은 `--env staging`)로 확인. 로컬은 `.dev.vars` | 노출 시 즉시 |
 | VAPID_PUBLIC_KEY | Web Push 공개키 | 변경 불필요 |
 | VAPID_PRIVATE_KEY | Web Push 비밀키 | 변경 불필요 |
 

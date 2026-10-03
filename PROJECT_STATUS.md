@@ -1,6 +1,6 @@
 # BookShelf App — 현재 상태 스냅샷
 
-> **최종 업데이트:** 2026-10-03 (36차: 잃은 장르 AI 추천 복구·인생책 즉시 표시·기본 대화상자 제거 / 35차: 전체 화면 점검·수정)
+> **최종 업데이트:** 2026-10-04 (37차: AI 모델을 Gemini 3.8 Flash로 교체 / 36차: 잃은 장르 AI 추천 복구·인생책 즉시 표시·기본 대화상자 제거 / 35차: 전체 화면 점검·수정)
 > **Git 브랜치:** `main` (kordokrip/BookShelf_App)
 > **E2E 테스트:** `bash scripts/e2e-api-test.sh --url <대상>` → **전체 PASS** ✅ (2026-10-03 스테이징·프로덕션 확인, 테스트 개수는 `grep -n '^  TOTAL=' scripts/e2e-api-test.sh`로 확인)
 > **상세 세션 리포트:** `docs/sessions/2026-10-03-full-ui-qa.md` (직전: `2026-10-03-ipad-ai-theme.md`)
@@ -217,7 +217,7 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 | 독서 세션 + 타이머 | ✅ 완료 |
 | 노트 CRUD + FTS5 검색 | ✅ 완료 |
 | 통계 + 연간결산 + 성취배지 | ✅ 완료 |
-| AI 요약·추천·OCR·인생책 추천·오늘의 명문장 | ✅ 2026-10-03 OpenRouter 유료 `google/gemma-3-27b-it` 우선(모델명은 `worker/lib/openrouter.ts`의 `OPENROUTER_MODEL`) + Workers AI(`@cf/meta/llama-3.1-8b-instruct-fast`) 폴백. 요약은 책 소개 근거만, 인생책은 실재 검증. 일일 호출 상한으로 비용 제한, 응답의 `provider`로 실제 사용 모델 확인. 무료판은 공용 풀 혼잡으로 교체 |
+| AI 요약·추천·OCR·인생책 추천·오늘의 명문장·장르 추천 | ✅ 2026-10-04 OpenRouter 유료 `google/gemini-3.8-flash`(추론 minimal) 우선 — 13개 모델 비교에서 응답 2~3초·추천 품질 최상(`docs/sessions/2026-10-04-ai-model-switch.md`). 모델명은 `worker/lib/openrouter.ts`의 `OPENROUTER_MODEL`. 요약·추천은 Workers AI(`@cf/meta/llama-3.1-8b-instruct-fast`) 폴백, 인생책·명문장은 폴백 없음. 일일 호출 상한으로 비용 제한, 응답의 `provider`로 실제 사용 확인 |
 | 독서 모임 + 실시간 채팅(DO WebSocket) + 일정 | ✅ 완료 |
 | 통계 공유 | ✅ 2026-10-03 보고서 화면 → 독서 통계 '내 통계 공유'(이미지 Web Share/PNG)·'요약 복사'. `/api/share`는 데이터 보존용으로 남김 |
 | 관리자 대시보드 | ✅ 완료 |

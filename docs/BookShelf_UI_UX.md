@@ -1750,7 +1750,7 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 
 | 엔드포인트 | 메서드 | UI 사용처 | 호출 트리거 |
 |-----------|--------|----------|-----------|
-| `/api/ai/summarize` | POST | BookDetailPage BookInfoTab | "AI 분석 시작" 버튼. 로그인 필요. 책 소개문(Kakao·Naver)에만 근거 — 소개문이 없으면 `reason:'no_source'`로 "분석할 수 없어요" 안내. 결과 아래 제공 모델 표기(Gemma · OpenRouter / Workers AI) |
+| `/api/ai/summarize` | POST | BookDetailPage BookInfoTab | "AI 분석 시작" 버튼. 로그인 필요. 책 소개문(Kakao·Naver)에만 근거 — 소개문이 없으면 `reason:'no_source'`로 "분석할 수 없어요" 안내. 결과 아래 제공 모델 표기(Gemini · OpenRouter / Workers AI) |
 | `/api/ai/lifebooks?refresh=` | GET | LifeBooksPage, WishlistPage RecommendSection | 진입 / "새로 추천" 버튼. 완독 전체 기반 → 읽은 책 제외 → 실재 검증. `source`로 "AI 추천"·"추천 목록" 표시. 429 시 "10분쯤 뒤에" 안내 |
 | `/api/ai/recommend?limit=&refresh=` | GET | — | (화면 호출 없음) |
 | `/api/ai/ocr` | POST | CameraOCRSheet | 사진 촬영 후 자동 |
