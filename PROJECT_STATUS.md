@@ -1,9 +1,9 @@
 # BookShelf App — 현재 상태 스냅샷
 
-> **최종 업데이트:** 2026-10-03 (iPad 대응 · OpenRouter Gemma AI 재구성 · 통계 이미지 공유 · 개인 앱 테마)
+> **최종 업데이트:** 2026-10-03 (35차: 전체 화면 기능 점검·수정 — 일부 수정 시 데이터 초기화 버그 핫픽스, 책 정보 수정·컬렉션 담기)
 > **Git 브랜치:** `main` (kordokrip/BookShelf_App)
 > **E2E 테스트:** `bash scripts/e2e-api-test.sh --url <대상>` → **전체 PASS** ✅ (2026-10-03 스테이징·프로덕션 확인, 테스트 개수는 `grep -n '^  TOTAL=' scripts/e2e-api-test.sh`로 확인)
-> **상세 세션 리포트:** `docs/sessions/2026-10-03-ipad-ai-theme.md`
+> **상세 세션 리포트:** `docs/sessions/2026-10-03-full-ui-qa.md` (직전: `2026-10-03-ipad-ai-theme.md`)
 > **기능 플래그:** 등록 목록은 `worker/lib/featureFlags.ts`의 `ALL_FEATURE_FLAGS`(현재 비어 있음), 공개 상태는 `GET /api/flags/public`으로 확인 (ADR-003)
 
 ---
@@ -233,9 +233,10 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 | 브랜드 에셋·디자인 시스템 (벡터 아이콘, 생성 표지, 세리프 책 문장, lucide 아이콘 체계) | ✅ 2026-09-28 — 규칙은 `docs/BookShelf_UI_UX.md` 1.4·2.1·2.1b·3.3, 에셋 재생성 `npm run pwa:assets` |
 | 개인 앱 테마 (강조색 프리셋·화면 모드, 서버 동기화) | ✅ 2026-10-03 — `docs/BookShelf_UI_UX.md` 5.4. 프리셋 정의 `src/lib/themePresets.ts` → `npm run theme:accent` |
 | iPad·태블릿 (안전 영역, 가로 시작 화면) | ✅ 2026-10-03 에뮬레이션 점검(WebKit + safe-area 주입). **iPad 실기기 설치 상태 미확인** — 시작 화면은 앱 재설치 필요 |
+| 전체 화면 기능·이벤트 점검 | ✅ 2026-10-03 QA 서브에이전트(Playwright·DevTools MCP) 3영역 + 재검증 2회. 책 일부 수정 데이터 초기화 버그(출시 때부터) 수정 — **이미 '기타'로 바뀐 장르는 복구 불가**, 사용자가 '책 정보 수정'으로 고쳐야 함 |
 
 > 상세 변경 이력: `docs/CHANGELOG.md`
-> 마지막 세션 상세 리포트: `docs/sessions/2026-10-03-ipad-ai-theme.md`
+> 마지막 세션 상세 리포트: `docs/sessions/2026-10-03-full-ui-qa.md`
 > 아키텍처 결정 기록: `docs/adr/README.md`
 > API 스펙: `docs/TRACE_MAP.md`
 > QA 절차: `docs/QA_가이드.md`

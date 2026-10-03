@@ -265,6 +265,10 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 
 **뒤로 가기(안드로이드 백 버튼·iOS 스와이프 백)**: 열린 시트·모달·팝업을 먼저 닫는다 — `src/hooks/useBackToClose.ts`. 열릴 때 같은 URL의 기록 항목을 하나 쌓고 popstate에서 닫으며, 화면에서 직접 닫으면 그 항목을 걷는다(한 틱 뒤, 여전히 자기 항목일 때만 — 닫으면서 다른 화면으로 이동했거나 다른 오버레이를 연 경우는 건드리지 않음). 공용 `Sheet`·`AlertDialog`·`Modal`에 내장되어 있고, 페이지가 직접 만든 모달(`fixed inset-0`)은 컴포넌트 첫 줄에서 `useBackToClose(true, onClose)`를 호출한다. 모임·컬렉션 상세처럼 라우트가 아닌 화면 내부 상태 전환도 같은 훅으로 "상세 → 목록"이 된다. **새 오버레이를 만들면 반드시 이 훅을 붙일 것.**
 
+**화면 이동 시 스크롤** (2026-10-03): `routes.ts`의 `ScrollLayout`이 React Router `<ScrollRestoration/>`을 둔다 — 새 화면은 맨 위에서 시작하고, 뒤로·앞으로 가기는 이전 위치로 돌아간다. 오버레이의 기록 항목은 같은 라우터 key를 복사하므로 시트·팝업을 열고 닫아도 스크롤이 움직이지 않는다. 전역 `scroll-behavior: smooth`는 두지 않는다(맨 위로 되돌리는 스크롤까지 미끄러지듯 보임) — 부드러운 스크롤은 `scrollTo({ behavior: 'smooth' })`로 직접 지정. `html { scroll-padding-top }`으로 포커스·`scrollIntoView`가 sticky TopBar 밑에 숨지 않게 한다.
+
+**직접 만든 대화상자의 접근성** (2026-10-03): Radix가 아닌 시트·모달은 `src/hooks/useDialogA11y.ts`를 쓴다 — 열릴 때 첫 요소로 포커스(`preventScroll`), Tab 가두기, Esc 닫기(안쪽 요소가 이미 처리한 Esc는 무시), 닫힐 때 포커스 복원. 컨테이너에 `role="dialog"`·`aria-modal`·`aria-labelledby`. 확인이 필요한 삭제·초기화는 브라우저 기본 `confirm` 대신 앱 안 AlertDialog. 스위치는 `role="switch"`·`aria-checked`, 시각 트랙은 `min-h-0` + 44px 투명 터치 영역(전역 `button{min-height:44px}`는 `@layer base`라 유틸리티로 덮을 수 있다).
+
 ---
 
 ## 4. 네비게이션 시스템
@@ -380,6 +384,8 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 
 **알림 배지**: `unreadCount > 0` → 빨강 원형(`bg-[#EF4444]`), 9초과→"9+", `border-2 border-white`
 **데이터 바인딩**: `useAuthStore(user)`, `useUiStore(themeMode, cycleThemeMode)`, `useNotificationUnreadCount()`, `useMarkAllNotificationsRead()`
+
+**ProfilePopup** (`components/ui/ProfilePopup.tsx`, role=dialog): 프로필 이모지, 독서 목표, 리마인더·주간 리포트 스위치, 푸시 알림, **바로가기**(독서 모임·인생책·컬렉션·연간 결산 — 2026-10-03 추가. 모바일 하단 탭바에는 4개 탭만 있어 이 화면들이 주소 입력 외에는 닿지 않았다), 앱 디자인, 로그아웃
 
 ---
 
@@ -998,7 +1004,11 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 - **공유 버튼**: `Share2` → `navigator.share()` or clipboard
 - **더보기 메뉴**: `MoreVertical` → DropdownMenu:
   - 상태 변경: 읽는 중(`BookOpen`), 완독(`BookMarked`), Wish(`Heart`)
-  - 삭제(`Trash2`): 확인 후 `useDeleteBook()` → `navigate("/")`
+  - **책 정보 수정** (2026-10-03, `components/books/EditBookSheet.tsx`): 제목·저자·출판사·총 페이지·장르·완독일(완독 책만, 오늘 이후 불가)·별점. 바뀐 필드만 PUT, 비운 출판사·완독일은 `null`
+  - **컬렉션에 추가** (2026-10-03, `components/collections/AddToCollectionSheet.tsx`): 내 컬렉션 체크 목록(담기·빼기 토글) + 새 컬렉션 바로 만들기
+  - 삭제(`Trash2`): 앱 안 확인 대화상자 후 `useDeleteBook()` → 앱 안 이전 화면이 있으면 뒤로, 바로 들어온 링크면 `/`
+- **별점**: `StarRadioGroup` — radiogroup(방향키로 변경), 별마다 44px 터치 영역
+- **노트 삭제**: 브라우저 기본 confirm 대신 앱 안 AlertDialog
 
 **BookCover** (lg, 120×168px):
 - coverImage 있으면 `<img>`(alt=제목), 없거나 로드 실패면 **생성 표지**(2026-09-28, `src/lib/coverArt.ts`): id 해시로 차분한 책 팔레트 10종 중 고정 선택(사용자가 고른 표지 색은 존중), lg/md는 세리프 제목·저자 라벨 밴드 + 책등 하이라이트, sm은 제목 이니셜. 옆에 제목이 보이므로 `aria-hidden`. 책 쌓기 책등도 같은 색 규칙(`spineBackground`)
@@ -1470,6 +1480,8 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 
 - 빈 상태(컬렉션 없음): EmptyState + 생성 CTA
 - 컬렉션 카드/목록 전환 및 정렬
+- 책 담기: 책 상세 ⋯ → **컬렉션에 추가**(9.9). 상세 화면에서 책마다 **빼기**(44px X), 머리글의 **수정**으로 이름·이모지·설명 변경 (2026-10-03 — 그전에는 화면에 담기·빼기·이름 바꾸기 수단이 없었다)
+- 만들기·수정 대화상자: `CollectionFormDialog`(role=dialog, Esc·뒤로 가기로 닫힘), 삭제는 앱 안 확인 대화상자
 - 컬렉션 상세에서 책 연결 상태를 즉시 반영(쿼리 무효화)
 
 ---
