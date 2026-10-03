@@ -35,7 +35,7 @@ export function UpdatePrompt() {
   return (
     <div
       // z-40: 열린 시트·모달(z-50) 아래 — 모달의 저장 버튼을 가리지 않고, 닫히면 다시 보인다
-      className="fixed left-0 right-0 z-40 flex justify-center px-4"
+      className="fixed left-0 right-0 z-40 flex justify-center px-4 pointer-events-none" // 가로 전체 폭 래퍼가 아래 버튼의 클릭을 가로채지 않게
       style={
         standalone
           ? // 하단 CTA를 가리지 않도록 상단 안전 영역 아래에 표시
@@ -47,7 +47,7 @@ export function UpdatePrompt() {
       }
     >
       <div
-        className="w-full max-w-sm flex items-center gap-3 rounded-2xl px-4 py-3 shadow-lg"
+        className="w-full max-w-sm flex items-center gap-3 rounded-2xl px-4 py-3 shadow-lg pointer-events-auto"
         style={{
           backgroundColor: "#1E293B",
           color: "#F8FAFC",

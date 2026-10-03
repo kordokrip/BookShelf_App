@@ -22,6 +22,8 @@ export function MembersTab({ groupId, members, isLeader, onBack, onlineSet }: {
   const { showToast } = useToast();
 
   const [confirmKind, setConfirmKind] = useState<'leave' | 'delete' | null>(null);
+  const [memberAction, setMemberAction] = useState<
+    { kind: 'remove' | 'transfer' | 'reject'; userId: string; name: string } | null>(null);
 
   const approvedMembers = members.filter((m) => m.status === 'approved');
   const pendingMembers = members.filter((m) => m.status === 'pending');
@@ -47,8 +49,7 @@ export function MembersTab({ groupId, members, isLeader, onBack, onlineSet }: {
     }
   };
 
-  const handleRemove = async (targetUserId: string, targetName: string) => {
-    if (!confirm(`${targetName}님을 추방하시겠습니까?`)) return;
+  const handleRemove = async (targetUserId: string) => {
     try {
       await removeMember.mutateAsync({ groupId, userId: targetUserId });
     } catch {
@@ -56,8 +57,7 @@ export function MembersTab({ groupId, members, isLeader, onBack, onlineSet }: {
     }
   };
 
-  const handleTransferLeader = async (targetUserId: string, targetName: string) => {
-    if (!confirm(`${targetName}님에게 모임장을 위임하시겠습니까? 본인은 일반 멤버가 됩니다.`)) return;
+  const handleTransferLeader = async (targetUserId: string) => {
     try {
       await transferLeader.mutateAsync({ groupId, newLeaderId: targetUserId });
     } catch {
@@ -74,13 +74,26 @@ export function MembersTab({ groupId, members, isLeader, onBack, onlineSet }: {
   };
 
   const handleReject = async (targetUserId: string) => {
-    if (!confirm('가입 신청을 거절하시겠습니까?')) return;
     try {
       await rejectMember.mutateAsync({ groupId, userId: targetUserId });
     } catch {
       showToast('거절 처리에 실패했어요. 다시 시도해주세요.', 'error');
     }
   };
+
+  const runMemberAction = () => {
+    const a = memberAction;
+    setMemberAction(null);
+    if (!a) return;
+    if (a.kind === 'remove') void handleRemove(a.userId);
+    else if (a.kind === 'transfer') void handleTransferLeader(a.userId);
+    else void handleReject(a.userId);
+  };
+  const memberCopy = memberAction && {
+    remove: { title: `${memberAction.name}님을 추방할까요?`, description: '추방된 멤버는 모임에서 나가게 되며, 다시 가입 신청을 해야 합니다.', confirmLabel: '추방' },
+    transfer: { title: `${memberAction.name}님에게 모임장을 위임할까요?`, description: `위임하면 ${memberAction.name}님이 새 모임장이 되고, 나는 일반 멤버가 돼요. 멤버 관리·일정·공지 권한도 함께 넘어가며 직접 되돌릴 수 없어요.`, confirmLabel: '위임' },
+    reject: { title: `${memberAction.name}님의 가입 신청을 거절할까요?`, description: '거절하면 신청이 삭제돼요. 상대방은 다시 신청할 수 있어요.', confirmLabel: '거절' },
+  }[memberAction.kind];
 
   return (
     <div className="overflow-y-auto h-full px-4 py-3 space-y-3">
@@ -107,7 +120,7 @@ export function MembersTab({ groupId, members, isLeader, onBack, onlineSet }: {
                     <Check size={16} />
                   </button>
                   <button
-                    onClick={() => handleReject(m.user_id)}
+                    onClick={() => setMemberAction({ kind: 'reject', userId: m.user_id, name: m.name })}
                     className="p-1.5 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                     aria-label={`${m.name} 가입 거절`}
                   >
@@ -161,14 +174,14 @@ export function MembersTab({ groupId, members, isLeader, onBack, onlineSet }: {
               {isLeader && m.user_id !== user?.id && (
                 <div className="flex items-center gap-1">
                   <button
-                    onClick={() => handleTransferLeader(m.user_id, m.name)}
+                    onClick={() => setMemberAction({ kind: 'transfer', userId: m.user_id, name: m.name })}
                     className="p-1.5 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900 rounded-lg transition-colors"
                     aria-label={`${m.name}에게 모임장 위임`}
                   >
                     <ArrowRightLeft size={14} />
                   </button>
                   <button
-                    onClick={() => handleRemove(m.user_id, m.name)}
+                    onClick={() => setMemberAction({ kind: 'remove', userId: m.user_id, name: m.name })}
                     className="p-1.5 text-[#EF4444] hover:bg-[#FEF2F2] dark:hover:bg-[#450A0A] rounded-lg transition-colors"
                     aria-label={`${m.name} 멤버 추방`}
                   >
@@ -197,6 +210,15 @@ export function MembersTab({ groupId, members, isLeader, onBack, onlineSet }: {
           </button>
         )}
       </div>
+      <ConfirmDialog
+        open={memberAction !== null}
+        title={memberCopy?.title ?? ''}
+        description={memberCopy?.description}
+        confirmLabel={memberCopy?.confirmLabel ?? '확인'}
+        destructive={memberAction?.kind !== 'transfer'}
+        onCancel={() => setMemberAction(null)}
+        onConfirm={runMemberAction}
+      />
       <ConfirmDialog
         open={confirmKind !== null}
         title={confirmKind === 'delete' ? '모임을 삭제할까요?' : '모임을 나갈까요?'}

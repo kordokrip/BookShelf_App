@@ -710,6 +710,7 @@ function MessagesHistoryTab() {
   const qc = useQueryClient();
   const { showToast } = useToast();
   const [offset, setOffset] = useState(0);
+  const [deletingMsgId, setDeletingMsgId] = useState<string | null>(null);
   const SIZE = 20;
   const params = { limit: SIZE, offset };
 
@@ -739,7 +740,8 @@ function MessagesHistoryTab() {
         </p>
         <button
           onClick={() => qc.invalidateQueries({ queryKey: ["admin", "messages"] })}
-          className="p-2 rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#334155] text-[#64748B] dark:text-[#94A3B8]"
+          aria-label="메시지 기록 새로고침"
+          className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#334155] text-[#64748B] dark:text-[#94A3B8]"
         >
           <RefreshCw size={15} />
         </button>
@@ -786,11 +788,9 @@ function MessagesHistoryTab() {
                   )}
                 </div>
                 <button
-                  onClick={() => {
-                    if (!confirm("이 메시지 기록을 삭제하시겠습니까?")) return;
-                    deleteMutation.mutate(m.id);
-                  }}
-                  className="shrink-0 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-[#CBD5E1] hover:text-red-500 transition-colors"
+                  onClick={() => setDeletingMsgId(m.id)}
+                  aria-label="메시지 기록 삭제"
+                  className="shrink-0 p-2.5 -m-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-[#CBD5E1] hover:text-red-500 transition-colors"
                 >
                   <Trash2 size={15} />
                 </button>
@@ -822,6 +822,24 @@ function MessagesHistoryTab() {
           </button>
         </div>
       )}
+
+      <AlertDialog open={deletingMsgId !== null} onOpenChange={(o) => { if (!o) setDeletingMsgId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>이 메시지 기록을 삭제할까요?</AlertDialogTitle>
+            <AlertDialogDescription>삭제한 발송 기록은 되돌릴 수 없어요.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { if (deletingMsgId) deleteMutation.mutate(deletingMsgId); setDeletingMsgId(null); }}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              삭제
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

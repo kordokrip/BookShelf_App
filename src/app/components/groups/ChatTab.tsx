@@ -4,6 +4,7 @@ import { useGroupMessages, useSendMessage, useDeleteMessage, useMarkGroupRead, u
 import { useGroupChat } from '../../../hooks/useGroupChat';
 import { useAuthStore } from '../../../stores/authStore';
 import { useToast } from '../ui/Toast';
+import { ConfirmDialog } from './ConfirmDialog';
 import type { GroupMember, GroupMessage } from '../../../lib/api';
 
 type PendingMsg = { tempId: string; content: string; status: 'sending' | 'failed' };
@@ -32,6 +33,7 @@ export function ChatTab({
   const markRead = useMarkGroupRead(groupId);
   const updateReadReceipt = useUpdateReadReceipt(groupId);
   const { showToast } = useToast();
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [pendingMsgs, setPendingMsgs] = useState<PendingMsg[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -223,9 +225,7 @@ export function ChatTab({
                     )}
                     {isLeader && !msg.deleted_at && (
                       <button
-                        onClick={() => { if (confirm('이 메시지를 삭제하시겠습니까?')) deleteMessage.mutate(msg.id, {
-                          onError: () => showToast('삭제에 실패했어요. 다시 시도해주세요.', 'error'),
-                        }); }}
+                        onClick={() => setDeleteTargetId(msg.id)}
                         className="text-[11px] text-red-400 hover:text-red-500 mt-0.5 ml-1 opacity-0 group-hover/msg:opacity-100 transition-opacity"
                         aria-label="메시지 삭제"
                       >
@@ -291,6 +291,18 @@ export function ChatTab({
           </button>
         </div>
       </div>
+      <ConfirmDialog
+        open={deleteTargetId !== null}
+        title="이 메시지를 삭제할까요?"
+        description="삭제한 메시지는 모든 멤버에게 '삭제된 메시지'로 표시되며 되돌릴 수 없어요."
+        confirmLabel="삭제"
+        onCancel={() => setDeleteTargetId(null)}
+        onConfirm={() => {
+          const id = deleteTargetId;
+          setDeleteTargetId(null);
+          if (id) deleteMessage.mutate(id, { onError: () => showToast('삭제에 실패했어요. 다시 시도해주세요.', 'error') });
+        }}
+      />
     </div>
   );
 }

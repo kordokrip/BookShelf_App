@@ -32,7 +32,7 @@ export function MeetingsTab({ groupId, isLeader }: { groupId: string; isLeader: 
       setShowCreate(false);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : '일정 생성에 실패했습니다.';
-      alert(msg);
+      showToast(msg, 'error');
     }
   };
 

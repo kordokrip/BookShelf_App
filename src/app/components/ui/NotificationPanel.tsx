@@ -55,14 +55,22 @@ export function NotificationPanel({ onClose }: Props) {
   const clearNotifications = useUiStore((s) => s.clearNotifications);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // 열릴 때 포커스 이동, 닫힐 때 트리거로 복원 (ESC는 아래 핸들러)
+  // 비모달 팝오버(aria-modal 없음, 바깥 클릭·Esc·Tab 이탈로 닫힘): 열릴 때 패널로 포커스를 옮기고, 닫을 때 트리거(벨)로 되돌린다.
+  // 트리거는 패널의 부모 래퍼(벨 버튼 + 패널) 안 첫 버튼으로 찾는다.
+  const triggerRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
+    triggerRef.current =
+      previous && previous !== document.body
+        ? previous
+        : (panelRef.current?.parentElement?.querySelector('button') as HTMLElement | null) ?? null;
     panelRef.current?.focus({ preventScroll: true });
-    return () => {
-      if (previous && document.contains(previous)) previous.focus({ preventScroll: true });
-    };
   }, []);
+  const closeAndRestoreFocus = () => {
+    onClose();
+    const t = triggerRef.current;
+    if (t && document.contains(t)) t.focus({ preventScroll: true });
+  };
 
   // 패널이 열리면 모두 읽음 처리
   useEffect(() => {
@@ -71,13 +79,18 @@ export function NotificationPanel({ onClose }: Props) {
 
   // 패널 외부 클릭 시 닫기
   useEffect(() => {
+    // 벨 버튼(부모 래퍼) 클릭은 벨 자체의 토글에 맡긴다 — 여기서 닫으면 곧바로 다시 열린다.
     function handleClick(e: MouseEvent) {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+      const scope = panelRef.current?.parentElement ?? panelRef.current;
+      if (scope && !scope.contains(e.target as Node)) {
         onClose();
       }
     }
     function handleEsc(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
+      if (e.key !== 'Escape') return;
+      onClose();
+      const t = triggerRef.current;
+      if (t && document.contains(t)) t.focus({ preventScroll: true });
     }
     document.addEventListener('mousedown', handleClick);
     document.addEventListener('keydown', handleEsc);
@@ -93,6 +106,20 @@ export function NotificationPanel({ onClose }: Props) {
       role="dialog"
       aria-label="알림 패널"
       tabIndex={-1}
+      onBlur={(e) => {
+        // Tab으로 패널 밖(다음/이전 요소)으로 나가면 닫는다 — 포커스가 패널 뒤에 남지 않도록.
+        // 벨 버튼(부모 래퍼) 안으로의 이동은 벨 토글이 처리한다.
+        const next = e.relatedTarget as Node | null;
+        const scope = panelRef.current?.parentElement;
+        if (next && !e.currentTarget.contains(next) && !(scope && scope.contains(next))) onClose();
+      }}
+      onKeyDown={(e) => {
+        // 패널 첫 요소에서 Shift+Tab → 벨로 복귀하며 닫기
+        if (e.key === 'Tab' && e.shiftKey && e.target === e.currentTarget) {
+          e.preventDefault();
+          closeAndRestoreFocus();
+        }
+      }}
       className={[
         'absolute right-0 top-full mt-2 z-50',
         'w-80 sm:w-96 max-w-[calc(100vw-1rem)] max-h-[calc(var(--vp-h)-var(--topbar-h)-var(--bottomnav-h)-1rem)] md:max-h-[calc(var(--vp-h)-var(--topbar-h)-1.5rem)] flex flex-col',
@@ -116,7 +143,7 @@ export function NotificationPanel({ onClose }: Props) {
             </button>
           )}
           <button
-            onClick={onClose}
+            onClick={closeAndRestoreFocus}
             aria-label="닫기"
             className="w-11 h-11 flex items-center justify-center rounded-full text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors"
           >

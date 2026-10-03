@@ -398,8 +398,9 @@ export function StatsPage() {
                   a.download = `bookshelf_export_${localDateString()}.csv`;
                   a.click();
                   URL.revokeObjectURL(url);
+                  showToast("CSV를 내려받았어요", "success");
                 } catch {
-                  alert("CSV 내보내기에 실패했습니다. 다시 시도해주세요.");
+                  showToast("CSV 내보내기에 실패했어요. 다시 시도해주세요.", "error");
                 }
               }}
               className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 border border-[#E2E8F0] dark:border-[#334155] bg-white dark:bg-[#1E293B] hover:bg-[#F8FAFC] dark:hover:bg-[#1E293B] transition-colors"

@@ -354,9 +354,11 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
             disabled={saving}
             aria-label="프로필 이모지 변경"
             aria-expanded={showEmojiPicker}
-            className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-white dark:bg-[#334155] border border-[#E2E8F0] dark:border-[#475569] shadow-sm flex items-center justify-center hover:bg-[#F8FAFC] dark:hover:bg-[#475569] transition-colors"
+            className="group absolute -bottom-2 -right-2 w-11 h-11 flex items-center justify-center"
           >
-            <Camera size={13} className="text-[#64748B] dark:text-[#94A3B8]" aria-hidden="true" />
+            <span className="w-7 h-7 rounded-full bg-white dark:bg-[#334155] border border-[#E2E8F0] dark:border-[#475569] shadow-sm flex items-center justify-center group-hover:bg-[#F8FAFC] dark:group-hover:bg-[#475569] transition-colors">
+              <Camera size={13} className="text-[#64748B] dark:text-[#94A3B8]" aria-hidden="true" />
+            </span>
           </button>
 
           {/* 이모지 피커 */}
@@ -395,9 +397,11 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
           <button
             onClick={cycleThemeMode}
             aria-label={THEME_LABEL[themeMode]}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F1F5F9] dark:hover:bg-[#334155] transition-colors"
+            className="group w-11 h-11 -mr-1 flex items-center justify-center text-[#64748B] dark:text-[#94A3B8]"
           >
-            {themeMode === 'auto' ? <Clock size={18} /> : themeMode === 'light' ? <Sun size={18} /> : <Moon size={18} />}
+            <span className="w-9 h-9 rounded-full flex items-center justify-center group-hover:bg-[#F1F5F9] dark:group-hover:bg-[#334155] transition-colors">
+              {themeMode === 'auto' ? <Clock size={18} /> : themeMode === 'light' ? <Sun size={18} /> : <Moon size={18} />}
+            </span>
           </button>
         </div>
 

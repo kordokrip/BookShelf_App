@@ -60,8 +60,24 @@ AlertDialogOverlay.displayName = AlertDialogPrimitive.Overlay.displayName;
 
 function AlertDialogContent({
   className,
+  onOpenAutoFocus,
+  onCloseAutoFocus,
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Content>) {
+  // Trigger 없이 open 상태로 제어하는 확인창은 Radix가 닫힌 뒤 돌려줄 곳을 몰라 포커스가 body로 간다 —
+  // 열릴 때(포커스가 대화상자로 옮겨지기 직전) 포커스가 있던 요소를 기억했다가 닫히면 그곳으로 돌려준다
+  const returnTo = React.useRef<HTMLElement | null>(null);
+  const handleOpenAutoFocus = (e: Event) => {
+    returnTo.current = document.activeElement as HTMLElement | null;
+    onOpenAutoFocus?.(e);
+  };
+  const handleCloseAutoFocus = (e: Event) => {
+    onCloseAutoFocus?.(e);
+    const el = returnTo.current;
+    if (e.defaultPrevented || !el || el === document.body || !document.contains(el)) return;
+    e.preventDefault();
+    el.focus({ preventScroll: true });
+  };
   return (
     <AlertDialogPortal>
       <AlertDialogOverlay />
@@ -71,6 +87,8 @@ function AlertDialogContent({
           "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg",
           className,
         )}
+        onOpenAutoFocus={handleOpenAutoFocus}
+        onCloseAutoFocus={handleCloseAutoFocus}
         {...props}
       />
     </AlertDialogPortal>

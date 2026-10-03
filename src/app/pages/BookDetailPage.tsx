@@ -634,6 +634,7 @@ function BookInfoTab({ book }: { book: UIBook }) {
 
   const { data: sessions = [], isLoading: sessionsLoading } = useSessions({ bookId: book.id });
   const deleteSession = useDeleteSession();
+  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
 
   const rows = [
     { label: "저자", value: book.author },
@@ -702,7 +703,7 @@ function BookInfoTab({ book }: { book: UIBook }) {
   };
 
   const handleDeleteSession = async (sessionId: string) => {
-    if (!confirm("이 독서 기록을 삭제할까요? 진행 페이지도 되돌아갑니다.")) return;
+    setDeletingSessionId(null);
     try {
       await deleteSession.mutateAsync(sessionId);
       showToast("독서 기록이 삭제됐어요", "success");
@@ -796,9 +797,9 @@ function BookInfoTab({ book }: { book: UIBook }) {
                   </span>
                 </div>
                 <button
-                  onClick={() => handleDeleteSession(s.id)}
+                  onClick={() => setDeletingSessionId(s.id)}
                   disabled={deleteSession.isPending}
-                  className="p-1.5 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+                  className="w-11 h-11 -my-2 -mr-2 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
                   aria-label="기록 삭제"
                 >
                   <Trash2 size={13} className="text-[#FDA5A5]" />
@@ -921,6 +922,25 @@ function BookInfoTab({ book }: { book: UIBook }) {
           </div>
         )}
       </div>
+
+      {/* 독서 기록 삭제 확인 */}
+      <AlertDialog open={deletingSessionId !== null} onOpenChange={(o) => { if (!o) setDeletingSessionId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>이 독서 기록을 삭제할까요?</AlertDialogTitle>
+            <AlertDialogDescription>진행 페이지도 되돌아갑니다.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { if (deletingSessionId) void handleDeleteSession(deletingSessionId); }}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              삭제
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
