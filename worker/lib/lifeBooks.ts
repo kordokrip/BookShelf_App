@@ -48,9 +48,22 @@ export interface LifeBooksResult {
 
 export type LifeBooksEnv = GenerateEnv & LookupEnv;
 
+export function lifeBooksFingerprint(doneBooks: DoneBook[]): string {
+  return hashString(doneBooks.map((b) => `${b.title}|${b.author ?? ''}|${b.genre ?? ''}|${b.rating ?? ''}`).join('\n'));
+}
+
 export function lifeBooksCacheKey(userId: string, doneBooks: DoneBook[]): string {
-  const fingerprint = hashString(doneBooks.map((b) => `${b.title}|${b.author ?? ''}|${b.genre ?? ''}|${b.rating ?? ''}`).join('\n'));
-  return `ai_lifebooks:${LIFEBOOKS_CACHE_VERSION}:${userId}:${fingerprint}`;
+  return `ai_lifebooks:${LIFEBOOKS_CACHE_VERSION}:${userId}:${lifeBooksFingerprint(doneBooks)}`;
+}
+
+/** 사용자별 최신 결과(지문 포함) — 캐시 미스 시 stale로 즉시 돌려주는 용도 */
+export function lifeBooksLatestKey(userId: string): string {
+  return `ai_lifebooks:${LIFEBOOKS_CACHE_VERSION}:${userId}:latest`;
+}
+
+/** 백그라운드 재생성 중복 방지 락 */
+export function lifeBooksLockKey(userId: string): string {
+  return `ai_lifebooks_lock:${userId}`;
 }
 
 export function buildLifeBookMessages(doneBooks: DoneBook[]): ChatMessage[] {

@@ -48,7 +48,7 @@ FAILED_TESTS=()
 if [[ "$READONLY" == true ]]; then
   TOTAL=3
 else
-  TOTAL=70
+  TOTAL=72
 fi
 
 # ── 시작 시각 ────────────────────────────────────────────────────
@@ -1426,6 +1426,33 @@ if [[ "$KEPT" == "True" ]]; then
   pass_test $T "$NAME" $ELAPSED
 else
   fail_test $T "$NAME" $ELAPSED "$BODY" "finished_date null 저장 또는 다른 필드 유지 실패"
+fi
+
+T=71; NAME="POST /api/books/genre-suggestions (기타 책 없는 신규 계정 → 200 빈 목록, AI 비용 없음)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s --max-time 30 -o "$TMPF" -w "%{http_code}" -X POST "${BASE_URL}/api/books/genre-suggestions" \
+  -H "Authorization: Bearer ${TOKEN_2}" \
+  -H "Content-Type: application/json" \
+  -d '{}')
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+EMPTY_OK=$(json_val "$BODY" "d['data'] == [] and d['provider'] is None")
+if [[ "$HTTP_CODE" == "200" && "$EMPTY_OK" == "True" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE}, empty=${EMPTY_OK} (기대: 200 + data [] + provider null)"
+fi
+
+T=72; NAME="POST /api/books/genre-suggestions (토큰 없음 → 401)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" -X POST "${BASE_URL}/api/books/genre-suggestions" \
+  -H "Content-Type: application/json" -d '{}')
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+if [[ "$HTTP_CODE" == "401" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE} (기대: 401)"
 fi
 
 # ================================================================

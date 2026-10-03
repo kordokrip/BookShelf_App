@@ -24,6 +24,8 @@ import { logActivity } from './admin';
 import { deriveFinishedDate } from '../lib/bookHelpers';
 import { achievementEventFor } from '../lib/achievementsDb';
 import { createBookSchema, updateBookSchema } from '../lib/bookSchemas';
+import { rateLimit } from '../middleware/rateLimit';
+import { parseBookIds, selectTargetBooks, suggestGenres } from '../lib/genreSuggestions';
 
 export const booksRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -189,6 +191,27 @@ booksRouter.get('/', authMiddleware, async (c) => {
     count: results.length,
   });
 });
+
+// ─── POST /api/books/genre-suggestions — '기타'로 초기화된 책의 장르 복구 제안 ─────
+// DB는 쓰지 않는다(적용은 클라이언트가 PUT /api/books/:id). 한도는 사용자별 → authMiddleware가 먼저.
+booksRouter.post(
+  '/genre-suggestions',
+  authMiddleware,
+  rateLimit({ limit: 3, windowMs: 600_000, keyPrefix: 'ai_genre', keyBy: 'user' }),
+  async (c) => {
+    const userId = c.get('userId');
+    const body = await c.req.json().catch(() => ({})) as { book_ids?: unknown } | null;
+    const ids = parseBookIds(body?.book_ids);
+    if (ids === null) return c.json({ error: 'book_ids는 최대 40개의 문자열 배열이어야 합니다' }, 400);
+    try {
+      const books = await selectTargetBooks(c.env.DB, userId, ids);
+      return c.json(await suggestGenres(c.env, books));
+    } catch (err) {
+      console.error('장르 제안 오류:', err);
+      return c.json({ error: '장르 제안에 실패했습니다' }, 500);
+    }
+  },
+);
 
 // ─── GET /api/books/:id ───────────────────────────────────────
 booksRouter.get('/:id', authMiddleware, async (c) => {

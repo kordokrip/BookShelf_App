@@ -27,6 +27,25 @@ export function computeRateLimitWindow(nowMs: number, windowMs: number) {
   return { windowId, ttlSec };
 }
 
+export const RATE_LIMIT_MESSAGE = '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.';
+
+/**
+ * 한도 확인 + 1 소모. 허용이면 true, 한도 초과면 false(소모하지 않음).
+ * 미들웨어와 "실제로 생성할 때만 세는" 핸들러 내부 검사가 같은 키 체계(`rl:{prefix}:{path}:{subject}:{window}`)를 공유한다.
+ */
+export async function consumeRateLimit(
+  kv: Pick<KVNamespace, 'get' | 'put'>,
+  opts: { limit: number; windowMs: number; keyPrefix: string; path: string; subject: string; nowMs?: number },
+): Promise<boolean> {
+  const { windowId, ttlSec } = computeRateLimitWindow(opts.nowMs ?? Date.now(), opts.windowMs);
+  const key = `rl:${opts.keyPrefix}:${opts.path}:${opts.subject}:${windowId}`;
+  const current = await kv.get(key);
+  const count = current ? parseInt(current, 10) : 0;
+  if (count >= opts.limit) return false;
+  await kv.put(key, String(count + 1), { expirationTtl: ttlSec });
+  return true;
+}
+
 /**
  * KV 기반 Rate Limiting 미들웨어 (고정 창 방식)
  *
@@ -46,20 +65,13 @@ export function rateLimit(
     const userId = keyBy === 'user' ? (c as unknown as { get(k: string): unknown }).get('userId') : undefined;
     const subject = typeof userId === 'string' && userId ? `u:${userId}` : ip;
     const path = new URL(c.req.url).pathname;
-    const { windowId, ttlSec } = computeRateLimitWindow(Date.now(), windowMs);
-    const key = `rl:${keyPrefix}:${path}:${subject}:${windowId}`;
-
-    const current = await c.env.KV.get(key);
-    const count = current ? parseInt(current, 10) : 0;
-
-    if (count >= limit) {
+    const allowed = await consumeRateLimit(c.env.KV, { limit, windowMs, keyPrefix, path, subject });
+    if (!allowed) {
       return c.json(
-        { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+        { error: RATE_LIMIT_MESSAGE },
         429,
       );
     }
-
-    await c.env.KV.put(key, String(count + 1), { expirationTtl: ttlSec });
 
     await next();
   };

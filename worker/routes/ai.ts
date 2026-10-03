@@ -8,7 +8,8 @@ import {
   normalizeRecommendations, parseFavoriteGenres,
   type BookRecommendation, type ReadingProfileBook, type RecommendationSource,
 } from '../lib/aiRecommend';
-import { buildLifeBooks, lifeBooksCacheKey, MAX_DONE_BOOKS, type DoneBook, type LifeBookItem } from '../lib/lifeBooks';
+import { MAX_DONE_BOOKS, type DoneBook } from '../lib/lifeBooks';
+import { resolveLifeBooks } from '../lib/lifeBooksSwr';
 import { summarizeBook } from '../lib/aiSummary';
 import { generateText } from '../lib/openrouter';
 
@@ -229,11 +230,11 @@ ${excludePrompt}
 
 // ─── GET /api/ai/lifebooks — 완독 이력 기반 인생책 추천 ────────
 // 완독 전체(최대 200권)를 Gemma에 주고 후보 10권 → 서재 중복 제거 + 카카오/네이버 실존 검증 → 5권. (worker/lib/lifeBooks.ts)
-// 한도는 사용자별(같은 IP를 쓰는 사용자끼리 서로 막지 않도록) — summarize와 같은 순서.
+// stale-while-revalidate: 지문이 바뀌면 직전 결과를 즉시(stale:true) 주고 백그라운드 재생성. (worker/lib/lifeBooksSwr.ts)
+// 한도(ai_life, 3회/10분, 사용자별)는 미들웨어가 아니라 resolveLifeBooks 안에서 "실제 생성" 때만 센다.
 aiRouter.get(
   '/lifebooks',
   authMiddleware,
-  rateLimit({ limit: 3, windowMs: 600_000, keyPrefix: 'ai_life', keyBy: 'user' }),
   async (c) => {
     const userId = c.get('userId');
     const forceRefresh = c.req.query('refresh') === 'true';
@@ -258,30 +259,19 @@ aiRouter.get(
       );
     }
 
-    const cacheKey = lifeBooksCacheKey(userId, doneBooks);
-    if (forceRefresh) {
-      await c.env.KV.delete(cacheKey);
-    } else {
-      const cached = await c.env.KV.get(cacheKey);
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached) as { data: LifeBookItem[] };
-          if (Array.isArray(parsed.data) && parsed.data.length > 0) {
-            return c.json({ ...parsed, cached: true });
-          }
-        } catch { /* 손상된 캐시는 아래에서 재생성 */ }
-        await c.env.KV.delete(cacheKey);
-      }
-    }
-
-    const excluded = buildExcludedSet(allResult.results ?? []);
-    const result = await buildLifeBooks(c.env, doneBooks, excluded);
-    const payload = { data: result.data, cached: false, source: result.source, provider: result.provider };
-    if (result.data.length > 0) {
-      // Gemma 결과만 하루 캐시 — 폴백(8B·큐레이션)은 1시간 뒤 다시 시도해 더 나은 추천으로 바뀌게
-      await c.env.KV.put(cacheKey, JSON.stringify(payload), { expirationTtl: result.provider === 'openrouter' ? 86400 : 3600 });
-    }
-    return c.json(payload);
+    const path = new URL(c.req.url).pathname;
+    const { status, body } = await resolveLifeBooks({
+      env: c.env,
+      userId,
+      doneBooks,
+      getExcluded: async () => buildExcludedSet(allResult.results ?? []),
+      forceRefresh,
+      path,
+      subject: `u:${userId}`,
+      // executionCtx가 없는 환경(일부 로컬/테스트)에서는 응답과 별개로 그냥 실행만 시작한다
+      waitUntil: (p) => { try { c.executionCtx.waitUntil(p); } catch { void p; } },
+    });
+    return c.json(body, status);
   },
 );
 
