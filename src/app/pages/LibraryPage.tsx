@@ -1,23 +1,23 @@
 /**
  * 내 서재 (도서 목록) 페이지
  * - 상태(읽는 중·완독·읽을 책) 탭 필터
- * - 장르·정렬 필터, 그리드/리스트/심어나무 레이아웃 전환
+ * - 툴바(보기·정렬·검색·장르·컬렉션), 그리드/리스트/심어나무 레이아웃 전환
  * - 컨렉션 폸 표시
  */
 import { useState, useEffect, useMemo } from "react";
-import { ChevronDown, ChevronRight, LayoutGrid, List, GitBranch, Search, X, FolderOpen, BookMarked } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import type { UIBook, GenreKey } from "../../types/book";
 import { ALL_GENRES } from "../../types/book";
 import { useBooks, useRefreshBookCovers } from "../../hooks/useBooks";
 import { DoneBookCard } from "../components/books/BookCard";
-import { GenreFilterBar } from "../components/books/GenreFilterBar";
 import { DailyRecallCard } from "../components/notes/DailyRecallCard";
 import { EmptyState } from "../components/ui/EmptyState";
 import { AddBookFab } from "../components/ui/Buttons";
-import { useNavigate, Link } from "react-router";
+import { useNavigate } from "react-router";
 import { BookCardSkeleton, ErrorState } from "../components/ui/skeleton";
 import { BookCover } from "../components/books/BookCard";
 import { GenreRecoveryBanner } from "../components/library/GenreRecoveryBanner";
+import { LibraryToolbar, type SortKey, type ViewMode } from "../components/library/LibraryToolbar";
 
 /* ─── helpers ─────────────────────────────────────── */
 function getMonthLabel(dateStr: string) {
@@ -193,11 +193,6 @@ function BookshelfView({ books, onBookClick }: { books: UIBook[]; onBookClick: (
   );
 }
 
-const SORT_OPTIONS = [
-  { value: "date" as const, label: "최근순" },
-  { value: "rating" as const, label: "평점순" },
-  { value: "title" as const, label: "제목순" },
-];
 
 /* ─── Month Group Header ─────────────────────────── */
 function MonthGroupHeader({ label, count }: { label: string; count: number }) {
@@ -213,56 +208,11 @@ function MonthGroupHeader({ label, count }: { label: string; count: number }) {
   );
 }
 
-/* ─── Sort Dropdown ──────────────────────────────── */
-function SortDropdown({
-  value,
-  onChange,
-}: {
-  value: "date" | "rating" | "title";
-  onChange: (v: "date" | "rating" | "title") => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const current = SORT_OPTIONS.find((o) => o.value === value)!;
-
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-1 text-[#64748B] dark:text-[#94A3B8]"
-        style={{ fontSize: 14, fontWeight: 400 }}
-      >
-        {current.label}
-        <ChevronDown size={14} className={`transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
-      {open && (
-        <div className="absolute right-0 top-full mt-1 bg-white dark:bg-[#1E293B] rounded-xl border border-[#E2E8F0] dark:border-[#334155] shadow-lg z-50 overflow-hidden min-w-[96px]">
-          {SORT_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => { onChange(opt.value); setOpen(false); }}
-              className="w-full text-left px-3 py-2.5 transition-colors hover:bg-[#F8FAFC] dark:hover:bg-[#334155]"
-              style={{
-                fontSize: 13,
-                fontWeight: opt.value === value ? 700 : 400,
-                color: opt.value === value ? "var(--brand-600)" : undefined,
-              }}
-            >
-              <span className={opt.value === value ? '' : 'text-[#374151] dark:text-[#CBD5E1]'}>
-                {opt.label}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function LibraryPage() {
   const [selectedGenre, setSelectedGenre] = useState<GenreKey | null>(null);
-  const [sortBy, setSortBy] = useState<"date" | "rating" | "title">("date");
+  const [sortBy, setSortBy] = useState<SortKey>("date");
   const [showAll, setShowAll] = useState(false);
-  const [viewMode, setViewMode] = useState<"grid" | "list" | "timeline" | "bookshelf">("list");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [searchQuery, setSearchQuery] = useState("");
   const { data: books = [], isLoading, isError, refetch } = useBooks({ status: 'done' });
   const loadState = isLoading ? "loading" : isError ? "error" : "success";
@@ -312,41 +262,12 @@ export function LibraryPage() {
     <div className="pb-[var(--page-pb)] lg:pb-8">
       <GenreRecoveryBanner />
       {/* ── Header row ── */}
-      <div className="flex items-start sm:items-center justify-between gap-3 px-3 xs:px-4 sm:px-6 pt-4 sm:pt-5 pb-3 flex-col sm:flex-row">
+      <div className="flex items-center justify-between gap-3 px-3 xs:px-4 sm:px-6 pt-4 sm:pt-5 pb-2">
         <div className="flex items-center gap-2 min-w-0">
           <h1 className="sr-only">완독</h1>
           <p className="text-[#64748B] dark:text-[#94A3B8] truncate" style={{ fontSize: 14 }}>
             {isLoading ? "불러오는 중..." : `올해 ${doneThisYear}권 · 전체 ${books.length}권`}
           </p>
-        </div>
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-start sm:justify-end w-full sm:w-auto">
-          {/* 뷰 모드 토글 */}
-          <div className="flex items-center gap-0.5 bg-[#F1F5F9] dark:bg-[#334155] rounded-xl p-0.5 flex-shrink-0">
-            {([
-              { v: "list" as const, icon: <List size={14} />, label: "리스트" },
-              { v: "grid" as const, icon: <LayoutGrid size={14} />, label: "그리드" },
-              { v: "bookshelf" as const, icon: <BookMarked size={14} />, label: "책장" },
-              { v: "timeline" as const, icon: <GitBranch size={14} />, label: "타임라인" },
-            ] as const).map(({ v, icon, label }) => (
-              <button
-                key={v}
-                onClick={() => setViewMode(v)}
-                aria-label={label}
-                aria-pressed={viewMode === v}
-                title={label}
-                className="flex items-center justify-center -my-2"
-                style={{ width: 44, height: 44 }}
-              >
-                <span
-                  className={`flex items-center justify-center rounded-lg transition-all ${viewMode === v ? 'bg-white dark:bg-[#1E293B] shadow-sm text-indigo-600 dark:text-indigo-300' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
-                  style={{ width: 30, height: 28 }}
-                >
-                  {icon}
-                </span>
-              </button>
-            ))}
-          </div>
-          <SortDropdown value={sortBy} onChange={setSortBy} />
         </div>
       </div>
 
@@ -368,61 +289,23 @@ export function LibraryPage() {
       {/* CV-7: Success state — book list */}
       {loadState === "success" && (
         <>
+          {/* ── 툴바: 보기·정렬 + 검색·장르·컬렉션 아이콘 ── */}
+          <LibraryToolbar
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            genres={ALL_GENRES}
+            genreCounts={genreCounts}
+            totalCount={books.length}
+            selectedGenre={selectedGenre}
+            onGenreChange={setSelectedGenre}
+          />
+
           {/* ── 오늘의 회고 (노트 없으면 숨김) ── */}
           <DailyRecallCard />
-
-          {/* ── 컬렉션 바로가기 ── */}
-          <div className="px-4 mb-3">
-            <Link
-              to="/collections"
-              className="flex items-center gap-3 w-full rounded-2xl px-4 py-3 bg-[#F8FAFC] dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] hover:bg-indigo-50 dark:hover:bg-[#334155] transition-colors"
-            >
-              <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-indigo-50 dark:bg-indigo-900"
-              >
-                <FolderOpen size={16} style={{ color: "var(--brand-600)" }} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 13, fontWeight: 700 }}>내 컬렉션</p>
-                <p className="text-[#64748B] dark:text-[#CBD5E1]" style={{ fontSize: 11 }}>시리즈, 주제별로 책을 모아보세요</p>
-              </div>
-              <ChevronRight size={16} className="text-[#64748B] dark:text-[#CBD5E1] flex-shrink-0" />
-            </Link>
-          </div>
-
-          {/* ── 인라인 검색 바 ── */}
-          <div className="px-4 mb-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748B] dark:text-[#CBD5E1] pointer-events-none" />
-              <input
-                type="text"
-                placeholder="제목 또는 저자로 검색..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-11 bg-[#F1F5F9] dark:bg-[#334155] rounded-xl pl-9 pr-9 text-sm text-[#1E293B] dark:text-[#F8FAFC] placeholder:text-[#94A3B8] dark:placeholder:text-[#64748B] outline-none border border-transparent focus:border-indigo-600/30 focus:bg-white dark:focus:bg-[#1E293B] transition-colors"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2"
-                  aria-label="검색어 지우기"
-                >
-                  <X className="h-4 w-4 text-[#64748B] dark:text-[#94A3B8]" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* ── Genre filter bar (shared component) ── */}
-          <div className="mb-4">
-            <GenreFilterBar
-              genres={ALL_GENRES}
-              selectedGenre={selectedGenre}
-              genreCounts={genreCounts}
-              totalCount={books.length}
-              onSelect={setSelectedGenre}
-            />
-          </div>
 
           {/* ── Book list ── */}
           {filtered.length === 0 ? (
