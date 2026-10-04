@@ -6,6 +6,7 @@ import { XIcon } from "lucide-react";
 
 import { cn } from "./utils";
 import { useBackToClose } from "../../../hooks/useBackToClose";
+import { focusReturnTarget } from "../../../lib/focusReturn";
 
 /** 뒤로 가기로 닫힘 (useBackToClose) — 제어(open)·비제어(defaultOpen·Trigger) 사용 모두 지원 */
 function Sheet({ open: openProp, defaultOpen, onOpenChange, ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
@@ -59,10 +60,26 @@ function SheetContent({
   className,
   children,
   side = "right",
+  onOpenAutoFocus,
+  onCloseAutoFocus,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: "top" | "right" | "bottom" | "left";
 }) {
+  // Trigger 없이 open으로 제어하는 시트는 닫힌 뒤 포커스가 body로 간다 — 열 때 포커스가 있던 요소로 돌려준다
+  // (alert-dialog.tsx와 같은 방식)
+  const returnTo = React.useRef<HTMLElement | null>(null);
+  const handleOpenAutoFocus = (e: Event) => {
+    returnTo.current = focusReturnTarget(document.activeElement);
+    onOpenAutoFocus?.(e);
+  };
+  const handleCloseAutoFocus = (e: Event) => {
+    onCloseAutoFocus?.(e);
+    const el = returnTo.current;
+    if (e.defaultPrevented || !el || el === document.body || !document.contains(el)) return;
+    e.preventDefault();
+    el.focus({ preventScroll: true });
+  };
   return (
     <SheetPortal>
       <SheetOverlay />
@@ -80,6 +97,8 @@ function SheetContent({
             "data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom inset-x-0 bottom-0 h-auto max-h-[calc(100dvh-var(--safe-top)-12px)] overflow-y-auto border-t pb-[var(--safe-bottom)]",
           className,
         )}
+        onOpenAutoFocus={handleOpenAutoFocus}
+        onCloseAutoFocus={handleCloseAutoFocus}
         {...props}
       >
         {children}

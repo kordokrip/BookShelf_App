@@ -6,6 +6,7 @@ import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 import { cn } from "./utils";
 import { buttonVariants } from "./button";
 import { useBackToClose } from "../../../hooks/useBackToClose";
+import { focusReturnTarget } from "../../../lib/focusReturn";
 
 /** 뒤로 가기로 닫힘(= 취소, useBackToClose) — 제어·비제어 사용 모두 지원 */
 function AlertDialog({
@@ -68,7 +69,7 @@ function AlertDialogContent({
   // 열릴 때(포커스가 대화상자로 옮겨지기 직전) 포커스가 있던 요소를 기억했다가 닫히면 그곳으로 돌려준다
   const returnTo = React.useRef<HTMLElement | null>(null);
   const handleOpenAutoFocus = (e: Event) => {
-    returnTo.current = document.activeElement as HTMLElement | null;
+    returnTo.current = focusReturnTarget(document.activeElement);
     onOpenAutoFocus?.(e);
   };
   const handleCloseAutoFocus = (e: Event) => {
