@@ -1,6 +1,6 @@
 # BookShelf App — 현재 상태 스냅샷
 
-> **최종 업데이트:** 2026-10-05 (39차: 수정요청 9건·운영 회원 정리·독서 기록 중복 버그 / 38차: 화면 문구·중복 정리, 용어 통일 / 37차: AI 모델을 Gemini 3.8 Flash로 교체 / 36차: 잃은 장르 AI 추천 복구·인생책 즉시 표시·기본 대화상자 제거 / 35차: 전체 화면 점검·수정)
+> **최종 업데이트:** 2026-10-05 (40차: 관리자 회원 휴면·삭제 / 39차: 수정요청 9건·운영 회원 정리·독서 기록 중복 버그 / 38차: 화면 문구·중복 정리, 용어 통일 / 37차: AI 모델을 Gemini 3.8 Flash로 교체 / 36차: 잃은 장르 AI 추천 복구·인생책 즉시 표시·기본 대화상자 제거 / 35차: 전체 화면 점검·수정)
 > **Git 브랜치:** `main` (kordokrip/BookShelf_App)
 > **E2E 테스트:** `bash scripts/e2e-api-test.sh --url <대상>` → **전체 PASS** ✅ (2026-10-03 스테이징·프로덕션 확인, 테스트 개수는 `grep -n '^  TOTAL=' scripts/e2e-api-test.sh`로 확인)
 > **상세 세션 리포트:** `docs/sessions/2026-10-05-refactoring-requests.md` (직전: `2026-10-03-ipad-ai-theme.md`)
@@ -149,6 +149,7 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 | `0015_notes_page_range_session_tags.sql` | notes `end_page`(페이지 범위), `session_id`(몰입 타이머 연결, FK SET NULL), `tags`(AI 태깅) 추가 + session_id 인덱스 |
 | `0016_user_achievements.sql` | 업적 달성 기록 `user_achievements(user_id, achievement_id, unlocked_at)` (ADR-004) |
 | `0017_user_appearance.sql` | users `theme_accent`(강조색 프리셋 id), `theme_mode`(auto/light/dark) 추가 — 둘 다 NULL 허용 |
+| `0018_user_status.sql` | users `status`(active/dormant, 기본 active), `dormant_at` 추가 + `idx_users_status` — 관리자 휴면 처리 |
 
 마이그레이션 적용 절차·로컬 검증 원칙은 `docs/CI_CD.md` 참고. **로컬에서 `--remote` 마이그레이션을 직접 실행하지 말 것** — `git push origin main` 시 CI가 자동 적용한다.
 

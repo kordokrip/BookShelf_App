@@ -1526,6 +1526,13 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 - 마운트 시 `useAuthStore(s => s.user)`로 `role` 확인 → `role !== 'admin'`이면 즉시 `navigate('/', { replace: true })`
 - 백엔드 측에서도 `worker/routes/admin.ts`의 `adminMiddleware`로 이중 검증 (전 엔드포인트)
 
+#### 회원 휴면·삭제 (2026-10-05, `components/admin/AccountManagementSection.tsx`)
+
+- 회원 목록: 상태 필터(전체 상태·활성·휴면), 휴면 회원은 "휴면" 배지와 휴면 처리일
+- 회원 상세 → **계정 관리**: [휴면 처리]/[휴면 해제](확인창: "로그인과 앱 사용이 막히고, 데이터는 그대로 보관돼요. 언제든 해제할 수 있어요.") · [계정 삭제](빨강, 회원 이메일을 그대로 입력해야 확인 버튼이 켜짐: "책·노트·기록 등 모든 데이터가 영구 삭제되며 되돌릴 수 없어요.")
+- 관리자 계정·본인 계정은 두 버튼 모두 비활성 + 이유 안내
+- 휴면 처리된 사용자는 다음 요청에서 로그아웃되고 로그인 화면에 "휴면 처리된 계정입니다. 관리자에게 문의해 주세요."(role=alert)
+
 #### 레이아웃
 
 - **헤더**: 뒤로가기(ArrowLeft) + "관리자 대시보드" 타이틀, sticky top

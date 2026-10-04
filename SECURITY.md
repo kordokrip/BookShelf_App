@@ -19,6 +19,14 @@
 - **쿠키 속성**: `HttpOnly; Secure; SameSite=Strict; Path=/api/auth`
 - **다중 탭**: 동일 토큰 재사용 (삭제하지 않음)
 
+### 휴면 계정 차단 (2026-10-05)
+- 관리자가 회원을 휴면 처리하면(`PATCH /api/admin/users/:id/status`) `users.status='dormant'` + KV `user_dormant:{userId}`를 기록한다.
+- 차단 지점: 이메일 로그인(비밀번호가 맞은 뒤에만 휴면 여부를 알려 계정 상태가 새지 않게), 구글 로그인(`/login?error=account_dormant`로 리다이렉트), 토큰 갱신, 그리고 `authMiddleware`(JWT 확인 뒤 KV 1회 조회 → 이미 로그인한 기기도 다음 요청부터 403 `ACCOUNT_DORMANT`). KV 조회 실패 시에는 막지 않는다(전체 장애 방지).
+- 관리자 계정과 본인 계정은 휴면·삭제할 수 없다. 관리자 삭제(`DELETE /api/admin/users/:id`)는 대상 이메일 재입력이 필요하고, 본인 탈퇴와 같은 정리 로직(`purgeUserAccount`)을 쓴다. 모든 조치는 activity_logs에 남는다.
+
+### 운영 메모
+- 2026-10-05: 테스트 스크립트에 커밋돼 있던 관리자 비밀번호 기본값을 제거하고, 해당 관리자 계정의 비밀번호를 재설정했다(사용자 요청). 비밀번호는 문서·저장소에 적지 않는다.
+
 ---
 
 ## 2. 비밀번호 해싱

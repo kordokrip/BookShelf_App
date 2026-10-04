@@ -4,6 +4,16 @@
 
 ---
 
+## 40차 (2026-10-05) — 관리자 회원 휴면·삭제, 관리자 비밀번호 재설정
+
+상세 경위: `docs/sessions/2026-10-05-refactoring-requests.md`의 "후속 (40차)"
+
+- 관리자 회원 관리: 휴면 처리/해제(로그인·토큰 갱신·이미 로그인한 기기까지 차단, 데이터 보존), 계정 삭제(이메일 재입력 확인), 관리자·본인 보호, 활동 로그 — 마이그레이션 0018(users.status, dormant_at)
+- 관리자 계정 비밀번호 재설정(커밋돼 있던 이전 비밀번호 무효화)
+- schema.sql에 빠져 있던 group_members.last_read_message_id(0013) 보완
+
+---
+
 ## 39차 (2026-10-05) — Refactoring.pdf 수정요청 9건 + 운영 회원 정리
 
 상세 경위: `docs/sessions/2026-10-05-refactoring-requests.md`
