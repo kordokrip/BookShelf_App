@@ -40,7 +40,7 @@ export function SideNav() {
   const navItems: SideNavItem[] = [
     { path: "/", label: "완독", icon: BookMarked, badge: doneBooks.length || undefined },
     { path: "/reading", label: "읽는 중", icon: BookOpen, badge: readingCount || undefined },
-    { path: "/wishlist", label: "책 추천", icon: Star, badge: wishCount || undefined },
+    { path: "/wishlist", label: "읽을 책", icon: Star, badge: wishCount || undefined },
     { path: "/stats", label: "독서 통계", icon: BarChart2 },
     { path: "/notes-search", label: "노트 & 검색", icon: FileText },
     { path: "/lifebooks", label: "인생책", icon: Sparkles },
@@ -119,7 +119,7 @@ export function SideNav() {
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all no-underline group ${
+              className={`flex items-center gap-3 px-3 py-2.5 min-h-11 rounded-xl transition-all no-underline group ${
                 showLabelsOnDesktop ? "lg:justify-start" : "lg:justify-center"
               } ${
                 isActive

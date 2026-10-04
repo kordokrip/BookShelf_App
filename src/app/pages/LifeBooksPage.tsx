@@ -24,7 +24,6 @@ export function LifeBooksPage() {
   const is400 = isError && error instanceof ApiError && error.status === 400;
   const is429 = isError && error instanceof ApiError && error.status === 429;
   const sourceLabel = lifeBooksSourceLabel(data);
-  const hasVerified = (data?.data ?? []).some((b) => b.verified);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0F172A] pb-24">
@@ -32,12 +31,10 @@ export function LifeBooksPage() {
       <div className="px-4 pt-6 pb-4">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-[#1E293B] dark:text-[#F8FAFC] flex items-center gap-2">
-              <Sparkles size={22} className="text-indigo-600 dark:text-indigo-300" />
-              나의 인생책
-            </h1>
-            <p className="mt-1 text-sm text-[#64748B] dark:text-[#94A3B8]">
-              완독한 책을 바탕으로 AI가 추천하는 인생의 책들
+            <h1 className="sr-only">인생책</h1>
+            <p className="flex items-center gap-2 text-sm text-[#64748B] dark:text-[#94A3B8]">
+              <Sparkles size={16} className="text-indigo-600 dark:text-indigo-300" aria-hidden="true" />
+              완독한 책을 바탕으로 고른 인생책
             </p>
           </div>
           {data?.data && data.data.length > 0 && (
@@ -55,15 +52,8 @@ export function LifeBooksPage() {
         {data?.stale && (
           <p role="status" className="mt-1.5 text-xs text-indigo-600 dark:text-indigo-300">{staleCopy}</p>
         )}
-        {data?.cached && (
-          <p className="mt-1.5 text-xs text-[#64748B] dark:text-[#94A3B8]">캐시된 결과 · 24시간 유지</p>
-        )}
-        {(sourceLabel || hasVerified) && (data?.data?.length ?? 0) > 0 && (
-          <p className="mt-1 text-xs text-[#64748B] dark:text-[#94A3B8]">
-            {sourceLabel}
-            {sourceLabel && hasVerified ? " · " : ""}
-            {hasVerified ? "실제 도서 검색으로 확인한 책" : ""}
-          </p>
+        {sourceLabel && (data?.data?.length ?? 0) > 0 && (
+          <p className="mt-1 text-xs text-[#64748B] dark:text-[#94A3B8]">{sourceLabel}</p>
         )}
       </div>
 

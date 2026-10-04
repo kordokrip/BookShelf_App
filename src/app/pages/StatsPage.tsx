@@ -144,9 +144,9 @@ export function StatsPage() {
     <div className="pb-[var(--page-pb)] lg:pb-8">
       {/* Header */}
       <div className="px-4 pt-4 pb-3">
-        <h2 className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 20, fontWeight: 700 }}>나의 독서 통계</h2>
-        <p className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 13, marginTop: 2 }}>
-          {stats ? `완독 ${totalDone}권 · 읽는 중 ${totalReading}권 · Wish ${totalWish}권` : "통계를 불러오는 중..."}
+        <h1 className="sr-only">독서 통계</h1>
+        <p className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 14 }}>
+          {stats ? `${new Date().getFullYear()}년 · 완독 ${totalDone}권 · 읽는 중 ${totalReading}권 · 읽을 책 ${totalWish}권` : "통계를 불러오는 중..."}
         </p>
       </div>
 
@@ -248,7 +248,7 @@ export function StatsPage() {
               icon={<Sparkles size={18} color="#F59E0B" />}
               iconBg="#FEF3C7"
               borderColor="#F59E0B"
-              label="Wish 목록"
+              label="읽을 책"
               value={`${totalWish}권`}
             />
             <SummaryCard

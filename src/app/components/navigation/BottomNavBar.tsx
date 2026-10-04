@@ -5,7 +5,7 @@ import { useBookCount } from "../../../hooks/useBooks";
 export function BottomNavBar() {
   const location = useLocation();
 
-  // 동적 badge: 실제 읽는 중 / 위시리스트 수 (select 최적화로 count만 구독)
+  // 동적 badge: 실제 읽는 중 / 읽을 책 수 (select 최적화로 count만 구독)
   const { data: readingCount = 0 } = useBookCount('reading');
   const { data: wishCount = 0 } = useBookCount('wish');
 
@@ -19,14 +19,14 @@ export function BottomNavBar() {
     },
     {
       path: "/reading",
-      label: "읽는중",
+      label: "읽는 중",
       icon: <BookOpen size={22} strokeWidth={1.5} />,
       activeIcon: <BookOpen size={22} strokeWidth={2.5} />,
       badge: readingCount > 0 ? readingCount : undefined,
     },
     {
       path: "/wishlist",
-      label: "추천",
+      label: "읽을 책",
       icon: <Star size={22} strokeWidth={1.5} />,
       activeIcon: <Star size={22} strokeWidth={2.5} />,
       badge: wishCount > 0 ? wishCount : undefined,

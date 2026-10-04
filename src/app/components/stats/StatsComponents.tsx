@@ -253,7 +253,7 @@ export function MonthlyBarChart({ data: monthlyData }: { data: { month: string; 
 
 /* ─── Genre Donut Chart ─────────────────────────────────────── */
 // Spec:
-// Tabs: [전체] [완독] [읽는중], active = "전체" underlined #4F46E5 2px
+// Tabs: [전체] [완독] [읽는 중], active = "전체" underlined #4F46E5 2px
 // Donut: innerRadius = 40% of outerRadius
 // Center text: "23권" 20px Bold + "전체" 12px Regular #64748B below
 // Custom legend: ● dot 10px + name 13px + "N권" 12px + "XX%" 12px #64748B
@@ -269,8 +269,8 @@ interface GenreDonutChartProps {
 }
 
 export function GenreDonutChart({ allData, doneData, readingData }: GenreDonutChartProps) {
-  const [activeTab, setActiveTab] = useState<"전체" | "완독" | "읽는중">("전체");
-  const tabs: Array<"전체" | "완독" | "읽는중"> = ["전체", "완독", "읽는중"];
+  const [activeTab, setActiveTab] = useState<"전체" | "완독" | "읽는 중">("전체");
+  const tabs: Array<"전체" | "완독" | "읽는 중"> = ["전체", "완독", "읽는 중"];
 
   const activeData = activeTab === "전체" ? allData : activeTab === "완독" ? doneData : readingData;
   const sortedGenres = [...activeData].sort((a, b) => b.count - a.count);

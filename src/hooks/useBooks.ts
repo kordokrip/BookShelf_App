@@ -93,7 +93,7 @@ export function useUpdateBook() {
       const statusMap: Record<string, string> = {
         done: '완독으로 이동했습니다 🎉',
         reading: '읽는 중으로 이동했습니다 📖',
-        wish: '위시리스트에 추가했습니다 💫',
+        wish: '읽을 책에 담았어요 💫',
       };
       const msg = data.status
         ? (statusMap[data.status] ?? '책 정보를 업데이트했습니다')

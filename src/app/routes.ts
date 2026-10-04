@@ -134,7 +134,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, Component: protected_(withSuspense(LazyLibraryPage, "서재 로딩 중...")), ErrorBoundary: EB },
       { path: "reading", Component: protected_(withSuspense(LazyReadingPage, "독서 로딩 중...")), ErrorBoundary: EB },
-      { path: "wishlist", Component: protected_(withSuspense(LazyWishlistPage, "위시리스트 로딩 중...")), ErrorBoundary: EB },
+      { path: "wishlist", Component: protected_(withSuspense(LazyWishlistPage, "읽을 책 로딩 중...")), ErrorBoundary: EB },
       { path: "stats", Component: protected_(withSuspense(LazyStatsPage, "통계 로딩 중...")), ErrorBoundary: EB },
       { path: "settings/appearance", Component: protected_(withSuspense(LazyAppearancePage, "앱 디자인 로딩 중...")), ErrorBoundary: EB },
       { path: "design-system", element: createElement(Navigate, { to: "/settings/appearance", replace: true }) },

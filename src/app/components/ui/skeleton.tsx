@@ -74,7 +74,7 @@ function ReadingBookCardSkeleton({ className }: { className?: string }) {
   );
 }
 
-/** 위시리스트 카드 스켈레톤 */
+/** 읽을 책 카드 스켈레톤 */
 function WishBookCardSkeleton({ className }: { className?: string }) {
   return (
     <div className={cn("flex gap-3 p-4 rounded-2xl bg-white dark:bg-[#1E293B]", className)}>

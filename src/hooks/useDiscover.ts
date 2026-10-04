@@ -1,5 +1,5 @@
 /**
- * 도서 탐색 (새로운책·인기책·인생책) React Query 훅
+ * 도서 탐색 (새로 나온 책·인기 책·인생책) React Query 훅
  * - useDiscover: 탭·장르 필터별 커뮤니티 도서 목록 조회
  * - useExternalBooks: 외부 API(카카오/네이버) 신간·베스트셀러 조회
  */

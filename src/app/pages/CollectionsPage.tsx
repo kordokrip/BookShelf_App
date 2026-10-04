@@ -53,7 +53,7 @@ function CollectionDetailView({ id, onBack }: { id: string; onBack: () => void }
       <div className="flex items-center gap-3 mb-4">
         <span style={{ fontSize: 32 }}>{detail.emoji}</span>
         <div className="flex-1 min-w-0">
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)" }}>{detail.name}</h2>
+          <h1 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)" }}>{detail.name}</h1>
           {detail.description && (
             <p style={{ fontSize: 13, color: "var(--text-secondary)", marginTop: 2 }}>{detail.description}</p>
           )}
@@ -107,7 +107,7 @@ function CollectionDetailView({ id, onBack }: { id: string; onBack: () => void }
                   color: book.status === "done" ? "#065F46" : book.status === "reading" ? "#1E40AF" : "#92400E",
                 }}
               >
-                {book.status === "done" ? "완독" : book.status === "reading" ? "읽는 중" : "위시"}
+                {book.status === "done" ? "완독" : book.status === "reading" ? "읽는 중" : "읽을 책"}
               </span>
             </button>
             <button
@@ -161,6 +161,7 @@ export function CollectionsPage() {
   return (
     // 데스크톱에서 한 줄 목록이 1400px+로 늘어나지 않도록 모임 화면과 같은 폭으로 제한
     <div className="pb-[var(--page-pb)] lg:pb-8 max-w-3xl mx-auto">
+      <h1 className="sr-only">컬렉션</h1>
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-4 pb-3">
         <div className="flex items-center gap-2">

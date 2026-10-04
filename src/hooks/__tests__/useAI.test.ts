@@ -1,16 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { providerLabel, lifeBooksSourceLabel, RATE_LIMIT_RETRY_COPY, lifeBooksRefetchInterval } from '../useAI';
+import { lifeBooksSourceLabel, RATE_LIMIT_RETRY_COPY, lifeBooksRefetchInterval } from '../useAI';
 
 describe('AI 라벨 헬퍼', () => {
-  it('provider 캡션', () => {
-    expect(providerLabel('openrouter')).toBe('Gemini · OpenRouter');
-    expect(providerLabel('workers-ai')).toBe('Workers AI');
-    expect(providerLabel(null)).toBeNull();
-  });
-  it('인생책 출처 캡션', () => {
-    expect(lifeBooksSourceLabel({ source: 'openrouter' })).toBe('AI 추천 · Gemini');
-    expect(lifeBooksSourceLabel({ source: 'curated-fallback' })).toBe('추천 목록(기본)');
-    expect(lifeBooksSourceLabel({ source: 'workers-ai' })).toBe('AI 추천 · Workers AI');
+  it('인생책 기본 목록 안내', () => {
+    expect(lifeBooksSourceLabel({ source: 'curated-fallback' })).toBe('많이 사랑받은 책을 골랐어요');
+    expect(lifeBooksSourceLabel({ source: 'openrouter' })).toBeNull();
     expect(lifeBooksSourceLabel(undefined)).toBeNull();
   });
   it('429 문구는 10분', () => {

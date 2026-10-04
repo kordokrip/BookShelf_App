@@ -10,7 +10,7 @@ interface GenreFilterBarProps {
 
 /**
  * Shared horizontal-scroll genre filter bar.
- * Used identically on 완독 / 읽는중 / Wish tabs.
+ * Used identically on 완독 / 읽는 중 / 읽을 책 tabs.
  * Spec: height 44px container, 8px gap, px-16px, pill chips 28px height,
  *       13px Medium, active: #4F46E5 bg / white text, inactive: white bg / #64748B text, #E2E8F0 border
  */

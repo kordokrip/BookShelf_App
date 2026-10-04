@@ -1,6 +1,6 @@
 /**
  * 내 서재 (도서 목록) 페이지
- * - 상태(읽은중·완료·위시리스트) 탭 필터
+ * - 상태(읽는 중·완독·읽을 책) 탭 필터
  * - 장르·정렬 필터, 그리드/리스트/심어나무 레이아웃 전환
  * - 컨렉션 폸 표시
  */
@@ -299,6 +299,9 @@ export function LibraryPage() {
       return (b.finishedDate ?? "").localeCompare(a.finishedDate ?? "");
     }), [books, selectedGenre, sortBy, searchQuery]);
 
+  const thisYear = String(new Date().getFullYear());
+  const doneThisYear = books.filter((b) => b.finishedDate?.startsWith(thisYear)).length;
+
   const grouped = useMemo(() => groupByMonth(filtered), [filtered]);
   const monthKeys = Array.from(grouped.keys());
 
@@ -311,21 +314,10 @@ export function LibraryPage() {
       {/* ── Header row ── */}
       <div className="flex items-start sm:items-center justify-between gap-3 px-3 xs:px-4 sm:px-6 pt-4 sm:pt-5 pb-3 flex-col sm:flex-row">
         <div className="flex items-center gap-2 min-w-0">
-          {/* Spec: 18px SemiBold #1E293B */}
-          <h1 className="text-lg sm:text-xl text-[#1E293B] dark:text-[#F8FAFC] font-semibold truncate">
-            완독한 책
-          </h1>
-          {/* Count badge */}
-          <span
-            className="rounded-full bg-indigo-50 dark:bg-indigo-900 flex-shrink-0 text-indigo-600 dark:text-indigo-200"
-            style={{
-              fontSize: 12,
-              fontWeight: 500,
-              padding: "2px 8px",
-            }}
-          >
-            {books.length}권
-          </span>
+          <h1 className="sr-only">완독</h1>
+          <p className="text-[#64748B] dark:text-[#94A3B8] truncate" style={{ fontSize: 14 }}>
+            {isLoading ? "불러오는 중..." : `올해 ${doneThisYear}권 · 전체 ${books.length}권`}
+          </p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-start sm:justify-end w-full sm:w-auto">
           {/* 뷰 모드 토글 */}
@@ -407,7 +399,7 @@ export function LibraryPage() {
                 placeholder="제목 또는 저자로 검색..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-10 bg-[#F1F5F9] dark:bg-[#334155] rounded-xl pl-9 pr-9 text-sm text-[#1E293B] dark:text-[#F8FAFC] placeholder:text-[#94A3B8] dark:placeholder:text-[#64748B] outline-none border border-transparent focus:border-indigo-600/30 focus:bg-white dark:focus:bg-[#1E293B] transition-colors"
+                className="w-full h-11 bg-[#F1F5F9] dark:bg-[#334155] rounded-xl pl-9 pr-9 text-sm text-[#1E293B] dark:text-[#F8FAFC] placeholder:text-[#94A3B8] dark:placeholder:text-[#64748B] outline-none border border-transparent focus:border-indigo-600/30 focus:bg-white dark:focus:bg-[#1E293B] transition-colors"
               />
               {searchQuery && (
                 <button

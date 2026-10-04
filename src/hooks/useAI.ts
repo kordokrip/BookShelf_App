@@ -27,9 +27,9 @@ export interface LifeBooksResponse {
 
 /** 지난 추천 안내 캡션 */
 const LIFEBOOKS_MAX_UPDATES = 3;
-export const LIFEBOOKS_STALE_COPY = '지난 추천이에요 · 새 완독 기록으로 다시 고르는 중';
+export const LIFEBOOKS_STALE_COPY = '지난 추천이에요 · 새로 고르는 중';
 /** 다시 불러오기를 다 써도 여전히 지난 추천일 때(백그라운드 생성 실패) — '고르는 중'이라고 계속 말하지 않는다 */
-export const LIFEBOOKS_STALE_DONE_COPY = '지난 추천이에요 · 새로고침을 누르면 새로 받아요';
+export const LIFEBOOKS_STALE_DONE_COPY = '지난 추천이에요';
 
 /** 지난 추천 안내 문구 — 아직 다시 불러오는 중이면 진행형, 시도를 다 썼으면 새로고침 안내 */
 export function lifeBooksStaleCopy(dataUpdateCount: number): string {
@@ -46,19 +46,9 @@ export function lifeBooksRefetchInterval(
   return data?.stale && dataUpdateCount < LIFEBOOKS_MAX_UPDATES ? LIFEBOOKS_STALE_POLL_MS : false;
 }
 
-/** AI 제공자 캡션 — 어떤 모델이 만든 결과인지 알려 신뢰도를 가늠하게 한다 */
-export function providerLabel(provider?: AIProvider | string | null): string | null {
-  if (provider === 'openrouter') return 'Gemini · OpenRouter';
-  if (provider === 'workers-ai') return 'Workers AI';
-  return null;
-}
-
-/** 인생책 추천 출처 캡션 (기본 목록이면 AI가 아님을 분명히) */
-export function lifeBooksSourceLabel(res?: Pick<LifeBooksResponse, 'source' | 'provider'> | null): string | null {
-  if (!res?.source) return null;
-  if (res.source === 'curated-fallback') return '추천 목록(기본)';
-  const p = providerLabel(res.provider ?? res.source);
-  return p ? `AI 추천 · ${p.split(' · ')[0]}` : 'AI 추천';
+/** 인생책 기본 목록(큐레이션) 결과 안내 — AI 결과면 null */
+export function lifeBooksSourceLabel(res?: Pick<LifeBooksResponse, 'source'> | null): string | null {
+  return res?.source === 'curated-fallback' ? '많이 사랑받은 책을 골랐어요' : null;
 }
 
 /** 429(요청 한도) 안내 문구 — 서버 제한 창이 10분 */

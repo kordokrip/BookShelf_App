@@ -1,24 +1,23 @@
 import { useState, useMemo } from "react";
+import { Link } from "react-router";
 import { Search } from "lucide-react";
 import { useBooks, useDeleteBook, useUpdateBook } from "../../hooks/useBooks";
 import { useToast } from "../components/ui/Toast";
 import { SearchSheet } from "../components/wishlist/SearchSheet";
-import { RecommendSection } from "../components/wishlist/RecommendSection";
 import { WishGrid } from "../components/wishlist/WishGrid";
 import { AddBookFab } from "../components/ui/Buttons";
 import { DiscoverTab } from "../components/wishlist/DiscoverTab";
 
-type TabKey = 'new' | 'popular' | 'life' | 'mine';
+type TabKey = 'new' | 'popular' | 'mine';
 
 const TABS: { key: TabKey; label: string }[] = [
-  { key: 'new',     label: '새로운책' },
-  { key: 'popular', label: '인기책' },
-  { key: 'life',    label: '인생책' },
   { key: 'mine',    label: '내 목록' },
+  { key: 'new',     label: '새로 나온 책' },
+  { key: 'popular', label: '인기 책' },
 ];
 
 export function WishlistPage() {
-  const [activeTab, setActiveTab] = useState<TabKey>('life');
+  const [activeTab, setActiveTab] = useState<TabKey>('mine');
   const [showSearch, setShowSearch] = useState(false);
 
   const { data: books = [], isLoading, isError, refetch } = useBooks({ status: "wish" });
@@ -59,13 +58,14 @@ export function WishlistPage() {
 
   return (
     <div className="pb-[var(--page-pb)] lg:pb-8">
+      <h1 className="sr-only">읽을 책</h1>
       <SearchSheet open={showSearch} onClose={() => setShowSearch(false)} />
 
       {/* 검색 바 */}
       <div className="px-4 pt-4 pb-3">
         <button
           onClick={() => setShowSearch(true)}
-          className="w-full flex items-center gap-2 bg-[#F1F5F9] dark:bg-[#1E293B] rounded-xl px-3 py-2.5 text-left"
+          className="w-full flex items-center gap-2 bg-[#F1F5F9] dark:bg-[#1E293B] rounded-xl px-3 py-2.5 min-h-11 text-left"
           aria-label="책 검색"
         >
           <Search size={15} className="text-[#64748B] dark:text-[#94A3B8] shrink-0" />
@@ -90,11 +90,22 @@ export function WishlistPage() {
         ))}
       </div>
 
+      {/* 인생책 바로가기 — AI 호출 없이 /lifebooks로 이동만 */}
+      <div className="px-4 mt-4">
+        <Link
+          to="/lifebooks"
+          className="flex items-center justify-between gap-2 min-h-11 px-3.5 py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-200 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-colors"
+          style={{ fontSize: 13 }}
+        >
+          <span><span className="font-semibold">✦ 인생책 추천 받기</span> — 완독한 책을 바탕으로 AI가 골라요</span>
+          <span aria-hidden>→</span>
+        </Link>
+      </div>
+
       {/* 탭 콘텐츠 */}
       <div className="mt-4">
         {activeTab === 'new'     && <DiscoverTab variant="new"     wishTitleSet={wishTitleSet} />}
         {activeTab === 'popular' && <DiscoverTab variant="popular" wishTitleSet={wishTitleSet} />}
-        {activeTab === 'life'    && <RecommendSection wishTitleSet={wishTitleSet} />}
         {activeTab === 'mine'    && (
           <WishGrid
             books={books}

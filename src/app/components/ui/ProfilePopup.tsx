@@ -8,13 +8,11 @@
  */
 import { useState, useEffect, forwardRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogOut, X, Camera, Sun, Moon, Clock, Palette, ChevronRight, Users, Sparkles, FolderOpen, CalendarRange } from "lucide-react";
+import { LogOut, X, Camera, Palette, ChevronRight, Users, Sparkles, FolderOpen, CalendarRange } from "lucide-react";
 import { useAuthStore, type AuthUser } from "../../../stores/authStore";
-import { useUiStore } from "../../../stores/uiStore";
 import { usersApi } from "../../../lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { PushNotificationToggle } from "./PushNotificationToggle";
-import { THEME_LABEL } from "../navigation/TopBar";
 import { useBackToClose } from "../../../hooks/useBackToClose";
 import { useNavigate } from "react-router";
 import { useDialogA11y } from "../../../hooks/useDialogA11y";
@@ -218,8 +216,6 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
-  const themeMode = useUiStore((s) => s.themeMode);
-  const cycleThemeMode = useUiStore((s) => s.cycleThemeMode);
   const queryClient = useQueryClient();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -390,20 +386,6 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
       <div className="p-3 space-y-2">
         {/* 푸시 알림 토글 */}
         <PushNotificationToggle />
-
-        {/* 테마 (모바일 전용 — sm 이상에서는 TopBar의 토글 사용) */}
-        <div className="sm:hidden flex items-center justify-between">
-          <span className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 13 }}>테마</span>
-          <button
-            onClick={cycleThemeMode}
-            aria-label={THEME_LABEL[themeMode]}
-            className="group w-11 h-11 -mr-1 flex items-center justify-center text-[#64748B] dark:text-[#94A3B8]"
-          >
-            <span className="w-9 h-9 rounded-full flex items-center justify-center group-hover:bg-[#F1F5F9] dark:group-hover:bg-[#334155] transition-colors">
-              {themeMode === 'auto' ? <Clock size={18} /> : themeMode === 'light' ? <Sun size={18} /> : <Moon size={18} />}
-            </span>
-          </button>
-        </div>
 
         {/* 바로가기 — 모바일 하단 탭·상단바에 없는 화면으로 이동 */}
         <nav aria-label="바로가기" className="space-y-0.5">

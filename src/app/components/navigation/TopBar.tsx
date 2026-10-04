@@ -2,11 +2,10 @@
  * TopBar — 상단 고정 헤더
  * - 3-column grid 레이아웃: [로고 | 타이틀 | 액션버튼] → 중앙 타이틀 겹침 방지
  * - 반응형: xs(~374px) / sm(375px~) / lg(1024px+)
- * - themeMode 3-state 순환 (auto/light/dark)
  * - 알림 벨: 미읽음 카운트 배지 + NotificationPanel 드롭다운
  */
 import { useState, useRef } from 'react';
-import { Bell, Sun, Moon, Clock, FileSearch, UserCog } from 'lucide-react';
+import { Bell, FileSearch, UserCog } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { useAuthStore } from '../../../stores/authStore';
 import { useUiStore } from '../../../stores/uiStore';
@@ -19,12 +18,12 @@ import { AppLogo } from "../brand/AppLogo";
 const pageTitles: Record<string, string> = {
   '/': '완독',
   '/reading': '읽는 중',
-  '/wishlist': '책 추천',
+  '/wishlist': '읽을 책',
   '/stats': '독서 통계',
   '/settings/appearance': '앱 디자인',
   '/notes-search': '노트 & 검색',
   '/groups': '독서 모임',
-  '/admin': '관리자 대시보드',
+  '/admin': '관리자',
   '/lifebooks': '인생책',
   '/collections': '컬렉션',
   '/yearly-review': '연간 결산',
@@ -35,29 +34,12 @@ function resolveTitle(pathname: string): string {
   return pageTitles[pathname] ?? 'BookShelf';
 }
 
-const DESKTOP_NAV_LINKS = [
-  { to: '/', label: '완독' },
-  { to: '/reading', label: '읽는 중' },
-  { to: '/wishlist', label: '추천' },
-  { to: '/stats', label: '통계' },
-  { to: '/groups', label: '모임' },
-  { to: '/notes-search', label: '노트' },
-];
-
-export const THEME_LABEL = {
-  auto:  '자동 (시간 기반) — 클릭하면 라이트 모드',
-  light: '라이트 모드 고정 — 클릭하면 다크 모드',
-  dark:  '다크 모드 고정 — 클릭하면 자동 모드',
-} as const;
-
 export function TopBar() {
   const location = useLocation();
   const navigate = useNavigate();
   const title = resolveTitle(location.pathname);
   const user = useAuthStore((s) => s.user);
 
-  const themeMode      = useUiStore((s) => s.themeMode);
-  const cycleThemeMode = useUiStore((s) => s.cycleThemeMode);
   const { data: serverUnread = 0 } = useNotificationUnreadCount();
   const unreadCount = serverUnread;
   const markAllServerRead = useMarkAllNotificationsRead();
@@ -100,48 +82,13 @@ export function TopBar() {
         </div>
 
         {/* ── 중앙: 페이지 제목 (truncate로 오버플로우 방지) ── */}
-        <h1 className="text-center truncate text-[#1E293B] dark:text-[#F8FAFC] text-[17px] sm:text-lg font-semibold leading-snug select-none px-1 lg:hidden min-w-0">
+        {/* 페이지 h1은 각 페이지가 sr-only로 갖는다 — 여기는 시각적 제목만 (전 화면 크기 공통) */}
+        <p className="text-center truncate text-[#1E293B] dark:text-[#F8FAFC] text-[17px] sm:text-lg font-semibold leading-snug select-none px-1 min-w-0">
           {title}
-        </h1>
-        <nav className="hidden lg:flex items-center justify-center gap-2 min-w-0 overflow-x-auto no-scrollbar px-2">
-          {DESKTOP_NAV_LINKS.map((item) => {
-            const isActive = item.to === '/'
-              ? location.pathname === '/'
-              : location.pathname.startsWith(item.to);
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={`px-3 h-9 rounded-lg inline-flex items-center transition-colors whitespace-nowrap touch-manipulation ${
-                  isActive
-                    ? 'bg-indigo-50 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 font-semibold'
-                    : 'text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B]'
-                }`}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+        </p>
 
         {/* ── 우측: 액션 버튼 그룹 ── */}
         <div className="flex items-center gap-0 sm:gap-0.5 flex-shrink-0" style={{ minWidth: 0 }}>
-
-          {/* 테마 토글: sm 이상에서만 표시 (모바일은 화면이 좁으므로 숨김) */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={cycleThemeMode}
-                aria-label={THEME_LABEL[themeMode]}
-                className="hidden sm:flex w-11 h-11 rounded-full items-center justify-center text-[#64748B] hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition-colors"
-              >
-                {themeMode === 'auto'  ? <Clock size={19} /> :
-                 themeMode === 'light' ? <Sun   size={19} /> :
-                                         <Moon  size={19} />}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" sideOffset={4}>{THEME_LABEL[themeMode]}</TooltipContent>
-          </Tooltip>
 
           {/* 노트 & 검색 */}
           <Tooltip>

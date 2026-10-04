@@ -975,6 +975,7 @@ export function ReadingPage() {
 
   return (
     <div className="pb-[var(--page-pb)] lg:pb-8">
+      <h1 className="sr-only">읽는 중</h1>
       <ReadingOverviewBanner
         books={books}
         weeklyPages={stats?.weekly?.reduce((s, w) => s + (w.pages ?? 0), 0)}

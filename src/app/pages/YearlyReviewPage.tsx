@@ -156,6 +156,7 @@ export function YearlyReviewPage() {
 
   return (
     <div className="min-h-svh bg-[#F8FAFC] dark:bg-[#0F172A] pb-[var(--page-pb)] lg:pb-8">
+      <h1 className="sr-only">연간 결산</h1>
       {/* 헤더 */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <button

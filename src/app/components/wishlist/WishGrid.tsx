@@ -29,7 +29,7 @@ function SortDropdown({
     <div className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1 text-[#64748B] dark:text-[#94A3B8]"
+        className="flex items-center gap-1 min-h-11 px-1 -mx-1 text-[#64748B] dark:text-[#94A3B8]"
         style={{ fontSize: 14, fontWeight: 400 }}
       >
         정렬
@@ -189,7 +189,7 @@ function WishBookDetailSheet({
               className="w-full rounded-2xl border border-[#FEE2E2] text-[#EF4444] hover:bg-[#FEF2F2] transition-colors"
               style={{ height: 44, fontSize: 14, fontWeight: 600 }}
             >
-              <span className="inline-flex items-center justify-center gap-1.5"><Trash2 size={16} aria-hidden />위시리스트에서 삭제</span>
+              <span className="inline-flex items-center justify-center gap-1.5"><Trash2 size={16} aria-hidden />읽을 책에서 삭제</span>
             </button>
           </div>
         </div>
@@ -279,7 +279,7 @@ export function WishGrid({
           style={{ backgroundColor: "#FFFBEB", border: "1px solid #FDE68A" }}
         >
           <p style={{ fontSize: 12, color: "#92400E", fontWeight: 500 }}>
-            ⚠️ 위시리스트가 가득 찼어요 ({books.length}/10) — 읽기 시작한 책으로 이동하면 자동으로 공간이 생깁니다
+            ⚠️ 읽을 책이 가득 찼어요 ({books.length}/10) — 읽기 시작한 책으로 이동하면 자동으로 공간이 생깁니다
           </p>
         </div>
       )}
@@ -322,12 +322,12 @@ export function WishGrid({
           {[...Array(3)].map((_, i) => <WishBookCardSkeleton key={i} />)}
         </div>
       ) : isError ? (
-        <ErrorState message="위시리스트를 불러오지 못했어요." onRetry={onRetry} />
+        <ErrorState message="읽을 책을 불러오지 못했어요." onRetry={onRetry} />
       ) : sorted.length === 0 ? (
         <EmptyState
           emoji="💫"
           heading="읽고 싶은 책을 모아보세요"
-          subtext="관심 있는 책을 위시리스트에 추가해보세요!"
+          subtext="관심 있는 책을 읽을 책에 담아보세요!"
           ctaLabel="책 추가하기"
           onCta={onNavigateAdd}
         />

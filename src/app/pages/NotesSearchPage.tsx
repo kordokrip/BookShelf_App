@@ -154,7 +154,7 @@ export function NotesSearchPage() {
             placeholder="메모, 문구, 독후감 검색..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-10 bg-muted rounded-xl pl-9 pr-9 text-sm outline-none border border-transparent focus:border-primary/50 focus:bg-background transition-colors"
+            className="w-full h-11 bg-muted rounded-xl pl-9 pr-9 text-sm outline-none border border-transparent focus:border-primary/50 focus:bg-background transition-colors"
           />
           {searchQuery && (
             <button
@@ -227,7 +227,7 @@ export function NotesSearchPage() {
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">최근 검색</span>
               <button
                 onClick={clearAll}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                className="text-xs min-h-11 px-2 -mr-2 text-muted-foreground hover:text-foreground transition-colors"
               >
                 전체 삭제
               </button>
@@ -236,19 +236,19 @@ export function NotesSearchPage() {
               {recents.map((r) => (
                 <div
                   key={r}
-                  className="flex items-center gap-1 bg-muted rounded-full pl-2.5 pr-1.5 py-1"
+                  className="flex items-center gap-1 bg-muted rounded-full pl-2.5 pr-0 min-h-11"
                 >
                   <Clock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                   <button
                     onClick={() => setSearchQuery(r)}
-                    className="text-sm text-foreground px-1"
+                    className="text-sm text-foreground px-1 min-h-11"
                   >
                     {r}
                   </button>
                   <button
                     onClick={() => removeSearch(r)}
                     aria-label={`${r} 삭제`}
-                    className="p-0.5 rounded-full hover:bg-muted-foreground/20 transition-colors"
+                    className="flex items-center justify-center min-w-11 min-h-11 rounded-full hover:bg-muted-foreground/20 transition-colors"
                   >
                     <X className="h-3 w-3 text-muted-foreground" />
                   </button>

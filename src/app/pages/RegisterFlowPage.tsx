@@ -492,7 +492,7 @@ function StepStatusCover({
   const STATUS_OPTIONS: { value: BookStatus; label: string; Icon: typeof BookOpen }[] = [
     { value: "reading", label: "읽는 중",   Icon: BookOpen },
     { value: "done",    label: "완독",       Icon: BookCheck },
-    { value: "wish",    label: "위시리스트", Icon: Bookmark },
+    { value: "wish",    label: "읽을 책", Icon: Bookmark },
   ];
 
   const inputClass =
@@ -645,7 +645,7 @@ function StepConfirm({
   const STATUS_LABELS: Record<BookStatus, string> = {
     reading: "읽는 중",
     done:    "완독",
-    wish:    "위시리스트",
+    wish:    "읽을 책",
   };
 
   return (
@@ -787,7 +787,7 @@ export function RegisterFlowPage() {
         rating:
           form.status === "done" && form.rating > 0 ? form.rating : undefined,
       });
-      // 등록한 상태에 맞는 목록으로 이동 (wish → 위시리스트, reading → 읽는 중, done → 서재)
+      // 등록한 상태에 맞는 목록으로 이동 (wish → 읽을 책, reading → 읽는 중, done → 서재)
       navigate(form.status === "wish" ? "/wishlist" : form.status === "reading" ? "/reading" : "/");
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : "등록에 실패했습니다. 다시 시도해주세요.");

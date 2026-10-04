@@ -70,8 +70,8 @@ export function GroupsPage() {
       {/* 헤더 */}
       <div className="flex items-start sm:items-center justify-between gap-3 flex-col sm:flex-row">
         <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold text-[#1E293B] dark:text-[#F8FAFC] leading-tight">독서 모임 📚</h1>
-          <p className="text-xs sm:text-sm text-[#64748B] dark:text-[#94A3B8] mt-1">
+          <h1 className="sr-only">독서 모임</h1>
+          <p className="text-xs sm:text-sm text-[#64748B] dark:text-[#94A3B8]">
             독서 모임을 만들고, 함께 읽고, 이야기를 나눠보세요
           </p>
         </div>

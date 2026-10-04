@@ -10,7 +10,7 @@ import { motion } from "framer-motion";
 import { useParams, useNavigate } from "react-router";
 import { useBack } from "../../hooks/useBack";
 import { useBackToClose } from "../../hooks/useBackToClose";
-import { ChevronLeft, MoreVertical, FileText, AlignLeft, Camera, Pencil, Trash2, BookMarked, BookOpen, Heart, ScanLine, Clock, Search, Share2, Sparkles, RefreshCw, Zap, PencilLine, FolderPlus } from "lucide-react";
+import { ChevronLeft, MoreVertical, FileText, AlignLeft, Camera, Pencil, Trash2, BookMarked, BookOpen, Heart, ScanLine, Clock, Search, Share2, Sparkles, RefreshCw, PencilLine, FolderPlus } from "lucide-react";
 import type { BookNote } from "../../types/book";
 import type { UIBook } from "../../types/book";
 import { BookCover } from "../components/books/BookCard";
@@ -19,7 +19,7 @@ import { useToast } from "../components/ui/Toast";
 import { useBookDetail, useDeleteBook, useUpdateBook } from "../../hooks/useBooks";
 import { useBookNotes, useAddNote, useUpdateNote, useDeleteNote } from "../../hooks/useNotes";
 import { useSessions, useDeleteSession } from "../../hooks/useSessions";
-import { useBookSummary as useBookSummaryMutation, providerLabel, RATE_LIMIT_RETRY_COPY } from "../../hooks/useAI";
+import { useBookSummary as useBookSummaryMutation, RATE_LIMIT_RETRY_COPY } from "../../hooks/useAI";
 import { ApiError, coverApi, queryKeys } from "../../lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../components/ui/sheet";
@@ -621,7 +621,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
 }
 
 /* ─── Book Info Tab ──────────────────────────────────────────── */
-function BookInfoTab({ book }: { book: UIBook }) {
+function BookInfoTab({ book, onEditBook }: { book: UIBook; onEditBook: () => void }) {
   const [summaryResult, setSummaryResult] = useState<string | null>(null);
   const [displayedSummary, setDisplayedSummary] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -641,7 +641,7 @@ function BookInfoTab({ book }: { book: UIBook }) {
     { label: "출판사", value: book.publisher || "-" },
     { label: "장르", value: book.genre },
     { label: "총 페이지", value: book.totalPages ? `${book.totalPages}p` : "-" },
-    { label: "상태", value: book.status === "done" ? "완독" : book.status === "reading" ? "읽는 중" : "위시리스트" },
+    { label: "상태", value: book.status === "done" ? "완독" : book.status === "reading" ? "읽는 중" : "읽을 책" },
     { label: "등록일", value: book.addedDate.replace(/-/g, ".") },
     ...(book.status === "done" && book.finishedDate ? [{ label: "완독일", value: book.finishedDate.replace(/-/g, ".") }] : []),
   ];
@@ -839,13 +839,20 @@ function BookInfoTab({ book }: { book: UIBook }) {
         {!summaryResult && !summarizeMutation.isPending && !summarizeMutation.isError && (
           <div className="px-4 pb-4 flex flex-col gap-3">
             {noSource ? (
-              <p
+              <div
                 role="status"
-                className="rounded-xl p-3 border border-violet-200 bg-white/70 dark:bg-white/10 dark:border-white/20 text-violet-900 dark:text-violet-100"
+                className="rounded-xl p-3 border border-violet-200 bg-white/70 dark:bg-white/10 dark:border-white/20 text-violet-900 dark:text-violet-100 flex flex-col items-start gap-2"
                 style={{ fontSize: 12, lineHeight: 1.65 }}
               >
-                이 책의 소개 정보를 찾지 못해 AI 분석을 하지 않았어요. 잘못된 내용을 지어내지 않도록 소개가 있는 책만 분석해요. 책 정보 수정에서 제목·저자를 정확히 고치면 다음에 분석할 수 있을 수도 있어요.
-              </p>
+                <p>책 소개를 찾지 못해 분석할 수 없어요. 제목·저자가 정확한지 확인해 보세요.</p>
+                <button
+                  onClick={() => onEditBook()}
+                  className="min-h-11 px-3 rounded-xl border border-violet-300 dark:border-white/30 text-violet-700 dark:text-[color:var(--brand-200)] hover:bg-white/60 dark:hover:bg-white/10 transition-colors"
+                  style={{ fontSize: 12, fontWeight: 600 }}
+                >
+                  책 정보 수정
+                </button>
+              </div>
             ) : (
               <p className="text-[color:var(--brand2-700)] dark:text-[color:var(--brand-200)]" style={{ fontSize: 12, lineHeight: 1.65 }}>
                 AI가 이 책의 핵심 내용과 읽어야 할 이유를 분석해 드립니다
@@ -891,15 +898,9 @@ function BookInfoTab({ book }: { book: UIBook }) {
                 )}
               </p>
             </div>
-            {(summarizeMutation.data?.cached || providerLabel(summarizeMutation.data?.provider)) && (
-              <p className="mt-1.5 flex items-center justify-end gap-1.5 text-violet-700 dark:text-[color:var(--brand-200)]" style={{ fontSize: 11 }}>
-                {summarizeMutation.data?.cached && (
-                  <span className="inline-flex items-center gap-1"><Zap size={11} aria-hidden />캐시된 분석 결과</span>
-                )}
-                {summarizeMutation.data?.cached && providerLabel(summarizeMutation.data?.provider) && <span aria-hidden>·</span>}
-                {providerLabel(summarizeMutation.data?.provider) && <span>{providerLabel(summarizeMutation.data?.provider)}</span>}
-              </p>
-            )}
+            <p className="mt-1.5 text-right text-violet-700 dark:text-[color:var(--brand-200)]" style={{ fontSize: 11 }}>
+              책 소개를 바탕으로 AI가 정리했어요
+            </p>
           </div>
         )}
 
@@ -993,8 +994,8 @@ export function BookDetailPage() {
         celebrateCompletion();
         showToast(`🎉 "${book.title}" 완독을 축하해요!`, 'success');
       } else {
-        const label = status === 'reading' ? '읽는 중' : '위시리스트';
-        showToast(`"${book.title}" → ${label}로 변경됐어요`, 'success');
+        const label = status === 'reading' ? '읽는 중' : '읽을 책';
+        showToast(`"${book.title}" → ${label}으로 변경됐어요`, 'success');
       }
     } catch {
       showToast('변경에 실패했어요. 다시 시도해주세요.', 'error');
@@ -1091,7 +1092,7 @@ export function BookDetailPage() {
           {book?.status === 'done' && (
             <button
               onClick={handleShare}
-              className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition-colors text-indigo-600 dark:text-indigo-300"
+              className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition-colors text-indigo-600 dark:text-indigo-300"
               aria-label="공유"
             >
               <Share2 size={18} />
@@ -1100,7 +1101,7 @@ export function BookDetailPage() {
           <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
-              className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition-colors text-[#1E293B] dark:text-[#F8FAFC]"
+              className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition-colors text-[#1E293B] dark:text-[#F8FAFC]"
               aria-label="더보기"
             >
               <MoreVertical size={20} />
@@ -1122,7 +1123,7 @@ export function BookDetailPage() {
             {book?.status !== 'wish' && (
               <DropdownMenuItem onClick={() => handleChangeStatus('wish')}>
                 <Heart size={14} className="mr-2 text-[#F59E0B]" />
-                위시리스트로 변경
+                읽을 책으로 변경
               </DropdownMenuItem>
             )}
             <DropdownMenuItem onClick={() => setShowEdit(true)}>
@@ -1255,7 +1256,7 @@ export function BookDetailPage() {
           {activeTab === "notes" ? (
             <NotesTab notes={notes} bookId={id!} currentPage={book?.currentPage ?? undefined} />
           ) : (
-            <BookInfoTab book={book} />
+            <BookInfoTab book={book} onEditBook={() => setShowEdit(true)} />
           )}
         </div>
       </div>

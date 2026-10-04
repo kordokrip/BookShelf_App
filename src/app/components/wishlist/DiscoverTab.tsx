@@ -36,10 +36,10 @@ function NewBooksTab({ wishTitleSet }: { wishTitleSet: Set<string> }) {
         genre: "기타" as GenreKey,
       },
       {
-        onSuccess: () => showToast(`"${book.title}" 위시리스트에 추가됨 💫`, "success"),
+        onSuccess: () => showToast(`"${book.title}" 읽을 책에 담았어요 💫`, "success"),
         onError: (err) => {
           if (err instanceof ApiError && err.status === 409) {
-            showToast("이미 위시리스트에 있는 책입니다.", "error");
+            showToast("이미 읽을 책에 있는 책이에요.", "error");
           } else {
             showToast("추가에 실패했어요. 다시 시도해주세요.", "error");
           }
@@ -100,10 +100,10 @@ function PopularBooksTab({ wishTitleSet }: { wishTitleSet: Set<string> }) {
         genre: (book.genre as GenreKey) ?? "기타",
       },
       {
-        onSuccess: () => showToast(`"${book.title}" 위시리스트에 추가됨 💫`, "success"),
+        onSuccess: () => showToast(`"${book.title}" 읽을 책에 담았어요 💫`, "success"),
         onError: (err) => {
           if (err instanceof ApiError && err.status === 409) {
-            showToast("이미 위시리스트에 있는 책입니다.", "error");
+            showToast("이미 읽을 책에 있는 책이에요.", "error");
           } else {
             showToast("추가에 실패했어요. 다시 시도해주세요.", "error");
           }
@@ -113,8 +113,8 @@ function PopularBooksTab({ wishTitleSet }: { wishTitleSet: Set<string> }) {
   }
 
   if (isLoading) return <SkeletonList />;
-  if (isError) return <ErrorEmpty label="인기책 정보를 불러오지 못했어요" />;
-  if (books.length === 0) return <ErrorEmpty label="현재 표시할 인기책이 없어요" />;
+  if (isError) return <ErrorEmpty label="인기 책 정보를 불러오지 못했어요" />;
+  if (books.length === 0) return <ErrorEmpty label="현재 표시할 인기 책이 없어요" />;
 
   return (
     <ul className="px-4 flex flex-col gap-3">

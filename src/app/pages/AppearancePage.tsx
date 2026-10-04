@@ -125,8 +125,8 @@ export function AppearancePage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-8">
       <header>
-        <h1 className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 22, fontWeight: 700 }}>앱 디자인</h1>
-        <p className="text-[#64748B] dark:text-[#94A3B8] mt-1" style={{ fontSize: 13 }}>
+        <h1 className="sr-only">앱 디자인</h1>
+        <p className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 13 }}>
           나만의 강조색과 화면 모드를 고르세요. 계정에 저장되어 다른 기기에서도 같게 보여요.
         </p>
       </header>

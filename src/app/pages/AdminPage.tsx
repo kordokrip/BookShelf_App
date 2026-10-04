@@ -159,8 +159,8 @@ function UserDetailModal({
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {[
                   { label: "완독", value: detail.stats.done_books ?? 0 },
-                  { label: "읽는중", value: detail.stats.reading_books ?? 0 },
-                  { label: "위시", value: detail.stats.wish_books ?? 0 },
+                  { label: "읽는 중", value: detail.stats.reading_books ?? 0 },
+                  { label: "읽을 책", value: detail.stats.wish_books ?? 0 },
                   { label: "노트", value: detail.stats.total_notes ?? 0 },
                   { label: "세션", value: detail.stats.total_sessions ?? 0 },
                   { label: "모임", value: detail.stats.group_count ?? 0 },
@@ -195,7 +195,7 @@ function UserDetailModal({
                         b.status === "reading" ? "bg-blue-100   text-blue-700   dark:bg-blue-900/30 dark:text-blue-400"  :
                                                  "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
                       }`}>
-                        {b.status === "done" ? "완독" : b.status === "reading" ? "읽는중" : "위시"}
+                        {b.status === "done" ? "완독" : b.status === "reading" ? "읽는 중" : "읽을 책"}
                       </span>
                     </div>
                   ))}

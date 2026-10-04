@@ -75,12 +75,12 @@ export function SearchSheet({
       },
       {
         onSuccess: () => {
-          showToast(`"${book.title}" 위시리스트에 추가됨 💫`, "success");
+          showToast(`"${book.title}" 읽을 책에 담았어요 💫`, "success");
           onClose();
         },
         onError: (err) => {
           if (err instanceof ApiError && err.status === 409) {
-            showToast("이미 위시리스트에 있는 책입니다.", "error");
+            showToast("이미 읽을 책에 있는 책이에요.", "error");
           } else if (err instanceof ApiError && err.status === 400) {
             showToast(err.message, "error");
           } else {
