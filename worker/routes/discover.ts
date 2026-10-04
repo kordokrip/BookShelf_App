@@ -121,9 +121,8 @@ discoverRouter.get(
             CAST(
               AVG(CASE WHEN b.rating IS NOT NULL THEN b.rating END)
             AS REAL)                         AS avg_rating,
-            COUNT(DISTINCT n.id)             AS note_count
+            SUM((SELECT COUNT(*) FROM notes n WHERE n.book_id = b.id)) AS note_count
           FROM books b
-          LEFT JOIN notes n ON n.book_id = b.id
           WHERE 1=1 ${genreCond}
           GROUP BY
             CASE

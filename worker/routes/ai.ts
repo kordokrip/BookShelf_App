@@ -3,15 +3,11 @@ import type { Bindings } from '../types';
 import { authMiddleware } from '../auth';
 import { rateLimit } from '../middleware/rateLimit';
 import { extractAiText } from '../lib/aiText';
-import {
-  analyzeTopGenres, buildCuratedRecommendations, buildExcludedSet, extractJsonArray, hashString,
-  normalizeRecommendations, parseFavoriteGenres,
-  type BookRecommendation, type ReadingProfileBook, type RecommendationSource,
-} from '../lib/aiRecommend';
+import { buildExcludedSet, parseFavoriteGenres } from '../lib/aiRecommend';
+import { resolveRecommendations, type OwnedBook } from '../lib/bookRecommend';
 import { MAX_DONE_BOOKS, type DoneBook } from '../lib/lifeBooks';
 import { resolveLifeBooks } from '../lib/lifeBooksSwr';
 import { summarizeBook } from '../lib/aiSummary';
-import { generateText } from '../lib/openrouter';
 
 const aiRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -47,185 +43,31 @@ aiRouter.post(
   },
 );
 
-// ─── GET /api/ai/recommend — 사용자 독서 패턴 기반 추천 ──────
-aiRouter.get('/recommend', rateLimit({ limit: 10, windowMs: 60_000, keyPrefix: 'ai_rec' }), authMiddleware, async (c) => {
+// ─── GET /api/ai/recommend — 서재 전체 기반 AI 추천 도서 ──────
+// 완독·읽는 중·읽고 싶은 책 전부를 모델에 주고, 서재에 있는 책은 제목·저자·ISBN으로 걸러 낸 뒤 실존 검증한다. (worker/lib/bookRecommend.ts)
+// stale-while-revalidate(worker/lib/aiSwr.ts). 한도(ai_rec, 3회/10분, 사용자별)는 "실제 생성" 때만 센다. ai_sum과 공유 금지.
+aiRouter.get('/recommend', authMiddleware, async (c) => {
   const userId = c.get('userId');
-  const requestedLimit = parseInt(c.req.query('limit') ?? '5', 10);
-  const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 10) : 5;
   const forceRefresh = c.req.query('refresh') === 'true';
 
-  const [readBooksResult, allBooksResult, userProfile] = await Promise.all([
-    c.env.DB.prepare(
-      `SELECT
-         b.title,
-         b.author,
-         b.genre,
-         b.rating,
-         b.status,
-         b.finished_date,
-         b.created_at,
-         b.note,
-         COALESCE((SELECT COUNT(*) FROM reading_sessions rs WHERE rs.book_id = b.id AND rs.user_id = ?), 0) AS session_count,
-         COALESCE((SELECT SUM(rs.pages_read) FROM reading_sessions rs WHERE rs.book_id = b.id AND rs.user_id = ?), 0) AS pages_read,
-         COALESCE((SELECT COUNT(*) FROM notes n WHERE n.book_id = b.id AND n.user_id = ?), 0) AS note_count
-       FROM books b
-       WHERE b.user_id = ? AND b.status IN ('done', 'reading')
-       ORDER BY
-         CASE b.status WHEN 'done' THEN 0 ELSE 1 END,
-         COALESCE(b.finished_date, b.created_at) DESC
-       LIMIT 30`,
-    ).bind(userId, userId, userId, userId).all<ReadingProfileBook>(),
-    c.env.DB.prepare(
-      `SELECT title, author FROM books WHERE user_id = ?`,
-    ).bind(userId).all<{ title: string; author: string | null }>(),
-    c.env.DB.prepare(
-      `SELECT favorite_genres FROM users WHERE id = ?`,
-    ).bind(userId).first<{ favorite_genres: string | null }>(),
+  const [booksResult, userProfile] = await Promise.all([
+    c.env.DB.prepare('SELECT title, author, genre, rating, status, isbn FROM books WHERE user_id = ?')
+      .bind(userId).all<OwnedBook>(),
+    c.env.DB.prepare('SELECT favorite_genres FROM users WHERE id = ?')
+      .bind(userId).first<{ favorite_genres: string | null }>(),
   ]);
 
-  const readBooks = readBooksResult.results ?? [];
-  if (readBooks.length === 0) {
-    return c.json({
-      message: '읽은 책이 없습니다. 책을 등록하고 나면 맞춤 추천을 받을 수 있습니다.',
-      recommendations: [],
-      topGenres: [],
-      source: 'none',
-      cached: false,
-    });
-  }
-
-  const favoriteGenres = parseFavoriteGenres(userProfile?.favorite_genres);
-  const topGenres = analyzeTopGenres(readBooks, favoriteGenres);
-  const excluded = buildExcludedSet(allBooksResult.results ?? []);
-  const historyFingerprint = hashString(
-    readBooks
-      .map((b) => `${b.title}|${b.author}|${b.genre ?? ''}|${b.rating ?? ''}|${b.status}|${b.created_at}`)
-      .join('\n'),
-  );
-
-  // KV 캐시 확인 (refresh=true 이면 기존 캐시 삭제)
-  const cacheKey = `ai_recommend:v2:${userId}:${limit}:${historyFingerprint}`;
-  if (forceRefresh) {
-    await c.env.KV.delete(cacheKey);
-  } else {
-    const cached = await c.env.KV.get(cacheKey);
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached) as {
-          recommendations?: unknown[];
-          topGenres?: string[];
-          source?: RecommendationSource;
-          analysis?: unknown;
-        } | unknown[];
-        const recommendations = Array.isArray(parsed)
-          ? normalizeRecommendations(parsed, excluded, topGenres[0] ?? '기타', 'workers-ai', limit)
-          : normalizeRecommendations(parsed.recommendations ?? [], excluded, topGenres[0] ?? '기타', parsed.source ?? 'workers-ai', limit);
-        if (recommendations.length > 0) {
-          return c.json({
-            recommendations,
-            cached: true,
-            topGenres,
-            source: Array.isArray(parsed) ? 'workers-ai' : parsed.source ?? 'workers-ai',
-            analysis: Array.isArray(parsed) ? undefined : parsed.analysis,
-          });
-        }
-        await c.env.KV.delete(cacheKey);
-      } catch {
-        await c.env.KV.delete(cacheKey);
-      }
-    }
-  }
-
-  const booksContext = readBooks
-    .slice(0, 12)
-    .map((b) => `"${b.title}" (${b.author}, 장르:${b.genre}, 별점:${b.rating ?? '?'}/5)`)
-    .join('\n');
-
-  const excludedTitles = [...excluded].filter((key) => !key.includes('::')).slice(0, 40);
-  const excludePrompt = excludedTitles.length > 0
-    ? `\n이미 사용자의 서재에 있으므로 추천하지 말 것: ${excludedTitles.join(', ')}`
-    : '';
-
-  // 대표 책 제목 (개인화 reason 작성에 활용)
-  const topBookTitle = readBooks.find((book) => book.rating && book.rating >= 4)?.title ?? readBooks[0]?.title ?? '';
-
-  try {
-    const systemPrompt = `당신은 독서 전문가입니다. 사용자의 독서 이력을 분석하여 다음에 읽을 책 ${limit}권을 추천해주세요.
-반드시 아래 JSON 배열 형식으로만 응답하세요(다른 텍스트 금지):
-[{"title":"책제목","author":"저자","reason":"추천 이유(사용자가 읽은 '${topBookTitle}'처럼 구체적인 책 이름을 언급하며 1~2문장으로 개인화하여 작성)","genre":"장르"}]
-${excludePrompt}
-추천 책은 실제 존재하는 책이어야 하며, 이미 읽은 책, 읽는 중인 책, 위시리스트에 있는 책은 절대 추천하지 마세요.`;
-    // OpenRouter 모델 우선, 실패 시 Workers AI 폴백
-    const { text, provider } = await generateText(
-      c.env,
-      {
-        messages: [
-          { role: 'system', content: systemPrompt },
-          {
-            role: 'user',
-            content: `최근 읽은 책들:\n${booksContext}\n\n선호 장르: ${topGenres.join(', ')}\n\n위 내용을 바탕으로 다음에 읽을 책 ${limit}권을 추천해주세요.`,
-          },
-        ],
-        maxTokens: 1200,
-        temperature: 0.6,
-      },
-      { fallback: 'workers-ai' },
-    );
-    let recommendations: BookRecommendation[] = [];
-    try {
-      recommendations = normalizeRecommendations(
-        extractJsonArray(text),
-        excluded,
-        topGenres[0] ?? '기타',
-        provider,
-        limit,
-      );
-    } catch {
-      recommendations = [];
-    }
-
-    if (recommendations.length === 0) {
-      recommendations = buildCuratedRecommendations(readBooks, topGenres, excluded, limit);
-    }
-
-    const source: RecommendationSource = recommendations.some((rec) => rec.source === provider)
-      ? provider
-      : 'curated-fallback';
-    const payload = {
-      recommendations,
-      cached: false,
-      topGenres,
-      source,
-      analysis: {
-        historyCount: readBooks.length,
-        anchorBook: topBookTitle,
-        favoriteGenres,
-      },
-    };
-
-    if (recommendations.length > 0) {
-      await c.env.KV.put(cacheKey, JSON.stringify(payload), { expirationTtl: 3600 });
-    }
-
-    return c.json(payload);
-  } catch (err) {
-    console.error('AI 추천 오류:', err);
-    const recommendations = buildCuratedRecommendations(readBooks, topGenres, excluded, limit);
-    return c.json({
-      recommendations,
-      message: recommendations.length > 0
-        ? 'AI 모델 응답이 지연되어 독서 이력 기반 추천을 먼저 보여드립니다.'
-        : '추천 후보를 만들 수 없습니다. 읽은 책을 몇 권 더 등록해 주세요.',
-      topGenres,
-      cached: false,
-      source: 'curated-fallback',
-      analysis: {
-        historyCount: readBooks.length,
-        anchorBook: topBookTitle,
-        favoriteGenres,
-      },
-    });
-  }
+  const { status, body } = await resolveRecommendations({
+    env: c.env,
+    userId,
+    books: booksResult.results ?? [],
+    favoriteGenres: parseFavoriteGenres(userProfile?.favorite_genres),
+    forceRefresh,
+    path: new URL(c.req.url).pathname,
+    subject: `u:${userId}`,
+    waitUntil: (p) => { try { c.executionCtx.waitUntil(p); } catch { void p; } },
+  });
+  return c.json(body, status);
 });
 
 // ─── GET /api/ai/lifebooks — 완독 이력 기반 인생책 추천 ────────

@@ -121,22 +121,48 @@ export function normalizeTitle(value: string): string {
     .replace(/[《》「」『』"'\s:：,，.。!！?？()[\]{}<>]/g, '');
 }
 
-export function isExcludedBook(title: string, author: string, excluded: Set<string>): boolean {
+/**
+ * ISBN을 13자리 숫자로 정규화한다(공백 구분 "ISBN10 ISBN13"·하이픈 허용, 10자리는 978 접두 + 체크디짓 재계산).
+ * 유효하지 않으면 ''.
+ */
+export function normalizeIsbn(raw: string | null | undefined): string {
+  const out: string[] = [];
+  for (const part of (raw ?? '').trim().split(/\s+/)) {
+    const d = part.replace(/[^0-9Xx]/g, '').toUpperCase();
+    if (d.length === 13 && /^\d{13}$/.test(d)) out.push(d);
+    else if (d.length === 10 && /^\d{9}[\dX]$/.test(d)) {
+      const body = `978${d.slice(0, 9)}`;
+      let sum = 0;
+      for (let i = 0; i < 12; i++) sum += Number(body[i]) * (i % 2 === 0 ? 1 : 3);
+      out.push(`${body}${(10 - (sum % 10)) % 10}`);
+    }
+  }
+  return out[0] ?? '';
+}
+
+const ISBN_PREFIX = 'isbn:';
+
+/** isbn은 선택 — 있으면 ISBN 일치만으로도 같은 책으로 본다(표기가 다른 판본·AI가 바꿔 쓴 제목 방지) */
+export function isExcludedBook(title: string, author: string, excluded: Set<string>, isbn?: string | null): boolean {
+  const isbnKey = normalizeIsbn(isbn);
+  if (isbnKey && excluded.has(`${ISBN_PREFIX}${isbnKey}`)) return true;
   const titleKey = normalizeTitle(title);
   const pairKey = `${titleKey}::${normalizeTitle(author)}`;
   if (excluded.has(titleKey) || excluded.has(pairKey)) return true;
   // "데미안" vs "데미안(개정판)"처럼 부제·판본 표기만 다른 경우도 같은 책으로 본다(3자 이상 접두 일치)
   if (titleKey.length < 3) return false;
   for (const key of excluded) {
-    if (key.includes('::') || key.length < 3) continue;
+    if (key.includes('::') || key.startsWith(ISBN_PREFIX) || key.length < 3) continue;
     if (key.startsWith(titleKey) || titleKey.startsWith(key)) return true;
   }
   return false;
 }
 
-export function buildExcludedSet(rows: Array<{ title: string; author: string | null }>): Set<string> {
+export function buildExcludedSet(rows: Array<{ title: string; author: string | null; isbn?: string | null }>): Set<string> {
   const set = new Set<string>();
   for (const row of rows) {
+    const isbnKey = normalizeIsbn(row.isbn);
+    if (isbnKey) set.add(`${ISBN_PREFIX}${isbnKey}`);
     const titleKey = normalizeTitle(row.title);
     if (!titleKey) continue;
     set.add(titleKey);
