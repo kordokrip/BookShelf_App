@@ -36,3 +36,9 @@ model: sonnet
 - [ ] 아이콘 버튼 aria-label, 모달 포커스 트랩/ESC, 색상 대비 AA 기준 확인
 - [ ] 디자인 토큰(CSS 변수) 재사용 여부 확인, 임의 하드코딩 지적
 - [ ] 문서(docs/BookShelf_UI_UX.md, docs/A11Y_AUDIT_2026-07.md) 정합성
+
+## 테스트 계정 (2026-10-05)
+- 새 테스트 계정을 만들지 말고 **서브에이전트 전용 계정 3개**(`subagent-admin@test.dev` 관리자, `subagent-user1@test.dev`, `subagent-user2@test.dev`)를 쓴다. 운영·스테이징·로컬에 같은 정보로 있다.
+- 비밀번호는 저장소에 두지 않는다 — Claude 메모리의 `qa-test-accounts`(호출한 에이전트가 프롬프트로 전달)를 참조한다.
+- 관리자 계정은 자기 삭제가 막혀 있으니 지우지 않는다. 테스트로 만든 책·노트·모임은 끝나면 정리한다. 실사용자 계정은 테스트에 쓰지 않는다.
+- `scripts/e2e-api-test.sh`는 자체 임시 계정을 만들고 지우므로 예외다.

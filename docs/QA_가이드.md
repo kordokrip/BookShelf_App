@@ -88,9 +88,13 @@ DevTools 설정:
   - Network 탭 → "Preserve log" ✅ 체크
   - Network 탭 → 필터: "Fetch/XHR" 선택
 
-테스트 계정:
-  - 일반 사용자: test@bookshelf.dev / TestPass123!
-  - 신규 가입용: qa_YYYYMMDD@bookshelf.dev (새 이메일)
+테스트 계정 (2026-10-05 정리):
+  - 운영 DB에는 실사용자 2명 + 서브에이전트 전용 테스트 계정 3개(subagent-admin@test.dev 관리자,
+    subagent-user1@test.dev, subagent-user2@test.dev)만 있다. 운영·스테이징·로컬 공통.
+  - 비밀번호는 저장소에 두지 않는다(담당자/Claude 메모리 qa-test-accounts 참조).
+  - 새 테스트 계정을 만들지 말 것. 만들었다면 반드시 DELETE /api/users/me로 지운다
+    (e2e·admin 스크립트는 자동 삭제). 실사용자 계정으로 테스트하지 말 것.
+  - scripts/admin-api-test.sh는 ADMIN_EMAIL/ADMIN_PASS(또는 ADMIN_TOKEN) 환경 변수가 필요하다.
 ```
 
 ---

@@ -1,9 +1,9 @@
 # BookShelf App — 현재 상태 스냅샷
 
-> **최종 업데이트:** 2026-10-04 (38차: 화면 문구·중복 정리, 용어 통일 / 37차: AI 모델을 Gemini 3.8 Flash로 교체 / 36차: 잃은 장르 AI 추천 복구·인생책 즉시 표시·기본 대화상자 제거 / 35차: 전체 화면 점검·수정)
+> **최종 업데이트:** 2026-10-05 (39차: 수정요청 9건·운영 회원 정리·독서 기록 중복 버그 / 38차: 화면 문구·중복 정리, 용어 통일 / 37차: AI 모델을 Gemini 3.8 Flash로 교체 / 36차: 잃은 장르 AI 추천 복구·인생책 즉시 표시·기본 대화상자 제거 / 35차: 전체 화면 점검·수정)
 > **Git 브랜치:** `main` (kordokrip/BookShelf_App)
 > **E2E 테스트:** `bash scripts/e2e-api-test.sh --url <대상>` → **전체 PASS** ✅ (2026-10-03 스테이징·프로덕션 확인, 테스트 개수는 `grep -n '^  TOTAL=' scripts/e2e-api-test.sh`로 확인)
-> **상세 세션 리포트:** `docs/sessions/2026-10-03-full-ui-qa.md` (직전: `2026-10-03-ipad-ai-theme.md`)
+> **상세 세션 리포트:** `docs/sessions/2026-10-05-refactoring-requests.md` (직전: `2026-10-03-ipad-ai-theme.md`)
 > **기능 플래그:** 등록 목록은 `worker/lib/featureFlags.ts`의 `ALL_FEATURE_FLAGS`(현재 비어 있음), 공개 상태는 `GET /api/flags/public`으로 확인 (ADR-003)
 
 ---
@@ -236,7 +236,7 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 | 전체 화면 기능·이벤트 점검 | ✅ 2026-10-03 QA 서브에이전트(Playwright·DevTools MCP) 3영역 + 재검증 2회. 책 일부 수정 데이터 초기화 버그(출시 때부터) 수정 — 이미 '기타'로 바뀐 장르는 자동 복구 불가 → 36차에 서재 배너 + AI 장르 추천(사용자 확인 후 적용) 추가. 실기기 전용 항목은 `docs/QA_가이드.md` C-2 |
 
 > 상세 변경 이력: `docs/CHANGELOG.md`
-> 마지막 세션 상세 리포트: `docs/sessions/2026-10-03-full-ui-qa.md`
+> 마지막 세션 상세 리포트: `docs/sessions/2026-10-05-refactoring-requests.md`
 > 아키텍처 결정 기록: `docs/adr/README.md`
 > API 스펙: `docs/TRACE_MAP.md`
 > QA 절차: `docs/QA_가이드.md`

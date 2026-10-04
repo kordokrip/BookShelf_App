@@ -214,3 +214,5 @@ npm view wrangler@<올리려는 버전> peerDependencies
 **교훈**: SPA 폴백은 클라이언트 라우트에만 적용하고 파일 요청(`/assets/*`, 확장자가 있는 경로)은 404를 그대로 돌려준다(`worker/lib/spaFallback.ts`). 배포 후 확인은 `curl -s -o /dev/null -w "%{http_code} %{content_type}" <url>/assets/index-OLD.js`가 404인지로 한다.
 
 같은 조사에서 서비스 워커 precache가 JS/CSS를 빠뜨려, 404가 올바르게 나와도 구 `index.html` + 사라진 진입 JS 조합으로 앱이 부팅하지 못한다는 것도 확인했다. `vite.config.ts` `globPatterns`에 `js,css`를 추가해 해결했다(ADR-001 보완 절).
+
+**마이그레이션만으로 새 DB를 만들 때 주의 (2026-10-05 확인)**: `0004_user_role.sql`은 빈 마이그레이션이라 `users.role` 열을 만들지 않는다(운영·스테이징·기존 로컬 DB에는 과거에 직접 추가돼 있다). 마이그레이션만으로 만든 새 로컬 DB는 `no such column: role`로 프로필·플래그 API가 실패하므로, 새 DB는 `worker/db/schema.sql`로 만들거나 `ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'`를 한 번 실행한다. 기존 DB에 이미 열이 있어 이 ALTER를 마이그레이션으로 넣으면 실패하므로 마이그레이션 파일로는 추가하지 않는다.
