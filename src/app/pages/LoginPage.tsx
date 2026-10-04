@@ -4,7 +4,8 @@
  * - Google OAuth 링크 제공
  * - 로그인 실패 시 에러 메시지 표시
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { peekDormantFlag, clearDormantFlag, DORMANT_LOGIN_MESSAGE } from "../../lib/api/client";
 import { useNavigate, Link } from "react-router";
 import { useAuthStore } from "../../stores/authStore";
 import { AuthPreviewNav } from "../components/auth/AuthPreviewNav";
@@ -98,6 +99,15 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
   const login = useAuthStore((s) => s.login);
   const isLoading = useAuthStore((s) => s.isLoading);
   const authError = useAuthStore((s) => s.error);
+  // 사용 중 휴면 처리되어 로그아웃된 경우 안내 (한 번만 표시)
+  // 구글 로그인은 리다이렉트라 서버가 /login?error=account_dormant 로 돌려보낸다
+  const [dormantNotice] = useState(
+    () =>
+      peekDormantFlag() ||
+      (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("error") === "account_dormant"),
+  );
+  // 두 벌의 폼이 모두 읽은 뒤(마운트 후)에 지운다 — 렌더 중에 지우면 먼저 그려진 숨은 폼만 안내를 받았다
+  useEffect(() => { clearDormantFlag(); }, []);
 
   const validateEmail = (val: string) => {
     if (!val) return "이메일을 입력해주세요";
@@ -243,6 +253,12 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
           <EyeToggle show={showPassword} onToggle={() => setShowPassword(!showPassword)} />
         </div>
       </div>
+
+      {dormantNotice && !authError && (
+        <p role="alert" className="flex items-center gap-1" style={{ fontSize: 13, color: "#EF4444", fontFamily: "var(--font-pretendard)" }}>
+          <AlertCircle size={13} aria-hidden className="inline -mt-0.5 mr-1" />{DORMANT_LOGIN_MESSAGE}
+        </p>
+      )}
 
       {/* Auth error message */}
       {authError && (

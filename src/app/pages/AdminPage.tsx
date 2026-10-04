@@ -10,7 +10,7 @@
 import { useState, useCallback } from "react";
 import { Users, BookOpen, BarChart2, Bell, Send, Trash2, Search, X, ChevronDown, ChevronLeft, ChevronRight, ShieldCheck, RefreshCw, FileText, Clock, TrendingUp, Loader2, AlertCircle, ArrowLeft, UserCog, Eye, Crown, Megaphone, Mail } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { adminApi, type AdminUser, type AdminUserDetail } from "../../lib/api";
+import { adminApi, type AdminUser, type AdminUserDetail, type AdminUserStatus } from "../../lib/api";
 import { useAuthStore } from "../../stores/authStore";
 import { useNavigate } from "react-router";
 import { useToast } from "../components/ui/Toast";
@@ -20,7 +20,10 @@ import {
   AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "../components/ui/alert-dialog";
+import { AccountManagementSection } from "../components/admin/AccountManagementSection";
+import { statusLabel } from "../components/admin/adminHelpers";
 import { useBackToClose } from "../../hooks/useBackToClose";
+import { useDialogA11y } from "../../hooks/useDialogA11y";
 
 // ─── 쿼리 키 ─────────────────────────────────────────────────
 const ADMIN_KEYS = {
@@ -82,20 +85,26 @@ function StatCard({
 // ─── 회원 상세 모달 ───────────────────────────────────────────
 function UserDetailModal({
   userId,
+  listStatus,
   onClose,
   onRoleChange,
 }: {
   userId: string;
+  /** 목록에서 넘겨받은 상태 (상세 응답에 status가 없을 때 대체) */
+  listStatus?: AdminUserStatus;
   onClose: () => void;
   onRoleChange: (id: string, role: "admin" | "user") => void;
 }) {
   useBackToClose(true, onClose);
+  const dialogRef = useDialogA11y<HTMLDivElement>(onClose); // Esc 닫기·포커스 이동·복원
   const { data, isLoading } = useQuery({
     queryKey: ["admin", "user-detail", userId],
     queryFn:  () => adminApi.getUserDetail(userId),
   });
 
   const detail: AdminUserDetail | undefined = data?.data;
+  const currentUserId = useAuthStore((s) => s.user?.id);
+  const detailStatus = detail?.user.status ?? listStatus;
 
   return (
     <div
@@ -103,7 +112,12 @@ function UserDetailModal({
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-[#1E293B] w-full sm:w-[520px] max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl shadow-2xl"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="회원 상세"
+        tabIndex={-1}
+        className="bg-white dark:bg-[#1E293B] w-full sm:w-[520px] max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl shadow-2xl outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 헤더 */}
@@ -133,14 +147,19 @@ function UserDetailModal({
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-[#0F172A] dark:text-white truncate">{detail.user.name}</p>
                 <p className="text-sm text-[#64748B] dark:text-[#94A3B8] truncate">{detail.user.email}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                <div className="flex flex-wrap items-center gap-2 mt-1">
+                  <span className={`whitespace-nowrap text-xs px-2 py-0.5 rounded-full font-medium ${
                     detail.user.role === "admin"
                       ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400"
                       : "bg-[#F1F5F9] text-[#475569] dark:bg-[#334155] dark:text-[#94A3B8]"
                   }`}>
                     {detail.user.role === "admin" ? "관리자" : "회원"}
                   </span>
+                  {detailStatus === "dormant" && (
+                    <span className="whitespace-nowrap text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                      {statusLabel("dormant")}
+                    </span>
+                  )}
                   <span className="text-xs text-[#64748B] dark:text-[#94A3B8]">{detail.user.auth_provider}</span>
                 </div>
               </div>
@@ -219,6 +238,16 @@ function UserDetailModal({
                 </div>
               </div>
             )}
+
+            {/* 계정 관리 */}
+            <AccountManagementSection
+              user={{
+                id: detail.user.id, name: detail.user.name, email: detail.user.email,
+                role: detail.user.role, status: detailStatus,
+              }}
+              currentUserId={currentUserId}
+              onDeleted={onClose}
+            />
 
             {/* 가입 정보 */}
             <div className="text-xs text-[#64748B] dark:text-[#94A3B8] border-t border-[#E2E8F0] dark:border-[#334155] pt-3">
@@ -341,12 +370,13 @@ function UsersTab() {
   const { showToast } = useToast();
   const [q, setQ]           = useState("");
   const [role, setRole]     = useState("");
+  const [status, setStatus] = useState<"" | AdminUserStatus>("");
   const [sort, setSort]     = useState("created_at");
   const [order, setOrder]   = useState("desc");
   const [page, setPage]     = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const params = { q: q || undefined, role: role || undefined, sort, order, page, size: 20 };
+  const params = { q: q || undefined, role: role || undefined, status: status || undefined, sort, order, page, size: 20 };
 
   const { data, isLoading } = useQuery({
     queryKey: ADMIN_KEYS.users(params),
@@ -376,11 +406,13 @@ function UsersTab() {
   return (
     <div className="space-y-4 pb-8">
       {/* 검색 + 필터 */}
-      <div className="flex gap-2">
-        <div className="flex-1 relative">
+      {/* 좁은 화면(< sm)에서는 검색창이 한 줄을 다 쓰고 필터가 다음 줄로 */}
+      <div className="flex flex-wrap sm:flex-nowrap gap-2">
+        <div className="relative basis-full sm:basis-0 sm:flex-1">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B] dark:text-[#94A3B8]" />
           <input
             type="text"
+            aria-label="회원 검색"
             value={q}
             onChange={(e) => { setQ(e.target.value); setPage(1); }}
             placeholder="이름 또는 이메일 검색"
@@ -390,11 +422,22 @@ function UsersTab() {
         <select
           value={role}
           onChange={(e) => { setRole(e.target.value); setPage(1); }}
-          className="px-3 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-[#334155] bg-white dark:bg-[#1E293B] text-sm text-[#64748B] dark:text-[#94A3B8] outline-none"
+          aria-label="역할 필터"
+          className="flex-1 sm:flex-none min-h-11 px-3 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-[#334155] bg-white dark:bg-[#1E293B] text-sm text-[#64748B] dark:text-[#94A3B8] outline-none"
         >
           <option value="">전체</option>
           <option value="admin">관리자</option>
           <option value="user">회원</option>
+        </select>
+        <select
+          value={status}
+          onChange={(e) => { setStatus(e.target.value as "" | AdminUserStatus); setPage(1); }}
+          aria-label="상태 필터"
+          className="flex-1 sm:flex-none min-h-11 px-3 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-[#334155] bg-white dark:bg-[#1E293B] text-sm text-[#64748B] dark:text-[#94A3B8] outline-none"
+        >
+          <option value="">전체 상태</option>
+          <option value="active">활성</option>
+          <option value="dormant">휴면</option>
         </select>
       </div>
 
@@ -457,8 +500,19 @@ function UsersTab() {
                   <div className="flex items-center gap-1.5">
                     <p className="text-sm font-medium text-[#0F172A] dark:text-white truncate">{u.name}</p>
                     {u.role === "admin" && <Crown size={12} className="text-amber-500 shrink-0" />}
+                    {u.status === "dormant" && (
+                      <span
+                        title={u.dormant_at ? `휴면 처리: ${formatDate(u.dormant_at)}` : undefined}
+                        className="text-[11px] px-1.5 py-0.5 rounded-full font-medium shrink-0 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                      >
+                        {statusLabel("dormant")}
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-[#64748B] dark:text-[#94A3B8] truncate">{u.email}</p>
+                  {u.status === "dormant" && u.dormant_at && (
+                    <p className="text-[11px] text-amber-700 dark:text-amber-300">휴면 처리: {formatDate(u.dormant_at)}</p>
+                  )}
                 </div>
 
                 {/* 통계 뱃지들 */}
@@ -526,6 +580,7 @@ function UsersTab() {
       {selectedId && (
         <UserDetailModal
           userId={selectedId}
+          listStatus={users.find((u: AdminUser) => u.id === selectedId)?.status}
           onClose={() => setSelectedId(null)}
           onRoleChange={handleRoleChange}
         />

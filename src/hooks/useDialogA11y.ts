@@ -20,7 +20,8 @@ export function useDialogA11y<T extends HTMLElement = HTMLDivElement>(onClose: (
 
     const onKey = (e: KeyboardEvent) => {
       // 안쪽 요소(Radix 선택·팝오버 등)가 이미 처리한 Esc는 대화상자를 닫지 않는다
-      if (e.key === 'Escape' && !e.defaultPrevented) {
+      // 위에 확인창(Radix alertdialog)이 열려 있으면 Esc는 그 확인창만 닫게 둔다
+      if (e.key === 'Escape' && !e.defaultPrevented && !document.querySelector('[role="alertdialog"][data-state="open"]')) {
         e.stopPropagation();
         onCloseRef.current();
         return;

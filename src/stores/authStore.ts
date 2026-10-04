@@ -220,3 +220,11 @@ export const useAuthStore = create<AuthState>()(
     { name: 'AuthStore' },
   ),
 );
+
+// 휴면 처리된 계정(403 ACCOUNT_DORMANT) 감지 → 기존 로그아웃 정리 후 로그인 화면으로 (안내는 sessionStorage 플래그)
+if (typeof window !== 'undefined') {
+  window.addEventListener('auth:dormant', () => {
+    const { status, logout } = useAuthStore.getState();
+    if (status === 'authenticated') logout();
+  });
+}

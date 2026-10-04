@@ -72,6 +72,8 @@ export interface AdminStats {
   }>;
 }
 
+export type AdminUserStatus = 'active' | 'dormant';
+
 export interface AdminUser {
   id: string;
   name: string;
@@ -85,6 +87,8 @@ export interface AdminUser {
   note_count: number;
   session_count: number;
   last_active: string | null;
+  status: AdminUserStatus;
+  dormant_at: string | null;
 }
 
 export interface AdminUserDetail {
@@ -99,6 +103,8 @@ export interface AdminUserDetail {
     reading_goal: number | null;
     created_at: string;
     updated_at: string;
+    status?: AdminUserStatus;
+    dormant_at?: string | null;
   };
   stats: {
     total_books: number;
@@ -147,6 +153,7 @@ export const adminApi = {
   getUsers: (params: {
     q?: string;
     role?: string;
+    status?: AdminUserStatus;
     sort?: string;
     order?: string;
     page?: number;
@@ -155,6 +162,7 @@ export const adminApi = {
     const qs = new URLSearchParams();
     if (params.q)     qs.set('q',     params.q);
     if (params.role)  qs.set('role',  params.role);
+    if (params.status) qs.set('status', params.status);
     if (params.sort)  qs.set('sort',  params.sort);
     if (params.order) qs.set('order', params.order);
     if (params.page)  qs.set('page',  String(params.page));
@@ -174,6 +182,20 @@ export const adminApi = {
     apiFetch<{ data: { id: string; role: string } }>(`/api/admin/users/${id}/role`, {
       method: 'PATCH',
       body: JSON.stringify({ role }),
+    }),
+
+  /** 회원 휴면 처리/해제 */
+  updateUserStatus: (id: string, status: AdminUserStatus) =>
+    apiFetch<{ data: { id: string; status: AdminUserStatus; dormant_at: string | null } }>(
+      `/api/admin/users/${id}/status`,
+      { method: 'PATCH', body: JSON.stringify({ status }) },
+    ),
+
+  /** 회원 계정 영구 삭제 (confirm_email = 대상 이메일 일치 필요) */
+  deleteUser: (id: string, confirmEmail: string) =>
+    apiFetch<{ data: { deleted: boolean } }>(`/api/admin/users/${id}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ confirm_email: confirmEmail }),
     }),
 
   /** 전체 활동 로그 */
