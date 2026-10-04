@@ -167,12 +167,12 @@ export function LibraryToolbar({
                   aria-label={label}
                   aria-pressed={viewMode === v}
                   title={label}
-                  className="flex items-center justify-center -my-2"
-                  style={{ width: 34, height: 44 }}
+                  // 320px 폭에서도 한 줄에 들어가도록 360px 미만은 30px (높이 44px 유지)
+                  className="flex items-center justify-center -my-2 w-[30px] min-[360px]:w-[34px] h-11"
                 >
                   <span
                     className={`flex items-center justify-center rounded-lg transition-all ${viewMode === v ? "bg-white dark:bg-[#1E293B] shadow-sm text-indigo-600 dark:text-indigo-300" : "text-[#64748B] dark:text-[#94A3B8]"}`}
-                    style={{ width: 30, height: 28 }}
+                    style={{ width: 28, height: 28 }}
                   >
                     {icon}
                   </span>
@@ -186,8 +186,7 @@ export function LibraryToolbar({
               ref={searchBtnRef}
               onClick={() => setSearching(true)}
               aria-label={hasQuery ? "검색 (검색어 적용 중)" : "검색"}
-              className={ICON_BTN}
-              style={{ width: 40, height: 44 }}
+              className={`${ICON_BTN} w-9 min-[360px]:w-10 h-11`}
             >
               <Search size={18} />
               {hasQuery && <span aria-hidden className="absolute top-2.5 right-2 w-2 h-2 rounded-full" style={{ backgroundColor: "var(--brand-600)" }} />}
@@ -196,13 +195,12 @@ export function LibraryToolbar({
               onClick={() => setGenreOpen(true)}
               aria-label={selectedGenre ? `장르 필터 (${selectedGenre} 선택됨)` : "장르 필터"}
               aria-haspopup="dialog"
-              className={ICON_BTN}
-              style={{ width: 40, height: 44 }}
+              className={`${ICON_BTN} w-9 min-[360px]:w-10 h-11`}
             >
               <SlidersHorizontal size={18} />
               {selectedGenre && <span aria-hidden className="absolute top-2.5 right-2 w-2 h-2 rounded-full" style={{ backgroundColor: "var(--brand-600)" }} />}
             </button>
-            <Link to="/collections" aria-label="컬렉션" title="컬렉션" className={ICON_BTN} style={{ width: 40, height: 44 }}>
+            <Link to="/collections" aria-label="컬렉션" title="컬렉션" className={`${ICON_BTN} w-9 min-[360px]:w-10 h-11`}>
               <FolderOpen size={18} />
             </Link>
           </div>
