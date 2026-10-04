@@ -54,14 +54,6 @@ export function lifeBooksSourceLabel(res?: Pick<LifeBooksResponse, 'source'> | n
 /** 429(요청 한도) 안내 문구 — 서버 제한 창이 10분 */
 export const RATE_LIMIT_RETRY_COPY = '10분쯤 뒤에 다시 시도해 주세요';
 
-export interface AIRecommendation {
-  title: string;
-  author: string;
-  reason: string;
-  genre: string;
-  source?: 'openrouter' | 'workers-ai' | 'curated-fallback';
-}
-
 export interface SummarizeResponse {
   /** null이면 분석하지 않음 (reason 참고) */
   summary: string | null;
@@ -73,17 +65,17 @@ export interface SummarizeResponse {
   reason?: 'no_source';
 }
 
-interface RecommendResponse {
-  recommendations: AIRecommendation[];
-  topGenres: string[];
-  cached?: boolean;
-  message?: string;
-  source?: 'openrouter' | 'workers-ai' | 'curated-fallback' | 'none';
-  analysis?: {
-    historyCount?: number;
-    anchorBook?: string;
-    favoriteGenres?: string[];
-  };
+/** 추천 도서 응답 — GET /api/ai/recommend (인생책과 같은 항목 모양) */
+export type RecommendResponse = LifeBooksResponse;
+
+/** 추천 도서에서 이미 서재에 있는 책(모든 상태) 제외 — 제목 공백·대소문자 무시 */
+export function filterOwnedRecommendations(
+  items: LifeBookItem[],
+  owned: Array<{ title: string }>,
+): LifeBookItem[] {
+  const norm = (t: string) => t.replace(/\s+/g, '').toLowerCase();
+  const set = new Set(owned.map((b) => norm(b.title)));
+  return items.filter((b) => !set.has(norm(b.title)));
 }
 
 /** 책 설명 요약 */
@@ -105,14 +97,14 @@ export function useBookSummary() {
   });
 }
 
-/** 독서 패턴 기반 AI 추천 */
+/** 독서 기록 기반 추천 도서 — stale이면 30초 뒤 최대 2회 다시 조회 */
 export function useAIRecommendations() {
   return useQuery({
     queryKey: queryKeys.ai.recommendations(),
-    queryFn: () =>
-      apiFetch<RecommendResponse>('/api/ai/recommend?limit=5'),
+    queryFn: () => apiFetch<RecommendResponse>('/api/ai/recommend'),
     staleTime: 60 * 60 * 1000, // 1시간
     retry: false,
+    refetchInterval: (q) => lifeBooksRefetchInterval(q.state.data, q.state.dataUpdateCount),
   });
 }
 
@@ -146,7 +138,7 @@ export function useRefreshAIRecommendations() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () =>
-      apiFetch<RecommendResponse>('/api/ai/recommend?limit=5&refresh=true'),
+      apiFetch<RecommendResponse>('/api/ai/recommend?refresh=true'),
     onSuccess: (data) => {
       queryClient.setQueryData(queryKeys.ai.recommendations(), data);
     },

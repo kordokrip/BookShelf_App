@@ -1,10 +1,9 @@
-import { useExternalBooks, useDiscover } from "../../../hooks/useDiscover";
+import { useExternalBooks } from "../../../hooks/useDiscover";
 import { useAddBook } from "../../../hooks/useBooks";
 import { useToast } from "../ui/Toast";
 import { ApiError } from "../../../lib/api";
 import type { GenreKey } from "../../../types/book";
 import type { ExternalBook } from "../../../lib/api";
-import type { DiscoverBook } from "../../../lib/api";
 
 function BookCoverImg({ src, alt }: { src: string | null; alt: string }) {
   return (
@@ -82,70 +81,6 @@ function NewBooksTab({ wishTitleSet }: { wishTitleSet: Set<string> }) {
   );
 }
 
-function PopularBooksTab({ wishTitleSet }: { wishTitleSet: Set<string> }) {
-  const { data, isLoading, isError } = useDiscover('popular', '전체');
-  const addBook = useAddBook();
-  const { showToast } = useToast();
-  const books = (data?.books ?? []).filter((b) => !wishTitleSet.has(b.title.toLowerCase()));
-
-  function handleAdd(book: DiscoverBook) {
-    addBook.mutate(
-      {
-        title: book.title,
-        author: book.author,
-        isbn: book.isbn || undefined,
-        coverImage: book.cover_image || undefined,
-        publisher: book.publisher || undefined,
-        status: "wish",
-        genre: (book.genre as GenreKey) ?? "기타",
-      },
-      {
-        onSuccess: () => showToast(`"${book.title}" 읽을 책에 담았어요 💫`, "success"),
-        onError: (err) => {
-          if (err instanceof ApiError && err.status === 409) {
-            showToast("이미 읽을 책에 있는 책이에요.", "error");
-          } else {
-            showToast("추가에 실패했어요. 다시 시도해주세요.", "error");
-          }
-        },
-      },
-    );
-  }
-
-  if (isLoading) return <SkeletonList />;
-  if (isError) return <ErrorEmpty label="인기 책 정보를 불러오지 못했어요" />;
-  if (books.length === 0) return <ErrorEmpty label="현재 표시할 인기 책이 없어요" />;
-
-  return (
-    <ul className="px-4 flex flex-col gap-3">
-      {books.slice(0, 20).map((book, i) => (
-        <li key={book.key || `${book.title}-${i}`} className="bg-white dark:bg-[#1E293B] rounded-2xl p-3 flex items-center gap-3 shadow-sm">
-          <BookCoverImg src={book.cover_image} alt={book.title} />
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-[#1E293B] dark:text-[#F8FAFC] leading-snug truncate" style={{ fontSize: 14 }}>
-              {book.title}
-            </p>
-            <p className="text-[#64748B] dark:text-[#94A3B8] truncate mt-0.5" style={{ fontSize: 12 }}>
-              {book.author}{book.publisher ? ` · ${book.publisher}` : ""}
-            </p>
-            <p className="text-[#64748B] dark:text-[#94A3B8] mt-0.5" style={{ fontSize: 11 }}>
-              서재 {book.library_count}명{book.avg_rating ? ` · ★ ${book.avg_rating.toFixed(1)}` : ""}
-            </p>
-          </div>
-          <button
-            onClick={() => handleAdd(book)}
-            disabled={addBook.isPending}
-            className="shrink-0 rounded-xl px-3 py-1.5 text-white disabled:opacity-50 transition-opacity"
-            style={{ fontSize: 12, fontWeight: 600, background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))" }}
-          >
-            담기
-          </button>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 function SkeletonList() {
   return (
     <div className="px-4 flex flex-col gap-3">
@@ -170,13 +105,6 @@ function ErrorEmpty({ label }: { label: string }) {
   );
 }
 
-export function DiscoverTab({
-  variant,
-  wishTitleSet,
-}: {
-  variant: 'new' | 'popular';
-  wishTitleSet: Set<string>;
-}) {
-  if (variant === 'new') return <NewBooksTab wishTitleSet={wishTitleSet} />;
-  return <PopularBooksTab wishTitleSet={wishTitleSet} />;
+export function DiscoverTab({ wishTitleSet }: { wishTitleSet: Set<string> }) {
+  return <NewBooksTab wishTitleSet={wishTitleSet} />;
 }

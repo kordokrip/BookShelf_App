@@ -7,13 +7,14 @@ import { SearchSheet } from "../components/wishlist/SearchSheet";
 import { WishGrid } from "../components/wishlist/WishGrid";
 import { AddBookFab } from "../components/ui/Buttons";
 import { DiscoverTab } from "../components/wishlist/DiscoverTab";
+import { RecommendedBooksTab } from "../components/wishlist/RecommendedBooksTab";
 
-type TabKey = 'new' | 'popular' | 'mine';
+type TabKey = 'new' | 'recommend' | 'mine';
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'mine',    label: '내 목록' },
   { key: 'new',     label: '새로 나온 책' },
-  { key: 'popular', label: '인기 책' },
+  { key: 'recommend', label: '추천 도서' },
 ];
 
 export function WishlistPage() {
@@ -74,10 +75,13 @@ export function WishlistPage() {
       </div>
 
       {/* 탭 바 */}
-      <div className="flex border-b border-[#E2E8F0] dark:border-[#334155] px-2 overflow-x-auto">
+      <div role="tablist" aria-label="읽을 책 보기" className="flex border-b border-[#E2E8F0] dark:border-[#334155] px-2 overflow-x-auto">
         {TABS.map((tab) => (
           <button
             key={tab.key}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={`shrink-0 mr-1 px-2 min-h-11 pt-1 pb-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
               activeTab === tab.key
@@ -104,8 +108,8 @@ export function WishlistPage() {
 
       {/* 탭 콘텐츠 */}
       <div className="mt-4">
-        {activeTab === 'new'     && <DiscoverTab variant="new"     wishTitleSet={wishTitleSet} />}
-        {activeTab === 'popular' && <DiscoverTab variant="popular" wishTitleSet={wishTitleSet} />}
+        {activeTab === 'new'     && <DiscoverTab wishTitleSet={wishTitleSet} />}
+        {activeTab === 'recommend' && <RecommendedBooksTab />}
         {activeTab === 'mine'    && (
           <WishGrid
             books={books}

@@ -31,3 +31,23 @@ describe('lifeBooksStaleCopy', () => {
     expect(lifeBooksStaleCopy(3)).toBe(LIFEBOOKS_STALE_DONE_COPY);
   });
 });
+
+describe('filterOwnedRecommendations', () => {
+  it('서재에 있는 책은 공백·대소문자 무시하고 제외', async () => {
+    const { filterOwnedRecommendations } = await import('../useAI');
+    const item = (title: string) => ({ title, author: '', reason: '', thumbnail: '', publisher: '', isbn: '', url: '' });
+    const out = filterOwnedRecommendations(
+      [item('채식주의자'), item('Dune'), item('새 책')],
+      [{ title: '채식 주의자' }, { title: 'dune' }],
+    );
+    expect(out.map((b) => b.title)).toEqual(['새 책']);
+  });
+});
+
+describe('추천 도서 refetch 간격', () => {
+  it('stale이면 30초, 2회 갱신 뒤엔 중단', () => {
+    expect(lifeBooksRefetchInterval({ stale: true }, 1)).toBe(30_000);
+    expect(lifeBooksRefetchInterval({ stale: true }, 3)).toBe(false);
+    expect(lifeBooksRefetchInterval({ stale: false }, 1)).toBe(false);
+  });
+});
