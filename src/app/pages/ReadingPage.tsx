@@ -4,14 +4,12 @@
  * - 정타이머(시작·일시정지·리셋) + 세션 기록 저장
  * - 읽기 목표(읽는 중 도서 제한) 설정
  */
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { useDialogA11y } from "../../hooks/useDialogA11y";
 import { objectParticle } from "../../lib/koreanParticle";
-import { X, Target, BookOpen, Timer, ChevronDown, RefreshCw, CheckCircle2, CalendarDays } from "lucide-react";
-import type { UIBook, GenreKey } from "../../types/book";
-import { ALL_GENRES } from "../../types/book";
+import { X, Pencil, Target, Timer, ChevronDown, RefreshCw, CheckCircle2, CalendarDays } from "lucide-react";
+import type { UIBook } from "../../types/book";
 import { ReadingBookCard, BookCover } from "../components/books/BookCard";
-import { GenreFilterBar } from "../components/books/GenreFilterBar";
 import { EmptyState } from "../components/ui/EmptyState";
 import { AddBookFab } from "../components/ui/Buttons";
 import { useToast } from "../components/ui/Toast";
@@ -336,8 +334,10 @@ function PageUpdateModal({
   );
 }
 /* ─── Overview banner ──────────────────────────────────────── */
-function ReadingOverviewBanner({ books, weeklyPages, annualGoal, annualDone }: {
+function ReadingOverviewBanner({ books, weeklyPages, annualGoal, annualDone, onSetGoal, timerSlot }: {
   books: UIBook[];
+  onSetGoal: () => void;
+  timerSlot: ReactNode;
   weeklyPages?: number;
   annualGoal?: number;
   annualDone?: number;
@@ -351,54 +351,62 @@ function ReadingOverviewBanner({ books, weeklyPages, annualGoal, annualDone }: {
   return (
     <div
       className="mx-4 mt-5 mb-4 rounded-2xl p-4 text-white"
-      style={{ background: "linear-gradient(135deg, var(--brand2-600) 0%, var(--brand-600) 100%)" }}
+      style={{ background: "linear-gradient(135deg, var(--brand2-700) 0%, var(--brand-700) 100%)" }} /* 700 단계 — 모든 강조색에서 흰 글자 6:1 이상(작은 글자 AA) */
     >
-      <p style={{ fontSize: 13, opacity: 0.85 }}>현재 읽는 중</p>
+      <p style={{ fontSize: 13, opacity: 0.9 }}>현재 읽는 중</p>
       <div className="flex items-end gap-1 mt-0.5">
         <span style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>{books.length}</span>
         <span style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>권 읽는 중 📖</span>
       </div>
       <div className="flex gap-4 mt-3 flex-wrap">
         <div className="flex flex-col gap-0.5">
-          <span style={{ fontSize: 11, opacity: 0.75 }}>읽은 페이지</span>
+          <span style={{ fontSize: 11, opacity: 0.9 }}>읽은 페이지</span>
           <span style={{ fontSize: 15, fontWeight: 700 }}>{readPages.toLocaleString()}p</span>
         </div>
         <div className="flex flex-col gap-0.5">
-          <span style={{ fontSize: 11, opacity: 0.75 }}>평균 진행</span>
+          <span style={{ fontSize: 11, opacity: 0.9 }}>평균 진행</span>
           <span style={{ fontSize: 15, fontWeight: 700 }}>{avgProgress}%</span>
         </div>
         {weeklyPages != null && weeklyPages > 0 && (
           <div className="flex flex-col gap-0.5">
-            <span style={{ fontSize: 11, opacity: 0.75 }}>이번 주</span>
+            <span style={{ fontSize: 11, opacity: 0.9 }}>이번 주</span>
             <span style={{ fontSize: 15, fontWeight: 700 }}>{weeklyPages.toLocaleString()}p</span>
           </div>
         )}
-        {annualGoal && annualGoal > 0 ? (
-          <div className="flex flex-col gap-0.5">
-            <span style={{ fontSize: 11, opacity: 0.75 }}>연간 목표</span>
-            <span style={{ fontSize: 15, fontWeight: 700 }}>
-              {annualDone ?? 0}/{annualGoal}권 ({goalRate}%)
-            </span>
-          </div>
-        ) : null}
         {overdueCount > 0 && (
           <div className="flex flex-col gap-0.5">
-            <span style={{ fontSize: 11, opacity: 0.75 }}>지연</span>
+            <span style={{ fontSize: 11, opacity: 0.9 }}>지연</span>
             <span style={{ fontSize: 15, fontWeight: 700, color: "#FCA5A5" }}>{overdueCount}권 ⚠️</span>
           </div>
         )}
       </div>
-      {/* 연간 목표 진행 바 */}
+      {/* 연간 목표 — 행 전체가 목표 설정 버튼 */}
       {annualGoal && annualGoal > 0 ? (
-        <div className="mt-3">
-          <div className="w-full rounded-full overflow-hidden" style={{ height: 4, backgroundColor: "rgba(255,255,255,0.2)" }}>
-            <div
-              className="h-full rounded-full transition-all"
-              style={{ width: `${goalRate}%`, backgroundColor: "rgba(255,255,255,0.85)" }}
-            />
-          </div>
-        </div>
-      ) : null}
+        <button
+          type="button"
+          onClick={onSetGoal}
+          aria-label="연간 목표 설정"
+          className="mt-3 w-full min-h-[44px] flex flex-col justify-center gap-1.5 text-left active:opacity-80"
+        >
+          <span className="flex items-center justify-between gap-2" style={{ fontSize: 12, fontWeight: 600 }}>
+            <span>연간 목표 {annualDone ?? 0}/{annualGoal}권 ({goalRate}%)</span>
+            <Pencil size={14} aria-hidden />
+          </span>
+          <span className="block w-full rounded-full overflow-hidden" style={{ height: 4, backgroundColor: "rgba(255,255,255,0.2)" }}>
+            <span className="block h-full rounded-full transition-all" style={{ width: `${goalRate}%`, backgroundColor: "rgba(255,255,255,0.85)" }} />
+          </span>
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={onSetGoal}
+          className="mt-2 min-h-[44px] inline-flex items-center gap-1 underline underline-offset-2"
+          style={{ fontSize: 13, fontWeight: 600 }}
+        >
+          <Target size={14} aria-hidden /> 연간 목표 설정하기
+        </button>
+      )}
+      <div className="mt-2 pt-2 border-t border-white/20">{timerSlot}</div>
     </div>
   );
 }
@@ -759,43 +767,6 @@ function GoalModal({
   );
 }
 
-/* ─── Quick Actions ────────────────────────────────────────── */
-function QuickActions({
-  onLogToday,
-  onSetGoal,
-  onTimer,
-  timerRunning,
-  timerDisplay,
-}: {
-  onLogToday: () => void;
-  onSetGoal: () => void;
-  onTimer: () => void;
-  timerRunning?: boolean;
-  timerDisplay?: string;
-}) {
-  const timerLabel = timerRunning && timerDisplay ? `타이머 ${timerDisplay}` : "독서 타이머";
-  const actions = [
-    { icon: <BookOpen size={18} />, label: "오늘 독서 기록", bg: "var(--bg-accent-soft)", color: "var(--text-accent)", onClick: onLogToday },
-    { icon: <Target size={18} />, label: "목표 설정", bg: "var(--bg-warn-soft)", color: "var(--text-warn)", onClick: onSetGoal },
-    { icon: <Timer size={18} />, label: timerLabel, bg: timerRunning ? "var(--bg-success-soft-strong)" : "var(--bg-success-soft)", color: "var(--text-success)", onClick: onTimer },
-  ];
-  return (
-    <div className="px-4 mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-      {actions.map((a) => (
-        <button
-          key={a.label === timerLabel ? "timer" : a.label}
-          onClick={a.onClick}
-          className="flex flex-col items-center gap-1.5 py-3 rounded-2xl transition-all hover:scale-[0.98] active:scale-95"
-          style={{ backgroundColor: a.bg, color: a.color }}
-        >
-          {a.icon}
-          <span style={{ fontSize: 11, fontWeight: 600 }}>{a.label}</span>
-        </button>
-      ))}
-    </div>
-  );
-}
-
 /* ─── Page ─────────────────────────────────────────────────── */
 export function ReadingPage() {
   const { data: books = [], isLoading, isError, refetch } = useBooks({ status: 'reading' });
@@ -804,7 +775,6 @@ export function ReadingPage() {
   const addSession = useAddSession();
   const [selectedBook, setSelectedBook] = useState<UIBook | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UIBook | null>(null);
-  const [selectedGenre, setSelectedGenre] = useState<GenreKey | null>(null);
   const [timerBook, setTimerBook] = useState<UIBook | null>(null);
   const timerStoreBookId = useTimerStore((s) => s.bookId);
   const [logModalOpen, setLogModalOpen] = useState(false);
@@ -829,7 +799,6 @@ export function ReadingPage() {
     setTimerPromptMinutes(elapsedMinutes);
   });
   const refreshCovers = useRefreshBookCovers();
-  const timerRef = useRef<HTMLDivElement>(null);
   const user = useAuthStore((s) => s.user);
   const { data: stats } = useStats();
 
@@ -943,23 +912,6 @@ export function ReadingPage() {
     }
   }, [timerBook, timerStoreBookId, books]);
 
-  // Genre counts for filter bar
-  const genreCounts = books.reduce((acc, b) => {
-    acc[b.genre] = (acc[b.genre] ?? 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const filtered = selectedGenre
-    ? books.filter((b) => b.genre === selectedGenre)
-    : books;
-
-  function handleTimerAction() {
-    timerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    if (!timer.isRunning) {
-      timer.start();
-    }
-  }
-
   function handleTimerPromptRecord() {
     if (timerPromptMinutes == null) return;
     setLogDuration(timerPromptMinutes);
@@ -981,43 +933,17 @@ export function ReadingPage() {
         weeklyPages={stats?.weekly?.reduce((s, w) => s + (w.pages ?? 0), 0)}
         annualGoal={user?.reading_goal ?? undefined}
         annualDone={stats?.statusCounts?.done ?? 0}
-      />
-      <QuickActions
-        onLogToday={() => setLogModalOpen(true)}
         onSetGoal={() => setGoalModalOpen(true)}
-        onTimer={handleTimerAction}
-        timerRunning={timer.isRunning}
-        timerDisplay={timer.displayTime}
+        timerSlot={
+          <FocusTimer
+            variant="compact"
+            timer={timer}
+            timerBook={timerBook}
+            onRecord={setTimerPromptMinutes}
+            onLog={() => { setLogBookId(timerStoreBookId ?? null); setLogModalOpen(true); }} // 타이머에 연결된 책을 기본 선택
+          />
+        }
       />
-
-      {/* 독서 타이머 위젯 — 몰입 타이머(스톱워치·집중 카운트다운) */}
-      <div ref={timerRef}>
-        <FocusTimer timer={timer} timerBook={timerBook} onRecord={setTimerPromptMinutes} />
-      </div>
-
-      {/* Section header row */}
-      <div className="flex items-center justify-between px-4 mb-2">
-        <h2 className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 18, fontWeight: 600 }}>
-          읽고 있는 책
-        </h2>
-        <span
-          className="rounded-full bg-indigo-50 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-200"
-          style={{ fontSize: 12, fontWeight: 500, padding: "2px 8px" }}
-        >
-          {books.length}권
-        </span>
-      </div>
-
-      {/* Genre filter bar */}
-      <div className="mb-4">
-        <GenreFilterBar
-          genres={ALL_GENRES.filter((g) => books.some((b) => b.genre === g))}
-          selectedGenre={selectedGenre}
-          genreCounts={genreCounts}
-          totalCount={books.length}
-          onSelect={setSelectedGenre}
-        />
-      </div>
 
       {isLoading ? (
         <div className="px-4 flex flex-col gap-3">
@@ -1028,7 +954,7 @@ export function ReadingPage() {
           message="읽는 중인 책 목록을 불러오지 못했어요."
           onRetry={() => refetch()}
         />
-      ) : filtered.length === 0 ? (
+      ) : books.length === 0 ? (
         <EmptyState
           emoji="📖"
           heading="읽고 있는 책이 없어요"
@@ -1039,7 +965,7 @@ export function ReadingPage() {
       ) : (
         // pb-24: FAB가 리스트 마지막 카드와 겹치지 않도록 확실한 여유 공간 확보
         <div className="px-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4 pb-24">
-          {filtered.map((book) => (
+          {books.map((book) => (
             <ReadingBookCard
               key={book.id}
               book={book}

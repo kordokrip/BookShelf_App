@@ -6,7 +6,7 @@
  */
 import { useState } from "react";
 import { TimerResetConfirm } from "./TimerDialogs";
-import { Pause, Play, RotateCcw, Timer } from "lucide-react";
+import { Pause, Play, RotateCcw, Timer, PencilLine, BookOpen } from "lucide-react";
 import type { UseReadingTimerReturn } from "../../../hooks/useReadingTimer";
 import { useTimerStore } from "../../../stores/timerStore";
 import { FOCUS_PRESETS_MIN } from "../../../lib/focusTimer";
@@ -17,11 +17,15 @@ interface FocusTimerProps {
   timerBook: UIBook | null;
   /** 초기화 확인에서 "기록하기" 선택 시 (분) — 정지 상태 타이머를 기록 프롬프트로 연결 */
   onRecord?: (minutes: number) => void;
+  /** card: 독립 카드(기본) / compact: 대시보드 안에 들어가는 한 줄 타이머 */
+  variant?: "card" | "compact";
+  /** compact: "기록" 버튼 (오늘 독서 기록 열기) */
+  onLog?: () => void;
 }
 
 const RING = 2 * Math.PI * 44;
 
-export function FocusTimer({ timer, timerBook, onRecord }: FocusTimerProps) {
+export function FocusTimer({ timer, timerBook, onRecord, variant = "card", onLog }: FocusTimerProps) {
   const [confirmReset, setConfirmReset] = useState(false);
   const setMode = useTimerStore((s) => s.setMode);
   const noteCount = useTimerStore((s) => (timerBook && s.bookId === timerBook.id ? s.sessionNoteIds.length : 0));
@@ -30,7 +34,86 @@ export function FocusTimer({ timer, timerBook, onRecord }: FocusTimerProps) {
   const targetMin = Math.round(timer.targetSec / 60);
 
   const segment = (active: boolean) =>
-    `flex-1 rounded-full py-2 transition-colors ${active ? "bg-white text-indigo-900" : "text-white/80 hover:text-white"} disabled:opacity-50`;
+    `flex-1 rounded-full py-2 transition-colors ${active ? "bg-white text-indigo-900" : "text-white/90 hover:text-white"} disabled:opacity-50`;
+
+  const resetDialog = confirmReset && (
+    <TimerResetConfirm
+      minutes={Math.floor(timer.elapsed / 60)}
+      onCancel={() => setConfirmReset(false)}
+      onDiscard={() => { setConfirmReset(false); timer.reset(); }}
+      onRecord={() => {
+        setConfirmReset(false);
+        if (timer.isRunning) timer.pause(); // onStop → 기록 프롬프트
+        else onRecord?.(Math.floor(timer.elapsed / 60));
+      }}
+    />
+  );
+
+  if (variant === "compact") {
+    const iconBtn = "w-11 h-11 rounded-full flex items-center justify-center active:scale-95 transition-all";
+    const seg = (active: boolean) =>
+      `min-h-[44px] px-3 rounded-full transition-colors ${active ? "bg-white text-indigo-900" : "text-white/90 hover:text-white"} disabled:opacity-50`;
+    return (
+      <div role="group" aria-label="독서 타이머">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <div className="flex items-center rounded-full p-0.5 bg-white/15" role="radiogroup" aria-label="타이머 모드">
+            <button type="button" role="radio" aria-checked={!isCountdown} disabled={locked} onClick={() => setMode("stopwatch")} className={seg(!isCountdown)} style={{ fontSize: 12, fontWeight: 700 }}>
+              자유
+            </button>
+            <button type="button" role="radio" aria-checked={isCountdown} disabled={locked} onClick={() => setMode("countdown")} className={seg(isCountdown)} style={{ fontSize: 12, fontWeight: 700 }}>
+              집중 {targetMin}분
+            </button>
+          </div>
+          <span
+            className="font-mono tabular-nums"
+            style={{ fontSize: 22, fontWeight: 800, color: timer.isRunning ? "white" : "rgba(255,255,255,0.8)" }}
+            role="timer"
+            aria-live="off"
+            aria-label={isCountdown ? `남은 시간 ${timer.displayTime}` : `경과 시간 ${timer.displayTime}`}
+          >
+            {timer.displayTime}
+          </span>
+          <div className="flex items-center gap-1 ml-auto">
+            <button type="button" onClick={timer.isRunning ? timer.pause : timer.start} className={`${iconBtn} bg-white/25 hover:bg-white/35`} aria-label={timer.isRunning ? "일시정지" : timer.elapsed > 0 ? "재개" : "시작"}>
+              {timer.isRunning ? <Pause size={18} fill="white" aria-hidden /> : <Play size={18} fill="white" aria-hidden />}
+            </button>
+            <button type="button" onClick={() => (timer.elapsed >= 60 ? setConfirmReset(true) : timer.reset())} disabled={!locked} className={`${iconBtn} bg-white/10 hover:bg-white/20 disabled:opacity-40`} aria-label="초기화">
+              <RotateCcw size={16} className="text-white/90" aria-hidden />
+            </button>
+            {onLog && (
+              <button type="button" onClick={onLog} className="min-h-[44px] px-3 rounded-full flex items-center gap-1 bg-white/10 hover:bg-white/20 active:scale-95 transition-all" aria-label="오늘 독서 기록하기" style={{ fontSize: 12, fontWeight: 700 }}>
+                <PencilLine size={14} aria-hidden /> 기록
+              </button>
+            )}
+          </div>
+        </div>
+        {isCountdown && !locked && (
+          <div className="flex gap-1.5 mt-1" role="group" aria-label="집중 시간">
+            {FOCUS_PRESETS_MIN.map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMode("countdown", m)}
+                aria-pressed={targetMin === m}
+                className={`min-h-[44px] px-3 rounded-full border transition-colors ${targetMin === m ? "bg-white/25 border-white/60" : "border-white/25 hover:bg-white/10"}`}
+                style={{ fontSize: 12, fontWeight: 600 }}
+              >
+                {m}분
+              </button>
+            ))}
+          </div>
+        )}
+        <p className="flex items-center gap-1.5 text-white/90 min-w-0 mt-1" style={{ fontSize: 12 }}>
+          <BookOpen size={13} className="flex-shrink-0" aria-hidden />
+          <span className="truncate">
+            {timerBook ? timerBook.title : "책을 누르면 타이머에 연결돼요"}
+            {noteCount > 0 ? ` · 메모 ${noteCount}개` : ""}
+          </span>
+        </p>
+        {resetDialog}
+      </div>
+    );
+  }
 
   return (
     <section
@@ -139,18 +222,7 @@ export function FocusTimer({ timer, timerBook, onRecord }: FocusTimerProps) {
           </div>
         </div>
       </div>
-      {confirmReset && (
-        <TimerResetConfirm
-          minutes={Math.floor(timer.elapsed / 60)}
-          onCancel={() => setConfirmReset(false)}
-          onDiscard={() => { setConfirmReset(false); timer.reset(); }}
-          onRecord={() => {
-            setConfirmReset(false);
-            if (timer.isRunning) timer.pause(); // onStop → 기록 프롬프트
-            else onRecord?.(Math.floor(timer.elapsed / 60));
-          }}
-        />
-      )}
+      {resetDialog}
     </section>
   );
 }
