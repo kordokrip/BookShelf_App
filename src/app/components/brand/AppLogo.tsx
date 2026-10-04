@@ -3,8 +3,9 @@
  * 앱 안 로고를 한 컴포넌트로 통일한다. 이전에는 흐린 icon-192.png(TopBar·SideNav), 펼친 책 SVG(로그인·가입),
  * 📚 이모지(온보딩)가 섞여 있었다 (2026-09-27 에셋 감사).
  *
- * - variant="tile": 브랜드 그라디언트 둥근 타일 + 흰 마크 (앱 아이콘과 동일한 모양)
+ * - variant="tile": 선택한 강조색(--brand-600 → --brand2-600)을 따르는 그라디언트 둥근 타일 + 흰 마크 (앱 아이콘과 동일한 모양)
  * - variant="glyph": 마크만, 색은 currentColor (그라디언트 배경 위 흰 로고 등)
+ * 앱 안 로고만 강조색을 따른다. OS 앱 아이콘·스플래시·파비콘은 고정 색(design/icons/app-icon.svg).
  * 장식용이면 label을 생략하면 스크린리더에서 숨긴다.
  */
 import { useId } from "react";
@@ -41,8 +42,8 @@ export function AppLogo({ size = 32, variant = "tile", label, className }: AppLo
         <>
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stopColor="#4F46E5" />
-              <stop offset="1" stopColor="#7C3AED" />
+              <stop offset="0" style={{ stopColor: "var(--brand-600, #4F46E5)" }} />
+              <stop offset="1" style={{ stopColor: "var(--brand2-600, #7C3AED)" }} />
             </linearGradient>
           </defs>
           <rect width="1024" height="1024" rx="230" fill={`url(#${gradientId})`} />

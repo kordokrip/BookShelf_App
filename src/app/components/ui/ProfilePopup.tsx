@@ -8,7 +8,7 @@
  */
 import { useState, useEffect, forwardRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogOut, X, Camera, Palette, ChevronRight, Users, Sparkles, FolderOpen, CalendarRange } from "lucide-react";
+import { LogOut, X, Camera, Palette, ChevronRight, Users, Sparkles, FolderOpen, CalendarRange, UserCog } from "lucide-react";
 import { useAuthStore, type AuthUser } from "../../../stores/authStore";
 import { usersApi } from "../../../lib/api";
 import { useQueryClient } from "@tanstack/react-query";
@@ -50,6 +50,8 @@ for (let h = 6; h < 24; h++) {
     REMINDER_TIMES.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
   }
 }
+
+const ADMIN_SHORTCUT = { path: "/admin", label: "관리자 대시보드", icon: UserCog };
 
 const SHORTCUTS: { path: string; label: string; icon: React.ComponentType<{ size?: number; className?: string; "aria-hidden"?: boolean | "true" }> }[] = [
   { path: "/groups", label: "독서 모임", icon: Users },
@@ -390,7 +392,7 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
         {/* 바로가기 — 모바일 하단 탭·상단바에 없는 화면으로 이동 */}
         <nav aria-label="바로가기" className="space-y-0.5">
           <p className="text-[#64748B] dark:text-[#94A3B8] px-1" style={{ fontSize: 11, fontWeight: 700 }}>바로가기</p>
-          {SHORTCUTS.map(({ path, label, icon: Icon }) => (
+          {(user.role === "admin" ? [ADMIN_SHORTCUT, ...SHORTCUTS] : SHORTCUTS).map(({ path, label, icon: Icon }) => (
             <button
               key={path}
               type="button"

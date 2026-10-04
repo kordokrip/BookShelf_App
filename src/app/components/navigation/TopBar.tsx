@@ -5,7 +5,7 @@
  * - 알림 벨: 미읽음 카운트 배지 + NotificationPanel 드롭다운
  */
 import { useState, useRef } from 'react';
-import { Bell, FileSearch, UserCog } from 'lucide-react';
+import { Bell, FileSearch } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { useAuthStore } from '../../../stores/authStore';
 import { useUiStore } from '../../../stores/uiStore';
@@ -103,22 +103,6 @@ export function TopBar() {
             </TooltipTrigger>
             <TooltipContent side="bottom" sideOffset={4}>노트 & 검색</TooltipContent>
           </Tooltip>
-
-          {/* 관리자 패널 (role='admin'일 때만 표시) */}
-          {user?.role === 'admin' && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => navigate('/admin')}
-                  aria-label="관리자 대시보드"
-                  className="w-11 h-11 rounded-full flex items-center justify-center text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
-                >
-                  <UserCog size={19} />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" sideOffset={4}>관리자 대시보드</TooltipContent>
-            </Tooltip>
-          )}
 
           {/* 🔔 알림 벨 + 패널 드롭다운 */}
           <div ref={bellRef} className="relative">

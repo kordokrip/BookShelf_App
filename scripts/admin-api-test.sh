@@ -2,10 +2,30 @@
 # Admin API 교차 검증 스크립트
 set -uo pipefail
 
-BASE="https://bookshelf-api.kordokrip.workers.dev"
-ADMIN_EMAIL="${ADMIN_EMAIL:-kordokrip@gmail.com}"
-ADMIN_PASS="${ADMIN_PASS:-Dhalwjd6@6}"
+# 사용법: ADMIN_EMAIL=... ADMIN_PASS=... bash scripts/admin-api-test.sh  (또는 ADMIN_TOKEN=... )
+BASE="${BASE:-https://bookshelf-api.kordokrip.workers.dev}"
+ADMIN_EMAIL="${ADMIN_EMAIL:-}"
+ADMIN_PASS="${ADMIN_PASS:-}"
 ADMIN_TOKEN="${ADMIN_TOKEN:-}"
+
+if [[ -z "$ADMIN_TOKEN" && ( -z "$ADMIN_EMAIL" || -z "$ADMIN_PASS" ) ]]; then
+  echo "사용법: ADMIN_EMAIL=<이메일> ADMIN_PASS=<비밀번호> bash scripts/admin-api-test.sh"
+  echo "        (또는 ADMIN_TOKEN=<관리자 JWT>; BASE=<API 주소>로 대상 변경 가능)"
+  exit 1
+fi
+
+# 테스트용 비관리자 계정 정리 (정상·조기 종료 모두)
+NONADMIN_TOKEN=""
+NONADMIN_PASS="TestPass123!"
+cleanup() {
+  if [[ -n "$NONADMIN_TOKEN" ]]; then
+    curl -s -X DELETE "$BASE/api/users/me" \
+      -H "Authorization: Bearer $NONADMIN_TOKEN" -H "Content-Type: application/json" \
+      --data-raw "{\"password\":\"$NONADMIN_PASS\"}" >/dev/null
+    NONADMIN_TOKEN=""
+  fi
+}
+trap cleanup EXIT
 
 PASS=0; FAIL=0
 
@@ -128,7 +148,7 @@ fi
 echo "=== 비관리자 admin 접근 차단 확인 ==="
 REG=$(curl -s -X POST "$BASE/api/users/register" \
   -H "Content-Type: application/json" \
-  --data-raw "{\"email\":\"nonadmin_$(date +%s)@test.dev\",\"password\":\"TestPass123!\",\"name\":\"nonadmin\"}")
+  --data-raw "{\"email\":\"nonadmin_$(date +%s)@test.dev\",\"password\":\"$NONADMIN_PASS\",\"name\":\"nonadmin\"}")
 NONADMIN_TOKEN=$(echo "$REG" | json_get "(d.get('data') or {}).get('token', d.get('token',''))")
 if [[ -n "$NONADMIN_TOKEN" ]]; then
   BLOCKED=$(curl -s "$BASE/api/admin/stats" -H "Authorization: Bearer $NONADMIN_TOKEN")
