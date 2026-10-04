@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { X, Smartphone } from "lucide-react";
 import { detectPlatform } from "../../../lib/platform";
+import { useNoticeSlot } from "../../../stores/noticeStore";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -16,6 +17,10 @@ export function InstallBanner() {
   // opacity/transform 전환이 실제로 재생된다 (Android 분기의 promptEvent/visible과 동일 패턴)
   const [iosEligible, setIosEligible] = useState(false);
   const [iosVisible, setIosVisible] = useState(false);
+
+  // 안내는 한 번에 하나 — 우선순위가 낮아 업데이트·장르 안내가 떠 있으면 숨는다
+  const wantsShow = promptEvent ? visible : iosEligible && iosVisible;
+  const isTop = useNoticeSlot("install", wantsShow);
 
   useEffect(() => {
     // 이미 설치된 경우 (standalone 모드) 표시 안 함
@@ -84,9 +89,9 @@ export function InstallBanner() {
         className="fixed left-0 right-0 z-40 flex justify-center px-4"
         style={{
           bottom: BANNER_BOTTOM,
-          ...wrapperState(iosVisible),
+          ...wrapperState(iosVisible && isTop),
         }}
-        aria-hidden={!iosVisible}
+        aria-hidden={!(iosVisible && isTop)}
       >
         <div className="w-full max-w-sm flex items-start gap-3 rounded-2xl px-4 py-3 shadow-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40">
           <Smartphone size={17} className="text-amber-500 mt-0.5 flex-shrink-0" />
@@ -117,9 +122,9 @@ export function InstallBanner() {
       className="fixed left-0 right-0 z-40 flex justify-center px-4"
       style={{
         bottom: BANNER_BOTTOM,
-        ...wrapperState(visible),
+        ...wrapperState(visible && isTop),
       }}
-      aria-hidden={!visible}
+      aria-hidden={!(visible && isTop)}
     >
       <div
         className="w-full max-w-sm flex items-center gap-3 rounded-2xl px-4 py-3 shadow-lg"

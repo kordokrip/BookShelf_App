@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 import { router } from "../../routes";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import { X, RefreshCw } from "lucide-react";
+import { useNoticeSlot } from "../../../stores/noticeStore";
 
 // 하단에 주 CTA(고정 푸터)가 있는 Root 레이아웃 외부 독립 라우트
 const STANDALONE_PREFIXES = ["/register-flow", "/notes-search"];
@@ -22,6 +23,9 @@ export function UpdatePrompt() {
     updateServiceWorker,
   } = useRegisterSW();
 
+  // 안내는 한 번에 하나 — 업데이트가 최우선
+  const isTop = useNoticeSlot("update", needRefresh);
+
   function handleUpdate() {
     updateServiceWorker(true);
   }
@@ -30,7 +34,7 @@ export function UpdatePrompt() {
     setNeedRefresh(false);
   }
 
-  if (!needRefresh) return null;
+  if (!needRefresh || !isTop) return null;
 
   return (
     <div
@@ -69,7 +73,7 @@ export function UpdatePrompt() {
         </button>
         <button
           onClick={handleDismiss}
-          className="shrink-0 rounded-full p-1 transition-colors hover:bg-white/10"
+          className="shrink-0 flex items-center justify-center min-w-11 min-h-11 -m-2 rounded-full transition-colors hover:bg-white/10"
           aria-label="닫기"
           style={{ color: "#94A3B8" }}
         >
