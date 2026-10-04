@@ -160,6 +160,55 @@ if [[ -n "$NONADMIN_TOKEN" ]]; then
   fi
 fi
 
+# ── 10. 회원 휴면/해제/삭제 흐름 (임시 계정 생성 → PATCH dormant → 로그인 403 → active → 로그인 200 → DELETE)
+echo "=== 회원 휴면·삭제 흐름 ==="
+FLOW_EMAIL="flow_$(date +%s)@test.dev"
+FLOW_PASS="TestPass123!"
+REG2=$(curl -s -X POST "$BASE/api/users/register" -H "Content-Type: application/json" \
+  --data-raw "{\"email\":\"$FLOW_EMAIL\",\"password\":\"$FLOW_PASS\",\"name\":\"flow\"}")
+FLOW_ID=$(echo "$REG2" | json_get "(d.get('data') or {}).get('user',{}).get('id','')")
+if [[ -z "$FLOW_ID" ]]; then
+  fail "임시 계정 생성" "$REG2"
+else
+  login_code() {
+    curl -s -o /tmp/flow_login.json -w "%{http_code}" -X POST "$BASE/api/users/login" -H "Content-Type: application/json" \
+      --data-raw "{\"email\":\"$FLOW_EMAIL\",\"password\":\"$FLOW_PASS\"}"
+  }
+  R=$(curl -s -X PATCH "$BASE/api/admin/users/$FLOW_ID/status" -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" --data-raw '{"status":"dormant"}')
+  [[ "$(echo "$R" | json_get "(d.get('data') or {}).get('status','')")" == "dormant" ]] \
+    && ok "PATCH status=dormant" || fail "PATCH status=dormant" "$R"
+
+  CODE=$(login_code); ECODE=$(json_get "d.get('code','')" < /tmp/flow_login.json)
+  [[ "$CODE" == "403" && "$ECODE" == "ACCOUNT_DORMANT" ]] \
+    && ok "휴면 계정 로그인 403 ACCOUNT_DORMANT" || fail "휴면 로그인 차단" "HTTP $CODE code=$ECODE"
+
+  LIST=$(curl -s "$BASE/api/admin/users?status=dormant&q=$FLOW_EMAIL" -H "Authorization: Bearer $TOKEN")
+  [[ "$(echo "$LIST" | json_get "len([u for u in (d.get('data') or []) if u['id']=='$FLOW_ID' and u.get('status')=='dormant'])")" == "1" ]] \
+    && ok "GET users?status=dormant 에 포함" || fail "status 필터" "$LIST"
+
+  R=$(curl -s -X PATCH "$BASE/api/admin/users/$FLOW_ID/status" -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" --data-raw '{"status":"active"}')
+  [[ "$(echo "$R" | json_get "(d.get('data') or {}).get('status','')")" == "active" ]] \
+    && ok "PATCH status=active" || fail "PATCH status=active" "$R"
+
+  CODE=$(login_code)
+  [[ "$CODE" == "200" ]] && ok "해제 후 로그인 200" || fail "해제 후 로그인" "HTTP $CODE"
+
+  CODE=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "$BASE/api/admin/users/$FLOW_ID" \
+    -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-raw '{"confirm_email":"wrong@test.dev"}')
+  [[ "$CODE" == "400" ]] && ok "DELETE 이메일 불일치 400" || fail "DELETE 이메일 불일치" "HTTP $CODE"
+
+  R=$(curl -s -X DELETE "$BASE/api/admin/users/$FLOW_ID" -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" --data-raw "{\"confirm_email\":\"$FLOW_EMAIL\"}")
+  [[ "$(echo "$R" | json_get "(d.get('data') or {}).get('deleted','')")" == "True" ]] \
+    && ok "DELETE confirm_email 일치 → 삭제" || fail "DELETE" "$R"
+
+  CODE=$(login_code)
+  [[ "$CODE" == "401" ]] && ok "삭제 후 로그인 실패(401)" || fail "삭제 후 로그인" "HTTP $CODE"
+  rm -f /tmp/flow_login.json
+fi
+
 # ── 요약
 echo ""
 echo "=============================="

@@ -1,6 +1,7 @@
 import { createMiddleware } from 'hono/factory';
 import { Jwt } from 'hono/utils/jwt';
 import type { Bindings } from './types';
+import { dormantKey, dormantBody } from './lib/accountHelpers';
 
 /** JWT payload */
 export interface JwtPayload {
@@ -132,10 +133,17 @@ export const authMiddleware = createMiddleware<{ Bindings: Bindings; Variables: 
         return c.json({ error: '잘못된 토큰 형식입니다.' }, 401);
       }
       c.set('userId', raw.sub);
-      await next();
     } catch {
       return c.json({ error: '유효하지 않은 토큰입니다.' }, 401);
     }
+
+    // 휴면 즉시 차단 — 이미 발급된 JWT(최대 2h)도 막기 위해 KV 1회 조회.
+    // KV 장애 시에는 인증을 막지 않고 통과(가용성 우선; 로그인/refresh는 DB로 별도 차단).
+    const dormant = await c.env.KV.get(dormantKey(c.get('userId'))).catch(() => null);
+    if (dormant) {
+      return c.json(dormantBody(), 403);
+    }
+    await next();
   },
 );
 

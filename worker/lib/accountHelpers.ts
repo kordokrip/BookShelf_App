@@ -23,3 +23,43 @@ export function getAccountDeletionBlock(
   }
   return null;
 }
+
+// ─── 휴면 처리 / 계정 정리 공용 ─────────────────────────────────
+
+export const DORMANT_MESSAGE = '휴면 처리된 계정입니다. 관리자에게 문의해 주세요.';
+export const DORMANT_CODE = 'ACCOUNT_DORMANT';
+
+/** 휴면 즉시 차단용 KV 키 (authMiddleware가 JWT 검증 직후 1회 조회) */
+export const dormantKey = (userId: string) => `user_dormant:${userId}`;
+
+/** 휴면 차단 응답 본문 — 로그인/refresh/미들웨어가 동일하게 사용 */
+export const dormantBody = () => ({ error: DORMANT_MESSAGE, code: DORMANT_CODE });
+
+/** 계정 영구 삭제 — 본인 탈퇴(DELETE /api/users/me)와 관리자 삭제가 공유 */
+export async function purgeUserAccount(
+  env: { DB: D1Database; R2: R2Bucket; KV: KVNamespace },
+  userId: string,
+): Promise<void> {
+  // group_messages.deleted_by는 ON DELETE 규칙이 없어 먼저 끊어야 FK 위반이 나지 않는다
+  await env.DB.batch([
+    env.DB.prepare('UPDATE group_messages SET deleted_by = NULL WHERE deleted_by = ?').bind(userId),
+    env.DB.prepare('DELETE FROM users WHERE id = ?').bind(userId),
+  ]);
+
+  // 이하는 DB 밖 정리 — 실패해도 계정 삭제 자체는 이미 완료
+  try {
+    await env.KV.delete(dormantKey(userId));
+  } catch (err) {
+    console.error('계정 삭제 후 휴면 KV 정리 실패:', userId, err);
+  }
+  try {
+    let cursor: string | undefined;
+    do {
+      const listed = await env.R2.list({ prefix: `covers/${userId}/`, cursor });
+      if (listed.objects.length > 0) await env.R2.delete(listed.objects.map((o) => o.key));
+      cursor = listed.truncated ? listed.cursor : undefined;
+    } while (cursor);
+  } catch (err) {
+    console.error('계정 삭제 후 R2 표지 정리 실패:', userId, err);
+  }
+}

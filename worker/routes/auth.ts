@@ -20,6 +20,7 @@ import type { Bindings, DbUser } from '../types';
 import { createToken, createRefreshToken, verifyRefreshToken } from '../auth';
 import { rateLimit } from '../middleware/rateLimit';
 import { logActivity } from './admin';
+import { dormantBody } from '../lib/accountHelpers';
 
 const authRouter = new Hono<{ Bindings: Bindings }>();
 
@@ -146,6 +147,11 @@ authRouter.get('/google/callback', async (c) => {
       return c.redirect(`${frontendUrl}/login?error=google_db`);
     }
 
+    // 휴면 계정은 토큰 발급 전에 차단 — 프론트가 code로 안내 화면을 띄운다
+    if (user.status === 'dormant') {
+      return c.redirect(`${frontendUrl}/login?error=account_dormant`);
+    }
+
     // ★ STEP 5: 관리자 이메일 자동 승격 (kordokrip@gmail.com)
     const ADMIN_EMAILS = ['kordokrip@gmail.com'];
     if (ADMIN_EMAILS.includes(user.email) && user.role !== 'admin') {
@@ -216,11 +222,14 @@ authRouter.post(
     await c.env.KV.put(`refresh:${refreshToken}`, userId, { expirationTtl: 60 * 60 * 24 * 30 });
 
     const user = await c.env.DB.prepare(
-      'SELECT id, email FROM users WHERE id = ?',
-    ).bind(userId).first<{ id: string; email: string }>();
+      'SELECT id, email, status FROM users WHERE id = ?',
+    ).bind(userId).first<{ id: string; email: string; status: string }>();
 
     if (!user) {
       return c.json({ error: '사용자를 찾을 수 없습니다.' }, 401);
+    }
+    if (user.status === 'dormant') {
+      return c.json(dormantBody(), 403);
     }
 
     const newAccessToken = await createToken(

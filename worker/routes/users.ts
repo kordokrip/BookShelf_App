@@ -22,7 +22,7 @@ import type { Bindings, DbUser } from '../types';
 import { hashPassword, verifyPassword, createToken, createRefreshToken, authMiddleware } from '../auth';
 import { rateLimit } from '../middleware/rateLimit';
 import { logActivity } from './admin';
-import { getAccountDeletionBlock } from '../lib/accountHelpers';
+import { getAccountDeletionBlock, purgeUserAccount, dormantBody } from '../lib/accountHelpers';
 
 export const usersRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -118,6 +118,11 @@ usersRouter.post(
       return c.json({ error: '이메일 또는 비밀번호가 올바르지 않습니다.' }, 401);
     }
 
+    // 휴면 계정 차단 — 비밀번호 확인 뒤에 알려 계정 존재 여부가 새지 않게 한다
+    if (user.status === 'dormant') {
+      return c.json(dormantBody(), 403);
+    }
+
     // 레거시 SHA-256 해시 → PBKDF2 투명 마이그레이션
     if (!user.password_hash.startsWith('pbkdf2:')) {
       const newHash = await hashPassword(password);
@@ -184,23 +189,7 @@ usersRouter.delete(
     const valid = await verifyPassword(password, user.password_hash!);
     if (!valid) return c.json({ error: '비밀번호가 올바르지 않습니다.' }, 401);
 
-    // group_messages.deleted_by는 ON DELETE 규칙이 없어 먼저 끊어야 FK 위반이 나지 않는다
-    await c.env.DB.batch([
-      c.env.DB.prepare('UPDATE group_messages SET deleted_by = NULL WHERE deleted_by = ?').bind(userId),
-      c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(userId),
-    ]);
-
-    // R2 표지는 DB 밖이라 별도 정리 — 실패해도 계정 삭제 자체는 이미 완료
-    try {
-      let cursor: string | undefined;
-      do {
-        const listed = await c.env.R2.list({ prefix: `covers/${userId}/`, cursor });
-        if (listed.objects.length > 0) await c.env.R2.delete(listed.objects.map((o) => o.key));
-        cursor = listed.truncated ? listed.cursor : undefined;
-      } while (cursor);
-    } catch (err) {
-      console.error('계정 삭제 후 R2 표지 정리 실패:', userId, err);
-    }
+    await purgeUserAccount(c.env, userId);
 
     return c.json({ data: { deleted: true } });
   },

@@ -43,6 +43,8 @@ export interface DbUser {
   reminder_enabled: number;      // 0 | 1
   weekly_report_enabled: number; // 0 | 1
   theme_accent: string | null;   // 'indigo'|'ocean'|'forest'|'sunset'|'rose'|'graphite' (0017)
+  status?: string;               // 'active' | 'dormant' (0018)
+  dormant_at?: string | null;
   theme_mode: string | null;     // 'auto'|'light'|'dark' (0017)
   created_at: string;
   updated_at: string;

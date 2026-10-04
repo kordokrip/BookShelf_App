@@ -1044,13 +1044,15 @@ totals:       { totalPages: number; totalMinutes: number }
 |---|---|---|---|---|
 | POST | `/api/admin/seed-admins` | — | `{results: {email, updated}[]}` | 최초 1회 관리자 시드, rate limit 5회/60s |
 | GET | `/api/admin/stats` | — | `{data: {users, books, engagement, charts, topUsers}}` | 대시보드 요약 통계 |
-| GET | `/api/admin/users` | `?q=&role=&sort=&order=&page=&size=` | `{data: AdminUser[], meta}` | 회원 목록 검색/정렬/페이지네이션 |
+| GET | `/api/admin/users` | `?q=&role=&status=&sort=&order=&page=&size=` | `{data: AdminUser[], meta}` | 회원 목록 검색/정렬/페이지네이션. 각 항목에 `status`('active'\|'dormant'), `dormant_at` 포함, `status` 필터 지원 |
 | GET | `/api/admin/users/:id` | — | `{data: AdminUserDetail}` | 회원 상세(독서 통계, 최근 도서/활동 포함) |
 | PATCH | `/api/admin/users/:id/role` | `{role: 'admin'\|'user'}` | `{success: true}` | 회원 역할 변경 |
 | GET | `/api/admin/activity` | `?action=&userId=&limit=&offset=` | `{data: ActivityLog[]}` | 전체 활동 로그 |
 | GET | `/api/admin/messages` | `?limit=&offset=` | `{data: AdminMessage[], total}` | 발송한 관리자 메시지 목록 |
 | POST | `/api/admin/messages` | `{type: 'broadcast'\|'individual', title, body, targetUserId?}` | `{data}` | 공지/개별 메시지 발송, rate limit 30회/60s |
 | DELETE | `/api/admin/messages/:id` | — | `{data: {deleted: true}}` | 발송 내역 삭제 |
+| PATCH | `/api/admin/users/:id/status` | `{status: 'active'\|'dormant'}` | `{data: {id, status, dormant_at}}` | 휴면 처리/해제 (`worker/routes/adminMembers.ts`). 400 잘못된 값, 403 본인·관리자 대상, 404. 휴면 시 KV `user_dormant:{id}`='1'(TTL 없음), 해제 시 삭제. 활동 로그 `admin:user_dormant`/`admin:user_reactivate` |
+| DELETE | `/api/admin/users/:id` | `{confirm_email}` | `{data: {deleted: true}}` | 회원 영구 삭제. confirm_email 대소문자 무시 일치 필수(400), 본인·관리자 403, 404. `purgeUserAccount`(DB cascade + R2 `covers/{id}/` + KV 휴면 키) 공유. 활동 로그 `admin:user_delete` |
 
 ---
 
@@ -1724,3 +1726,14 @@ Global QueryClient 설정:
 | 2026-03-31 | 15차 반영 (자동 테마(themeMode auto/light/dark·06:00~18:00=light·setInterval 60_000) · 알림 시스템(NotificationItem 6타입·localStorage max20·NotificationPanel 드롭다운) · TopBar 3-column grid(grid-cols-[auto_1fr_auto]·Bell 배지) · AI one-click UX(description optional·타이핑효과 18ms/char·스켈레톤·에러재시도)) — GitHub `29ec33e` / Cloudflare `d4b79c4b-24f2-49f6-8631-203449189e13` |
 | 2026-04-01 | 16차 반영 (교차검증: E2E 27/27 PASS · 프론트엔드 버그 6건 수정 · SideNav 접기/펼치기+Tooltip+Admin 체계 · TopBar BookPlus/FileSearch 아이콘 · EntryGate /entry 라우트 · Root 동적 마진 · D1 0004_user_role.sql · PATCH /api/users/profile role · authStore role) — Git `0f3cf28` / Cloudflare `719eeb80` |
 | 2026-04-01 | 17차 반영 (코드 정리: 40개 미사용 UI 컴포넌트 삭제(47→21개 잔존) · 39개 npm 의존성 제거 · 문서 정리·중복 파일 삭제) — Cloudflare `17eba81b-7637-4721-9a8b-0d6385efa55f` |
+
+### 휴면 계정 차단 (ACCOUNT_DORMANT)
+
+휴면(`users.status='dormant'`, 0018) 계정은 `403 {error: '휴면 처리된 계정입니다. 관리자에게 문의해 주세요.', code: 'ACCOUNT_DORMANT'}`로 차단된다.
+
+| 지점 | 방식 |
+|---|---|
+| `POST /api/users/login` | 비밀번호 검증 통과 후 `users.status` 확인 (틀린 비밀번호는 기존대로 401) |
+| `GET /api/auth/google/callback` | 토큰 발급 전 확인 → `/login?error=account_dormant` 리다이렉트 |
+| `POST /api/auth/refresh` | `users.status` 확인 → 403 |
+| `authMiddleware` (`worker/auth.ts`) | JWT 검증 후 KV `user_dormant:{userId}` 1회 조회 → 403 (KV 오류 시 통과) |

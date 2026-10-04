@@ -47,7 +47,7 @@ export const adminRouter = new Hono<{
 }>();
 
 /** 관리자 권한 검증 미들웨어 */
-const adminMiddleware = createMiddleware<{
+export const adminMiddleware = createMiddleware<{
   Bindings: Bindings;
   Variables: { userId: string };
 }>(async (c, next) => {
@@ -235,12 +235,19 @@ adminRouter.get(
       params.push(role);
     }
 
+    const status = c.req.query('status') ?? '';     // '' | 'active' | 'dormant'
+    if (status === 'active' || status === 'dormant') {
+      whereClauses.push('u.status = ?');
+      params.push(status);
+    }
+
     const where = whereClauses.join(' AND ');
 
     const rows = await db
       .prepare(`
         SELECT
           u.id, u.name, u.email, u.avatar_url, u.role, u.auth_provider,
+          u.status, u.dormant_at,
           u.created_at, u.updated_at,
           COUNT(DISTINCT b.id)  AS book_count,
           COUNT(DISTINCT n.id)  AS note_count,

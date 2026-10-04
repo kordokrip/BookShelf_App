@@ -32,11 +32,14 @@ CREATE TABLE IF NOT EXISTS users (
   weekly_report_enabled INTEGER NOT NULL DEFAULT 1,         -- 0014
   theme_accent    TEXT,                                     -- 0017: indigo|ocean|forest|sunset|rose|graphite
   theme_mode      TEXT,                                     -- 0017: auto|light|dark
+  status          TEXT NOT NULL DEFAULT 'active',           -- 0018: active|dormant
+  dormant_at      TEXT,                                     -- 0018: 휴면 전환 시각
   created_at      TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_users_email     ON users (email);
+CREATE INDEX IF NOT EXISTS idx_users_status    ON users (status);
 CREATE INDEX IF NOT EXISTS idx_users_kakao_id  ON users (kakao_id)  WHERE kakao_id  IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_users_google_id ON users (google_id) WHERE google_id IS NOT NULL;
 
@@ -217,6 +220,7 @@ CREATE TABLE IF NOT EXISTS group_members (
   role         TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('leader', 'member')),
   status       TEXT NOT NULL DEFAULT 'approved',
   last_read_at TEXT,
+  last_read_message_id TEXT,  -- 0013 읽음 표시
   joined_at    TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE(group_id, user_id)
 );

@@ -48,7 +48,7 @@ FAILED_TESTS=()
 if [[ "$READONLY" == true ]]; then
   TOTAL=3
 else
-  TOTAL=73
+  TOTAL=75
 fi
 
 # ── 시작 시각 ────────────────────────────────────────────────────
@@ -1466,6 +1466,41 @@ if [[ "$DUP_PAGE" == "10" ]]; then
   pass_test $T "$NAME" $ELAPSED
 else
   fail_test $T "$NAME" $ELAPSED "$BODY" "current_page ${DUP_PAGE:-?} (기대: 10 — 두 번째 기록이 중복으로 버려졌는지 확인)"
+fi
+
+# ================================================================
+# GROUP 16d — 관리자 회원 관리 권한 가드 (비관리자 → 403)
+# ================================================================
+printf "\n%s── Group 16d: 관리자 회원 관리 권한 가드 (2개)%s\n" "$CYAN" "$NC"
+
+T=74; NAME="PATCH /api/admin/users/:id/status (비관리자 → 403)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" -X PATCH \
+  "${BASE_URL}/api/admin/users/${USER_ID}/status" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"status":"dormant"}')
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+if [[ "$HTTP_CODE" == "403" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE} (기대: 403)"
+fi
+
+T=75; NAME="DELETE /api/admin/users/:id (비관리자 → 403)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" -X DELETE \
+  "${BASE_URL}/api/admin/users/${USER_ID}" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d "{\"confirm_email\":\"${TEST_EMAIL}\"}")
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+if [[ "$HTTP_CODE" == "403" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE} (기대: 403 — 비관리자가 계정을 삭제할 수 있으면 안 됨)"
 fi
 
 # ================================================================
