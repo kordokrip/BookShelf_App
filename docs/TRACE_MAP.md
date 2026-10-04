@@ -669,27 +669,17 @@ UI(ISBNScanner) → searchApi.searchByIsbn(isbn)
   → GET /api/search/books/isbn?isbn=...
     → 카카오(target=isbn) → 네이버(book_adv) 폴백
 
-[AI 추천]
+[AI 추천 — 위시리스트 "추천 도서" 탭]
 UI(마운트) → useAIRecommendations()
-  → GET /api/ai/recommend?limit=5  ★ (11차, 기존 limit=3)
-    → D1: SELECT genre, title, author FROM books WHERE status IN ('done', 'reading')  ★ (11차)
-    → D1: SELECT title FROM books WHERE status = 'wish' → wishTitles (제외 목록)  ★ (11차)
-    → forceRefresh=true 시 → KV.delete(cacheKey)  ★ (11차)
-    → KV: 캐시 확인(1시간 TTL, 키: ai_recommend:{userId}:{topGenres})
-    → Workers AI(llama-3.1-8b-instruct-fast): 독서 패턴 → JSON 추천 목록
-      systemPrompt: reason에 읽은 특정 책 언급, wishTitles 제외, max_tokens 800  ★ (11차)
+  → GET /api/ai/recommend  (authMiddleware, ?refresh=true로 강제 재생성)
+    → D1: SELECT title, author, genre, rating, status, isbn FROM books WHERE user_id = ?  (서재 전체: done·reading·wish)
+    → 제외 집합: 제목·저자·ISBN(10/13자리 정규화) — 모든 상태. 서재에 있는 책은 응답에 절대 포함되지 않음
+    → KV: ai_recommend:v2:{userId}:{서재 지문} (24h, 큐레이션 결과는 1h) / :latest (stale-while-revalidate)
+    → OpenRouter(json, 22초): 서재 ≤200권 + 상위 장르 → 후보 12권 → 제외 → 카카오/네이버 실존·표지 검증 → 검증된 제목·ISBN 재확인 → ≤10권
+    → 6권 미만이면 큐레이션(같은 제외·검증)으로 보충. 응답 {data[], cached, stale?, source, provider}
 
-[visibleRecs 자동 필터링] ★ (11차)
-wishTitleSet = new Set(books.map(b => b.title.toLowerCase()))
-visibleRecs = aiData.recommendations.filter(r => !wishTitleSet.has(r.title.toLowerCase()))
-→ 위시리스트에 이미 추가된 책은 추천 카드에서 자동 제거
-→ 추가 완료 후 remaining.length === 0 → refreshRecs.mutate() 자동 호출
-
-[AI 새로고침] ★ (11차)
-UI("새로운 추천" 버튼 클릭) → refreshRecs.mutate() → useRefreshAIRecommendations()
-  → GET /api/ai/recommend?limit=5&refresh=true
-    → KV 캐시 삭제 → Workers AI 재요청 → setQueryData(recommendations) → UI 갱신
-  → 로딩 중: RefreshCw 아이콘 animate-spin
+[AI 새로고침]
+UI("새로운 추천" 버튼) → GET /api/ai/recommend?refresh=true → 캐시 무시·재생성(ai_rec 한도 소모) → setQueryData
 
 [위시 추가 — 제한 및 중복 방지] ★ (11차)
 UI(검색/AI 결과에서 추가) → useAddBook.mutate({ ..., status: 'wish' })
@@ -929,7 +919,7 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 | Method | 경로 | 인증 | 요청 | 응답 | 캐시 |
 |---|---|---|---|---|---|
 | POST | `/api/ai/summarize` | **authMiddleware** (한도는 사용자별 `ai_sum`, 5회/분) | `{title, author, isbn?, description?, refresh?}` — `refresh: true`면 KV 캐시 읽기를 건너뛰고 재생성(결과는 다시 캐시에 기록, 사용자별 `ai_sum` 한도는 그대로 적용; 프론트 "다시 생성") · 20자 이상 description이 없으면 서버가 카카오→네이버에서 책 소개 조회(ISBN 우선, 제목 유사도 검증) | 근거 있음: `{summary, cached, provider: 'openrouter'\|'workers-ai', grounded: true, source: 'kakao'\|'naver'\|'client'}` · 근거 없음(모델 미호출): `{summary: null, reason: 'no_source', cached: false, provider: null}` · 실패 500 | KV `ai_summary:v4:{SHA-256(isbn·제목·저자·소개 전체)}` 7일 — Workers AI 폴백 결과는 1시간(성공 결과만, 요약 800자 상한). `lib/aiSummary.ts` |
-| GET | `/api/ai/recommend` | optionalAuth (OpenRouter 모델 우선 → Workers AI 폴백, `source`에 `openrouter` 추가) | `?limit=5` (`&refresh=true` 지원 ★) | `{recommendations, topGenres, cached}` | KV 1시간 TTL |
+| GET | `/api/ai/recommend` | **authMiddleware** (한도 `ai_rec` 사용자별 3회/10분 — 미들웨어가 아니라 핸들러 안에서 **실제 생성할 때만** 소모. 캐시/stale 적중은 소모 없음, 초과 시 429 `{error}`. `ai_sum`과 공유 금지) | `?refresh=true` | `{data: [{title, author, reason(≤60자), thumbnail, publisher, isbn, url, verified}], cached, stale?: true, source: 'openrouter'\|'curated-fallback', provider: 'openrouter'\|null}` — 서재 전체(완독·읽는 중·위시, 프롬프트 ≤200권)로 후보 12권 → 서재 제외(제목·저자·ISBN) → 카카오/네이버 실존 검증 → 검증된 제목·ISBN 재확인 → ≤10권(6권 미만이면 큐레이션 보충). 서재가 비면 모델 호출 없이 큐레이션 | **stale-while-revalidate**(`lib/aiSwr.ts`): 지문 캐시 미스 + `latest` 있음 → 즉시 `latest`(그새 서재에 담긴 책은 제외) `stale: true, cached: true` 반환 + `waitUntil` 재생성(락 `ai_recommend_lock:{userId}` 120초). KV `ai_recommend:v2:{userId}:{hash(서재 전체)}` 24시간(OpenRouter 결과만, 큐레이션 1시간), `:latest` 30일. 백그라운드에서 OpenRouter 실패 시 지난 추천을 덮어쓰지 않음. `lib/bookRecommend.ts` |
 | GET | `/api/ai/lifebooks` | **authMiddleware** (한도 `ai_life` 사용자별 3회/10분 — 미들웨어가 아니라 핸들러 안에서 **실제 생성할 때만** 소모: refresh=true·최초 동기 생성·백그라운드 재생성 시작. 캐시/stale 적중은 소모 없음, 초과 시 429 `{error}`) | `?refresh=true` | `{stale?: true, data: [{title, author, reason, thumbnail, publisher, isbn, url, verified}], cached, source: 'openrouter'\|'workers-ai'\|'curated-fallback', provider: 'openrouter'\|'workers-ai'\|null}` — 완독 전체(≤200권)로 후보 10권 → 서재 중복 제거 + 카카오/네이버 실존 검증 → 5권(3권 미만이면 큐레이션 보충, 400: 완독 2권 미만) | **stale-while-revalidate**: 현재 지문 캐시 미스이고 `latest`가 있으면 즉시 `latest`를 `stale: true, cached: true`로 반환하고 `c.executionCtx.waitUntil`로 재생성(KV 락 `ai_lifebooks_lock:{userId}` 120초로 중복 방지). `latest`가 없거나 `?refresh=true`면 동기 생성. KV `ai_lifebooks:v5:{userId}:{hash(완독 전체)}` 24시간(OpenRouter 결과만 — 폴백·큐레이션은 1시간). 생성은 OpenRouter 모델만(처리량 우선 공급자, 후보 6권·22초 제한, Workers AI 폴백 없음 — 실패 시 바로 큐레이션)으로 Workers 백그라운드(약 30초) 안에 끝나게 하고, 백그라운드에서 OpenRouter 모델이 실패하면 지난 추천을 덮어쓰지 않는다. 최신 결과는 `ai_lifebooks:v5:{userId}:latest`(지문 포함, 30일)에도 저장. `lib/lifeBooks.ts`, `lib/lifeBooksSwr.ts` |
 | POST | `/api/books/genre-suggestions` | **authMiddleware** → rateLimit(`ai_genre`, 사용자별 3회/10분) | `{book_ids?: string[]}` (최대 40, 문자열 배열이 아니면 400). 없으면 본인 책 중 장르 '기타'/NULL/빈 값 최신순 최대 40권, 있으면 본인 소유 id만 | `{data: [{id, title, author, current_genre, suggested_genre, confidence: 'high'\|'low'}], provider: 'openrouter'\|'workers-ai'\|null}` — 카카오/네이버 책 소개(≤200자)를 근거로 배치 모델 1회(JSON). 입력에 없는 id·목록 밖 장르·'기타'는 제외. 대상이 없으면 모델 호출 없이 `{data: [], provider: null}`. **DB 쓰기 없음**(적용은 클라이언트가 `PUT /api/books/:id {genre}`). 표준 장르 목록 `lib/genres.ts`(프론트 `GenreKey`와 vitest로 동기화), `lib/genreSuggestions.ts` |
 | POST | `/api/ai/ocr` | optionalAuth | FormData(`image` 파일, 최대 5MB) | `{text, confidence}` ★ (FEAT-102) | 없음 |

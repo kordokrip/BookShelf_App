@@ -74,7 +74,7 @@ adminRouter.post(
   adminMiddleware,
   async (c) => {
     const db = c.env.DB;
-    const ADMIN_EMAILS = ['admin@gmail.com', 'kordokrip@gmail.com'];
+    const ADMIN_EMAILS = ['kordokrip@gmail.com'];
 
     const results: { email: string; updated: boolean }[] = [];
     for (const email of ADMIN_EMAILS) {
@@ -129,7 +129,7 @@ adminRouter.get(
       .prepare(`
         SELECT strftime('%Y-%m', created_at) AS month, COUNT(*) AS cnt
         FROM users
-        WHERE created_at >= datetime('now', '-6 months')
+        WHERE datetime(created_at) >= datetime('now', '-6 months')
         GROUP BY month
         ORDER BY month ASC
       `)

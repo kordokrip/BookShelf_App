@@ -48,7 +48,7 @@ FAILED_TESTS=()
 if [[ "$READONLY" == true ]]; then
   TOTAL=3
 else
-  TOTAL=72
+  TOTAL=73
 fi
 
 # ── 시작 시각 ────────────────────────────────────────────────────
@@ -729,47 +729,36 @@ else
     "summary 없음 — AI 응답 실패 또는 타임아웃 (error: '${AI_ERR:-알 수 없음}')"
 fi
 
-T=23; NAME="GET /api/ai/recommend (완독 기반 추천)"; START=$(now_ms)
-printf "         ${YELLOW}⏳ AI 추론 중... (최대 30초 대기)${NC}\n"
+T=23; NAME="GET /api/ai/recommend (서재 전체 기반 추천 도서)"; START=$(now_ms)
+printf "         ${YELLOW}⏳ AI 추론 중... (최대 40초 대기)${NC}\n"
 TMPF=$(mktemp /tmp/e2e_XXXXXX)
-curl -s --max-time 30 -o "$TMPF" "${BASE_URL}/api/ai/recommend" \
-  -H "Authorization: Bearer ${TOKEN}"
+HTTP_CODE=$(curl -s --max-time 40 -o "$TMPF" -w "%{http_code}" "${BASE_URL}/api/ai/recommend" \
+  -H "Authorization: Bearer ${TOKEN}")
 BODY=$(cat "$TMPF"); rm -f "$TMPF"
 ELAPSED=$(( $(now_ms) - START ))
-HAS_RECS=$(echo "$BODY" | python3 -c "
-import sys, json
-try:
-    d = json.load(sys.stdin)
-    print('ok' if 'recommendations' in d or 'message' in d else 'fail')
-except Exception:
-    print('fail')
-" 2>/dev/null || echo "fail")
 REC_SOURCE=$(json_val "$BODY" "d.get('source', '')")
-RECS_COUNT=$(json_val "$BODY" "len(d.get('recommendations', []))")
-# 폴백이든 실제 AI 응답이든, recommendations가 있다면 최소한 유효한 추천 데이터
-# 구조(title/author 필수 필드)는 갖추고 있는지 검증한다.
+RECS_COUNT=$(json_val "$BODY" "len(d.get('data', []))")
+# 계약: {data:[{title,author,reason,thumbnail,publisher,isbn,url,verified}], cached:bool, source, provider}
+# 서재가 비어 있어도(큐레이션) 200 + data가 있어야 한다. 서재에 있는 책은 절대 포함되면 안 된다.
 RECS_VALID=$(echo "$BODY" | python3 -c "
 import sys, json
 try:
     d = json.load(sys.stdin)
-    recs = d.get('recommendations', [])
-    ok = all(isinstance(r, dict) and r.get('title') and r.get('author') for r in recs)
+    keys = ('title','author','reason','thumbnail','publisher','isbn','url','verified')
+    recs = d.get('data')
+    ok = (isinstance(recs, list) and len(recs) > 0 and isinstance(d.get('cached'), bool)
+          and d.get('source') in ('openrouter','curated-fallback') and d.get('provider') in ('openrouter', None)
+          and all(isinstance(r, dict) and r.get('title') and r.get('author') and all(k in r for k in keys) for r in recs))
     print('ok' if ok else 'fail')
 except Exception:
     print('fail')
 " 2>/dev/null || echo "fail")
-if [[ "$HAS_RECS" == "ok" && "$RECS_VALID" == "ok" ]]; then
-  if [[ "$REC_SOURCE" == "curated-fallback" ]]; then
-    pass_test $T "${NAME} (fallback)" $ELAPSED
-    printf "         ${YELLOW}↳ source: curated-fallback — Workers AI 미사용, 큐레이션 폴백으로 대체됨${NC}\n"
-  else
-    pass_test $T "$NAME" $ELAPSED
-    printf "         ${CYAN}↳ source: %s${NC}\n" "${REC_SOURCE:-none}"
-  fi
-  printf "         ${CYAN}↳ recommendations: %s건${NC}\n" "${RECS_COUNT:-0}"
+if [[ "$HTTP_CODE" == "200" && "$RECS_VALID" == "ok" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+  printf "         ${CYAN}↳ source: %s, 추천: %s건${NC}\n" "${REC_SOURCE:-none}" "${RECS_COUNT:-0}"
 else
   fail_test $T "$NAME" $ELAPSED "$BODY" \
-    "recommendations/message 구조 오류 또는 항목 title/author 필드 누락 (source='${REC_SOURCE}', has_recs=${HAS_RECS}, recs_valid=${RECS_VALID})"
+    "http=${HTTP_CODE}, 계약 위반 {data[], cached, source, provider} (source='${REC_SOURCE}', valid=${RECS_VALID})"
 fi
 
 # ================================================================
@@ -1453,6 +1442,30 @@ if [[ "$HTTP_CODE" == "401" ]]; then
   pass_test $T "$NAME" $ELAPSED
 else
   fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE} (기대: 401)"
+fi
+
+T=73; NAME="POST /api/sessions 같은 날 같은 쪽수 두 번(11초 간격) → 둘 다 반영"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+curl -s -o "$TMPF" -X POST "${BASE_URL}/api/books" \
+  -H "Authorization: Bearer ${TOKEN}" -H "Content-Type: application/json" \
+  -d '{"title":"E2E 세션 중복 검사","author":"테스트","status":"reading","total_pages":300,"current_page":0}'
+DUP_BOOK_ID=$(json_val "$(cat "$TMPF")" "d['data']['id']"); rm -f "$TMPF"
+for DUP_I in 1 2; do
+  curl -s -o /dev/null -X POST "${BASE_URL}/api/sessions" \
+    -H "Authorization: Bearer ${TOKEN}" -H "Content-Type: application/json" \
+    -d "{\"book_id\":\"${DUP_BOOK_ID}\",\"pages_read\":5}"
+  [[ $DUP_I == 1 ]] && sleep 11
+done
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+curl -s -o "$TMPF" "${BASE_URL}/api/books/${DUP_BOOK_ID}" -H "Authorization: Bearer ${TOKEN}"
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+DUP_PAGE=$(json_val "$BODY" "d['data']['current_page']")
+curl -s -o /dev/null -X DELETE "${BASE_URL}/api/books/${DUP_BOOK_ID}" -H "Authorization: Bearer ${TOKEN}"
+ELAPSED=$(( $(now_ms) - START ))
+if [[ "$DUP_PAGE" == "10" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "current_page ${DUP_PAGE:-?} (기대: 10 — 두 번째 기록이 중복으로 버려졌는지 확인)"
 fi
 
 # ================================================================

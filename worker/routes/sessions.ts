@@ -80,10 +80,12 @@ sessionsRouter.post(
       });
 
     // 중복 방지: 동일 book_id + session_date + pages_read 세션이 10초 이내에 생성되었으면 기존 반환
+    // created_at은 ISO 문자열("…T…Z")이고 datetime()은 "YYYY-MM-DD HH:MM:SS"라 문자열로 바로 비교하면
+    // 'T'가 공백보다 커서 같은 날 기록이 모두 "10초 이내"로 잡혀 두 번째 같은 쪽수 기록이 버려졌다 → datetime()으로 맞춘다
     const dup = await c.env.DB.prepare(
       `SELECT * FROM reading_sessions
        WHERE book_id = ? AND user_id = ? AND session_date = ? AND pages_read = ?
-         AND created_at > datetime('now', '-10 seconds')
+         AND datetime(created_at) > datetime('now', '-10 seconds')
        LIMIT 1`,
     ).bind(body.book_id, userId, today, body.pages_read).first<DbReadingSession>();
 
