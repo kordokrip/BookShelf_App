@@ -5,7 +5,15 @@
 > **대상 기준**: `main` 브랜치 작업본 (2026-05-31)  
 > **목적**: 코드레벨 교차 검증을 통한 완전한 UI/UX 명세. 이 문서만으로 모든 버튼, 이미지, 데이터 바인딩, API 호출을 파악할 수 있도록 작성.
 
-### 최근 동기화 노트 (2026-10-03, 34차)
+### 최근 동기화 노트 (2026-10-04, 38차 — 화면 문구·중복 정리)
+
+- **화면 용어(사용자에게 보이는 글자만, 코드 식별자·경로·API 값은 그대로)**: 완독 / **읽는 중**(항상 띄어 씀) / **읽을 책**(위시·위시리스트·Wish·찜 대신, `/wishlist` 화면 이름도 "읽을 책"). 탭은 "내 목록"·"새로 나온 책"·"인기 책". 조사는 "읽을 책을/에/으로"
+- **기술 용어 노출 금지**: 모델·제공자 이름(OpenRouter, Gemini, Workers AI 등), "캐시", 내부 검증 과정 설명을 화면에 쓰지 않는다. AI 결과에는 "책 소개를 바탕으로 AI가 정리했어요"처럼 사용자가 이해할 근거 한 줄만. 명문장의 "AI가 고른 문장 · 원문과 다를 수 있어요"는 필요한 고지라 유지
+- **인생책은 별도 페이지**(`/lifebooks`, 사이드바·프로필 바로가기). '읽을 책' 화면에서는 탭이 아니라 링크 카드로만 안내 — 방문만으로 유료 AI를 부르지 않는다. '읽을 책' 기본 탭은 "내 목록"
+- **중복 제거**: 데스크톱 상단바 가운데 메뉴 제거(사이드바만), 상단바 가운데는 화면 제목만. 페이지 안 큰 제목은 화면 낭독용(sr-only) h1 + 요약 한 줄("올해 N권 · 전체 M권"). 테마 전환은 '앱 디자인' 한 곳(상단바·프로필 팝업 토글 제거)
+- **안내는 한 번에 하나**: `src/stores/noticeStore.ts` — 업데이트 안내 > 장르 다시 찾기 > 설치 안내 순으로 가장 높은 하나만 보인다. 장르 배너는 처음 한 번 전체, 이후 "장르 확인 필요 N권" 칩
+
+### 이전 동기화 노트 (2026-10-03, 34차)
 
 - **개인 앱 테마**: 디자인 시스템 화면(관리자 전용)을 없애고 모든 사용자의 `앱 디자인`(`/settings/appearance`, 9.14)으로 교체. 강조색 프리셋 6종 × 자동·라이트·다크, 서버 프로필에 저장해 기기 간 동기화 (5.4)
 - **강조색 토큰화**: 앱의 인디고·바이올렛은 이제 `--brand-*`·`--brand2-*` CSS 변수에서 나온다(`src/styles/accent.css`, 1.1·5.4)
@@ -53,7 +61,7 @@
   - [9.5 GoogleCallbackPage](#95-googlecallbackpage)
   - [9.6 LibraryPage (완독 서재)](#96-librarypage-완독-서재)
   - [9.7 ReadingPage (읽는 중)](#97-readingpage-읽는-중)
-  - [9.8 WishlistPage (위시리스트)](#98-wishlistpage-위시리스트)
+  - [9.8 WishlistPage (읽을 책)](#98-wishlistpage-읽을-책)
   - [9.9 BookDetailPage (책 상세)](#99-bookdetailpage-책-상세)
   - [9.10 RegisterFlowPage (책 등록)](#910-registerflowpage-책-등록)
   - [9.11 StatsPage (독서 통계)](#911-statspage-독서-통계)
@@ -285,8 +293,8 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 | 순서 | 아이콘 | 라벨 | 경로 | 동적 배지 |
 |------|--------|------|------|----------|
 | 1 | `BookMarked` 22px | 완독 | `/` | — |
-| 2 | `BookOpen` 22px | 읽는중 | `/reading` | `readingCount` (빨강 원형, 10px 폰트) |
-| 3 | `Star` 22px | Wish | `/wishlist` | `wishCount` (빨강 원형) |
+| 2 | `BookOpen` 22px | 읽는 중 | `/reading` | `readingCount` (빨강 원형, 10px 폰트) |
+| 3 | `Star` 22px | 읽을 책 | `/wishlist` | `wishCount` (빨강 원형) |
 | 4 | `BarChart2` 22px | 통계 | `/stats` | — |
 
 **활성 상태**:
@@ -320,7 +328,7 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 |------|--------|------|------|------|
 | 1 | `BookMarked` 20px | 완독 📚 | `/` | `doneBooks.length` |
 | 2 | `BookOpen` 20px | 읽는 중 📖 | `/reading` | `readingCount` |
-| 3 | `Star` 20px | 책 추천 📚 | `/wishlist` | `wishCount` |
+| 3 | `Star` 20px | 읽을 책 | `/wishlist` | `wishCount` |
 | 4 | `BarChart2` 20px | 독서 통계 📊 | `/stats` | — |
 | 5 | `PlusCircle` 20px | 책 등록 플로우 | `/register-flow` | — |
 | 6 | `FileText` 20px | 노트 & 검색 | `/notes-search` | — |
@@ -354,20 +362,22 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 - 이미지: `/icons/icon-192.png` 32px × 32px, `rounded-lg shadow-sm`
 - "BookShelf" 텍스트: `hidden sm:block`, Base Bold `#1E293B`
 
-**중앙 — 페이지 제목/데스크톱 네비**:
-
-- 모바일/태블릿(`lg` 미만): 동적 페이지 제목 표시
-- 데스크톱(`lg` 이상): `DESKTOP_NAV_LINKS` 기반 중앙 네비게이션 렌더링
+**중앙 — 화면 제목** (38차: 모든 크기에서 제목만. 데스크톱 가운데 메뉴는 사이드바와 겹쳐 제거)
 
 | 경로 | 표시 제목 |
 |------|----------|
-| `/` | 완독 📚 |
-| `/reading` | 읽는 중 📖 |
-| `/wishlist` | 당신을 위한 책 추천 📚 |
-| `/stats` | 독서 통계 📊 |
-| `/settings/appearance` | 앱 디자인 |
+| `/` | 완독 |
+| `/reading` | 읽는 중 |
+| `/wishlist` | 읽을 책 |
+| `/stats` | 독서 통계 |
+| `/yearly-review` | 연간 결산 |
 | `/notes-search` | 노트 & 검색 |
+| `/groups` · `/collections` · `/lifebooks` | 독서 모임 · 컬렉션 · 인생책 |
+| `/settings/appearance` | 앱 디자인 |
+| `/book/:id` · `/admin` | 책 상세 · 관리자 |
 | 기타 | BookShelf |
+
+제목은 `<p>`(페이지마다 h1은 하나 — 페이지 안의 sr-only h1)
 
 - 스타일: 17px(모바일) / 18px(sm+) SemiBold, truncate, `select-none`
 
@@ -375,7 +385,6 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 
 | 버튼 | 아이콘 | 크기 | 표시 조건 | 동작 |
 |------|--------|------|----------|------|
-| 테마 토글 | `Clock`/`Sun`/`Moon` 19px | 40px(xs)/44px(sm+) | `hidden sm:flex` | `cycleThemeMode()` |
 | 책 추가 | `BookPlus` 19px ★ (16차) | 40px(xs)/44px(sm+) | 항상 | `navigate('/register-flow')` |
 | 검색 | `FileSearch` 19px ★ (16차) | 40/44px | 항상 | `navigate('/notes-search')` |
 | 관리자 | `UserCog` 19px | 40/44px | `user.role==='admin'` | `navigate('/admin')` |
@@ -383,9 +392,9 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 | 아바타 | ProfileAvatar | 32px 원형 | 항상 | `ProfilePopup` 토글 |
 
 **알림 배지**: `unreadCount > 0` → 빨강 원형(`bg-[#EF4444]`), 9초과→"9+", `border-2 border-white`
-**데이터 바인딩**: `useAuthStore(user)`, `useUiStore(themeMode, cycleThemeMode)`, `useNotificationUnreadCount()`, `useMarkAllNotificationsRead()`
+**데이터 바인딩**: `useAuthStore(user)`, `useNotificationUnreadCount()`, `useMarkAllNotificationsRead()`
 
-**ProfilePopup** (`components/ui/ProfilePopup.tsx`, role=dialog): 프로필 이모지, 독서 목표, 리마인더·주간 리포트 스위치, 푸시 알림, **바로가기**(독서 모임·인생책·컬렉션·연간 결산 — 2026-10-03 추가. 모바일 하단 탭바에는 4개 탭만 있어 이 화면들이 주소 입력 외에는 닿지 않았다), 앱 디자인, 로그아웃
+**ProfilePopup** (`components/ui/ProfilePopup.tsx`, role=dialog): 프로필 이모지, 독서 목표, 리마인더·주간 리포트 스위치, 푸시 알림, **바로가기**(독서 모임·인생책·컬렉션·연간 결산 — 2026-10-03 추가. 모바일 하단 탭바에는 4개 탭만 있어 이 화면들이 주소 입력 외에는 닿지 않았다), 앱 디자인(테마 전환은 여기 한 곳 — 38차에 상단바·팝업의 테마 토글 제거), 로그아웃
 
 ---
 
@@ -888,11 +897,12 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 
 ---
 
-### 9.8 WishlistPage (위시리스트)
+### 9.8 WishlistPage (읽을 책)
 
 - **파일**: `src/app/pages/WishlistPage.tsx` (~800줄)
-- **경로**: `/wishlist`
+- **경로**: `/wishlist` (화면 이름 "읽을 책")
 - **보호**: ProtectedRoute
+- **탭(38차)**: 내 목록(기본) · 새로 나온 책 · 인기 책. 인생책은 탭이 아니라 상단 링크 카드("✦ 인생책 추천 받기 →", `/lifebooks`) — 이 화면 방문으로는 AI를 부르지 않는다
 
 #### State (10개)
 
@@ -922,10 +932,10 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 #### UI 구조
 
 **상단**:
-- "위시리스트" + 카운트 배지
+- "읽을 책" + 카운트 배지
 - 검색 토글 (`Search`), 정렬 드롭다운 (`ChevronDown`)
 
-**10권 한도 경고**: `books.length >= 10` → 앰버 경고 배너 ("위시리스트는 최대 10권까지...")
+**10권 한도 경고**: `books.length >= 10` → 앰버 경고 배너 ("읽을 책은 최대 10권까지...")
 
 **GenreFilterBar**: 장르 필터
 
@@ -1006,7 +1016,7 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 - **뒤로 버튼**: `ChevronLeft` → `navigate(-1)`
 - **공유 버튼**: `Share2` → `navigator.share()` or clipboard
 - **더보기 메뉴**: `MoreVertical` → DropdownMenu:
-  - 상태 변경: 읽는 중(`BookOpen`), 완독(`BookMarked`), Wish(`Heart`)
+  - 상태 변경: 읽는 중(`BookOpen`), 완독(`BookMarked`), 읽을 책(`Heart`)
   - **책 정보 수정** (2026-10-03, `components/books/EditBookSheet.tsx`): 제목·저자·출판사·총 페이지·장르·완독일(완독 책만, 오늘 이후 불가)·별점. 바뀐 필드만 PUT, 비운 출판사·완독일은 `null`
   - **컬렉션에 추가** (2026-10-03, `components/collections/AddToCollectionSheet.tsx`): 내 컬렉션 체크 목록(담기·빼기 토글) + 새 컬렉션 바로 만들기
   - 삭제(`Trash2`): 앱 안 확인 대화상자 후 `useDeleteBook()` → 앱 안 이전 화면이 있으면 뒤로, 바로 들어온 링크면 `/`
@@ -1355,7 +1365,7 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 - **경로**: `/settings/appearance` (Lazy, ProtectedRoute, 모든 사용자). 예전 `/design-system`은 여기로 리다이렉트
 - **진입**: SideNav `앱 디자인`, ProfilePopup `앱 디자인` 행
 - **강조색**: 프리셋 6종 라디오 그룹 카드(방향키·Home/End 이동). 카드마다 프리셋 hex로 그린 미니 미리보기(그라데이션 띠·버튼·칩), 선택 시 체크 표시
-- **화면 모드**: 자동(시간대)·라이트·다크 세그먼트 컨트롤 — TopBar 테마 토글과 같은 `themeMode`
+- **화면 모드**: 자동(시간대)·라이트·다크 세그먼트 컨트롤 — 앱에서 테마를 바꾸는 유일한 곳(38차)
 - **미리보기**: 실제 토큰(`bg-indigo-*` 등)으로 그린 버튼·칩·진행 바·표지 — 선택 결과를 바로 확인
 - **저장 흐름**: 5.4 참고 (`changeTheme` → 기기 즉시 적용 + 서버 PATCH, 실패 시 토스트)
 
@@ -1559,7 +1569,7 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 #### UI 상태
 
 - **헤더**: Sparkles 아이콘 + "나의 인생책" 타이틀, 부제 안내 문구, 새로고침 버튼(추천 결과 있을 때만 노출)
-- **캐시 배지**: `data.cached === true`이면 "캐시된 결과 · 24시간 유지" 안내
+- **안내 문구(38차)**: 부제 한 줄("완독한 책을 바탕으로 고른 인생책")만. 캐시 시간·모델명·검증 과정은 표시하지 않는다. 큐레이션 결과면 "많이 사랑받은 책을 골랐어요"
 - **지난 추천(2026-10-03)**: 완독 목록이 바뀌어 캐시가 없으면 서버가 직전 추천을 바로 돌려주고(`stale: true`) 백그라운드에서 새로 만든다. 화면은 "지난 추천이에요 · 새 완독 기록으로 다시 고르는 중"을 보여 주고 30초 간격으로 최대 2번 다시 불러와 새 추천으로 조용히 바꾼다. 처음 한 번만 생성(10~30초)을 기다린다
 - **로딩**: 카드 5개 스켈레톤(표지 16×24 + 텍스트 라인 4줄, `animate-pulse`)
 - **완독 2권 미만(400 에러)**: BookOpen 아이콘 + "완독한 책이 2권 이상 필요해요" 안내 + "서재로 이동" CTA(`Link to="/"`)
@@ -1750,8 +1760,8 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 
 | 엔드포인트 | 메서드 | UI 사용처 | 호출 트리거 |
 |-----------|--------|----------|-----------|
-| `/api/ai/summarize` | POST | BookDetailPage BookInfoTab | "AI 분석 시작" 버튼. 로그인 필요. 책 소개문(Kakao·Naver)에만 근거 — 소개문이 없으면 `reason:'no_source'`로 "분석할 수 없어요" 안내. 결과 아래 제공 모델 표기(Gemini · OpenRouter / Workers AI) |
-| `/api/ai/lifebooks?refresh=` | GET | LifeBooksPage, WishlistPage RecommendSection | 진입 / "새로 추천" 버튼. 완독 전체 기반 → 읽은 책 제외 → 실재 검증. `source`로 "AI 추천"·"추천 목록" 표시. 429 시 "10분쯤 뒤에" 안내 |
+| `/api/ai/summarize` | POST | BookDetailPage BookInfoTab | "AI 분석 시작" 버튼. 로그인 필요. 책 소개문(Kakao·Naver)에만 근거 — 소개문이 없으면 `reason:'no_source'`로 "분석할 수 없어요" 안내. 결과 아래 근거 한 줄("책 소개를 바탕으로 AI가 정리했어요", 38차에 제공 모델 표기 제거 / Workers AI) |
+| `/api/ai/lifebooks?refresh=` | GET | LifeBooksPage (38차: 읽을 책 화면의 추천 섹션 제거) | 진입 / "새로 추천" 버튼. 완독 전체 기반 → 읽은 책 제외 → 실재 검증. `source`로 "AI 추천"·"추천 목록" 표시. 429 시 "10분쯤 뒤에" 안내 |
 | `/api/ai/recommend?limit=&refresh=` | GET | — | (화면 호출 없음) |
 | `/api/ai/ocr` | POST | CameraOCRSheet | 사진 촬영 후 자동 |
 
@@ -1840,7 +1850,7 @@ stats
 | `removeToast(id)` | action | 토스트 제거 |
 | `setOnline(v)` | action | 네트워크 상태 설정 |
 | `toggleSidebar()` | action | 사이드바 토글 |
-| `cycleThemeMode()` | action | auto→light→dark→auto 순환 |
+| `cycleThemeMode()` | action | auto→light→dark→auto 순환 (38차: 화면 토글은 제거, 앱 디자인 화면은 `setThemeMode`) |
 | `addNotification(n)` | action | 알림 추가 (max 20, localStorage) |
 | `markAllRead()` | action | 모두 읽음 |
 | `clearNotifications()` | action | 전체 삭제 |
@@ -1901,7 +1911,7 @@ stats
 | 브레이크포인트 | 크기 | 주요 변화 |
 |-------------|------|----------|
 | **xs** | ~374px | TopBar 액션 간 gap 최소 |
-| **sm** | 375px+ | TopBar "BookShelf" 텍스트 표시, 테마 토글 표시 |
+| **sm** | 375px+ | TopBar "BookShelf" 텍스트 표시 |
 | **md** | 768px+ | 카드 그리드 2~3열 |
 | **lg** | 1024px+ | SideNav 240px 표시, BottomNavBar 숨김, Main max-w-3xl, Modal=센터 |
 

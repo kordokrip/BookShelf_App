@@ -1,6 +1,6 @@
 # BookShelf App — 현재 상태 스냅샷
 
-> **최종 업데이트:** 2026-10-04 (37차: AI 모델을 Gemini 3.8 Flash로 교체 / 36차: 잃은 장르 AI 추천 복구·인생책 즉시 표시·기본 대화상자 제거 / 35차: 전체 화면 점검·수정)
+> **최종 업데이트:** 2026-10-04 (38차: 화면 문구·중복 정리, 용어 통일 / 37차: AI 모델을 Gemini 3.8 Flash로 교체 / 36차: 잃은 장르 AI 추천 복구·인생책 즉시 표시·기본 대화상자 제거 / 35차: 전체 화면 점검·수정)
 > **Git 브랜치:** `main` (kordokrip/BookShelf_App)
 > **E2E 테스트:** `bash scripts/e2e-api-test.sh --url <대상>` → **전체 PASS** ✅ (2026-10-03 스테이징·프로덕션 확인, 테스트 개수는 `grep -n '^  TOTAL=' scripts/e2e-api-test.sh`로 확인)
 > **상세 세션 리포트:** `docs/sessions/2026-10-03-full-ui-qa.md` (직전: `2026-10-03-ipad-ai-theme.md`)

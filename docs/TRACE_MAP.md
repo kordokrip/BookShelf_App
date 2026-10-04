@@ -218,7 +218,7 @@ toggleSidebar() → uiStore.sidebarOpen 반전 → localStorage 영속화
 [메뉴 항목] (8개, 34차 기준 — 정의: SideNav.tsx navItems)
 BookMarked → "/" (완독)
 BookOpen → "/reading" (읽는 중)
-Star → "/wishlist" (책 추천)
+Star → "/wishlist" (읽을 책)
 BarChart2 → "/stats" (독서 통계)
 FileText → "/notes-search" (노트 & 검색)
 Sparkles → "/lifebooks" (인생책)
