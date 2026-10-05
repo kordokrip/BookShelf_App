@@ -9,7 +9,7 @@
  * - 무료 모델 한도: 구매 크레딧이 없으면 하루 50회(계정 전체). 현재 사용량은 GET /api/v1/key의
  *   free_model_daily_requests로 확인한다. 아래 일일 예산을 그보다 작게 둔다.
  * - 비용 상한: KV 전역 일일 예산(`or_budget:{KST 날짜}`)을 넘기면 호출하지 않고 폴백한다
- * - 일시 오류(429/5xx)는 한 번 재시도
+ * - 일시 오류(429/5xx)는 두 번까지 재시도 — 무료 풀은 혼잡하면 곧바로 429를 돌려주고(0.3초), 실패한 요청은 횟수 한도에 들어가지 않는다
  * - 실패(키 없음·예산 초과·타임아웃·재시도 후에도 실패)는 OpenRouterError로 던져 호출 측이 폴백하게 한다
  */
 import { extractAiText } from './aiText';
@@ -52,6 +52,8 @@ export const OPENROUTER_DAILY_BUDGET = 45;
 export const OPENROUTER_BACKGROUND_BUDGET = 15;
 export const OPENROUTER_TIMEOUT_MS = 20_000;
 export const OPENROUTER_RETRY_DELAY_MS = 1_800;
+/** 첫 시도 포함 최대 시도 횟수(429/5xx만 재시도) */
+export const OPENROUTER_MAX_ATTEMPTS = 3;
 export const WORKERS_AI_FALLBACK_MODEL = '@cf/meta/llama-3.1-8b-instruct-fast';
 
 export interface ChatMessage {
@@ -164,7 +166,7 @@ export async function chatCompletion(
   if (!(await consumeBudget(env, nowMs, opts.budgetCap))) throw new OpenRouterError('budget', '오늘의 OpenRouter 예산 소진');
 
   let lastStatus = 0;
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < OPENROUTER_MAX_ATTEMPTS; attempt++) {
     if (attempt > 0) await sleep(opts.retryDelayMs ?? OPENROUTER_RETRY_DELAY_MS);
     let res: Response;
     try {

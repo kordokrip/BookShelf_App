@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   chatCompletion, generateText, OpenRouterError, OPENROUTER_DAILY_BUDGET, OPENROUTER_BACKGROUND_BUDGET, OPENROUTER_MODEL, budgetKey,
-  OPENROUTER_MODEL_CURATOR, OPENROUTER_PAID_MODEL, OPENROUTER_REASONING_EFFORT, supportsJsonMode, type GenerateEnv,
+  OPENROUTER_MODEL_CURATOR, OPENROUTER_PAID_MODEL, OPENROUTER_REASONING_EFFORT, OPENROUTER_MAX_ATTEMPTS, supportsJsonMode, type GenerateEnv,
 } from '../lib/openrouter';
 
 const NOW = Date.UTC(2026, 8, 27, 3, 0, 0); // KST 2026-09-27
@@ -91,10 +91,13 @@ describe('chatCompletion', () => {
     expect(kv.get(budgetKey(NOW))).toBe('1');
   });
 
-  it('429가 두 번이면 upstream 에러', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => limited()));
-    const { env } = makeEnv();
+  it('429가 최대 시도 횟수만큼 이어지면 upstream 에러', async () => {
+    const fetchMock = vi.fn(async () => limited());
+    vi.stubGlobal('fetch', fetchMock);
+    const { env, kv } = makeEnv();
     await expect(chatCompletion(env, OPTS, NOW)).rejects.toMatchObject({ name: 'OpenRouterError', code: 'upstream' });
+    expect(fetchMock).toHaveBeenCalledTimes(OPENROUTER_MAX_ATTEMPTS);
+    expect(kv.get(budgetKey(NOW))).toBe('1');
   });
 
   it('4xx(429 제외)는 재시도 없이 실패', async () => {
