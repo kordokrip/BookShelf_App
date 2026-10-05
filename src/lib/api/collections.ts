@@ -16,6 +16,21 @@ export interface CollectionDetail extends Collection {
   books: (Book & { sort_order: number; collection_added_at: string })[];
 }
 
+export interface FromBooksInput {
+  name: string;
+  emoji?: string;
+  description?: string;
+  book_ids: string[];
+}
+
+export interface FromBooksResult {
+  id: string;
+  name: string;
+  emoji: string;
+  description: string | null;
+  book_count: number;
+}
+
 export const collectionsApi = {
   list: () =>
     apiFetch<{ data: (Collection & { book_count: number })[] }>('/api/collections'),
@@ -25,6 +40,13 @@ export const collectionsApi = {
 
   create: (data: { name: string; description?: string; emoji?: string }) =>
     apiFetch<{ data: Collection }>('/api/collections', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  /** AI가 정리한 책 묶음을 그대로 컬렉션으로 저장 — 같은 이름이 있으면 409 { existing_id } */
+  createFromBooks: (data: FromBooksInput) =>
+    apiFetch<{ data: FromBooksResult }>('/api/collections/from-books', {
       method: 'POST',
       body: JSON.stringify(data),
     }),

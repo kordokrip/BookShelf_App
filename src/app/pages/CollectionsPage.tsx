@@ -13,6 +13,7 @@ import {
   useCollectionDetail,
   useRemoveBookFromCollection,
 } from "../../hooks/useCollections";
+import { AICollectionsSection } from "../components/collections/ai/AICollectionsSection";
 import { CollectionFormDialog } from "../components/collections/CollectionFormDialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -172,7 +173,7 @@ export function CollectionsPage() {
           >
             <ChevronLeft size={22} className="text-[#1E293B] dark:text-[#F8FAFC]" />
           </button>
-          <h2 className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 20, fontWeight: 700 }}>내 컬렉션</h2>
+          <span className="text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 20, fontWeight: 700 }}>내 컬렉션</span>
         </div>
         <button
           onClick={() => setShowCreate(true)}
@@ -183,6 +184,11 @@ export function CollectionsPage() {
           만들기
         </button>
       </div>
+
+      {/* AI가 정리한 내 서재 */}
+      <AICollectionsSection onOpenCollection={setSelectedId} />
+
+      <h2 className="px-4 pb-2 text-[#1E293B] dark:text-[#F8FAFC]" style={{ fontSize: 15, fontWeight: 700 }}>내가 만든 컬렉션</h2>
 
       {/* Loading */}
       {isLoading && (

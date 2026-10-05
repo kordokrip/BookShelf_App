@@ -1,16 +1,24 @@
+import { useMemo } from "react";
 import { Link } from "react-router";
 import { RefreshCw, Sparkles, BookOpen, ExternalLink } from "lucide-react";
 import { useLifeBooks, useRefreshLifeBooks, lifeBooksSourceLabel, RATE_LIMIT_RETRY_COPY } from "../../hooks/useAI";
 import { ApiError } from "../../lib/api";
 import { useToast } from "../components/ui/Toast";
+import { useBooks } from "../../hooks/useBooks";
+import { lifeBooksBasisLine, linkBasedOn } from "../../lib/aiCollections";
 
 export function LifeBooksPage() {
   const { data, isLoading, isError, error, staleCopy } = useLifeBooks();
   const refreshMutation = useRefreshLifeBooks();
   const { showToast } = useToast();
+  const { data: myBooks = [] } = useBooks();
+  const basisLine = lifeBooksBasisLine(data?.basis, data?.generated_at);
+  const refreshing = refreshMutation.isPending;
+  const bookRefs = useMemo(() => myBooks.map((b) => ({ id: b.id, title: b.title })), [myBooks]);
 
   const handleRefresh = () => {
     refreshMutation.mutate(undefined, {
+      onSuccess: (d) => showToast(`새 인생책 ${d.data?.length ?? 0}권을 골랐어요`, "success"),
       onError: (e) =>
         showToast(
           e instanceof ApiError && e.status === 429
@@ -27,6 +35,7 @@ export function LifeBooksPage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0F172A] pb-24">
+      <div className="max-w-3xl mx-auto">
       {/* Header */}
       <div className="px-4 pt-6 pb-4">
         <div className="flex items-start justify-between">
@@ -42,13 +51,16 @@ export function LifeBooksPage() {
               onClick={handleRefresh}
               disabled={refreshMutation.isPending}
               className="flex items-center justify-center gap-1.5 min-w-11 min-h-11 px-2 -mr-2 rounded-full text-sm text-[#64748B] dark:text-[#94A3B8] hover:text-indigo-600 hover:bg-[#F1F5F9] dark:hover:text-indigo-300 dark:hover:bg-[#334155] transition-colors disabled:opacity-40"
-              aria-label="인생책 새로고침"
+              aria-label={refreshing ? "다시 고르는 중" : "인생책 다시 고르기"}
             >
-              <RefreshCw size={15} className={refreshMutation.isPending ? "animate-spin" : ""} />
-              <span className="hidden sm:inline">새로고침</span>
+              <RefreshCw size={15} className={refreshing ? "animate-spin" : ""} aria-hidden="true" />
+              <span>{refreshing ? "다시 고르는 중…" : "다시 고르기"}</span>
             </button>
           )}
         </div>
+        {basisLine && (
+          <p className="mt-1.5 text-xs text-[#64748B] dark:text-[#94A3B8]">{basisLine}</p>
+        )}
         {data?.stale && (
           <p role="status" className="mt-1.5 text-xs text-indigo-600 dark:text-indigo-300">{staleCopy}</p>
         )}
@@ -119,7 +131,8 @@ export function LifeBooksPage() {
 
         {/* 추천 카드 목록 */}
         {data?.data && data.data.length > 0 && (
-          <div className="flex flex-col gap-4">
+          <div className="relative">
+          <div className={`flex flex-col gap-4 transition-opacity ${refreshing ? "pointer-events-none opacity-30" : ""}`} aria-busy={refreshing}>
             {data.data.map((book, i) => (
               <div
                 key={`${book.title}-${i}`}
@@ -168,12 +181,42 @@ export function LifeBooksPage() {
                     <p className="mt-2 text-[#475569] dark:text-[#94A3B8] leading-relaxed" style={{ fontSize: 13 }}>
                       {book.reason}
                     </p>
+                    {book.based_on && book.based_on.length > 0 && (
+                      <p className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-[#64748B] dark:text-[#94A3B8]">
+                        <span>이 책들을 바탕으로:</span>
+                        {linkBasedOn(book.based_on, bookRefs).map((r) =>
+                          r.id ? (
+                            <Link
+                              key={r.title}
+                              to={`/book/${r.id}`}
+                              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-indigo-50 px-3 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-200"
+                            >
+                              {r.title}
+                            </Link>
+                          ) : (
+                            <span key={r.title} className="inline-flex min-h-6 items-center rounded-full bg-[#F1F5F9] px-2.5 dark:bg-[#334155]">
+                              {r.title}
+                            </span>
+                          ),
+                        )}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
             ))}
           </div>
+          {refreshing && (
+            <div className="absolute inset-0 flex items-start justify-center pt-10" role="status" aria-live="polite">
+              <p className="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-indigo-700 shadow-md dark:bg-[#1E293B] dark:text-indigo-200">
+                <RefreshCw size={14} className="animate-spin" aria-hidden="true" />
+                나에게 맞는 책을 다시 고르는 중이에요…
+              </p>
+            </div>
+          )}
+          </div>
         )}
+      </div>
       </div>
     </div>
   );

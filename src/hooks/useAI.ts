@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiFetch, queryKeys } from '../lib/api';
+import { apiFetch, queryKeys, collectionsApi, type FromBooksInput } from '../lib/api';
+import type { AICollectionBasis } from '../lib/aiCollections';
 
 export interface LifeBookItem {
   title: string;
@@ -11,6 +12,8 @@ export interface LifeBookItem {
   url: string;
   /** 실제 도서 검색으로 존재를 확인한 책 */
   verified?: boolean;
+  /** 이 추천의 근거가 된 내 서재 책 제목 */
+  based_on?: string[];
 }
 
 export type AIProvider = 'openrouter' | 'workers-ai';
@@ -23,6 +26,9 @@ export interface LifeBooksResponse {
   /** true면 지난 추천을 먼저 돌려주고 서버가 새 추천을 백그라운드로 만드는 중 */
   stale?: boolean;
   error?: string;
+  /** 추천 근거 요약 */
+  basis?: { done_count: number; top_genres: string[] };
+  generated_at?: string;
 }
 
 /** 지난 추천 안내 캡션 */
@@ -141,6 +147,71 @@ export function useRefreshAIRecommendations() {
       apiFetch<RecommendResponse>('/api/ai/recommend?refresh=true'),
     onSuccess: (data) => {
       queryClient.setQueryData(queryKeys.ai.recommendations(), data);
+    },
+  });
+}
+
+/* ─── AI가 정리한 컬렉션 ─────────────────────────────────────── */
+export interface AICollectionItem {
+  key: string;
+  name: string;
+  emoji: string;
+  description: string;
+  insight: string;
+  book_ids: string[];
+}
+
+export interface AICollectionsResponse {
+  data: { collections: AICollectionItem[]; basis: AICollectionBasis };
+  cached: boolean;
+  stale?: boolean;
+  generated_at: string;
+  provider: 'openrouter' | null;
+  reason?: 'not_enough_books';
+}
+
+export const COLLECTIONS_STALE_COPY = '지난 정리예요 · 새로 정리하는 중';
+export const COLLECTIONS_STALE_DONE_COPY = '지난 정리예요 · [새로 정리]로 다시 시도할 수 있어요';
+
+/** 지난 정리 안내 문구 — 다시 불러오는 중이면 진행형, 시도를 다 썼으면 다시 시도 안내 */
+export function collectionsStaleCopy(dataUpdateCount: number): string {
+  return dataUpdateCount < LIFEBOOKS_MAX_UPDATES ? COLLECTIONS_STALE_COPY : COLLECTIONS_STALE_DONE_COPY;
+}
+
+const AI_COLLECTIONS_KEY = [...queryKeys.ai.all, 'collections'] as const;
+
+/** 내 서재 AI 컬렉션 — stale이면 30초 뒤 최대 2회 다시 조회 */
+export function useAICollections() {
+  const queryClient = useQueryClient();
+  const query = useQuery({
+    queryKey: AI_COLLECTIONS_KEY,
+    queryFn: () => apiFetch<AICollectionsResponse>('/api/ai/collections'),
+    staleTime: 60 * 60 * 1000,
+    retry: false,
+    refetchInterval: (q) => lifeBooksRefetchInterval(q.state.data, q.state.dataUpdateCount),
+  });
+  const updates = queryClient.getQueryState(AI_COLLECTIONS_KEY)?.dataUpdateCount ?? 0;
+  return { ...query, staleCopy: query.data?.stale ? collectionsStaleCopy(updates) : null };
+}
+
+/** 컬렉션 다시 정리 (서버 한도: 10분에 3회) */
+export function useRefreshAICollections() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiFetch<AICollectionsResponse>('/api/ai/collections?refresh=true'),
+    onSuccess: (data) => {
+      queryClient.setQueryData(AI_COLLECTIONS_KEY, data);
+    },
+  });
+}
+
+/** AI 컬렉션 하나를 내 컬렉션으로 저장 */
+export function useCreateCollectionFromBooks() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: FromBooksInput) => collectionsApi.createFromBooks(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.collections.all });
     },
   });
 }

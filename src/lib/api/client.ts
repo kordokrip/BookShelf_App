@@ -4,6 +4,8 @@ export class ApiError extends Error {
     public override readonly message: string,
     /** 서버가 내려주는 기계 판독용 코드 (예: 'ACCOUNT_DORMANT') */
     public readonly code?: string,
+    /** 서버 에러 본문 전체 (예: 409의 existing_id) */
+    public readonly body?: Record<string, unknown>,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -57,14 +59,17 @@ function handleDormant(): void {
 async function readError(response: Response): Promise<ApiError> {
   const fallback = `HTTP ${response.status}`;
   let parsed: { message: string; code?: string } = { message: fallback };
+  let rawBody: Record<string, unknown> | undefined;
   try {
-    parsed = parseErrorBody(await response.json(), fallback);
+    const json: unknown = await response.json();
+    parsed = parseErrorBody(json, fallback);
+    if (json && typeof json === 'object') rawBody = json as Record<string, unknown>;
   } catch { /* JSON 파싱 실패 시 기본 메시지 */ }
   // 로그인 요청 자체의 403은 폼이 서버 메시지를 직접 보여주므로 플래그/로그아웃 제외
   if (response.status === 403 && parsed.code === ACCOUNT_DORMANT_CODE && !response.url.includes('/api/auth/login')) {
     handleDormant();
   }
-  return new ApiError(response.status, parsed.message, parsed.code);
+  return new ApiError(response.status, parsed.message, parsed.code, rawBody);
 }
 
 export const TOKEN_KEY = 'auth_token';
