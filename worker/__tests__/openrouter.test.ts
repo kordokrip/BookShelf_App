@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   chatCompletion, generateText, OpenRouterError, OPENROUTER_DAILY_BUDGET, OPENROUTER_BACKGROUND_BUDGET, OPENROUTER_MODEL, budgetKey,
-  OPENROUTER_MODEL_CURATOR, type GenerateEnv,
+  OPENROUTER_MODEL_CURATOR, OPENROUTER_PAID_MODEL, OPENROUTER_REASONING_EFFORT, supportsJsonMode, type GenerateEnv,
 } from '../lib/openrouter';
 
 const NOW = Date.UTC(2026, 8, 27, 3, 0, 0); // KST 2026-09-27
@@ -55,10 +55,31 @@ describe('chatCompletion', () => {
     const body = JSON.parse(init.body as string);
     expect(body.model).toBe(OPENROUTER_MODEL);
     expect(body.provider).toMatchObject({ sort: 'throughput' });
-    expect(body.reasoning).toEqual({ effort: 'minimal' });
+    expect(body.reasoning).toEqual({ effort: OPENROUTER_REASONING_EFFORT });
     expect(body.max_tokens).toBe(100);
-    expect(body.response_format).toEqual({ type: 'json_object' });
     expect(kv.get(budgetKey(NOW))).toBe('1');
+  });
+
+  it('JSON 모드: 지원 모델에만 response_format·require_parameters를 보내고, 무료 Qwen에는 보내지 않는다', async () => {
+    const fetchMock = vi.fn(async () => ok('{}'));
+    vi.stubGlobal('fetch', fetchMock);
+    const { env } = makeEnv();
+    await chatCompletion(env, { ...OPTS, json: true, model: OPENROUTER_PAID_MODEL }, NOW);
+    await chatCompletion(env, { ...OPTS, json: true, model: 'qwen/qwen3.8-27b:free' }, NOW);
+    await chatCompletion(env, { ...OPTS, model: OPENROUTER_PAID_MODEL }, NOW);
+    const bodies = fetchMock.mock.calls.map((c) => JSON.parse((c as unknown as [string, RequestInit])[1].body as string));
+    expect(bodies[0].response_format).toEqual({ type: 'json_object' });
+    expect(bodies[0].provider).toEqual({ sort: 'throughput', require_parameters: true });
+    expect(bodies[1].response_format).toBeUndefined();
+    expect(bodies[1].provider).toEqual({ sort: 'throughput' });
+    expect(bodies[2].response_format).toBeUndefined();
+    expect(supportsJsonMode(OPENROUTER_PAID_MODEL)).toBe(true);
+    expect(supportsJsonMode('qwen/qwen3.8-27b:free')).toBe(false);
+  });
+
+  it('무료 모델 예산은 계정 한도(하루 50회)보다 작고, 백그라운드 몫은 전체보다 작다', () => {
+    if (OPENROUTER_MODEL.endsWith(':free')) expect(OPENROUTER_DAILY_BUDGET).toBeLessThan(50);
+    expect(OPENROUTER_BACKGROUND_BUDGET).toBeLessThan(OPENROUTER_DAILY_BUDGET);
   });
 
   it('429 후 재시도 성공 — 예산은 호출당 1만 소모', async () => {

@@ -3,7 +3,7 @@ import {
   parseCollections, buildCollectionMessages, resolveCollections, collectionsCacheKey, collectionsLatestKey, collectionsBasis,
   COLLECTIONS_ERROR, COLLECTIONS_RATE, type CollectionBook, type CollectionsEnv,
 } from '../lib/aiCollections';
-import { OPENROUTER_MODEL_CURATOR } from '../lib/openrouter';
+import { OPENROUTER_MODEL_CURATOR, supportsJsonMode } from '../lib/openrouter';
 import { hashString } from '../lib/aiRecommend';
 
 afterEach(() => { vi.unstubAllGlobals(); });
@@ -114,7 +114,8 @@ describe('resolveCollections', () => {
       cached: false, provider: 'openrouter', generated_at: '2026-10-05T00:00:00.000Z',
       data: { collections: [{ name: 'A묶음', book_ids: ['id-1', 'id-2', 'id-3'] }, { name: 'B묶음' }], basis: { total_books: 10, done_count: 5 } },
     });
-    expect(s.bodies[0]).toMatchObject({ model: OPENROUTER_MODEL_CURATOR, max_tokens: 2500, response_format: { type: 'json_object' } });
+    expect(s.bodies[0]).toMatchObject({ model: OPENROUTER_MODEL_CURATOR, max_tokens: 2500 });
+    expect((s.bodies[0] as { response_format?: unknown }).response_format).toEqual(supportsJsonMode(OPENROUTER_MODEL_CURATOR) ? { type: 'json_object' } : undefined);
     expect(s.rl()).toBe(1);
     expect(s.store.has(collectionsCacheKey('u1', books))).toBe(true);
     const hit = await resolveCollections(s.deps({ nowMs: Date.UTC(2026, 9, 6) }));

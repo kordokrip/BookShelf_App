@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import { OPENROUTER_MODEL, supportsJsonMode } from '../lib/openrouter';
 import {
   parseBookIds, parseSuggestions, selectTargetBooks, suggestGenres, MAX_SUGGEST_BOOKS,
   type GenreBookRow, type GenreEnv,
@@ -101,7 +102,7 @@ describe('suggestGenres', () => {
         modelCalls++;
         const body = JSON.parse(String(init?.body)) as { messages: Array<{ content: string }>; response_format?: unknown };
         userPrompt = body.messages[1]!.content;
-        expect(body.response_format).toEqual({ type: 'json_object' });
+        expect(body.response_format).toEqual(supportsJsonMode(OPENROUTER_MODEL) ? { type: 'json_object' } : undefined);
         return json({ choices: [{ message: { content: JSON.stringify({ suggestions: [{ id: 'b1', genre: '해외사', confidence: 'high' }, { id: 'b2', genre: '없는장르', confidence: 'high' }] }) } }] });
       }
       const q = new URL(u).searchParams.get('query') ?? '';

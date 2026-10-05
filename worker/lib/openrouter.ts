@@ -1,11 +1,13 @@
 /**
- * OpenRouter(유료) 클라이언트 + Workers AI 폴백.
+ * OpenRouter 클라이언트 + Workers AI 폴백.
  *
- * - 모델: `google/gemini-3.8-flash` (2026-10-04). 실제 앱 프롬프트로 13개 모델을 비교한 결과
- *   인생책 응답 2~3초·실재하고 안 읽은 책 6권 중 5~6권, 명문장 원문 재현·책 소개 근거 요약이 가장 좋았다.
- *   이전 `google/gemma-3-27b-it`은 공급자에 따라 10~42초로 들쭉날쭉했고(가격 우선 라우팅이 느린 공급자로 감),
- *   그 전 무료판 `google/gemma-4-26b-a4b-it:free`는 공용 풀 혼잡으로 거의 응답하지 않았다.
- *   비교 방법·결과: docs/sessions/2026-10-04-ai-model-switch.md
+ * - 모델: 무료 `qwen/qwen3.8-27b:free` (2026-10-05). 계정 구매 크레딧이 $0이라 유료 모델은 402로 막혀,
+ *   무료 모델을 사용자 실데이터(76권)로 비교해 유일하게 안정적으로 응답한 모델을 골랐다
+ *   (AI 컬렉션 12.6초·76권 중 63권 분류, 인생책 7.7초, 요약·명문장·장르 1~4초).
+ *   크레딧을 충전하면 `OPENROUTER_PAID_MODEL`로 되돌린다(아래 두 상수 + 추론 정도).
+ *   비교: docs/sessions/2026-10-05-free-model.md, 이전 유료 비교: docs/sessions/2026-10-04-ai-model-switch.md
+ * - 무료 모델 한도: 구매 크레딧이 없으면 하루 50회(계정 전체). 현재 사용량은 GET /api/v1/key의
+ *   free_model_daily_requests로 확인한다. 아래 일일 예산을 그보다 작게 둔다.
  * - 비용 상한: KV 전역 일일 예산(`or_budget:{KST 날짜}`)을 넘기면 호출하지 않고 폴백한다
  * - 일시 오류(429/5xx)는 한 번 재시도
  * - 실패(키 없음·예산 초과·타임아웃·재시도 후에도 실패)는 OpenRouterError로 던져 호출 측이 폴백하게 한다
@@ -13,29 +15,41 @@
 import { extractAiText } from './aiText';
 import { kstDateString } from './noteHelpers';
 
-export const OPENROUTER_MODEL = 'google/gemini-3.8-flash';
+export type ReasoningEffort = 'minimal' | 'low' | 'none';
+
+export const OPENROUTER_MODEL = 'qwen/qwen3.8-27b:free';
+/** 크레딧 충전 후 쓸 유료 모델(37차 비교 1위). 되돌릴 때 추론 정도는 'minimal'로 */
+export const OPENROUTER_PAID_MODEL = 'google/gemini-3.8-flash';
 /**
  * 추론(thinking) 정도 — 이 앱의 작업(요약·추천·인용 JSON)은 추론이 필요 없고, 켜 두면 응답이 느려지고
- * 추론 토큰이 출력 요금으로 청구된다. 'minimal'에서 추론 토큰 0을 확인(응답 usage.completion_tokens_details).
+ * 토큰 한도를 추론에 다 써서 본문이 비기도 한다. Qwen 무료는 'none'에서 추론 토큰 0을 확인
+ * (응답 usage.completion_tokens_details). Gemini는 'none'을 거절하므로 'minimal'.
  */
-export const OPENROUTER_REASONING_EFFORT = 'minimal';
-export type ReasoningEffort = 'minimal' | 'low' | 'none';
+export const OPENROUTER_REASONING_EFFORT: ReasoningEffort = 'none';
 /**
  * 품질이 중요한 큐레이션(AI 컬렉션·인생책)용 모델. 작업별 모델 분리 — 벤치마크 뒤 이 값만 바꾸면 된다.
  * 지금은 기본 모델과 같다. 모델 id가 'anthropic/'이거나 effort 'none'이 거절되면 호출 측에서 reasoningEffort를 조정한다.
  */
 export const OPENROUTER_MODEL_CURATOR: string = OPENROUTER_MODEL;
+/**
+ * JSON 모드(response_format)를 지원하는 공급자가 없는 모델 — 이 모델에 response_format·require_parameters를
+ * 보내면 404(공급자 없음)가 난다. 프롬프트가 'JSON만' 요구하고 호출 측이 extractJsonObject로 꺼내므로 생략해도 된다.
+ * 지원 여부: GET /api/v1/models 의 supported_parameters
+ */
+const MODELS_WITHOUT_JSON_MODE = new Set(['qwen/qwen3.8-27b:free']);
+export const supportsJsonMode = (model: string) => !MODELS_WITHOUT_JSON_MODE.has(model);
 export const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 /**
- * 하루 전체 호출 상한(전 사용자 합산) — 유료 모델의 비용 안전장치.
- * 호출당 비용은 OpenRouter 응답 usage.cost 또는 대시보드(Activity)로 확인한다.
+ * 하루 전체 호출 상한(전 사용자 합산). 무료 모델은 계정 한도(하루 50회)보다 조금 작게 두어
+ * 한도에 닿기 전에 폴백(요약·추천 → Workers AI, 인생책 → 엄선 목록)으로 넘어가게 한다.
+ * 유료로 되돌리면 비용 안전장치로 1000 정도(호출당 비용은 응답 usage.cost 또는 대시보드 Activity).
  */
-export const OPENROUTER_DAILY_BUDGET = 1000;
+export const OPENROUTER_DAILY_BUDGET = 45;
 /**
  * 백그라운드성 호출(오늘의 명문장)이 쓸 수 있는 상한 — 전체 예산이 이만큼 쓰였으면 더 쓰지 않는다.
  * 사용자가 버튼을 눌러 요청하는 책 분석·추천 몫(전체 − 이 값)을 남겨 두기 위함.
  */
-export const OPENROUTER_BACKGROUND_BUDGET = 600;
+export const OPENROUTER_BACKGROUND_BUDGET = 15;
 export const OPENROUTER_TIMEOUT_MS = 20_000;
 export const OPENROUTER_RETRY_DELAY_MS = 1_800;
 export const WORKERS_AI_FALLBACK_MODEL = '@cf/meta/llama-3.1-8b-instruct-fast';
@@ -49,7 +63,7 @@ export interface ChatOptions {
   messages: ChatMessage[];
   maxTokens: number;
   temperature: number;
-  /** true면 JSON 객체 응답을 요청한다(response_format) */
+  /** true면 JSON 객체 응답을 요청한다(response_format — 모델이 지원할 때만, supportsJsonMode) */
   json?: boolean;
   /** 요청 타임아웃(기본 20초). 화면이 응답을 기다리는 가벼운 호출은 더 짧게 준다 */
   timeoutMs?: number;
@@ -110,6 +124,8 @@ async function consumeBudget(env: OpenRouterEnv, nowMs: number, cap = OPENROUTER
 async function postOnce(env: OpenRouterEnv, opts: ChatOptions): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? OPENROUTER_TIMEOUT_MS);
+  const model = opts.model ?? OPENROUTER_MODEL;
+  const jsonMode = !!opts.json && supportsJsonMode(model);
   try {
     return await fetch(OPENROUTER_URL, {
       method: 'POST',
@@ -121,15 +137,15 @@ async function postOnce(env: OpenRouterEnv, opts: ChatOptions): Promise<Response
         'X-Title': 'BookShelf',
       },
       body: JSON.stringify({
-        model: opts.model ?? OPENROUTER_MODEL,
+        model,
         messages: opts.messages,
         max_tokens: opts.maxTokens,
         temperature: opts.temperature,
-        ...(opts.json ? { response_format: { type: 'json_object' } } : {}),
+        ...(jsonMode ? { response_format: { type: 'json_object' } } : {}),
         // 기본 라우팅은 가격 우선이라 처리 속도가 가장 느린 공급자(초당 ~21토큰)로 자주 가서 인생책처럼 긴 응답이
         // 20초를 넘겼다. 처리량 우선(초당 35~40토큰, 비용 차이는 호출당 $0.0001 수준)으로 고르고,
         // JSON 모드가 필요하면 그 기능을 지원하는 공급자만 쓴다. 공급자별 지표: /api/v1/models/{model}/endpoints
-        provider: { sort: 'throughput', ...(opts.json ? { require_parameters: true } : {}) },
+        provider: { sort: 'throughput', ...(jsonMode ? { require_parameters: true } : {}) },
         reasoning: { effort: opts.reasoningEffort ?? OPENROUTER_REASONING_EFFORT },
       }),
     });
