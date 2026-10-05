@@ -48,7 +48,7 @@ FAILED_TESTS=()
 if [[ "$READONLY" == true ]]; then
   TOTAL=3
 else
-  TOTAL=75
+  TOTAL=79
 fi
 
 # ── 시작 시각 ────────────────────────────────────────────────────
@@ -764,7 +764,7 @@ fi
 # ================================================================
 # GROUP 9 — 컬렉션 CRUD
 # ================================================================
-group "GROUP 9 — 컬렉션 CRUD (4개)"
+group "GROUP 9 — 컬렉션 CRUD + AI 컬렉션 저장 (8개)"
 
 T=24; NAME="POST /api/collections (컬렉션 생성)"; START=$(now_ms)
 TMPF=$(mktemp /tmp/e2e_XXXXXX)
@@ -824,6 +824,64 @@ if [[ "$HTTP_CODE" == "200" || "$HTTP_CODE" == "204" ]]; then
   pass_test $T "$NAME" $ELAPSED
 else
   fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE} (기대: 200 또는 204)"
+fi
+
+T=76; NAME="GET /api/ai/collections (책 6권 미만 → 모델 호출 없이 not_enough_books)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" "${BASE_URL}/api/ai/collections" \
+  -H "Authorization: Bearer ${TOKEN}")
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+AICOL_OK=$(json_val "$BODY" "d.get('reason') == 'not_enough_books' and d['data']['collections'] == [] and 'total_books' in d['data']['basis']")
+if [[ "$HTTP_CODE" == "200" && "$AICOL_OK" == "True" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE}, reason/collections/basis 계약 위반 (ok=${AICOL_OK})"
+fi
+
+T=77; NAME="POST /api/collections/from-books (AI 제안 저장 → 201)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" -X POST "${BASE_URL}/api/collections/from-books" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d "{\"name\":\"E2E제안컬렉션\",\"emoji\":\"🧪\",\"description\":\"제안 저장 테스트\",\"book_ids\":[\"${BOOK_ID_DONE}\",\"${BOOK_ID_READING}\"]}")
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+FB_ID=$(json_val "$BODY" "d['data']['id']")
+FB_COUNT=$(json_val "$BODY" "d['data']['book_count']")
+if [[ "$HTTP_CODE" == "201" && -n "$FB_ID" && "$FB_COUNT" == "2" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE} (기대 201), id='${FB_ID}', book_count='${FB_COUNT}' (기대 2)"
+fi
+
+T=78; NAME="POST /api/collections/from-books (같은 이름 → 409 + existing_id)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" -X POST "${BASE_URL}/api/collections/from-books" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d "{\"name\":\"E2E제안컬렉션\",\"book_ids\":[\"${BOOK_ID_DONE}\"]}")
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+FB_EXISTING=$(json_val "$BODY" "d.get('existing_id', '')")
+if [[ "$HTTP_CODE" == "409" && -n "$FB_ID" && "$FB_EXISTING" == "$FB_ID" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE} (기대 409), existing_id='${FB_EXISTING}' (기대 '${FB_ID}')"
+fi
+
+T=79; NAME="POST /api/collections/from-books (내 책이 아닌 id → 400)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" -X POST "${BASE_URL}/api/collections/from-books" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d "{\"name\":\"E2E소유권위반\",\"book_ids\":[\"${BOOK_ID_DONE}\",\"00000000-0000-4000-8000-000000000000\"]}")
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+if [[ "$HTTP_CODE" == "400" || "$HTTP_CODE" == "404" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE} (기대 400/404)"
 fi
 
 # ================================================================

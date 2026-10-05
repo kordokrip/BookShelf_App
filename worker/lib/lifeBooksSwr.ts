@@ -7,8 +7,8 @@
  */
 import { resolveSwr } from './aiSwr';
 import {
-  buildLifeBooks, lifeBooksCacheKey, lifeBooksLatestKey, lifeBooksLockKey, lifeBooksFingerprint,
-  LIFEBOOKS_CACHE_TTL_SEC, type DoneBook, type LifeBookItem, type LifeBooksEnv, type LifeBooksResult,
+  buildLifeBooks, lifeBooksCacheKey, lifeBooksLatestKey, lifeBooksLockKey, lifeBooksFingerprint, lifeBooksSeenKey,
+  LIFEBOOKS_CACHE_TTL_SEC, SEEN_MAX, SEEN_TTL_SEC, type LifeBooksBasis, type DoneBook, type LifeBookItem, type LifeBooksEnv, type LifeBooksResult,
 } from './lifeBooks';
 
 export const LIFEBOOKS_LOCK_TTL_SEC = 120;
@@ -25,6 +25,22 @@ export interface LifeBooksPayload {
   source: LifeBooksResult['source'];
   provider: LifeBooksResult['provider'];
   stale?: boolean;
+  basis?: LifeBooksBasis;
+  generated_at?: string;
+}
+
+async function loadSeen(kv: LifeKv, userId: string): Promise<string[]> {
+  try {
+    const raw = await kv.get(lifeBooksSeenKey(userId));
+    const arr: unknown = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr.filter((t): t is string => typeof t === 'string').slice(0, SEEN_MAX) : [];
+  } catch { return []; }
+}
+
+/** 이번 추천 제목을 맨 앞에 붙여 최근 SEEN_MAX개만 기억(중복 제거) */
+async function saveSeen(kv: LifeKv, userId: string, prev: string[], titles: string[]): Promise<void> {
+  const next = [...titles, ...prev.filter((t) => !titles.includes(t))].slice(0, SEEN_MAX);
+  await kv.put(lifeBooksSeenKey(userId), JSON.stringify(next), { expirationTtl: SEEN_TTL_SEC }).catch(() => undefined);
 }
 
 export interface LifeBooksDeps {
@@ -62,7 +78,14 @@ export async function resolveLifeBooks(deps: LifeBooksDeps): Promise<LifeBooksRe
     lockTtlSec: LIFEBOOKS_LOCK_TTL_SEC,
     latestTtlSec: LIFEBOOKS_LATEST_TTL_SEC,
     label: '인생책',
-    generate: async (background) => (deps.build ?? buildLifeBooks)(env, doneBooks, await deps.getExcluded(), { background }),
+    generate: async (background) => {
+      const refresh = deps.forceRefresh && !background;
+      const seen = await loadSeen(env.KV, userId);
+      const res = await (deps.build ?? buildLifeBooks)(env, doneBooks, await deps.getExcluded(), { background, refresh, seenTitles: seen });
+      // AI가 만든 결과만 "이미 본 책"으로 기억한다(큐레이션 보충분은 제외해도 의미가 작다)
+      if (res.provider === 'openrouter') await saveSeen(env.KV, userId, seen, res.data.map((b) => b.title));
+      return { data: res.data, source: res.source, provider: res.provider, extra: res.basis ? { basis: res.basis } : undefined };
+    },
     nowMs: deps.nowMs,
   });
 }

@@ -8,6 +8,7 @@ import { resolveRecommendations, type OwnedBook } from '../lib/bookRecommend';
 import { MAX_DONE_BOOKS, type DoneBook } from '../lib/lifeBooks';
 import { resolveLifeBooks } from '../lib/lifeBooksSwr';
 import { summarizeBook } from '../lib/aiSummary';
+import { resolveCollections, COLLECTIONS_MAX_BOOKS, type CollectionBook } from '../lib/aiCollections';
 
 const aiRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -116,6 +117,32 @@ aiRouter.get(
     return c.json(body, status);
   },
 );
+
+// ─── GET /api/ai/collections — 서재 전체를 테마별로 묶은 AI 컬렉션 제안 ──
+// 책 id는 모델에 보내지 않고 번호로만 매핑한다. 6권 미만이면 모델 호출 없이 reason:'not_enough_books'.
+// 모델 실패는 503(가짜 대체 없음). 한도 ai_col 3회/10분은 실제 생성 때만 소모. (worker/lib/aiCollections.ts)
+aiRouter.get('/collections', authMiddleware, async (c) => {
+  const userId = c.get('userId');
+  const forceRefresh = c.req.query('refresh') === 'true';
+
+  const { results } = await c.env.DB.prepare(
+    `SELECT b.id, b.title, b.author, b.genre, b.rating, b.status,
+            (SELECT COUNT(*) FROM notes n WHERE n.book_id = b.id AND n.user_id = b.user_id) AS note_count
+     FROM books b WHERE b.user_id = ?
+     ORDER BY b.created_at DESC, b.id LIMIT ${COLLECTIONS_MAX_BOOKS}`,
+  ).bind(userId).all<CollectionBook>();
+
+  const { status, body } = await resolveCollections({
+    env: c.env,
+    userId,
+    books: results ?? [],
+    forceRefresh,
+    path: new URL(c.req.url).pathname,
+    subject: `u:${userId}`,
+    waitUntil: (p) => { try { c.executionCtx.waitUntil(p); } catch { void p; } },
+  });
+  return c.json(body, status);
+});
 
 // ─── POST /ocr ────────────────────────────────────────────────
 // 이미지에서 텍스트를 추출해 독서 노트로 저장할 수 있도록 반환

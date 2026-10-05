@@ -3,6 +3,7 @@
  *
  * GET    /api/collections        — 콜렉션 목록 조회
  * POST   /api/collections        — 콜렉션 생성
+ * POST   /api/collections/from-books — AI 제안 저장(콜렉션 + 도서를 한 번에)
  * GET    /api/collections/:id    — 콜렉션 상세 (포함 독서 목록)
  * PATCH  /api/collections/:id    — 콜렉션 수정
  * DELETE /api/collections/:id    — 콜렉션 삭제
@@ -33,6 +34,13 @@ const updateCollectionSchema = collectionBaseSchema.partial();
 const addBookSchema = z.object({
   book_id: z.string().uuid(),
   sort_order: z.number().int().min(0).optional().default(0),
+});
+
+const fromBooksSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+  emoji: z.string().max(8).optional(),
+  description: z.string().max(500).optional(),
+  book_ids: z.array(z.string().min(1).max(64)).min(1).max(200),
 });
 
 // ─── GET /api/collections — 사용자 컬렉션 목록 ────────────────
@@ -104,6 +112,43 @@ collectionsRouter.post('/', authMiddleware, zValidator('json', createCollectionS
     .first();
 
   return c.json({ data: created }, 201);
+});
+
+// ─── POST /api/collections/from-books — AI 컬렉션 제안 저장 ────
+// 컬렉션 생성 + collection_books 삽입을 D1 batch 한 번(원자적)으로. book_ids는 전부 본인 책이어야 한다.
+collectionsRouter.post('/from-books', authMiddleware, zValidator('json', fromBooksSchema), async (c) => {
+  const userId = c.get('userId');
+  const body = c.req.valid('json');
+  const bookIds = [...new Set(body.book_ids)];
+
+  const dup = await c.env.DB.prepare('SELECT id FROM collections WHERE user_id = ? AND name = ?')
+    .bind(userId, body.name).first<{ id: string }>();
+  if (dup) return c.json({ error: '같은 이름의 컬렉션이 이미 있어요.', existing_id: dup.id }, 409);
+
+  const countResult = await c.env.DB.prepare('SELECT COUNT(*) AS cnt FROM collections WHERE user_id = ?')
+    .bind(userId).first<{ cnt: number }>();
+  if ((countResult?.cnt ?? 0) >= 20) return c.json({ error: '컬렉션은 최대 20개까지 생성 가능합니다.' }, 400);
+
+  // 소유권: 요청한 id가 모두 이 사용자의 책이어야 한다(하나라도 아니면 아무것도 만들지 않는다)
+  const placeholders = bookIds.map(() => '?').join(',');
+  const owned = await c.env.DB.prepare(`SELECT id FROM books WHERE user_id = ? AND id IN (${placeholders})`)
+    .bind(userId, ...bookIds).all<{ id: string }>();
+  if ((owned.results?.length ?? 0) !== bookIds.length) {
+    return c.json({ error: '내 서재에 없는 책이 포함되어 있어요.' }, 400);
+  }
+
+  const id = crypto.randomUUID();
+  const emoji = body.emoji?.trim() || '📚';
+  const description = body.description ?? null;
+  await c.env.DB.batch([
+    c.env.DB.prepare('INSERT INTO collections (id, user_id, name, description, emoji) VALUES (?, ?, ?, ?, ?)')
+      .bind(id, userId, body.name, description, emoji),
+    ...bookIds.map((bookId, i) =>
+      c.env.DB.prepare('INSERT INTO collection_books (collection_id, book_id, sort_order) VALUES (?, ?, ?)')
+        .bind(id, bookId, i)),
+  ]);
+
+  return c.json({ data: { id, name: body.name, emoji, description, book_count: bookIds.length } }, 201);
 });
 
 // ─── PUT /api/collections/:id — 컬렉션 수정 ──────────────────

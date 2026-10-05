@@ -52,7 +52,7 @@ describe('lifeBooks', () => {
 
   it('캐시 키: v4 + 전체 목록 해시(한 권만 달라져도 바뀜)', () => {
     const a = lifeBooksCacheKey('u1', done);
-    expect(a.startsWith('ai_lifebooks:v5:u1:')).toBe(true);
+    expect(a.startsWith('ai_lifebooks:v6:u1:')).toBe(true);
     expect(lifeBooksCacheKey('u1', [...done, { title: 'X', author: null, genre: null, rating: null }])).not.toBe(a);
   });
 

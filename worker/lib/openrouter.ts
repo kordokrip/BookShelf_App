@@ -19,6 +19,12 @@ export const OPENROUTER_MODEL = 'google/gemini-3.8-flash';
  * 추론 토큰이 출력 요금으로 청구된다. 'minimal'에서 추론 토큰 0을 확인(응답 usage.completion_tokens_details).
  */
 export const OPENROUTER_REASONING_EFFORT = 'minimal';
+export type ReasoningEffort = 'minimal' | 'low' | 'none';
+/**
+ * 품질이 중요한 큐레이션(AI 컬렉션·인생책)용 모델. 작업별 모델 분리 — 벤치마크 뒤 이 값만 바꾸면 된다.
+ * 지금은 기본 모델과 같다. 모델 id가 'anthropic/'이거나 effort 'none'이 거절되면 호출 측에서 reasoningEffort를 조정한다.
+ */
+export const OPENROUTER_MODEL_CURATOR: string = OPENROUTER_MODEL;
 export const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 /**
  * 하루 전체 호출 상한(전 사용자 합산) — 유료 모델의 비용 안전장치.
@@ -51,6 +57,10 @@ export interface ChatOptions {
   retryDelayMs?: number;
   /** 이 호출이 쓸 수 있는 오늘 예산 상한(기본 OPENROUTER_DAILY_BUDGET). 백그라운드 호출은 OPENROUTER_BACKGROUND_BUDGET */
   budgetCap?: number;
+  /** 이 호출이 쓸 모델(기본 OPENROUTER_MODEL). 큐레이션은 OPENROUTER_MODEL_CURATOR */
+  model?: string;
+  /** 추론 정도(기본 OPENROUTER_REASONING_EFFORT) — 모델이 'none'/'minimal'을 거절하면 'low' 등으로 */
+  reasoningEffort?: ReasoningEffort;
 }
 
 /** 모킹이 쉽도록 필요한 바인딩만 좁혀서 받는다(noteTagger 패턴) */
@@ -111,7 +121,7 @@ async function postOnce(env: OpenRouterEnv, opts: ChatOptions): Promise<Response
         'X-Title': 'BookShelf',
       },
       body: JSON.stringify({
-        model: OPENROUTER_MODEL,
+        model: opts.model ?? OPENROUTER_MODEL,
         messages: opts.messages,
         max_tokens: opts.maxTokens,
         temperature: opts.temperature,
@@ -120,7 +130,7 @@ async function postOnce(env: OpenRouterEnv, opts: ChatOptions): Promise<Response
         // 20초를 넘겼다. 처리량 우선(초당 35~40토큰, 비용 차이는 호출당 $0.0001 수준)으로 고르고,
         // JSON 모드가 필요하면 그 기능을 지원하는 공급자만 쓴다. 공급자별 지표: /api/v1/models/{model}/endpoints
         provider: { sort: 'throughput', ...(opts.json ? { require_parameters: true } : {}) },
-        reasoning: { effort: OPENROUTER_REASONING_EFFORT },
+        reasoning: { effort: opts.reasoningEffort ?? OPENROUTER_REASONING_EFFORT },
       }),
     });
   } finally {

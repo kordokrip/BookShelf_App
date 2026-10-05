@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   chatCompletion, generateText, OpenRouterError, OPENROUTER_DAILY_BUDGET, OPENROUTER_BACKGROUND_BUDGET, OPENROUTER_MODEL, budgetKey,
-  type GenerateEnv,
+  OPENROUTER_MODEL_CURATOR, type GenerateEnv,
 } from '../lib/openrouter';
 
 const NOW = Date.UTC(2026, 8, 27, 3, 0, 0); // KST 2026-09-27
@@ -28,6 +28,18 @@ const limited = () => new Response('{"error":{"message":"temporarily rate-limite
 afterEach(() => { vi.unstubAllGlobals(); });
 
 describe('chatCompletion', () => {
+  it('model·reasoningEffort 옵션이 요청 본문에 반영되고, 큐레이터 모델 상수가 있다', async () => {
+    const fetchMock = vi.fn(async () => ok('x'));
+    vi.stubGlobal('fetch', fetchMock);
+    const { env } = makeEnv();
+    await chatCompletion(env, { ...OPTS, model: 'anthropic/claude-x', reasoningEffort: 'low' }, NOW);
+    const body = JSON.parse((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
+    expect(body.model).toBe('anthropic/claude-x');
+    expect(body.reasoning).toEqual({ effort: 'low' });
+    expect(typeof OPENROUTER_MODEL_CURATOR).toBe('string');
+    expect(OPENROUTER_MODEL_CURATOR.length).toBeGreaterThan(0);
+  });
+
   it('성공: 헤더·모델·본문을 올바르게 보내고 예산을 1 소모', async () => {
     const fetchMock = vi.fn(async () => ok(' 요약 결과 '));
     vi.stubGlobal('fetch', fetchMock);

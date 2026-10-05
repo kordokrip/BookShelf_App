@@ -16,12 +16,18 @@ export interface SwrPayload<T> {
   source: RecommendationSource;
   provider: Provider | null;
   stale?: boolean;
+  /** 이 payload를 만든 시각(ISO) — 캐시에도 보존되어 "n분 전 분석" 표시에 쓴다 */
+  generated_at?: string;
+  /** 호출 측이 덧붙이는 메타(예: basis) — 캐시에 그대로 보존 */
+  [extra: string]: unknown;
 }
 
 export interface SwrGenerated<T> {
   data: T[];
   source: RecommendationSource;
   provider: Provider | null;
+  /** payload 최상위에 병합될 추가 필드(예: basis) */
+  extra?: Record<string, unknown>;
 }
 
 export interface SwrOptions<T> {
@@ -61,7 +67,10 @@ function parseStored<T>(raw: string | null): Stored<T> | null {
 
 async function generateAndStore<T>(o: SwrOptions<T>, background: boolean): Promise<SwrPayload<T>> {
   const result = await o.generate(background);
-  const payload: SwrPayload<T> = { data: result.data, cached: false, source: result.source, provider: result.provider };
+  const payload: SwrPayload<T> = {
+    ...result.extra, data: result.data, cached: false, source: result.source, provider: result.provider,
+    generated_at: new Date(o.nowMs ?? Date.now()).toISOString(),
+  };
   // 백그라운드에서 OpenRouter 모델이 실패하면(큐레이션만 남음) 지난 AI 추천을 덮어쓰지 않는다 — 다음 조회 때 다시 시도
   if (background && result.provider !== 'openrouter') return payload;
   if (result.data.length > 0) {

@@ -5,18 +5,23 @@
  * 검증을 통과한 책이 3권 미만이면 큐레이션 목록(서재 제외 적용)으로 채운다.
  */
 import {
-  analyzeTopGenres, buildCuratedRecommendations, extractJsonObject, hashString, isExcludedBook,
+  analyzeTopGenres, buildCuratedRecommendations, buildExcludedSet, extractJsonObject, hashString, isExcludedBook,
   normalizeTitle, sanitizeForPrompt, type RecommendationSource,
 } from './aiRecommend';
 import { searchBook, type LookupEnv } from './bookLookup';
-import { generateText, type ChatMessage, type GenerateEnv, type Provider } from './openrouter';
+import { generateText, OPENROUTER_MODEL_CURATOR, type ChatMessage, type GenerateEnv, type Provider } from './openrouter';
 
 export const LIFEBOOKS_CACHE_TTL_SEC = 24 * 60 * 60;
-export const LIFEBOOKS_CACHE_VERSION = 'v5';
+export const LIFEBOOKS_CACHE_VERSION = 'v6';
 export const MAX_DONE_BOOKS = 200;
 export const CANDIDATE_COUNT = 6;
 /** 후보 8권 × 짧은 2문장 이유(권당 ~120토큰) + JSON 오버헤드 */
-export const LIFEBOOKS_MAX_TOKENS = 800;
+export const LIFEBOOKS_MAX_TOKENS = 1000;
+/** 사용자별 최근 추천 제목 기억(새로고침 다양성) */
+export const SEEN_MAX = 30;
+export const SEEN_TTL_SEC = 90 * 24 * 60 * 60;
+export const TEMP_NORMAL = 0.6;
+export const TEMP_REFRESH = 0.8;
 /**
  * OpenRouter 호출 제한 시간 — Workers의 waitUntil(응답 뒤 백그라운드)은 약 30초까지만 이어지므로
  * 생성·검증이 그 안에 끝나야 한다. 출력(후보 6권 × 짧은 이유)을 줄여 보통 10~15초에 끝난다.
@@ -43,9 +48,14 @@ export interface LifeBookItem {
   isbn: string;
   url: string;
   verified: boolean;
+  /** 이 추천의 근거가 된 사용자의 책 제목(1~3권, 사용자 목록에서 검증됨). 없으면 빈 배열 */
+  based_on?: string[];
 }
 
+export interface LifeBooksBasis { done_count: number; top_genres: string[] }
+
 export interface LifeBooksResult {
+  basis?: LifeBooksBasis;
   data: LifeBookItem[];
   source: RecommendationSource;
   provider: Provider | null;
@@ -67,11 +77,16 @@ export function lifeBooksLatestKey(userId: string): string {
 }
 
 /** 백그라운드 재생성 중복 방지 락 */
+/** 사용자별 최근 추천 제목 목록(최대 SEEN_MAX) */
+export function lifeBooksSeenKey(userId: string): string {
+  return `ai_lifebooks_seen:${userId}`;
+}
+
 export function lifeBooksLockKey(userId: string): string {
   return `ai_lifebooks_lock:${userId}`;
 }
 
-export function buildLifeBookMessages(doneBooks: DoneBook[]): ChatMessage[] {
+export function buildLifeBookMessages(doneBooks: DoneBook[], seenTitles: string[] = []): ChatMessage[] {
   const lines = doneBooks
     .slice(0, MAX_DONE_BOOKS)
     .map((b) => `${sanitizeForPrompt(b.title)} | ${sanitizeForPrompt(b.author ?? '')} | ${sanitizeForPrompt(b.genre ?? '')} | ${b.rating ? `내 별점 ${b.rating}점(5점 만점)` : '별점 없음'}`)
@@ -86,14 +101,16 @@ export function buildLifeBookMessages(doneBooks: DoneBook[]): ChatMessage[] {
         '- 목록에 이미 있는 책은 절대 추천하지 마세요.\n' +
         '- reason은 한국어 1~2문장(총 60자 이내)으로, 사용자가 읽은 구체적인 책 제목을 언급하며 왜 이 책이 어울리는지 연결하세요.\n' +
         '- 별점은 "내 별점 N점(5점 만점)" 형식입니다. reason에 별점 숫자를 쓰지 마세요(쓰려면 목록의 값을 정확히 그대로, 만점 기준은 5점). 별점을 잘못 옮기거나 "5점 만점으로 평가하신" 같은 표현을 쓰지 마세요.\n' +
+        '- based_on은 이 추천의 근거가 된, 사용자 목록에 있는 책의 제목 1~3개입니다. 목록의 제목을 한 글자도 바꾸지 말고 그대로 쓰세요.\n' +
+        '- 한 장르에 몰리지 말고 사용자의 여러 관심사(서로 다른 장르·주제)에 걸쳐 고르게 추천하세요.\n' +
         '- 다른 텍스트 없이 아래 JSON 형식으로만 응답하세요.\n' +
-        '{"books":[{"title":"책 제목","author":"저자","reason":"추천 이유"}]}',
+        '{"books":[{"title":"책 제목","author":"저자","reason":"추천 이유","based_on":["목록의 책 제목"]}]}',
     },
-    { role: 'user', content: `완독 목록 (${Math.min(doneBooks.length, MAX_DONE_BOOKS)}권):\n${lines}\n\n이 독서 이력을 바탕으로 인생책 후보 ${CANDIDATE_COUNT}권을 추천해 주세요.` },
+    { role: 'user', content: `완독 목록 (${Math.min(doneBooks.length, MAX_DONE_BOOKS)}권):\n${lines}\n\n${seenTitles.length > 0 ? `\n\n이번에는 제외 (최근에 이미 추천한 책, 다시 추천하지 마세요):\n${seenTitles.map((t) => sanitizeForPrompt(t)).join('\n')}` : ''}\n\n이 독서 이력을 바탕으로 인생책 후보 ${CANDIDATE_COUNT}권을 추천해 주세요.` },
   ];
 }
 
-export interface Candidate { title: string; author: string; reason: string }
+export interface Candidate { title: string; author: string; reason: string; based_on?: string[] }
 
 /**
  * 모델이 프롬프트의 별점 표기를 그대로 옮겨 쓰는 경우("내 별점 5점(5점 만점)", "5점 만점으로 평가하신")를 지운다.
@@ -107,7 +124,30 @@ export function stripRatingEcho(reason: string): string {
     .trim();
 }
 
-export function parseCandidates(text: string): Candidate[] {
+/** 사용자 책 제목 조회표 — 정규화한 제목 → 원래 제목 */
+export function titleLookup(doneBooks: DoneBook[]): Map<string, string> {
+  const m = new Map<string, string>();
+  for (const b of doneBooks) {
+    const k = normalizeTitle(b.title);
+    if (k && !m.has(k)) m.set(k, b.title);
+  }
+  return m;
+}
+
+/** 모델이 낸 based_on 중 사용자 목록에 실제로 있는 제목만 남긴다(최대 3, 중복 제거, 원래 표기로 되돌림) */
+export function validateBasedOn(raw: unknown, userTitles: Map<string, string> | undefined): string[] {
+  if (!userTitles || !Array.isArray(raw)) return [];
+  const out: string[] = [];
+  for (const t of raw) {
+    if (typeof t !== 'string') continue;
+    const orig = userTitles.get(normalizeTitle(t));
+    if (orig && !out.includes(orig)) out.push(orig);
+    if (out.length >= 3) break;
+  }
+  return out;
+}
+
+export function parseCandidates(text: string, userTitles?: Map<string, string>): Candidate[] {
   const obj = extractJsonObject(text);
   const list = obj?.books;
   if (!Array.isArray(list)) return [];
@@ -122,7 +162,7 @@ export function parseCandidates(text: string): Candidate[] {
     const key = normalizeTitle(title);
     if (!title || !author || !reason || seen.has(key)) continue;
     seen.add(key);
-    out.push({ title, author, reason });
+    out.push({ title, author, reason, based_on: validateBasedOn(r.based_on, userTitles) });
   }
   return out.slice(0, CANDIDATE_COUNT);
 }
@@ -155,6 +195,7 @@ export async function verifyCandidates(
       isbn: m.isbn,
       url: m.url,
       verified: true,
+      based_on: c.based_on ?? [],
     });
   });
   return out.slice(0, limit);
@@ -177,8 +218,17 @@ async function topUpCurated(env: LookupEnv, doneBooks: DoneBook[], excluded: Set
       title: r.title, author: m?.author || r.author, reason: r.reason,
       thumbnail: m?.thumbnail ?? '', publisher: m?.publisher ?? '', isbn: m?.isbn ?? '', url: m?.url ?? '',
       verified: !!m,
+      based_on: [],
     };
   });
+}
+
+export interface BuildLifeBooksOpts {
+  background?: boolean;
+  /** ?refresh=true — 온도를 올리고 seenTitles를 제외한다 */
+  refresh?: boolean;
+  /** 최근에 추천했던 제목(새로고침 시 프롬프트 제외 + 하드 제외) */
+  seenTitles?: string[];
 }
 
 /**
@@ -190,36 +240,54 @@ export async function buildLifeBooks(
   env: LifeBooksEnv,
   doneBooks: DoneBook[],
   excluded: Set<string>,
-  _opts: { background?: boolean } = {}, // 호출 측 구분용(지금은 같은 경로) — 백그라운드 저장 정책은 lifeBooksSwr
+  opts: BuildLifeBooksOpts = {},
 ): Promise<LifeBooksResult> {
+  const seenTitles = opts.refresh ? (opts.seenTitles ?? []) : [];
+  const seenSet = buildExcludedSet(seenTitles.map((title) => ({ title, author: null })));
+  const basis: LifeBooksBasis = { done_count: doneBooks.length, top_genres: topGenresOf(doneBooks) };
   let verified: LifeBookItem[] = [];
   let provider: Provider | null = null;
   try {
     const res = await generateText(
       env,
       {
-        messages: buildLifeBookMessages(doneBooks),
+        messages: buildLifeBookMessages(doneBooks, seenTitles),
         maxTokens: LIFEBOOKS_MAX_TOKENS,
-        temperature: 0.6,
+        temperature: opts.refresh ? TEMP_REFRESH : TEMP_NORMAL,
         json: true,
         timeoutMs: LIFEBOOKS_TIMEOUT_MS,
+        model: OPENROUTER_MODEL_CURATOR,
       },
       { fallback: 'none' },
     );
     provider = res.provider;
-    verified = await verifyCandidates(env, parseCandidates(res.text), excluded, RESULT_COUNT);
+    const all = await verifyCandidates(env, parseCandidates(res.text, titleLookup(doneBooks)), excluded, CANDIDATE_COUNT);
+    // 새로고침: 최근 추천은 뒤로 — 새 책이 3권 미만일 때만 지난 추천을 허용한다
+    const fresh = all.filter((b) => !isExcludedBook(b.title, b.author, seenSet));
+    const repeats = all.filter((b) => isExcludedBook(b.title, b.author, seenSet));
+    verified = (fresh.length >= MIN_VERIFIED ? fresh : [...fresh, ...repeats]).slice(0, RESULT_COUNT);
   } catch (err) {
     console.error('AI 인생책 추천 오류:', err);
   }
 
   if (verified.length >= RESULT_COUNT) {
-    return { data: verified, source: provider ?? 'curated-fallback', provider };
+    return { data: verified, source: provider ?? 'curated-fallback', provider, basis };
   }
   // 후보를 줄였으므로(생성 시간) 검증 통과가 5권에 못 미치면 큐레이션으로 채운다 — AI 추천이 앞에 온다
-  const topUp = await topUpCurated(env, doneBooks, excluded, verified, RESULT_COUNT - verified.length);
+  const topUp = await topUpCurated(env, doneBooks, new Set([...excluded, ...seenSet]), verified, RESULT_COUNT - verified.length);
   const data = [...verified, ...topUp];
   // AI 검증분이 하나도 없으면 전부 큐레이션 — provider도 null로 알린다
   return verified.length === 0
-    ? { data, source: 'curated-fallback', provider: null }
-    : { data, source: provider ?? 'curated-fallback', provider };
+    ? { data, source: 'curated-fallback', provider: null, basis }
+    : { data, source: provider ?? 'curated-fallback', provider, basis };
+}
+
+function topGenresOf(doneBooks: DoneBook[]): string[] {
+  return analyzeTopGenres(
+    doneBooks.map((b) => ({
+      title: b.title, author: b.author ?? '', genre: b.genre, rating: b.rating, status: 'done' as const,
+      finished_date: b.finished_date ?? null, created_at: b.created_at ?? '', note: null, session_count: 0, pages_read: 0, note_count: 0,
+    })),
+    [],
+  );
 }
