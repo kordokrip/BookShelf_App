@@ -4,6 +4,17 @@
 
 ---
 
+## 42차 (2026-10-05) — OpenRouter 무료 모델로 전환 (크레딧 $0 대응)
+
+상세 경위: `docs/sessions/2026-10-05-free-model.md`
+
+- 모델: `qwen/qwen3.8-27b:free`(추론 none) — 무료 모델 6개를 서재 76권으로 비교해 유일하게 안정적으로 응답(AI 컬렉션 12.6초, 인생책 7.7초)
+- JSON 모드는 지원 모델에만 보냄(`supportsJsonMode`) — Qwen 무료 공급자는 response_format 미지원(404)
+- 일일 예산을 무료 한도(계정 하루 50회)보다 작게 — 넘으면 기존 폴백
+- 크레딧 충전 후 되돌릴 유료 모델은 `OPENROUTER_PAID_MODEL`
+
+---
+
 ## 41차 (2026-10-05) — AI 컬렉션(서재 자동 정리·시각화), 인생책 근거 표시·다시 고르기
 
 상세 경위: `docs/sessions/2026-10-05-refactoring-requests.md`의 "후속 (41차)"
