@@ -1485,6 +1485,12 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 
 - **파일**: `src/app/pages/CollectionsPage.tsx`
 - **경로**: `/collections` (Lazy loaded, 인증 필수)
+- **AI가 정리한 내 서재 (41차, `components/collections/ai/*`)**: 맨 위 섹션. `GET /api/ai/collections`가 서재의 모든 책을 주제·정서·관심사로 4~7개 묶음으로 정리(모델 `OPENROUTER_MODEL_CURATOR`, 24시간 캐시·지난 정리 즉시 표시, 한도 3회/10분은 실제 생성 때만)
+  - 근거 줄: "완독 N권·읽는 중 N권을 바탕으로 정리했어요 · N시간 전"
+  - 시각화: 묶음별 비율 막대(`ShareBar`, role=img + 요약 aria-label, 범례) + 카드 그리드(모바일 1열·태블릿 2열·데스크톱 3열) — 이모지·이름, 묶인 이유, 취향 한 줄(insight), 표지 모자이크(최대 4), 권 수, 펼치면 책 제목 링크
+  - [컬렉션으로 저장](`POST /api/collections/from-books`) → "저장됨 · 보기", 같은 이름이 있으면 409 → "기존 컬렉션 보기" · [모두 저장] · [새로 정리](생성 중 오버레이 "서재를 다시 살펴보는 중…")
+  - 책이 6권 미만이면 "책을 6권 이상 담으면 AI가 컬렉션을 만들어 드려요", AI 실패는 503 안내(가짜 결과로 대체하지 않음)
+- 아래에 기존 "내가 만든 컬렉션" 목록
 
 #### 역할
 
@@ -1577,6 +1583,8 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 
 - **파일**: `src/app/pages/LifeBooksPage.tsx`
 - **경로**: `/lifebooks` (Lazy loaded, 인증 필수)
+- **근거 표시 (41차)**: 머리 줄 "완독 N권 · 주로 A·B을 바탕으로 골랐어요 · N시간 전"(`basis`, `generated_at`), 카드마다 "이 책들을 바탕으로: 넥서스 · 파친코"(`based_on` — 서버가 내 책 제목과 대조해 검증, 서재에 있으면 책 상세 링크)
+- **다시 고르기**: 직전에 보여 준 책(최근 30권, KV `ai_lifebooks_seen:{userId}`)을 빼고 다시 고른다. 진행 중 "다시 고르는 중…" + 목록 흐림 오버레이, 완료 토스트 "새 인생책 N권을 골랐어요"
 
 #### 역할
 

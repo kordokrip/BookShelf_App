@@ -4,6 +4,16 @@
 
 ---
 
+## 41차 (2026-10-05) — AI 컬렉션(서재 자동 정리·시각화), 인생책 근거 표시·다시 고르기
+
+상세 경위: `docs/sessions/2026-10-05-refactoring-requests.md`의 "후속 (41차)"
+
+- AI 컬렉션: `GET /api/ai/collections`가 서재 전체를 주제별 4~7개 묶음으로 정리 → 컬렉션 화면 맨 위 비율 막대·카드(표지 모자이크·취향 한 줄)·[컬렉션으로 저장]/[모두 저장](`POST /api/collections/from-books`)
+- 인생책: 추천마다 근거가 된 내 책(based_on) 표시, 다시 고르기는 직전에 보여 준 책 제외, 생성 시각·진행 상태 표시
+- 기능별 모델 지정(`OPENROUTER_MODEL_CURATOR`) — 유료 상위 모델 비교는 OpenRouter 크레딧 충전 후 진행(현재 크레딧 $0으로 긴 요청은 402)
+
+---
+
 ## 40차 (2026-10-05) — 관리자 회원 휴면·삭제, 관리자 비밀번호 재설정
 
 상세 경위: `docs/sessions/2026-10-05-refactoring-requests.md`의 "후속 (40차)"
