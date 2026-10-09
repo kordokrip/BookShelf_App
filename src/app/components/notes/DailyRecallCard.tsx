@@ -43,9 +43,16 @@ export function DailyRecallCard() {
           >
             {quote.question}
           </p>
-          <p className="mt-2 truncate text-[#78350F] dark:text-[#FDE68A]" style={{ fontSize: 12, fontWeight: 600 }}>
-            {book.title}{book.author ? ` · ${book.author}` : ""}
-          </p>
+          <Link
+            to={`/book/${book.id}`}
+            className="flex items-center justify-between gap-2 mt-1 min-h-11 text-[#78350F] dark:text-[#FDE68A]"
+            aria-label={`오늘의 회고: ${book.title} 상세 열기`}
+          >
+            <span className="truncate" style={{ fontSize: 12, fontWeight: 600 }}>
+              {book.title}{book.author ? ` · ${book.author}` : ""}
+            </span>
+            <ChevronRight size={14} className="flex-shrink-0 text-[#B45309] dark:text-[#FCD34D]" aria-hidden />
+          </Link>
           <button
             type="button"
             onClick={() => navigate(`/book/${book.id}?note=new&prompt=${encodeURIComponent(quote.question)}`)}

@@ -308,7 +308,16 @@ export function LibraryPage() {
           <DailyRecallCard />
 
           {/* ── Book list ── */}
-          {filtered.length === 0 ? (
+          {filtered.length === 0 && books.length > 0 ? (
+            /* 검색·장르로 좁혀서 0권 — 서재가 빈 것과 구분 */
+            <EmptyState
+              emoji="🔍"
+              heading="조건에 맞는 책이 없어요"
+              subtext="검색어나 장르를 바꿔 보세요."
+              ctaLabel="필터 지우기"
+              onCta={() => { setSearchQuery(""); setSelectedGenre(null); }}
+            />
+          ) : filtered.length === 0 ? (
             <EmptyState
               emoji="📚"
               heading="아직 완독한 책이 없어요"

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { RefreshCw, Sparkles } from "lucide-react";
 import {
@@ -36,6 +36,27 @@ function Skeleton() {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+/** 첫 생성은 무료 AI 상황에 따라 1분 가까이 걸릴 수 있어, 조금 지나면 기다려도 된다는 안내로 바꾼다 */
+const SLOW_NOTICE_MS = 12_000;
+
+function LoadingState() {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const t = window.setTimeout(() => setSlow(true), SLOW_NOTICE_MS);
+    return () => window.clearTimeout(t);
+  }, []);
+  return (
+    <div role="status" aria-live="polite">
+      <p className="px-4 mb-3 text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 13 }}>
+        {slow
+          ? "처음 고를 때는 1분쯤 걸릴 수 있어요. 다른 화면을 보셔도 돼요."
+          : "완독·읽는 중·읽을 책을 살펴보는 중이에요…"}
+      </p>
+      <Skeleton />
     </div>
   );
 }
@@ -112,16 +133,7 @@ export function RecommendedBooksTab() {
     });
   }
 
-  if (isLoading) {
-    return (
-      <div role="status" aria-live="polite">
-        <p className="px-4 mb-3 text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 13 }}>
-          완독·읽는 중·읽을 책을 살펴보는 중이에요…
-        </p>
-        <Skeleton />
-      </div>
-    );
-  }
+  if (isLoading) return <LoadingState />;
   if (isError && !data && error instanceof ApiError && error.status === 400) {
     return (
       <div className="px-4 py-16 text-center">
@@ -138,7 +150,7 @@ export function RecommendedBooksTab() {
   const refreshing = refresh.isPending;
   const ago = relativeTimeKo(data?.generated_at);
   const doneCount = data?.basis?.done_count ?? 0;
-  const intro = doneCount > 0 ? `내 서재 ${doneCount}권을 바탕으로 골랐어요` : "읽은 책을 바탕으로 골랐어요";
+  const intro = doneCount > 0 ? `완독한 ${doneCount}권과 내 서재를 바탕으로 골랐어요` : "내 서재를 바탕으로 골랐어요";
   const sourceLabel = lifeBooksSourceLabel(data);
 
   return (
@@ -195,19 +207,19 @@ export function RecommendedBooksTab() {
                     {book.author}
                   </p>
                   {book.reason && (
-                    <p className="text-[#475569] dark:text-[#CBD5E1] mt-1 line-clamp-3" style={{ fontSize: 12 }}>
+                    <p className="text-[#475569] dark:text-[#CBD5E1] mt-1 line-clamp-4 sm:line-clamp-none" style={{ fontSize: 12 }}>
                       {book.reason}
                     </p>
                   )}
                   {book.based_on && book.based_on.length > 0 && (
-                    <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 11 }}>
-                      <span>이 책을 좋아하셔서:</span>
+                    <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 leading-tight text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 11 }}>
+                      <span>이 책들을 바탕으로:</span>
                       {linkBasedOn(book.based_on.slice(0, MAX_BASIS_CHIPS), bookRefs).map((r) =>
                         r.id ? (
                           <Link
                             key={r.title}
                             to={`/book/${r.id}`}
-                            className="inline-flex min-h-11 max-w-full items-center truncate text-indigo-700 underline underline-offset-2 dark:text-indigo-200"
+                            className="relative inline-flex max-w-full items-center truncate py-1 text-indigo-700 underline underline-offset-2 dark:text-indigo-200 after:absolute after:-inset-y-3 after:inset-x-0 after:content-['']"
                           >
                             {r.title}
                           </Link>

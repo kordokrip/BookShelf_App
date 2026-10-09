@@ -12,7 +12,7 @@ export const HINT_MAX_VISITS = 7;
 /** 화면 전체 우선순위 — 화면 안 순서이자, 화면 힌트가 모두 끝나야 하단 메뉴 힌트가 나온다 */
 export const HINT_ORDER = [
   'library-search', 'library-genre', 'library-view',
-  'reading-timer', 'reading-record', 'reading-goal',
+  'reading-goal', 'reading-timer', 'reading-record',
   'wishlist-search', 'wishlist-ai-tab',
   'collections-ai', 'collections-save',
   'stats-share',
