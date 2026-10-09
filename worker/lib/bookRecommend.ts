@@ -15,7 +15,7 @@ import { generateText, type GenerateEnv, type Provider } from './llm';
 import type { ChatMessage } from './openrouter';
 import { topUpFavoriteAuthors } from './recommendAuthors';
 import {
-  loadSeen, saveSeen, seenSetOf, stripRatingEcho, titleLookup, validateBasedOn, verifyCandidates,
+  isGarbledReason, loadSeen, saveSeen, seenSetOf, stripRatingEcho, titleLookup, validateBasedOn, verifyCandidates,
   type Candidate, type RecommendItem,
 } from './recommendShared';
 
@@ -35,8 +35,6 @@ export const RESULT_MAX = 10;
 export const RECOMMEND_LOOKUP_BUDGET = 36;
 export const RESULT_MIN = 6;
 export const REASON_MAX_CHARS = 60;
-/** 새로고침에서 새 추천이 이만큼은 있어야 지난 추천을 섞지 않는다 */
-export const MIN_FRESH = 4;
 /** 후보 14권 × (제목·저자·이유·based_on) + JSON 오버헤드 */
 export const RECOMMEND_MAX_TOKENS = 2400;
 /** 실측(78권, 12후보) 출력 ~1200토큰 → 14후보 ~1400. Workers AI(느림) 소요 추정용 */
@@ -142,7 +140,7 @@ export function parseRecommendCandidates(text: string, userTitles?: Map<string, 
     const author = typeof r.author === 'string' ? sanitizeForPrompt(r.author).trim() : '';
     const reason = typeof r.reason === 'string' ? stripRatingEcho(sanitizeForPrompt(r.reason)).slice(0, REASON_MAX_CHARS + 20) : '';
     const key = normalizeTitle(title);
-    if (!title || !author || !reason || seen.has(key)) continue;
+    if (!title || !author || !reason || seen.has(key) || isGarbledReason(reason)) continue;
     seen.add(key);
     out.push({ title, author, reason, based_on: validateBasedOn(r.based_on, userTitles) });
   }
@@ -201,6 +199,7 @@ export async function buildRecommendations(
   const seenSet = seenSetOf(seenTitles);
   const titles = titleLookup(books);
   let verified: RecommendItem[] = [];
+  let repeatsAside: RecommendItem[] = [];
   let provider: Provider | null = null;
   if (books.length > 0) {
     try {
@@ -220,10 +219,11 @@ export async function buildRecommendations(
       // verifyCandidates는 제목·저자만 재확인 — 검증된 ISBN도 서재와 대조한다
       const items = (await verifyCandidates(env, parseRecommendCandidates(res.text, titles), excluded, CANDIDATE_COUNT + 4))
         .filter((it) => !isExcludedBook(it.title, it.author, excluded, it.isbn));
-      // 새로고침: 최근 추천은 뒤로 — 새 책이 MIN_FRESH권 미만일 때만 지난 추천을 허용한다
+      // 새로고침: 최근 추천은 빼 두고 작가·큐레이션 보강을 먼저 — 그래도 RESULT_MIN권이 안 되면 그때만 다시 쓴다
       const fresh = items.filter((it) => !isExcludedBook(it.title, it.author, seenSet));
       const repeats = items.filter((it) => isExcludedBook(it.title, it.author, seenSet));
-      verified = (fresh.length >= MIN_FRESH || repeats.length === 0 ? fresh : [...fresh, ...repeats]).slice(0, RESULT_MAX);
+      verified = fresh.slice(0, RESULT_MAX);
+      repeatsAside = repeats;
     } catch (err) {
       console.error('AI 추천 도서 오류:', err);
     }
@@ -233,6 +233,8 @@ export async function buildRecommendations(
   let data = verified;
   if (data.length < RESULT_MAX) data = [...data, ...(await topUpFavoriteAuthors(env, books, skip, data, RESULT_MAX - data.length))];
   if (data.length < RESULT_MIN) data = [...data, ...(await topUpCurated(env, books, skip, data, RESULT_MIN - data.length))];
+  // 다시 고르기에서 새 책이 정말 모자랄 때만 최근에 보여 준 AI 추천을 다시 쓴다
+  if (data.length < RESULT_MIN) data = [...data, ...repeatsAside.slice(0, RESULT_MIN - data.length)];
   data = data.slice(0, RESULT_MAX);
   // AI 검증분이 하나도 없으면 전부 큐레이션·작가 보강 — provider도 null로 알린다
   return verified.length === 0

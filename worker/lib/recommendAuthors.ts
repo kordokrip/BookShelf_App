@@ -4,7 +4,7 @@
  */
 import { isExcludedBook, normalizeTitle } from './aiRecommend';
 import { searchByAuthor, type LookupEnv } from './bookLookup';
-import type { RecommendItem } from './recommendShared';
+import { isOddEdition, type RecommendItem } from './recommendShared';
 
 export const FAVORITE_AUTHOR_MAX = 4;
 export const AUTHOR_REASON_MAX = 60;
@@ -38,9 +38,17 @@ export function pickFavoriteAuthors(books: AuthorSourceBook[], max = FAVORITE_AU
   return [...map.values()].sort((a, b) => b.score - a.score).slice(0, max);
 }
 
+/** 목적격 조사 — 마지막 글자가 한글이면 받침으로 을/를, 아니면 '을(를)' */
+export function objectParticle(word: string): string {
+  const last = word.trim().slice(-1);
+  const code = last.charCodeAt(0) - 0xac00;
+  if (code < 0 || code > 11171) return '을(를)';
+  return code % 28 === 0 ? '를' : '을';
+}
+
 export const authorReason = (ownTitle: string): string => {
   const t = Array.from(ownTitle).length > 20 ? `${Array.from(ownTitle).slice(0, 19).join('')}…` : ownTitle;
-  return `'${t}'을 좋게 읽으셨다면 같은 작가의 다른 작품`.slice(0, AUTHOR_REASON_MAX);
+  return `'${t}'${objectParticle(t)} 좋게 읽으셨다면 같은 작가의 이 작품도 좋아요`.slice(0, AUTHOR_REASON_MAX);
 };
 
 /**
@@ -63,6 +71,7 @@ export async function topUpFavoriteAuthors(
   authors.forEach((a, i) => {
     const pick = (results[i] ?? []).find((m) =>
       !BUNDLE_RE.test(m.title)
+      && !isOddEdition(m.title, m.author)
       && !taken.has(normalizeTitle(m.title))
       && !isExcludedBook(m.title, m.author, excluded, m.isbn));
     if (!pick) return;

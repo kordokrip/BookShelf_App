@@ -20,6 +20,22 @@ export interface RecommendItem {
 
 export interface Candidate { title: string; author: string; reason: string; based_on?: string[] }
 
+
+/**
+ * 추천으로 어색한 판본·자료 — 어학 학습판·오디오북·원서·워크북, 저자가 '편집부'이거나 제목이 '무제'인 항목.
+ * (예: 어린 왕자를 읽은 사람에게 "THE LITTLE PRINCE: 영어로 즐기는 명작(MP3CD)"이 다시 나오던 문제)
+ */
+const ODD_EDITION_RE = /(mp3|\bcd\b|오디오북|원서|영어로|영한대역|대역|워크북|workbook|english\s*edition|학습판|필사)/i;
+export function isOddEdition(title: string, author: string): boolean {
+  const t = title.trim();
+  return ODD_EDITION_RE.test(t) || /^무제$/.test(t) || /편집부/.test(author);
+}
+
+/** 이유 문장에 한자·긴 영단어가 섞이면(모델 출력 깨짐 — "한硬核한", "dystopian") 쓰지 않는다 */
+export function isGarbledReason(reason: string): boolean {
+  return /[\u4E00-\u9FFF]/.test(reason) || /[A-Za-z]{5,}/.test(reason);
+}
+
 /**
  * 모델이 프롬프트의 별점 표기를 그대로 옮겨 쓰는 경우("내 별점 5점(5점 만점)", "별점 5/5", "5점 만점으로 평가하신")를 지운다.
  * 별점을 잘못 말하는 것보다 아예 언급하지 않는 편이 낫다.
@@ -74,13 +90,17 @@ export async function verifyCandidates(
   fresh.forEach((c, i) => {
     const m = matches[i];
     if (!m) return;
+    if (isOddEdition(m.title, m.author)) return;
+    // 977로 시작하는 ISBN은 정기간행물(잡지) 코드 — 책 추천에서 뺀다
+    if (m.isbn?.startsWith('977')) return;
     // 검증된 실제 책이 이미 서재에 있는 책이면(AI가 표기를 바꿔 쓴 경우, 저자를 바로잡은 뒤 포함) 버린다
     if (isExcludedBook(m.title, m.author, excluded, m.isbn)) return;
     const key = normalizeTitle(c.title);
     if (seen.has(key)) return;
     seen.add(key);
     out.push({
-      title: c.title,
+      // 띄어쓰기만 다르면("창백한 푸른점" → "창백한 푸른 점") 실제 표기를 쓴다
+      title: normalizeTitle(m.title) === key ? m.title : c.title,
       author: m.author || c.author,
       reason: c.reason,
       thumbnail: m.thumbnail,

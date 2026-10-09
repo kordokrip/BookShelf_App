@@ -142,6 +142,16 @@ export function normalizeIsbn(raw: string | null | undefined): string {
 
 const ISBN_PREFIX = 'isbn:';
 
+/**
+ * 부제·판본 표기를 뗀 본제목 키 — "넛지(파이널 에디션)"·"넛지 : 똑똑한 선택을…" → "넛지".
+ * 짧은 제목(2자)은 접두 비교에서 빠지므로 본제목끼리 따로 비교한다. 구분자가 없으면 ''.
+ */
+export function mainTitleKey(title: string): string {
+  const head = title.split(/\s*[(（[【:：]|\s+[-–—]\s+/)[0] ?? '';
+  const key = normalizeTitle(head);
+  return key && key !== normalizeTitle(title) ? key : '';
+}
+
 /** isbn은 선택 — 있으면 ISBN 일치만으로도 같은 책으로 본다(표기가 다른 판본·AI가 바꿔 쓴 제목 방지) */
 export function isExcludedBook(title: string, author: string, excluded: Set<string>, isbn?: string | null): boolean {
   const isbnKey = normalizeIsbn(isbn);
@@ -149,6 +159,8 @@ export function isExcludedBook(title: string, author: string, excluded: Set<stri
   const titleKey = normalizeTitle(title);
   const pairKey = `${titleKey}::${normalizeTitle(author)}`;
   if (excluded.has(titleKey) || excluded.has(pairKey)) return true;
+  const mainKey = mainTitleKey(title);
+  if (mainKey && excluded.has(mainKey)) return true;
   // "데미안" vs "데미안(개정판)"처럼 부제·판본 표기만 다른 경우도 같은 책으로 본다(3자 이상 접두 일치)
   if (titleKey.length < 3) return false;
   for (const key of excluded) {
@@ -166,6 +178,8 @@ export function buildExcludedSet(rows: Array<{ title: string; author: string | n
     const titleKey = normalizeTitle(row.title);
     if (!titleKey) continue;
     set.add(titleKey);
+    const mainKey = mainTitleKey(row.title);
+    if (mainKey) set.add(mainKey);
     if (row.author) set.add(`${titleKey}::${normalizeTitle(row.author)}`);
   }
   return set;

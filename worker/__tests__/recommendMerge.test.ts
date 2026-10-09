@@ -118,7 +118,7 @@ describe('좋아한 작가의 다른 책', () => {
   });
 
   it('authorReason: 60자 이내, 긴 제목은 줄인다', () => {
-    expect(authorReason('데미안')).toBe("'데미안'을 좋게 읽으셨다면 같은 작가의 다른 작품");
+    expect(authorReason('데미안')).toBe("'데미안'을 좋게 읽으셨다면 같은 작가의 이 작품도 좋아요");
     expect(authorReason('아주 긴 제목'.repeat(10)).length).toBeLessThanOrEqual(60);
   });
 
@@ -135,7 +135,7 @@ describe('좋아한 작가의 다른 책', () => {
     const out = await topUpFavoriteAuthors({ KAKAO_REST_API_KEY: 'k' }, lib, excluded, [], 5);
     expect(out.map((o) => o.title)).toEqual(['유리알 유희', '한계']);
     expect(out[0]).toMatchObject({ author: '헤르만 헤세', verified: true, based_on: ['데미안', '싯다르타'], thumbnail: 't-유리알 유희' });
-    expect(out[0]!.reason).toBe("'데미안'을 좋게 읽으셨다면 같은 작가의 다른 작품");
+    expect(out[0]!.reason).toBe("'데미안'을 좋게 읽으셨다면 같은 작가의 이 작품도 좋아요");
     expect(out.every((o) => o.reason.length <= 60)).toBe(true);
     expect(await topUpFavoriteAuthors({ KAKAO_REST_API_KEY: 'k' }, lib, excluded, [], 0)).toEqual([]);
   });
@@ -209,11 +209,15 @@ describe('합쳐진 추천 — buildRecommendations', () => {
     for (const t of seen) expect(body.messages[1]!.content).toContain(t);
   });
 
-  it('refresh: 새 책이 4권 미만이면 지난 추천을 허용(새 책이 앞); 일반 호출은 seen을 무시', async () => {
+  it('refresh: 최근 추천은 작가·큐레이션 보강 뒤, 그래도 모자랄 때만 맨 뒤에; 일반 호출은 seen을 무시', async () => {
     const real = { 변신: '저자', 이방인: '저자', 페스트: '저자' };
     const w = stubWorld({ ai: [cand('변신'), cand('이방인'), cand('페스트')], real });
     const r1 = await buildRecommendations(env(), lib, [], excluded, { refresh: true, seenTitles: ['변신'] });
-    expect(r1.data.map((d) => d.title).slice(0, 3)).toEqual(['이방인', '페스트', '변신']);
+    const titles = r1.data.map((d) => d.title);
+    expect(titles.slice(0, 2)).toEqual(['이방인', '페스트']);
+    // 최근에 보여 준 '변신'은 있더라도 맨 뒤(새 책·보강 책이 먼저)
+    if (titles.includes('변신')) expect(titles.indexOf('변신')).toBe(titles.length - 1);
+    expect(r1.data.length).toBeLessThanOrEqual(10);
     await buildRecommendations(env(), lib, [], excluded, { seenTitles: ['변신'] });
     const normal = w.modelBodies[1] as { temperature: number; messages: Array<{ content: string }> };
     expect(normal.temperature).toBe(TEMP_NORMAL);
@@ -280,3 +284,38 @@ describe('합쳐진 추천 — resolveRecommendations (seen·SWR)', () => {
     expect(keys[0]).toMatch(/^rl:ai_rec:/);
   });
 });
+
+describe('43차 QA 보완', () => {
+  it('짧은 제목도 판본·부제만 다르면 내 책으로 본다(넛지 ↔ 넛지(파이널 에디션)·넛지 : 부제)', async () => {
+    const { buildExcludedSet, isExcludedBook, mainTitleKey } = await import('../lib/aiRecommend');
+    expect(mainTitleKey('넛지(파이널 에디션)')).toBe('넛지');
+    expect(mainTitleKey('넛지 : 똑똑한 선택을 이끄는 힘')).toBe('넛지');
+    expect(mainTitleKey('넛지')).toBe('');
+    const ex1 = buildExcludedSet([{ title: '넛지', author: '리처드 탈러' }]);
+    expect(isExcludedBook('넛지(파이널 에디션)', '리처드 탈러', ex1)).toBe(true);
+    expect(isExcludedBook('넛지 : 똑똑한 선택을 이끄는 힘', '리처드 탈러', ex1)).toBe(true);
+    const ex2 = buildExcludedSet([{ title: '넛지 : 똑똑한 선택을 이끄는 힘', author: '리처드 탈러' }]);
+    expect(isExcludedBook('넛지', '리처드 탈러', ex2)).toBe(true);
+    expect(isExcludedBook('넛지마', '누군가', ex1)).toBe(false);
+  });
+
+  it('작가 보강 이유의 목적격 조사: 받침 있으면 을, 없으면 를, 한글이 아니면 을(를)', async () => {
+    const { objectParticle, authorReason } = await import('../lib/recommendAuthors');
+    expect(objectParticle('데미안')).toBe('을');
+    expect(objectParticle('넛지')).toBe('를');
+    expect(objectParticle('1Q84')).toBe('을(를)');
+    expect(authorReason('넛지')).toContain("'넛지'를 좋게");
+  });
+
+  it('어색한 판본(어학판·오디오북·편집부·무제)과 깨진 이유 문장을 걸러 낸다', async () => {
+    const { isOddEdition, isGarbledReason } = await import('../lib/recommendShared');
+    expect(isOddEdition('THE LITTLE PRINCE: 영어로 즐기는 명작의 향기(MP3CD1장포함)', '앙투안 드 생텍쥐페리')).toBe(true);
+    expect(isOddEdition('브레인', '한국뇌과학연구원 편집부')).toBe(true);
+    expect(isOddEdition('무제', '누군가')).toBe(true);
+    expect(isOddEdition('어린 왕자', '앙투안 드 생텍쥐페리')).toBe(false);
+    expect(isGarbledReason('한硬核한 SF 소설')).toBe(true);
+    expect(isGarbledReason('dystopian 세계를 그린 고전')).toBe(true);
+    expect(isGarbledReason("'1984'처럼 SF 감성의 디스토피아 소설")).toBe(false);
+  });
+});
+
