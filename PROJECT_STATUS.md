@@ -1,6 +1,6 @@
 # BookShelf App — 현재 상태 스냅샷
 
-> **최종 업데이트:** 2026-10-05 (42차: OpenRouter 무료 모델(Qwen 3.8 27B)로 전환 / 41차: AI 컬렉션·인생책 근거 — OpenRouter 크레딧 충전 필요 / 40차: 관리자 회원 휴면·삭제 / 39차: 수정요청 9건·운영 회원 정리·독서 기록 중복 버그 / 38차: 화면 문구·중복 정리, 용어 통일 / 37차: AI 모델을 Gemini 3.8 Flash로 교체 / 36차: 잃은 장르 AI 추천 복구·인생책 즉시 표시·기본 대화상자 제거 / 35차: 전체 화면 점검·수정)
+> **최종 업데이트:** 2026-10-10 (43차: 무료 AI 공급자 체인·AI 추천 통합·회고 성찰 질문·기능 말풍선·하단 메뉴 컬렉션 / 42차: OpenRouter 무료 모델(Qwen 3.8 27B)로 전환 / 41차: AI 컬렉션·인생책 근거 — OpenRouter 크레딧 충전 필요 / 40차: 관리자 회원 휴면·삭제 / 39차: 수정요청 9건·운영 회원 정리·독서 기록 중복 버그 / 38차: 화면 문구·중복 정리, 용어 통일 / 37차: AI 모델을 Gemini 3.8 Flash로 교체 / 36차: 잃은 장르 AI 추천 복구·인생책 즉시 표시·기본 대화상자 제거 / 35차: 전체 화면 점검·수정)
 > **Git 브랜치:** `main` (kordokrip/BookShelf_App)
 > **E2E 테스트:** `bash scripts/e2e-api-test.sh --url <대상>` → **전체 PASS** ✅ (2026-10-03 스테이징·프로덕션 확인, 테스트 개수는 `grep -n '^  TOTAL=' scripts/e2e-api-test.sh`로 확인)
 > **상세 세션 리포트:** `docs/sessions/2026-10-05-refactoring-requests.md` (직전: `2026-10-03-ipad-ai-theme.md`)
@@ -218,7 +218,7 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 | 독서 세션 + 타이머 | ✅ 완료 |
 | 노트 CRUD + FTS5 검색 | ✅ 완료 |
 | 통계 + 연간결산 + 성취배지 | ✅ 완료 |
-| AI 요약·추천·OCR·인생책 추천·오늘의 명문장·장르 추천 | ✅ 2026-10-05 OpenRouter 무료 `qwen/qwen3.8-27b:free`(추론 none) 우선 — 구매 크레딧 $0이라 유료 모델은 402, 무료 6개 비교에서 유일하게 안정 응답(`docs/sessions/2026-10-05-free-model.md`). 무료 한도는 계정 전체 하루 50회라 일일 예산을 그보다 작게 둠. 크레딧 충전 후 `OPENROUTER_PAID_MODEL`(Gemini 3.8 Flash)로 되돌림. 모델명은 `worker/lib/openrouter.ts`의 `OPENROUTER_MODEL`. 요약·추천은 Workers AI(`@cf/meta/llama-3.1-8b-instruct-fast`) 폴백, 인생책·명문장은 폴백 없음. 일일 호출 상한으로 비용 제한, 응답의 `provider`로 실제 사용 확인 |
+| AI 요약·추천(인생책 통합)·AI 컬렉션·오늘의 회고·장르 추천 | ✅ 2026-10-10 공급자 체인(`worker/lib/llm.ts`): Gemini(`GEMINI_API_KEY`, 무료 등급) → Gemini Lite → Workers AI `@cf/qwen/qwen3.8-27b` → OpenRouter 무료 목록 → (요약·장르만) Workers AI 8B. 키 없음·상한·404/429/5xx·타임아웃이면 다음 공급자. 상태는 관리자 대시보드 'AI 공급자 상태'. 명문장은 Gemini만(다른 모델은 문장을 지어냄). 42차 무료 Qwen은 무료 중단으로 404였음(`docs/sessions/2026-10-10-free-ai-quality.md`). **Gemini 키 미등록 상태면 Workers AI가 1순위라 추천 첫 생성 30~60초** |
 | 독서 모임 + 실시간 채팅(DO WebSocket) + 일정 | ✅ 완료 |
 | 통계 공유 | ✅ 2026-10-03 보고서 화면 → 독서 통계 '내 통계 공유'(이미지 Web Share/PNG)·'요약 복사'. `/api/share`는 데이터 보존용으로 남김 |
 | 관리자 대시보드 | ✅ 완료 |
