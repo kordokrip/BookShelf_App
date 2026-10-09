@@ -6,9 +6,9 @@
  * - 선택된 장르는 줄 아래 칩 하나로 표시(눌러서 해제)
  */
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router";
-import { ArrowLeft, BookMarked, ChevronDown, FolderOpen, GitBranch, LayoutGrid, List, Search, SlidersHorizontal, X } from "lucide-react";
+import { ArrowLeft, BookMarked, ChevronDown, GitBranch, LayoutGrid, List, Search, SlidersHorizontal, X } from "lucide-react";
 import type { GenreKey } from "../../../types/book";
+import { FeatureHint } from "../onboarding/FeatureHint";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../ui/sheet";
 
 export type ViewMode = "grid" | "list" | "timeline" | "bookshelf";
@@ -159,6 +159,7 @@ export function LibraryToolbar({
       ) : (
         <div className="flex items-center justify-between gap-1 min-w-0">
           <div className="flex items-center gap-0.5 min-w-0">
+            <FeatureHint id="library-view" text="여기서 표지 모아보기, 목록, 책장 등 보는 방식을 바꿀 수 있어요" side="bottom">
             <div className="flex items-center bg-[#F1F5F9] dark:bg-[#334155] rounded-xl p-0.5 flex-shrink-0">
               {VIEW_OPTIONS.map(({ v, icon, label }) => (
                 <button
@@ -179,9 +180,11 @@ export function LibraryToolbar({
                 </button>
               ))}
             </div>
+            </FeatureHint>
             <SortDropdown value={sortBy} onChange={onSortChange} />
           </div>
           <div className="flex items-center flex-shrink-0">
+            <FeatureHint id="library-search" text="여기를 누르면 제목·저자로 내 서재를 찾을 수 있어요" side="bottom">
             <button
               ref={searchBtnRef}
               onClick={() => setSearching(true)}
@@ -191,6 +194,8 @@ export function LibraryToolbar({
               <Search size={18} />
               {hasQuery && <span aria-hidden className="absolute top-2.5 right-2 w-2 h-2 rounded-full" style={{ backgroundColor: "var(--brand-600)" }} />}
             </button>
+            </FeatureHint>
+            <FeatureHint id="library-genre" text="장르별로 골라서 볼 수 있어요" side="bottom">
             <button
               onClick={() => setGenreOpen(true)}
               aria-label={selectedGenre ? `장르 필터 (${selectedGenre} 선택됨)` : "장르 필터"}
@@ -200,9 +205,7 @@ export function LibraryToolbar({
               <SlidersHorizontal size={18} />
               {selectedGenre && <span aria-hidden className="absolute top-2.5 right-2 w-2 h-2 rounded-full" style={{ backgroundColor: "var(--brand-600)" }} />}
             </button>
-            <Link to="/collections" aria-label="컬렉션" title="컬렉션" className={`${ICON_BTN} w-9 min-[360px]:w-10 h-11`}>
-              <FolderOpen size={18} />
-            </Link>
+            </FeatureHint>
           </div>
         </div>
       )}

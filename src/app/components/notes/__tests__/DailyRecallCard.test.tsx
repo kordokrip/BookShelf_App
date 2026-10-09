@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, cleanup } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
+import { render, cleanup, fireEvent } from '@testing-library/react';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router';
 import type { DailyQuote } from '../../../../lib/api/notes';
 
 const state: { data: DailyQuote | null | undefined } = { data: null };
@@ -50,7 +50,7 @@ describe('DailyRecallCard', () => {
       text: '삶이 있는 한 희망은 있다.',
       context: '고전 속 한 구절',
       book: { id: 'b1', title: '데미안', author: '헤세', cover_image: null, cover_color: null },
-      provider: 'openrouter',
+      provider: 'gemini',
       disclaimer: true,
     };
     const { container } = renderCard();
@@ -78,5 +78,51 @@ describe('DailyRecallCard', () => {
     expect(container.textContent).toContain('2026.09.01');
     expect(container.querySelector('a')?.getAttribute('href')).toBe('/book/b2');
     expect(container.querySelector('[data-testid="ai-disclaimer"]')).toBeNull();
+  });
+
+  it('ai quote: why 한 줄을 보여주고 kind가 없어도 명문장으로 처리', () => {
+    state.data = {
+      source: 'ai',
+      text: '문장',
+      why: '요즘 읽은 책과 이어져요',
+      book: { id: 'b1', title: '데미안', author: '헤세', cover_image: null, cover_color: null },
+      disclaimer: true,
+    };
+    const { container } = renderCard();
+    expect(container.textContent).toContain('오늘의 명문장');
+    expect(container.querySelector('[data-testid="quote-why"]')?.textContent).toBe('요즘 읽은 책과 이어져요');
+  });
+
+  it('reflection: 질문·책 정보·노트로 답하기 이동', () => {
+    state.data = {
+      source: 'ai',
+      kind: 'reflection',
+      intro: '최근 읽은 책에서 이어지는 질문이에요',
+      question: '데미안에서 가장 기억에 남는 장면은 무엇인가요?',
+      book: { id: 'b1', title: '데미안', author: '헤세', cover_image: null, cover_color: null },
+      provider: 'gemini',
+    };
+    let loc = '';
+    const Probe = () => {
+      const l = useLocation();
+      loc = l.pathname + l.search;
+      return null;
+    };
+    const { container, getByRole } = render(
+      <MemoryRouter>
+        <Probe />
+        <Routes>
+          <Route path="*" element={<DailyRecallCard />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(container.textContent).toContain('오늘의 회고');
+    expect(container.textContent).toContain('최근 읽은 책에서 이어지는 질문이에요');
+    expect(container.textContent).toContain('데미안 · 헤세');
+    expect(container.querySelector('[data-testid="ai-disclaimer"]')).toBeNull();
+    fireEvent.click(getByRole('button', { name: '노트로 답하기' }));
+    expect(loc).toBe(
+      `/book/b1?note=new&prompt=${encodeURIComponent('데미안에서 가장 기억에 남는 장면은 무엇인가요?')}`,
+    );
   });
 });

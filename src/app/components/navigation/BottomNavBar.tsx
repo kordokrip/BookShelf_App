@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router";
-import { BookMarked, BookOpen, Star, BarChart2 } from "lucide-react";
+import { BookMarked, BookOpen, Star, BarChart2, LibraryBig } from "lucide-react";
+import { FeatureHint } from "../onboarding/FeatureHint";
 import { useBookCount } from "../../../hooks/useBooks";
 
 export function BottomNavBar() {
@@ -32,6 +33,13 @@ export function BottomNavBar() {
       badge: wishCount > 0 ? wishCount : undefined,
     },
     {
+      path: "/collections",
+      label: "컬렉션",
+      icon: <LibraryBig size={22} strokeWidth={1.5} />,
+      activeIcon: <LibraryBig size={22} strokeWidth={2.5} />,
+      badge: undefined as number | undefined,
+    },
+    {
       path: "/stats",
       label: "통계",
       icon: <BarChart2 size={22} strokeWidth={1.5} />,
@@ -56,7 +64,7 @@ export function BottomNavBar() {
               ? location.pathname === "/"
               : location.pathname.startsWith(item.path);
 
-          return (
+          const linkEl = (
             <Link
               key={item.path}
               to={item.path}
@@ -110,6 +118,11 @@ export function BottomNavBar() {
               </span>
             </Link>
           );
+          return item.path === "/collections" ? (
+            <FeatureHint key={item.path} id="nav-collections" text="새로 생긴 컬렉션 메뉴예요. 내 책을 묶어서 한눈에 볼 수 있어요" side="top" mediaQuery="(max-width: 767px)">
+              {linkEl}
+            </FeatureHint>
+          ) : linkEl;
         })}
       </div>
     </nav>

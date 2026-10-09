@@ -33,15 +33,29 @@ export interface DailyQuoteBook {
   cover_image?: string | null;
   cover_color?: string | null;
 }
+/** 오늘의 회고 AI 항목의 제공자 */
+export type DailyQuoteProvider = 'gemini' | 'workers-ai' | 'openrouter';
 export type DailyQuote =
   | { source: 'note'; note: DailyNote }
   | {
       source: 'ai';
+      /** 없으면(옛 캐시) 'quote'로 본다 */
+      kind?: 'quote';
       text: string;
       context?: string | null;
+      /** 이 문장이 왜 지금 어울리는지 한 줄 */
+      why?: string | null;
       book: DailyQuoteBook;
-      provider?: string;
+      provider?: DailyQuoteProvider;
       disclaimer?: boolean;
+    }
+  | {
+      source: 'ai';
+      kind: 'reflection';
+      intro: string;
+      question: string;
+      book: DailyQuoteBook;
+      provider?: DailyQuoteProvider;
     };
 
 export interface NoteWriteFields {

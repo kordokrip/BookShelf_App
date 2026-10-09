@@ -3,7 +3,7 @@
  * 저장 형식은 `**굵게**` / `==하이라이트==` 평문이며 NoteContent가 렌더링한다.
  * 단축키: ⌘/Ctrl+B 굵게, ⌘/Ctrl+Shift+H 하이라이트 (그 외 키는 onKeyDown으로 전달)
  */
-import { forwardRef, useImperativeHandle, useLayoutEffect, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef } from "react";
 import { Bold, Highlighter } from "lucide-react";
 import { wrapSelection } from "../../../lib/noteMarkup";
 
@@ -41,6 +41,14 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>(funct
     el.focus();
     el.setSelectionRange(sel[0], sel[1]);
   }, [value]);
+
+  // 자동 포커스로 열릴 때 커서를 기존 내용 끝으로 (예: "Q. 질문\n\n" 미리 채움 뒤 바로 답을 쓰도록)
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!autoFocus || !el) return;
+    el.setSelectionRange(el.value.length, el.value.length);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const applyMarker = (marker: "**" | "==") => {
     const el = textareaRef.current;

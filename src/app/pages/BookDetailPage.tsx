@@ -7,7 +7,8 @@
  */
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useParams, useNavigate } from "react-router";
+import { useParams, useNavigate, useSearchParams } from "react-router";
+import { FeatureHint } from "../components/onboarding/FeatureHint";
 import { useBack } from "../../hooks/useBack";
 import { useBackToClose } from "../../hooks/useBackToClose";
 import { ChevronLeft, MoreVertical, FileText, AlignLeft, Camera, Pencil, Trash2, BookMarked, BookOpen, Heart, ScanLine, Clock, Search, Share2, Sparkles, RefreshCw, PencilLine, FolderPlus } from "lucide-react";
@@ -182,6 +183,20 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
     setForm({ type, content: "", page: "", endPage: "" });
     setIsSheetOpen(true);
   };
+
+  // 오늘의 회고 [노트로 답하기] — ?note=new&prompt=질문 → 메모 시트를 "Q. 질문" 채워서 열고 쿼리는 지운다
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get("note") !== "new") return;
+    const prompt = searchParams.get("prompt")?.trim();
+    setEditingNote(null);
+    setForm({ type: "memo", content: prompt ? `Q. ${prompt}\n\n` : "", page: "", endPage: "" });
+    setIsSheetOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete("note");
+    next.delete("prompt");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const openEdit = (note: BookNote) => {
     setEditingNote(note);
@@ -505,6 +520,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
         )}
 
         {/* 타입별 노트 추가 버튼 */}
+        <FeatureHint id="book-note-add" text="읽다가 떠오른 생각이나 마음에 남은 문장을 여기서 노트로 남겨 보세요" side="top">
         <div className="flex gap-2">
           {NOTE_TYPES.map((t) => (
             <button
@@ -517,6 +533,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
             </button>
           ))}
         </div>
+        </FeatureHint>
       </div>
 
       {/* 카메라 OCR 노트 */}
@@ -859,6 +876,7 @@ function BookInfoTab({ book, onEditBook }: { book: UIBook; onEditBook: () => voi
               </p>
             )}
             {!noSource && (
+              <FeatureHint id="book-ai-summary" text="책 소개를 바탕으로 핵심 내용을 AI가 짧게 정리해 드려요" side="top">
               <button
                 onClick={() => void handleSummarize()}
                 className="flex items-center justify-center gap-2 py-3 rounded-xl text-white transition-all active:scale-[0.98]"
@@ -867,6 +885,7 @@ function BookInfoTab({ book, onEditBook }: { book: UIBook; onEditBook: () => voi
                 <Sparkles size={15} />
                 AI 분석 시작
               </button>
+              </FeatureHint>
             )}
           </div>
         )}

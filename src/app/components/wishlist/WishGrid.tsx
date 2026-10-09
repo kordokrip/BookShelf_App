@@ -257,21 +257,6 @@ export function WishGrid({
         />
       )}
 
-      {/* Banner */}
-      <div
-        className="mx-4 mt-5 mb-4 rounded-2xl p-4 text-white"
-        style={{ background: "linear-gradient(135deg, #F59E0B 0%, #EF4444 100%)" }}
-      >
-        <p style={{ fontSize: 13, opacity: 0.85 }}>읽고 싶은 책</p>
-        <div className="flex items-end gap-1 mt-0.5">
-          <span style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>{books.length}</span>
-          <span style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>권 저장됨 💫</span>
-        </div>
-        <p style={{ fontSize: 12, opacity: 0.8, marginTop: 8 }}>
-          우선순위가 높은 책부터 읽어보세요!
-        </p>
-      </div>
-
       {/* 10권 한도 경고 배너 */}
       {books.length >= 10 && (
         <div

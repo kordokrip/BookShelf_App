@@ -29,6 +29,7 @@ import { usersApi, queryKeys, searchApi } from "../../lib/api";
 import { useAuthStore } from "../../stores/authStore";
 import { useStats } from "../../hooks/useStats";
 import { FocusTimer } from "../components/reading/FocusTimer";
+import { FeatureHint } from "../components/onboarding/FeatureHint";
 import { TimerRecordPrompt } from "../components/reading/TimerDialogs";
 import { useTimerStore } from "../../stores/timerStore";
 import { useBackToClose } from "../../hooks/useBackToClose";
@@ -381,6 +382,7 @@ function ReadingOverviewBanner({ books, weeklyPages, annualGoal, annualDone, onS
         )}
       </div>
       {/* 연간 목표 — 행 전체가 목표 설정 버튼 */}
+      <FeatureHint id="reading-goal" text="올해 읽을 책 권수를 정해 두면 얼마나 읽었는지 여기서 볼 수 있어요" side="bottom">
       {annualGoal && annualGoal > 0 ? (
         <button
           type="button"
@@ -406,6 +408,7 @@ function ReadingOverviewBanner({ books, weeklyPages, annualGoal, annualDone, onS
           <Target size={14} aria-hidden /> 연간 목표 설정하기
         </button>
       )}
+      </FeatureHint>
       <div className="mt-2 pt-2 border-t border-white/20">{timerSlot}</div>
     </div>
   );

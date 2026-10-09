@@ -144,7 +144,23 @@ export interface AdminActivityLog {
   avatar_url: string | null;
 }
 
+/** GET /api/admin/ai-status — AI 공급자별 오늘 사용량·마지막 성공/오류 */
+export interface AdminAiProviderStatus {
+  provider: 'gemini' | 'gemini-lite' | 'workers-ai' | 'openrouter';
+  model: string;
+  configured: boolean;
+  used_today: number;
+  cap: number;
+  last_ok_at: string | null;
+  last_error_at: string | null;
+  last_error: string | null;
+}
+
 export const adminApi = {
+  /** AI 공급자 상태 */
+  getAiStatus: () =>
+    apiFetch<{ data: AdminAiProviderStatus[] }>('/api/admin/ai-status'),
+
   /** 대시보드 요약 통계 */
   getStats: () =>
     apiFetch<{ data: AdminStats }>('/api/admin/stats'),

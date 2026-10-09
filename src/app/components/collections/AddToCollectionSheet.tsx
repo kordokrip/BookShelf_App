@@ -6,7 +6,7 @@
  */
 import { useState } from "react";
 import { useQueries, useQueryClient } from "@tanstack/react-query";
-import { Check, FolderOpen, Plus } from "lucide-react";
+import { Check, LibraryBig, Plus } from "lucide-react";
 import { collectionsApi, queryKeys } from "../../../lib/api";
 import {
   useCollections,
@@ -96,7 +96,7 @@ function SheetBody({ bookId, bookTitle }: Omit<Props, "open" | "onClose">) {
           </div>
         ) : collections.length === 0 ? (
           <div className="text-center py-8">
-            <FolderOpen size={36} className="text-[#CBD5E1] mx-auto mb-2" aria-hidden />
+            <LibraryBig size={36} className="text-[#CBD5E1] mx-auto mb-2" aria-hidden />
             <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>아직 컬렉션이 없어요. 아래에서 만들어보세요.</p>
           </div>
         ) : (

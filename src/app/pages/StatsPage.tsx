@@ -17,6 +17,7 @@ import type { UISession } from "../../types/book";
 import { GENRE_CONFIG, normalizeGenre } from "../../types/book";
 import { useAuthStore } from "../../stores/authStore";
 import { statsApi } from "../../lib/api";
+import { FeatureHint } from "../components/onboarding/FeatureHint";
 import { collectShareData, sumPagesRead, shareStatsImage, copyStatsSummary } from "../../lib/statsShareImage";
 import { useToast } from "../components/ui/Toast";
 import { localDateString } from "../../lib/localDate";
@@ -364,6 +365,7 @@ export function StatsPage() {
 
           {/* 내 통계 공유 */}
           <div className="px-4 mt-4 flex gap-2">
+            <FeatureHint id="stats-share" text="올해 읽은 기록을 이미지로 만들어 친구에게 자랑해 보세요" side="top">
             <button
               type="button"
               onClick={handleShareStats}
@@ -375,6 +377,7 @@ export function StatsPage() {
               {sharing ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Share2 size={16} aria-hidden />}
               {sharing ? "이미지 만드는 중..." : "내 통계 공유"}
             </button>
+            </FeatureHint>
             <button
               type="button"
               onClick={handleCopySummary}

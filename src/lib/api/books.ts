@@ -13,7 +13,7 @@ export interface GenreSuggestion {
 
 export interface GenreSuggestionsResponse {
   data: GenreSuggestion[];
-  provider: 'openrouter' | 'workers-ai' | null;
+  provider: 'gemini' | 'workers-ai' | 'openrouter' | null;
 }
 
 export const booksApi = {

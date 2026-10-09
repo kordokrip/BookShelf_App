@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router";
-import { BookMarked, BookOpen, Star, BarChart2, Settings, Palette, FileText, ChevronsLeft, ChevronsRight, ShieldCheck, Users, Sparkles } from "lucide-react";
+import { BookMarked, BookOpen, Star, BarChart2, Settings, Palette, FileText, ChevronsLeft, ChevronsRight, ShieldCheck, Users, LibraryBig } from "lucide-react";
 import { useAuthStore } from "../../../stores/authStore";
 import { useBookCount, useBooks } from "../../../hooks/useBooks";
 import { useUiStore } from "../../../stores/uiStore";
@@ -41,9 +41,9 @@ export function SideNav() {
     { path: "/", label: "완독", icon: BookMarked, badge: doneBooks.length || undefined },
     { path: "/reading", label: "읽는 중", icon: BookOpen, badge: readingCount || undefined },
     { path: "/wishlist", label: "읽을 책", icon: Star, badge: wishCount || undefined },
+    { path: "/collections", label: "컬렉션", icon: LibraryBig },
     { path: "/stats", label: "독서 통계", icon: BarChart2 },
     { path: "/notes-search", label: "노트 & 검색", icon: FileText },
-    { path: "/lifebooks", label: "인생책", icon: Sparkles },
     { path: "/groups", label: "독서 모임", icon: Users },
     { path: "/settings/appearance", label: "앱 디자인", icon: Palette },
   ];

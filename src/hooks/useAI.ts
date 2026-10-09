@@ -16,12 +16,12 @@ export interface LifeBookItem {
   based_on?: string[];
 }
 
-export type AIProvider = 'openrouter' | 'workers-ai';
+export type AIProvider = 'gemini' | 'workers-ai' | 'openrouter';
 
 export interface LifeBooksResponse {
   data: LifeBookItem[];
   cached: boolean;
-  source?: 'openrouter' | 'workers-ai' | 'curated-fallback' | (string & {});
+  source?: 'gemini' | 'workers-ai' | 'openrouter' | 'curated-fallback' | (string & {});
   provider?: AIProvider | null;
   /** true면 지난 추천을 먼저 돌려주고 서버가 새 추천을 백그라운드로 만드는 중 */
   stale?: boolean;
@@ -103,40 +103,18 @@ export function useBookSummary() {
   });
 }
 
-/** 독서 기록 기반 추천 도서 — stale이면 30초 뒤 최대 2회 다시 조회 */
+/** 당신을 위한 AI추천 도서(인생책 + 추천 도서 통합) — stale이면 30초 뒤 최대 2회 다시 조회 */
 export function useAIRecommendations() {
-  return useQuery({
+  const queryClient = useQueryClient();
+  const query = useQuery({
     queryKey: queryKeys.ai.recommendations(),
     queryFn: () => apiFetch<RecommendResponse>('/api/ai/recommend'),
     staleTime: 60 * 60 * 1000, // 1시간
     retry: false,
     refetchInterval: (q) => lifeBooksRefetchInterval(q.state.data, q.state.dataUpdateCount),
   });
-}
-
-/** 인생책 AI 추천 */
-export function useLifeBooks() {
-  const queryClient = useQueryClient();
-  const query = useQuery({
-    queryKey: queryKeys.ai.lifeBooks(),
-    queryFn: () => apiFetch<LifeBooksResponse>('/api/ai/lifebooks'),
-    staleTime: 24 * 60 * 60 * 1000, // 24시간
-    retry: false,
-    refetchInterval: (q) => lifeBooksRefetchInterval(q.state.data, q.state.dataUpdateCount),
-  });
-  const updates = queryClient.getQueryState(queryKeys.ai.lifeBooks())?.dataUpdateCount ?? 0;
+  const updates = queryClient.getQueryState(queryKeys.ai.recommendations())?.dataUpdateCount ?? 0;
   return { ...query, staleCopy: query.data?.stale ? lifeBooksStaleCopy(updates) : null };
-}
-
-/** 인생책 강제 새로고침 (KV 캐시 무효화) */
-export function useRefreshLifeBooks() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: () => apiFetch<LifeBooksResponse>('/api/ai/lifebooks?refresh=true'),
-    onSuccess: (data) => {
-      queryClient.setQueryData(queryKeys.ai.lifeBooks(), data);
-    },
-  });
 }
 
 /** AI 추천 강제 새로고침 (KV 캐시 무효화) */
@@ -166,7 +144,7 @@ export interface AICollectionsResponse {
   cached: boolean;
   stale?: boolean;
   generated_at: string;
-  provider: 'openrouter' | null;
+  provider: AIProvider | null;
   reason?: 'not_enough_books';
 }
 

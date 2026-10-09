@@ -9,6 +9,7 @@ import {
 } from '../../../../hooks/useAI';
 import { collectionsBasisLine } from '../../../../lib/aiCollections';
 import { useToast } from '../../ui/Toast';
+import { FeatureHint } from '../../onboarding/FeatureHint';
 import { AICollectionCard } from './AICollectionCard';
 import { ShareBar } from './ShareBar';
 import type { SavedInfo } from './palette';
@@ -117,6 +118,7 @@ export function AICollectionsSection({ onOpenCollection }: { onOpenCollection: (
     <section aria-labelledby="ai-collections-title" className="mx-4 mb-6">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
+          <FeatureHint id="collections-ai" text="내 서재를 AI가 주제별로 묶어 보여드려요. 어떤 책을 모아 읽었는지 한눈에 볼 수 있어요" side="bottom">
           <h2
             id="ai-collections-title"
             className="flex items-center gap-1.5 text-[#1E293B] dark:text-[#F8FAFC]"
@@ -125,6 +127,7 @@ export function AICollectionsSection({ onOpenCollection }: { onOpenCollection: (
             <Sparkles size={17} className="text-indigo-600 dark:text-indigo-300" aria-hidden="true" />
             AI가 정리한 내 서재
           </h2>
+          </FeatureHint>
           {basisLine && <p className="mt-1 text-xs text-[#64748B] dark:text-[#94A3B8]">{basisLine}</p>}
           {query.staleCopy && !refresh.isPending && (
             <p role="status" className="mt-1 text-xs text-indigo-600 dark:text-indigo-300">{query.staleCopy}</p>

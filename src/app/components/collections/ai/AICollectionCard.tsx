@@ -4,6 +4,7 @@ import { Check, ChevronDown, FolderPlus, Loader2 } from 'lucide-react';
 import type { UIBook } from '../../../../types/book';
 import { resolveCover, coverInitials } from '../../../../lib/coverArt';
 import type { AICollectionItem } from '../../../../hooks/useAI';
+import { FeatureHint } from '../../onboarding/FeatureHint';
 import { collectionColor, type SavedInfo } from './palette';
 
 function Tile({ book }: { book: UIBook }) {
@@ -128,6 +129,7 @@ export function AICollectionCard({ collection, index, books, saved, saving, onSa
             </button>
           </div>
         ) : (
+          <FeatureHint id="collections-save" enabled={index === 0} side="top" text="마음에 드는 묶음은 내 컬렉션으로 저장해 두세요. 나중에 언제든 다시 볼 수 있어요">
           <button
             type="button"
             onClick={onSave}
@@ -138,6 +140,7 @@ export function AICollectionCard({ collection, index, books, saved, saving, onSa
             {saving ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <FolderPlus size={16} aria-hidden="true" />}
             {saving ? '저장하는 중…' : '컬렉션으로 저장'}
           </button>
+          </FeatureHint>
         )}
       </div>
     </li>

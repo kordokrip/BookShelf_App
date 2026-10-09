@@ -6,7 +6,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, BookOpen, Plus, FolderOpen, Trash2, Layers, Pencil, X } from "lucide-react";
+import { ChevronLeft, BookOpen, Plus, LibraryBig, Trash2, Layers, Pencil, X } from "lucide-react";
 import {
   useCollections,
   useDeleteCollection,
@@ -200,7 +200,7 @@ export function CollectionsPage() {
       {/* Empty state */}
       {!isLoading && collections.length === 0 && (
         <div className="text-center py-16 px-4">
-          <FolderOpen size={48} className="text-[#CBD5E1] mx-auto mb-3" />
+          <LibraryBig size={48} className="text-[#CBD5E1] mx-auto mb-3" />
           <p style={{ fontSize: 16, fontWeight: 600, color: "var(--text-secondary)" }}>컬렉션이 없습니다</p>
           <p style={{ fontSize: 13, color: "var(--text-secondary)", marginTop: 4 }}>
             시리즈, 주제, 무드별로 책을 모아보세요

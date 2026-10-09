@@ -20,3 +20,26 @@ export function accountActionBlockReason(
   if (currentUserId && target.id === currentUserId) return "본인 계정은 휴면 처리하거나 삭제할 수 없어요.";
   return null;
 }
+
+export type AiProviderState = "ok" | "error" | "unconfigured" | "idle";
+
+/** AI 공급자 상태 — 미설정 > (오류가 성공보다 최근이면) 오류 > 정상 > 아직 호출 없음 */
+export function aiProviderState(p: {
+  configured: boolean;
+  last_ok_at: string | null;
+  last_error_at: string | null;
+}): AiProviderState {
+  if (!p.configured) return "unconfigured";
+  const ok = p.last_ok_at ? Date.parse(p.last_ok_at) : NaN;
+  const err = p.last_error_at ? Date.parse(p.last_error_at) : NaN;
+  if (!Number.isNaN(err) && (Number.isNaN(ok) || err > ok)) return "error";
+  if (!Number.isNaN(ok)) return "ok";
+  return "idle";
+}
+
+/** 오류 문구를 한 줄 길이로 자름 */
+export function truncateError(text: string | null | undefined, max = 80): string {
+  if (!text) return "";
+  const t = text.replace(/\s+/g, " ").trim();
+  return t.length > max ? `${t.slice(0, max)}…` : t;
+}

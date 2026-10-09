@@ -47,7 +47,6 @@ const LazyYearlyReviewPage = makeLazy(() => import("./pages/YearlyReviewPage"), 
 const LazyCollectionsPage = makeLazy(() => import("./pages/CollectionsPage"), "CollectionsPage");
 const LazyGroupsPage      = makeLazy(() => import("./pages/GroupsPage"),       "GroupsPage");
 const LazyAdminPage       = makeLazy(() => import("./pages/AdminPage"),        "AdminPage");
-const LazyLifeBooksPage   = makeLazy(() => import("./pages/LifeBooksPage"),    "LifeBooksPage");
 
 function withSuspense(Component: React.ComponentType, fallbackText = "로딩 중...") {
   return () =>
@@ -144,7 +143,7 @@ export const router = createBrowserRouter([
       { path: "groups", Component: protected_(withSuspense(LazyGroupsPage, "독서 모임 로딩 중...")), ErrorBoundary: EB },
       { path: "share", Component: () => createElement(Navigate, { to: "/stats", replace: true }) }, // 공유 보고서 폐지 → 통계 공유로 대체
       { path: "admin", Component: protected_(withSuspense(LazyAdminPage, "관리자 페이지 로딩 중...")), ErrorBoundary: EB },
-      { path: "lifebooks", Component: protected_(withSuspense(LazyLifeBooksPage, "인생책 로딩 중...")), ErrorBoundary: EB },
+      { path: "lifebooks", element: createElement(Navigate, { to: "/wishlist?tab=recommend", replace: true }) }, // 인생책 → AI추천 도서 탭으로 통합
     ],
   },
   // ─── 404 Fallback ─────────────────────────────────────────────

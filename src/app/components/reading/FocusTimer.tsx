@@ -6,6 +6,7 @@
  */
 import { useState } from "react";
 import { TimerResetConfirm } from "./TimerDialogs";
+import { FeatureHint } from "../onboarding/FeatureHint";
 import { Pause, Play, RotateCcw, Timer, PencilLine, BookOpen } from "lucide-react";
 import type { UseReadingTimerReturn } from "../../../hooks/useReadingTimer";
 import { useTimerStore } from "../../../stores/timerStore";
@@ -74,16 +75,20 @@ export function FocusTimer({ timer, timerBook, onRecord, variant = "card", onLog
             {timer.displayTime}
           </span>
           <div className="flex items-center gap-1 ml-auto">
+            <FeatureHint id="reading-timer" text="▶를 누르면 독서 시간이 재어져요. 멈추면 기록으로 남길 수 있어요" side="bottom">
             <button type="button" onClick={timer.isRunning ? timer.pause : timer.start} className={`${iconBtn} bg-white/25 hover:bg-white/35`} aria-label={timer.isRunning ? "일시정지" : timer.elapsed > 0 ? "재개" : "시작"}>
               {timer.isRunning ? <Pause size={18} fill="white" aria-hidden /> : <Play size={18} fill="white" aria-hidden />}
             </button>
+            </FeatureHint>
             <button type="button" onClick={() => (timer.elapsed >= 60 ? setConfirmReset(true) : timer.reset())} disabled={!locked} className={`${iconBtn} bg-white/10 hover:bg-white/20 disabled:opacity-40`} aria-label="초기화">
               <RotateCcw size={16} className="text-white/90" aria-hidden />
             </button>
             {onLog && (
+              <FeatureHint id="reading-record" text="타이머 없이도 오늘 읽은 쪽수를 여기서 바로 기록할 수 있어요" side="bottom">
               <button type="button" onClick={onLog} className="min-h-[44px] px-3 rounded-full flex items-center gap-1 bg-white/10 hover:bg-white/20 active:scale-95 transition-all" aria-label="오늘 독서 기록하기" style={{ fontSize: 12, fontWeight: 700 }}>
                 <PencilLine size={14} aria-hidden /> 기록
               </button>
+              </FeatureHint>
             )}
           </div>
         </div>

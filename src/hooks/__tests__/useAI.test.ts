@@ -5,6 +5,7 @@ describe('AI 라벨 헬퍼', () => {
   it('인생책 기본 목록 안내', () => {
     expect(lifeBooksSourceLabel({ source: 'curated-fallback' })).toBe('많이 사랑받은 책을 골랐어요');
     expect(lifeBooksSourceLabel({ source: 'openrouter' })).toBeNull();
+    expect(lifeBooksSourceLabel({ source: 'gemini' })).toBeNull();
     expect(lifeBooksSourceLabel(undefined)).toBeNull();
   });
   it('429 문구는 10분', () => {

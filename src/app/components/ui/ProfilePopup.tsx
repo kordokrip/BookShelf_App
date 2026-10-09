@@ -8,7 +8,7 @@
  */
 import { useState, useEffect, forwardRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogOut, X, Camera, Palette, ChevronRight, Users, Sparkles, FolderOpen, CalendarRange, UserCog } from "lucide-react";
+import { LogOut, X, Camera, Palette, ChevronRight, Users, LibraryBig, CalendarRange, UserCog } from "lucide-react";
 import { useAuthStore, type AuthUser } from "../../../stores/authStore";
 import { usersApi } from "../../../lib/api";
 import { useQueryClient } from "@tanstack/react-query";
@@ -55,8 +55,7 @@ const ADMIN_SHORTCUT = { path: "/admin", label: "관리자 대시보드", icon: 
 
 const SHORTCUTS: { path: string; label: string; icon: React.ComponentType<{ size?: number; className?: string; "aria-hidden"?: boolean | "true" }> }[] = [
   { path: "/groups", label: "독서 모임", icon: Users },
-  { path: "/lifebooks", label: "인생책", icon: Sparkles },
-  { path: "/collections", label: "컬렉션", icon: FolderOpen },
+  { path: "/collections", label: "컬렉션", icon: LibraryBig },
   { path: "/yearly-review", label: "연간 결산", icon: CalendarRange },
 ];
 

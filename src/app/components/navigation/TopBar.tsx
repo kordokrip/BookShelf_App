@@ -24,7 +24,6 @@ const pageTitles: Record<string, string> = {
   '/notes-search': '노트 & 검색',
   '/groups': '독서 모임',
   '/admin': '관리자',
-  '/lifebooks': '인생책',
   '/collections': '컬렉션',
   '/yearly-review': '연간 결산',
 };

@@ -22,6 +22,7 @@ import {
 } from "../components/ui/alert-dialog";
 import { AccountManagementSection } from "../components/admin/AccountManagementSection";
 import { statusLabel } from "../components/admin/adminHelpers";
+import { AiStatusCard } from "../components/admin/AiStatusCard";
 import { useBackToClose } from "../../hooks/useBackToClose";
 import { useDialogA11y } from "../../hooks/useDialogA11y";
 
@@ -306,6 +307,8 @@ function DashboardTab() {
           <StatCard label="누적 노트"         value={stats.engagement.totalNotes}   icon={<FileText size={18} className="text-white" />} color="bg-amber-500" />
         </div>
       </section>
+
+      <AiStatusCard />
 
       {/* 이번 달 신규 가입 추이 */}
       {stats.charts.monthlySignups.length > 0 && (
