@@ -153,9 +153,9 @@ function swr(seed: Record<string, unknown> = {}) {
 const ck = recommendCacheKey('u1', books);
 
 describe('resolveRecommendations (SWR·캐시·한도)', () => {
-  it('키 형식: ai_recommend:v3:{userId}:{fingerprint} / :latest', () => {
-    expect(ck).toMatch(/^ai_recommend:v3:u1:[0-9a-z]+$/);
-    expect(recommendLatestKey('u1')).toBe('ai_recommend:v3:u1:latest');
+  it('키 형식: ai_recommend:v4:{userId}:{fingerprint} / :latest', () => {
+    expect(ck).toMatch(/^ai_recommend:v4:u1:[0-9a-z]+$/);
+    expect(recommendLatestKey('u1')).toBe('ai_recommend:v4:u1:latest');
     expect(recommendCacheKey('u1', [...books, { ...books[0]!, title: '새책' }])).not.toBe(ck);
   });
 

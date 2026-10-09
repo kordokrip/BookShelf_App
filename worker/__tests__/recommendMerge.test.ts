@@ -313,6 +313,7 @@ describe('43차 QA 보완', () => {
     expect(isOddEdition('브레인', '한국뇌과학연구원 편집부')).toBe(true);
     expect(isOddEdition('무제', '누군가')).toBe(true);
     expect(isOddEdition('어린 왕자', '앙투안 드 생텍쥐페리')).toBe(false);
+    expect(isOddEdition('동행', '정명석')).toBe(true);
     expect(isGarbledReason('한硬核한 SF 소설')).toBe(true);
     expect(isGarbledReason('dystopian 세계를 그린 고전')).toBe(true);
     expect(isGarbledReason("'1984'처럼 SF 감성의 디스토피아 소설")).toBe(false);

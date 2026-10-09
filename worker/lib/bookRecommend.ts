@@ -22,7 +22,7 @@ import {
 export type { RecommendItem } from './recommendShared';
 export type RecommendEnv = GenerateEnv & LookupEnv & { KV: SwrKv };
 
-export const RECOMMEND_CACHE_VERSION = 'v3';
+export const RECOMMEND_CACHE_VERSION = 'v4';
 export const RECOMMEND_CACHE_TTL_SEC = 24 * 60 * 60;
 export const RECOMMEND_FALLBACK_TTL_SEC = 3600;
 export const RECOMMEND_LOCK_TTL_SEC = 120;
@@ -115,6 +115,7 @@ export function buildRecommendMessages(books: OwnedBook[], topGenres: string[], 
         '- 완독한 책과 별점이 높은(4~5점) 책을 취향의 가장 중요한 근거로 삼으세요. 읽는 중·읽고 싶은 책은 관심사 참고용입니다.\n' +
         '- 한국에서 출간되어 서점에서 구할 수 있는 실제 책만, 정확한 한국어 제목과 저자로 쓰세요. 확실하지 않은 책은 제외하세요.\n' +
         '- 목록에 있는 책(완독·읽는 중·읽고 싶음 모두)은 절대 추천하지 마세요.\n' +
+        '- 종교 포교서, 특정 단체·교주·정치인 홍보서, 사회적으로 물의를 일으킨 인물의 책은 추천하지 마세요.\n' +
         '- 사용자의 취향이 많이 나타난 장르에 비중을 두되, 서로 다른 장르·주제에 걸쳐 고르게 섞으세요.\n' +
         `- reason은 한국어 ${REASON_MAX_CHARS}자 이내 한 문장으로, 사용자가 읽은 구체적인 책 제목을 언급하며 왜 어울리는지 쓰세요. 별점 숫자는 쓰지 마세요.\n` +
         '- based_on은 이 추천의 근거가 된, 사용자 목록에 있는 책의 제목 1~3개입니다. 목록의 제목을 한 글자도 바꾸지 말고 그대로 쓰세요.\n' +

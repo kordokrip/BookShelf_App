@@ -26,9 +26,15 @@ export interface Candidate { title: string; author: string; reason: string; base
  * (예: 어린 왕자를 읽은 사람에게 "THE LITTLE PRINCE: 영어로 즐기는 명작(MP3CD)"이 다시 나오던 문제)
  */
 const ODD_EDITION_RE = /(mp3|\bcd\b|오디오북|원서|영어로|영한대역|대역|워크북|workbook|english\s*edition|학습판|필사)/i;
+/**
+ * 추천에서 빼는 저자 — 모델이 실존 책이라는 이유로 내놓는 사회적 물의 인물(이단 교주 등)의 책.
+ * 프롬프트에서도 금지하지만 모델이 무시할 수 있어 검증 단계에서 한 번 더 거른다. 사례가 생기면 추가한다.
+ */
+const BLOCKED_AUTHORS = ['정명석', '이만희', '문선명', '한학자'];
 export function isOddEdition(title: string, author: string): boolean {
   const t = title.trim();
-  return ODD_EDITION_RE.test(t) || /^무제$/.test(t) || /편집부/.test(author);
+  return ODD_EDITION_RE.test(t) || /^무제$/.test(t) || /편집부/.test(author)
+    || BLOCKED_AUTHORS.some((name) => author.includes(name));
 }
 
 /** 이유 문장에 한자·긴 영단어가 섞이면(모델 출력 깨짐 — "한硬核한", "dystopian") 쓰지 않는다 */
