@@ -7,7 +7,7 @@
 import { extractJsonObject, sanitizeForPrompt } from './aiRecommend';
 import { searchBook, type LookupEnv } from './bookLookup';
 import { FALLBACK_GENRE, GENRES, isGenre } from './genres';
-import { generateText, type GenerateEnv, type Provider } from './openrouter';
+import { generateText, type GenerateEnv, type Provider } from './llm';
 
 export const MAX_SUGGEST_BOOKS = 40;
 const DESCRIPTION_MAX_CHARS = 200;
@@ -136,7 +136,7 @@ export async function suggestGenres(env: GenreEnv, books: GenreBookRow[]): Promi
   const descriptions = await fetchDescriptions(env, books);
   const result = await generateText(
     env,
-    { messages: buildGenreMessages(books, descriptions), maxTokens: GENRE_MAX_TOKENS, temperature: 0.1, json: true },
+    { messages: buildGenreMessages(books, descriptions), maxTokens: GENRE_MAX_TOKENS, temperature: 0.1, json: true, expectedTokens: 500 },
     { fallback: 'workers-ai' },
   );
   return { data: parseSuggestions(result.text, books), provider: result.provider };

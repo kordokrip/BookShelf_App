@@ -28,7 +28,7 @@ def kakao_ok(title, author):
     return any(norm(title)[:6] in norm(x['title']) and (not a or any(a in norm(y) for y in x.get('authors', []))) for x in docs)
 
 def lifebooks(model, effort):
-    r = call(model, effort, 'lifebooks', 800, True, 0.6)
+    r = call(model, effort, 'recommend', 1500, True, 0.7)  # 합쳐진 추천(인생책 통합) 프롬프트
     if 'err' in r: return r['dt'], 'ERR', 0, 0, r.get('cost')
     c = r['content']
     try: books = json.loads(c[c.find('{'):c.rfind('}') + 1]).get('books', [])

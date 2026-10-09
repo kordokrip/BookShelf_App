@@ -7,21 +7,23 @@
  */
 import { analyzeTopGenres, extractJsonObject, hashString, sanitizeForPrompt } from './aiRecommend';
 import { resolveSwr, type SwrKv, type SwrPayload } from './aiSwr';
-import { generateText, OPENROUTER_MODEL_CURATOR, type GenerateEnv } from './openrouter';
+import { generateText, type GenerateEnv, type Provider } from './llm';
 
 export const COLLECTIONS_CACHE_VERSION = 'v1';
 export const COLLECTIONS_CACHE_TTL_SEC = 24 * 60 * 60;
 export const COLLECTIONS_LATEST_TTL_SEC = 30 * 24 * 60 * 60;
 export const COLLECTIONS_LOCK_TTL_SEC = 120;
 export const COLLECTIONS_MAX_TOKENS = 2500;
-/** 사용자가 기다리는 동기 생성 — 인생책(22초)보다 길게 */
+/** 78권 실측 출력 ~600토큰 — Workers AI(느림) 소요 추정용 */
+export const COLLECTIONS_EXPECTED_TOKENS = 600;
+/** 사용자가 기다리는 동기 생성 — 추천(백그라운드 26초)보다 길게 */
 export const COLLECTIONS_TIMEOUT_MS = 40_000;
 export const COLLECTIONS_MIN_BOOKS = 6;
 export const COLLECTIONS_MIN_PER = 3;
 export const COLLECTIONS_MAX = 7;
 /** 프롬프트에 담는 책 수 상한(입력 토큰 보호) — 최근 담은 순 */
 export const COLLECTIONS_MAX_BOOKS = 400;
-/** ai_sum·ai_rec·ai_life와 공유 금지 */
+/** ai_sum·ai_rec와 공유 금지 */
 export const COLLECTIONS_RATE = { limit: 3, windowMs: 600_000, keyPrefix: 'ai_col' } as const;
 export const COLLECTIONS_ERROR = 'AI가 서재를 정리하지 못했어요. 잠시 후 다시 시도해 주세요.';
 
@@ -159,7 +161,7 @@ export interface CollectionsBody {
   cached: boolean;
   stale?: boolean;
   generated_at?: string;
-  provider: 'openrouter' | null;
+  provider: Provider | null;
   reason?: 'not_enough_books';
 }
 export type CollectionsResponse =
@@ -200,13 +202,15 @@ export async function resolveCollections(deps: CollectionsDeps): Promise<Collect
           env,
           {
             messages: buildCollectionMessages(books), maxTokens: COLLECTIONS_MAX_TOKENS, temperature: 0.7,
-            json: true, timeoutMs: COLLECTIONS_TIMEOUT_MS, model: OPENROUTER_MODEL_CURATOR,
+            json: true, timeoutMs: COLLECTIONS_TIMEOUT_MS, expectedTokens: COLLECTIONS_EXPECTED_TOKENS,
+            // 형식이 깨진 응답은 다음 공급자로 넘긴다
+            validate: (t) => parseCollections(t, books).length > 0,
           },
           { fallback: 'none' },
         );
         const collections = parseCollections(res.text, books);
         if (collections.length === 0) throw new Error('AI 컬렉션 응답에서 유효한 묶음이 없음');
-        return { data: collections, source: 'openrouter', provider: res.provider, extra: { basis } };
+        return { data: collections, source: res.provider, provider: res.provider, extra: { basis } };
       },
       nowMs: deps.nowMs,
     });
@@ -223,7 +227,7 @@ export async function resolveCollections(deps: CollectionsDeps): Promise<Collect
       cached: p.cached,
       ...(p.stale ? { stale: true } : {}),
       generated_at: p.generated_at,
-      provider: p.provider === 'openrouter' ? 'openrouter' : null,
+      provider: p.provider,
     },
   };
 }

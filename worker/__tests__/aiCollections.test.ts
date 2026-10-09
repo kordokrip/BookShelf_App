@@ -3,7 +3,7 @@ import {
   parseCollections, buildCollectionMessages, resolveCollections, collectionsCacheKey, collectionsLatestKey, collectionsBasis,
   COLLECTIONS_ERROR, COLLECTIONS_RATE, type CollectionBook, type CollectionsEnv,
 } from '../lib/aiCollections';
-import { OPENROUTER_MODEL_CURATOR, supportsJsonMode } from '../lib/openrouter';
+import { OPENROUTER_FREE_MODELS, supportsJsonMode } from '../lib/openrouter';
 import { hashString } from '../lib/aiRecommend';
 
 afterEach(() => { vi.unstubAllGlobals(); });
@@ -106,7 +106,7 @@ describe('resolveCollections', () => {
     expect(s.rl()).toBe(0);
   });
 
-  it('생성: 큐레이터 모델·json 모드·40초, 응답 형태·generated_at·한도 1회, 이후 캐시 적중은 한도 0', async () => {
+  it('생성: 무료 모델 목록(models)·json 모드, 응답 형태·generated_at·한도 1회, 이후 캐시 적중은 한도 0', async () => {
     const s = setup();
     const r = await resolveCollections(s.deps());
     expect(r.status).toBe(200);
@@ -114,8 +114,8 @@ describe('resolveCollections', () => {
       cached: false, provider: 'openrouter', generated_at: '2026-10-05T00:00:00.000Z',
       data: { collections: [{ name: 'A묶음', book_ids: ['id-1', 'id-2', 'id-3'] }, { name: 'B묶음' }], basis: { total_books: 10, done_count: 5 } },
     });
-    expect(s.bodies[0]).toMatchObject({ model: OPENROUTER_MODEL_CURATOR, max_tokens: 2500 });
-    expect((s.bodies[0] as { response_format?: unknown }).response_format).toEqual(supportsJsonMode(OPENROUTER_MODEL_CURATOR) ? { type: 'json_object' } : undefined);
+    expect(s.bodies[0]).toMatchObject({ models: [...OPENROUTER_FREE_MODELS], max_tokens: 2500 });
+    expect((s.bodies[0] as { response_format?: unknown }).response_format).toEqual(OPENROUTER_FREE_MODELS.every(supportsJsonMode) ? { type: 'json_object' } : undefined);
     expect(s.rl()).toBe(1);
     expect(s.store.has(collectionsCacheKey('u1', books))).toBe(true);
     const hit = await resolveCollections(s.deps({ nowMs: Date.UTC(2026, 9, 6) }));

@@ -9,7 +9,7 @@ export const sanitizeForPrompt = (s: string) =>
    .replace(/[<>{}[\]]/g, '')
    .slice(0, 500);
 
-export type RecommendationSource = 'workers-ai' | 'openrouter' | 'curated-fallback';
+export type RecommendationSource = 'gemini' | 'workers-ai' | 'openrouter' | 'curated-fallback';
 
 export interface ReadingProfileBook {
   title: string;

@@ -162,4 +162,6 @@ export interface Bindings {
   ALADIN_TTB_KEY?: string;     // 알라딘 TTB API 키 (실제 베스트셀러 순위 조회용)
   // OpenRouter 유료 모델(lib/openrouter.ts OPENROUTER_MODEL) (wrangler secret put OPENROUTER_API_KEY) — AI 요약·인생책·오늘의 문장
   OPENROUTER_API_KEY?: string;
+  // Google AI Studio 무료 티어(lib/llm.ts 공급자 체인 1·2순위) (wrangler secret put GEMINI_API_KEY) — 없으면 건너뛴다
+  GEMINI_API_KEY?: string;
 }

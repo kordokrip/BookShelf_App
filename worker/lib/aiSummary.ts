@@ -7,7 +7,8 @@
  */
 import { sanitizeForPrompt } from './aiRecommend';
 import { searchBook, type LookupEnv } from './bookLookup';
-import { generateText, type ChatMessage, type GenerateEnv, type Provider } from './openrouter';
+import { generateText, type GenerateEnv, type Provider } from './llm';
+import type { ChatMessage } from './openrouter';
 
 export const SUMMARY_CACHE_TTL_SEC = 7 * 24 * 60 * 60;
 /** 폴백(Workers AI 8B) 결과는 짧게만 캐시 — OpenRouter 모델이 다시 응답하면 곧 더 나은 요약으로 바뀌게 */
@@ -108,13 +109,13 @@ export async function summarizeBook(
     } catch { /* 손상된 캐시는 무시하고 재생성 */ }
   }
 
-  const { text, provider } = await generateText(
+  const { text, provider, degraded } = await generateText(
     env,
-    { messages: buildSummaryMessages(safe.title, safe.author, resolved.text), maxTokens: 600, temperature: 0.3 },
+    { messages: buildSummaryMessages(safe.title, safe.author, resolved.text), maxTokens: 600, temperature: 0.3, expectedTokens: 250 },
     { fallback: 'workers-ai' },
   );
   const summary = cleanSummary(text).slice(0, MAX_SUMMARY_LEN);
   if (!summary) throw new Error('빈 요약 응답');
-  await env.KV.put(cacheKey, JSON.stringify({ summary, provider, source: resolved.source }), { expirationTtl: provider === 'openrouter' ? SUMMARY_CACHE_TTL_SEC : SUMMARY_FALLBACK_CACHE_TTL_SEC });
+  await env.KV.put(cacheKey, JSON.stringify({ summary, provider, source: resolved.source }), { expirationTtl: degraded ? SUMMARY_FALLBACK_CACHE_TTL_SEC : SUMMARY_CACHE_TTL_SEC });
   return { summary, cached: false, provider, grounded: true, source: resolved.source };
 }

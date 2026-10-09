@@ -42,6 +42,16 @@ describe('searchBook', () => {
     expect(await searchBook(ENV, { title: '존재하지않는유령의서재', author: '가짜' })).toBeNull();
   });
 
+  it('조회 예산(lookupBudget)이 있으면 1씩 줄이고, 0이면 fetch 없이 null', async () => {
+    const f = kakao([doc()]);
+    vi.stubGlobal('fetch', f);
+    const env = { ...ENV, lookupBudget: { left: 1 } };
+    expect((await searchBook(env, { title: '데미안', author: '헤르만 헤세' }))?.title).toBe('데미안');
+    expect(env.lookupBudget.left).toBe(0);
+    expect(await searchBook(env, { title: '데미안', author: '헤르만 헤세' })).toBeNull();
+    expect(f).toHaveBeenCalledTimes(1);
+  });
+
   it('ISBN이 있으면 target=isbn으로 조회', async () => {
     const f = kakao([doc()]);
     vi.stubGlobal('fetch', f);

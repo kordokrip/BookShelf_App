@@ -12,7 +12,8 @@ function makeEnv(opts: { orKey?: string; aiText?: string } = {}) {
       get: vi.fn(async (k: string) => kv.get(k) ?? null) as unknown as KVNamespace['get'],
       put: vi.fn(async (k: string, v: string) => { kv.set(k, v); }) as unknown as KVNamespace['put'],
     },
-    AI: { run: vi.fn(async () => ({ response: opts.aiText ?? '폴백 요약' })) },
+    // 27B(체인 3단계)는 실패시키고, 8B 마지막 폴백만 응답 — OpenRouter 경로·폴백 경로를 각각 검증하기 위함
+    AI: { run: vi.fn(async (model: string) => { if (model.includes('qwen')) throw new Error('27B 불가'); return { response: opts.aiText ?? '폴백 요약' }; }) },
   };
   return { env, kv };
 }

@@ -730,25 +730,29 @@ else
 fi
 
 T=23; NAME="GET /api/ai/recommend (서재 전체 기반 추천 도서)"; START=$(now_ms)
-printf "         ${YELLOW}⏳ AI 추론 중... (최대 40초 대기)${NC}\n"
+printf "         ${YELLOW}⏳ AI 추론 중... (최대 80초 대기 — Gemini 키가 없으면 Workers AI 27B가 느리다)${NC}\n"
 TMPF=$(mktemp /tmp/e2e_XXXXXX)
-HTTP_CODE=$(curl -s --max-time 40 -o "$TMPF" -w "%{http_code}" "${BASE_URL}/api/ai/recommend" \
+HTTP_CODE=$(curl -s --max-time 80 -o "$TMPF" -w "%{http_code}" "${BASE_URL}/api/ai/recommend" \
   -H "Authorization: Bearer ${TOKEN}")
 BODY=$(cat "$TMPF"); rm -f "$TMPF"
 ELAPSED=$(( $(now_ms) - START ))
 REC_SOURCE=$(json_val "$BODY" "d.get('source', '')")
 RECS_COUNT=$(json_val "$BODY" "len(d.get('data', []))")
-# 계약: {data:[{title,author,reason,thumbnail,publisher,isbn,url,verified}], cached:bool, source, provider}
+# 계약: {data:[{title,author,reason,thumbnail,publisher,isbn,url,verified,based_on[]}], cached:bool, source, provider, basis:{done_count,top_genres[]}, generated_at}
+# (예전 /api/ai/lifebooks는 이 엔드포인트로 통합되어 제거됨)
 # 서재가 비어 있어도(큐레이션) 200 + data가 있어야 한다. 서재에 있는 책은 절대 포함되면 안 된다.
 RECS_VALID=$(echo "$BODY" | python3 -c "
 import sys, json
 try:
     d = json.load(sys.stdin)
-    keys = ('title','author','reason','thumbnail','publisher','isbn','url','verified')
+    keys = ('title','author','reason','thumbnail','publisher','isbn','url','verified','based_on')
+    srcs = ('gemini','workers-ai','openrouter','curated-fallback')
     recs = d.get('data')
     ok = (isinstance(recs, list) and len(recs) > 0 and isinstance(d.get('cached'), bool)
-          and d.get('source') in ('openrouter','curated-fallback') and d.get('provider') in ('openrouter', None)
-          and all(isinstance(r, dict) and r.get('title') and r.get('author') and all(k in r for k in keys) for r in recs))
+          and d.get('source') in srcs and d.get('provider') in ('gemini','workers-ai','openrouter', None)
+          and isinstance(d.get('basis'), dict) and isinstance(d['basis'].get('done_count'), int) and isinstance(d['basis'].get('top_genres'), list)
+          and isinstance(d.get('generated_at'), str)
+          and all(isinstance(r, dict) and r.get('title') and r.get('author') and all(k in r for k in keys) and isinstance(r['based_on'], list) for r in recs))
     print('ok' if ok else 'fail')
 except Exception:
     print('fail')
@@ -1346,13 +1350,13 @@ HTTP_CODE=$(curl -s --max-time 40 -o "$TMPF" -w "%{http_code}" "${BASE_URL}/api/
   -H "Authorization: Bearer ${TOKEN}")
 BODY=$(cat "$TMPF"); rm -f "$TMPF"
 ELAPSED=$(( $(now_ms) - START ))
-QUOTE_OK=$(json_val "$BODY" "(d['data'] is None) or (d['data']['source'] == 'note' and 'book_title' in d['data']['note']) or (d['data']['source'] == 'ai' and bool(d['data']['text']) and 'title' in d['data']['book'] and d['data']['disclaimer'] is True)")
+QUOTE_OK=$(json_val "$BODY" "(d['data'] is None) or (d['data']['source'] == 'note' and 'book_title' in d['data']['note']) or (d['data']['source'] == 'ai' and d['data']['kind'] == 'quote' and bool(d['data']['text']) and isinstance(d['data']['why'], str) and 'title' in d['data']['book'] and d['data']['disclaimer'] is True) or (d['data']['source'] == 'ai' and d['data']['kind'] == 'reflection' and bool(d['data']['intro']) and bool(d['data']['question']) and 'title' in d['data']['book'])")
 HAS_DATE=$(json_val "$BODY" "len(d['date']) == 10")
 if [[ "$HTTP_CODE" == "200" && "$QUOTE_OK" == "True" && "$HAS_DATE" == "True" ]]; then
   pass_test $T "$NAME" $ELAPSED
-  printf "         ${CYAN}↳ source=%s${NC}\n" "$(json_val "$BODY" "(d['data'] or {}).get('source', 'null')")"
+  printf "         ${CYAN}↳ source=%s kind=%s${NC}\n" "$(json_val "$BODY" "(d['data'] or {}).get('source', 'null')")" "$(json_val "$BODY" "(d['data'] or {}).get('kind', '-')")"
 else
-  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE}, 카드 형식=${QUOTE_OK}, date=${HAS_DATE} (기대: 200 + data null 또는 note/ai 카드)"
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE}, 카드 형식=${QUOTE_OK}, date=${HAS_DATE} (기대: 200 + data null 또는 note / ai quote / ai reflection 카드)"
 fi
 
 T=65; NAME="PATCH /api/users/profile (theme_accent=ocean, theme_mode=dark)"; START=$(now_ms)

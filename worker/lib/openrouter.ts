@@ -1,23 +1,30 @@
 /**
- * OpenRouter 클라이언트 + Workers AI 폴백.
+ * OpenRouter 전송 계층(공급자 체인의 마지막 단계 — 체인 자체는 lib/llm.ts).
  *
- * - 모델: 무료 `qwen/qwen3.8-27b:free` (2026-10-05). 계정 구매 크레딧이 $0이라 유료 모델은 402로 막혀,
- *   무료 모델을 사용자 실데이터(76권)로 비교해 유일하게 안정적으로 응답한 모델을 골랐다
- *   (AI 컬렉션 12.6초·76권 중 63권 분류, 인생책 7.7초, 요약·명문장·장르 1~4초).
- *   크레딧을 충전하면 `OPENROUTER_PAID_MODEL`로 되돌린다(아래 두 상수 + 추론 정도).
- *   비교: docs/sessions/2026-10-05-free-model.md, 이전 유료 비교: docs/sessions/2026-10-04-ai-model-switch.md
+ * - 모델: 무료 모델 목록(`OPENROUTER_FREE_MODELS`)을 OpenRouter의 `models` 배열(자체 폴백 라우팅)로 보낸다.
+ *   무료 모델은 수시로 내려가거나(404 "unavailable for free") 혼잡(429)해서 하나에 의존하지 않는다.
+ *   계정 구매 크레딧이 $0이라 유료 모델은 402로 막힌다. 크레딧을 충전하면 `OPENROUTER_PAID_MODEL`로 되돌린다.
+ *   과거 비교: docs/sessions/2026-10-05-free-model.md, docs/sessions/2026-10-04-ai-model-switch.md
  * - 무료 모델 한도: 구매 크레딧이 없으면 하루 50회(계정 전체). 현재 사용량은 GET /api/v1/key의
  *   free_model_daily_requests로 확인한다. 아래 일일 예산을 그보다 작게 둔다.
  * - 비용 상한: KV 전역 일일 예산(`or_budget:{KST 날짜}`)을 넘기면 호출하지 않고 폴백한다
  * - 일시 오류(429/5xx)는 두 번까지 재시도 — 무료 풀은 혼잡하면 곧바로 429를 돌려주고(0.3초), 실패한 요청은 횟수 한도에 들어가지 않는다
  * - 실패(키 없음·예산 초과·타임아웃·재시도 후에도 실패)는 OpenRouterError로 던져 호출 측이 폴백하게 한다
  */
-import { extractAiText } from './aiText';
 import { kstDateString } from './noteHelpers';
 
 export type ReasoningEffort = 'minimal' | 'low' | 'none';
 
-export const OPENROUTER_MODEL = 'qwen/qwen3.8-27b:free';
+/**
+ * 무료 모델 우선순위(2026-10-10 응답 확인). 앞 모델이 429/오류면 OpenRouter가 다음 모델로 넘긴다.
+ * 모델이 내려가면(404) 이 목록만 고친다. 현재 응답하는 무료 모델: GET /api/v1/models 에서 ':free' 접미사.
+ */
+export const OPENROUTER_FREE_MODELS: readonly string[] = [
+  'google/gemma-4-31b-it:free',
+  'dots-studio/dots-3-note-preview:free',
+  'apodex/apodex-1.1-mini:free',
+];
+export const OPENROUTER_MODEL = OPENROUTER_FREE_MODELS[0] as string;
 /** 크레딧 충전 후 쓸 유료 모델(37차 비교 1위). 되돌릴 때 추론 정도는 'minimal'로 */
 export const OPENROUTER_PAID_MODEL = 'google/gemini-3.8-flash';
 /**
@@ -36,7 +43,7 @@ export const OPENROUTER_MODEL_CURATOR: string = OPENROUTER_MODEL;
  * 보내면 404(공급자 없음)가 난다. 프롬프트가 'JSON만' 요구하고 호출 측이 extractJsonObject로 꺼내므로 생략해도 된다.
  * 지원 여부: GET /api/v1/models 의 supported_parameters
  */
-const MODELS_WITHOUT_JSON_MODE = new Set(['qwen/qwen3.8-27b:free']);
+const MODELS_WITHOUT_JSON_MODE = new Set<string>(['qwen/qwen3.8-27b:free']);
 export const supportsJsonMode = (model: string) => !MODELS_WITHOUT_JSON_MODE.has(model);
 export const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 /**
@@ -54,7 +61,6 @@ export const OPENROUTER_TIMEOUT_MS = 20_000;
 export const OPENROUTER_RETRY_DELAY_MS = 1_800;
 /** 첫 시도 포함 최대 시도 횟수(429/5xx만 재시도) */
 export const OPENROUTER_MAX_ATTEMPTS = 3;
-export const WORKERS_AI_FALLBACK_MODEL = '@cf/meta/llama-3.1-8b-instruct-fast';
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -73,8 +79,10 @@ export interface ChatOptions {
   retryDelayMs?: number;
   /** 이 호출이 쓸 수 있는 오늘 예산 상한(기본 OPENROUTER_DAILY_BUDGET). 백그라운드 호출은 OPENROUTER_BACKGROUND_BUDGET */
   budgetCap?: number;
-  /** 이 호출이 쓸 모델(기본 OPENROUTER_MODEL). 큐레이션은 OPENROUTER_MODEL_CURATOR */
+  /** 이 호출이 쓸 모델(기본 OPENROUTER_MODEL). `models`가 있으면 무시 */
   model?: string;
+  /** OpenRouter 자체 폴백 라우팅용 모델 목록(우선순위순). JSON 모드는 모두 지원할 때만 요청한다 */
+  models?: readonly string[];
   /** 추론 정도(기본 OPENROUTER_REASONING_EFFORT) — 모델이 'none'/'minimal'을 거절하면 'low' 등으로 */
   reasoningEffort?: ReasoningEffort;
 }
@@ -86,10 +94,6 @@ export interface OpenRouterEnv {
   KV: Pick<KVNamespace, 'get' | 'put'>;
 }
 
-export interface GenerateEnv extends OpenRouterEnv {
-  AI: { run: (model: string, input: unknown) => Promise<unknown> };
-}
-
 export type OpenRouterErrorCode = 'no_key' | 'budget' | 'upstream' | 'timeout' | 'empty';
 
 export class OpenRouterError extends Error {
@@ -97,13 +101,6 @@ export class OpenRouterError extends Error {
     super(message);
     this.name = 'OpenRouterError';
   }
-}
-
-export type Provider = 'openrouter' | 'workers-ai';
-
-export interface TextResult {
-  text: string;
-  provider: Provider;
 }
 
 const BUDGET_TTL_SEC = 26 * 60 * 60;
@@ -123,11 +120,12 @@ async function consumeBudget(env: OpenRouterEnv, nowMs: number, cap = OPENROUTER
   return true;
 }
 
-async function postOnce(env: OpenRouterEnv, opts: ChatOptions): Promise<Response> {
+async function postOnce(env: OpenRouterEnv, opts: ChatOptions, timeoutMs: number): Promise<Response> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? OPENROUTER_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const list = opts.models && opts.models.length > 0 ? opts.models : null;
   const model = opts.model ?? OPENROUTER_MODEL;
-  const jsonMode = !!opts.json && supportsJsonMode(model);
+  const jsonMode = !!opts.json && (list ? list.every(supportsJsonMode) : supportsJsonMode(model));
   try {
     return await fetch(OPENROUTER_URL, {
       method: 'POST',
@@ -139,7 +137,7 @@ async function postOnce(env: OpenRouterEnv, opts: ChatOptions): Promise<Response
         'X-Title': 'BookShelf',
       },
       body: JSON.stringify({
-        model,
+        ...(list ? { models: list } : { model }),
         messages: opts.messages,
         max_tokens: opts.maxTokens,
         temperature: opts.temperature,
@@ -165,12 +163,19 @@ export async function chatCompletion(
   if (!env.OPENROUTER_API_KEY) throw new OpenRouterError('no_key', 'OPENROUTER_API_KEY 미설정');
   if (!(await consumeBudget(env, nowMs, opts.budgetCap))) throw new OpenRouterError('budget', '오늘의 OpenRouter 예산 소진');
 
+  // timeoutMs는 재시도를 포함한 전체 제한 — 시도마다 남은 시간만 쓴다(공급자 체인의 전체 마감을 지키기 위함)
+  const totalMs = opts.timeoutMs ?? OPENROUTER_TIMEOUT_MS;
+  const startedAt = Date.now();
   let lastStatus = 0;
   for (let attempt = 0; attempt < OPENROUTER_MAX_ATTEMPTS; attempt++) {
-    if (attempt > 0) await sleep(opts.retryDelayMs ?? OPENROUTER_RETRY_DELAY_MS);
+    if (attempt > 0) {
+      const delay = opts.retryDelayMs ?? OPENROUTER_RETRY_DELAY_MS;
+      if (Date.now() - startedAt + delay >= totalMs) break;
+      await sleep(delay);
+    }
     let res: Response;
     try {
-      res = await postOnce(env, opts);
+      res = await postOnce(env, opts, Math.max(1, totalMs - (Date.now() - startedAt)));
     } catch (err) {
       const aborted = err instanceof Error && err.name === 'AbortError';
       // 타임아웃은 재시도하지 않는다(20초를 두 번 기다리면 Workers 응답 지연이 과하다)
@@ -194,30 +199,4 @@ export async function chatCompletion(
     return { text, provider: 'openrouter' };
   }
   throw new OpenRouterError('upstream', `OpenRouter HTTP ${lastStatus} (재시도 후에도 실패)`);
-}
-
-/**
- * OpenRouter 우선 생성. `fallback: 'workers-ai'`면 실패 시 Workers AI 8B로 대체하고,
- * `'none'`이면(환각 위험이 큰 작업 — 인용구 등) OpenRouterError를 그대로 던진다.
- */
-export async function generateText(
-  env: GenerateEnv,
-  opts: ChatOptions,
-  config: { fallback: 'workers-ai' | 'none' },
-  nowMs = Date.now(),
-): Promise<TextResult> {
-  try {
-    return await chatCompletion(env, opts, nowMs);
-  } catch (err) {
-    if (config.fallback === 'none') throw err;
-    console.warn('[openrouter] Workers AI로 폴백:', err instanceof OpenRouterError ? err.code : err);
-  }
-  const response = await env.AI.run(WORKERS_AI_FALLBACK_MODEL, {
-    messages: opts.messages,
-    max_tokens: opts.maxTokens,
-    temperature: opts.temperature,
-  });
-  const text = extractAiText(response);
-  if (!text) throw new OpenRouterError('empty', 'Workers AI 응답 본문 없음');
-  return { text, provider: 'workers-ai' };
 }

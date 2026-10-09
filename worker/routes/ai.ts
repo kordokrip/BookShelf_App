@@ -3,10 +3,8 @@ import type { Bindings } from '../types';
 import { authMiddleware } from '../auth';
 import { rateLimit } from '../middleware/rateLimit';
 import { extractAiText } from '../lib/aiText';
-import { buildExcludedSet, parseFavoriteGenres } from '../lib/aiRecommend';
+import { parseFavoriteGenres } from '../lib/aiRecommend';
 import { resolveRecommendations, type OwnedBook } from '../lib/bookRecommend';
-import { MAX_DONE_BOOKS, type DoneBook } from '../lib/lifeBooks';
-import { resolveLifeBooks } from '../lib/lifeBooksSwr';
 import { summarizeBook } from '../lib/aiSummary';
 import { resolveCollections, COLLECTIONS_MAX_BOOKS, type CollectionBook } from '../lib/aiCollections';
 
@@ -44,8 +42,9 @@ aiRouter.post(
   },
 );
 
-// ─── GET /api/ai/recommend — 서재 전체 기반 AI 추천 도서 ──────
-// 완독·읽는 중·읽고 싶은 책 전부를 모델에 주고, 서재에 있는 책은 제목·저자·ISBN으로 걸러 낸 뒤 실존 검증한다. (worker/lib/bookRecommend.ts)
+// ─── GET /api/ai/recommend — 서재 전체 기반 '당신을 위한 AI추천 도서' (예전 인생책 통합) ──────
+// 완독·읽는 중·읽고 싶은 책 전부를 모델에 주고(완독·고평점 강조), 서재에 있는 책은 제목·저자·ISBN으로 걸러 낸 뒤 실존 검증한다.
+// 각 추천에 근거가 된 내 책(based_on)이 붙고, 모자라면 좋아한 작가의 다른 책 → 큐레이션으로 채운다. (worker/lib/bookRecommend.ts)
 // stale-while-revalidate(worker/lib/aiSwr.ts). 한도(ai_rec, 3회/10분, 사용자별)는 "실제 생성" 때만 센다. ai_sum과 공유 금지.
 aiRouter.get('/recommend', authMiddleware, async (c) => {
   const userId = c.get('userId');
@@ -70,53 +69,6 @@ aiRouter.get('/recommend', authMiddleware, async (c) => {
   });
   return c.json(body, status);
 });
-
-// ─── GET /api/ai/lifebooks — 완독 이력 기반 인생책 추천 ────────
-// 완독 전체(최대 200권)를 OpenRouter 모델에 주고 후보 10권 → 서재 중복 제거 + 카카오/네이버 실존 검증 → 5권. (worker/lib/lifeBooks.ts)
-// stale-while-revalidate: 지문이 바뀌면 직전 결과를 즉시(stale:true) 주고 백그라운드 재생성. (worker/lib/lifeBooksSwr.ts)
-// 한도(ai_life, 3회/10분, 사용자별)는 미들웨어가 아니라 resolveLifeBooks 안에서 "실제 생성" 때만 센다.
-aiRouter.get(
-  '/lifebooks',
-  authMiddleware,
-  async (c) => {
-    const userId = c.get('userId');
-    const forceRefresh = c.req.query('refresh') === 'true';
-
-    const [doneResult, allResult] = await Promise.all([
-      c.env.DB.prepare(
-        `SELECT title, author, genre, rating, finished_date, created_at
-         FROM books
-         WHERE user_id = ? AND status = 'done'
-         ORDER BY COALESCE(rating, 0) DESC, COALESCE(finished_date, created_at) DESC
-         LIMIT ${MAX_DONE_BOOKS}`,
-      ).bind(userId).all<DoneBook>(),
-      c.env.DB.prepare('SELECT title, author FROM books WHERE user_id = ?')
-        .bind(userId).all<{ title: string; author: string | null }>(),
-    ]);
-
-    const doneBooks = doneResult.results ?? [];
-    if (doneBooks.length < 2) {
-      return c.json(
-        { error: '완독한 책이 2권 이상 필요합니다. 더 많은 책을 읽으면 인생책 추천을 받을 수 있어요!', data: [], cached: false },
-        400,
-      );
-    }
-
-    const path = new URL(c.req.url).pathname;
-    const { status, body } = await resolveLifeBooks({
-      env: c.env,
-      userId,
-      doneBooks,
-      getExcluded: async () => buildExcludedSet(allResult.results ?? []),
-      forceRefresh,
-      path,
-      subject: `u:${userId}`,
-      // executionCtx가 없는 환경(일부 로컬/테스트)에서는 응답과 별개로 그냥 실행만 시작한다
-      waitUntil: (p) => { try { c.executionCtx.waitUntil(p); } catch { void p; } },
-    });
-    return c.json(body, status);
-  },
-);
 
 // ─── GET /api/ai/collections — 서재 전체를 테마별로 묶은 AI 컬렉션 제안 ──
 // 책 id는 모델에 보내지 않고 번호로만 매핑한다. 6권 미만이면 모델 호출 없이 reason:'not_enough_books'.

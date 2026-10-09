@@ -12,12 +12,14 @@
  * POST /api/admin/messages           — 공지/개별 메시지 발송
  * DELETE /api/admin/messages/:id     — 메시지 삭제
  * POST /api/admin/seed-admins        — 초기 관리자 권한 시드
+ * GET  /api/admin/ai-status          — AI 공급자 체인 상태(키 설정·오늘 사용량·마지막 성공/실패)
  */
 import { Hono } from 'hono';
 import { createMiddleware } from 'hono/factory';
 import type { Bindings } from '../types';
 import { authMiddleware } from '../auth';
 import { rateLimit } from '../middleware/rateLimit';
+import { getAiStatus } from '../lib/llm';
 
 // ─── 활동 로그 헬퍼 (fire-and-forget) ────────────────────────
 export async function logActivity(
@@ -93,6 +95,15 @@ adminRouter.post(
 
     return c.json({ data: { seeded: results, requestor: self } });
   },
+);
+
+// ── AI 공급자 체인 상태 ──────────────────────────────────────
+// 키는 노출하지 않고 설정 여부(configured)만. 사용량은 KV 일일 카운터(KST 기준), 상태는 llm_status:{provider}
+adminRouter.get(
+  '/ai-status',
+  authMiddleware,
+  adminMiddleware,
+  async (c) => c.json({ data: await getAiStatus(c.env) }),
 );
 
 // ── 대시보드 요약 통계 ────────────────────────────────────────

@@ -11,12 +11,30 @@ export interface LookupEnv {
   KAKAO_REST_API_KEY?: string;
   NAVER_CLIENT_ID?: string;
   NAVER_CLIENT_SECRET?: string;
+  /**
+   * 한 요청에서 쓸 수 있는 외부 조회 횟수(선택). Workers 무료 플랜은 요청당 외부 fetch가 50회라
+   * 후보를 여러 권 검증하는 추천처럼 조회가 많은 흐름은 이 상한을 넘으면 더 조회하지 않는다(null 처리).
+   */
+  lookupBudget?: { left: number };
+}
+
+/** 조회 예산이 있으면 1 소모. 이미 0이면 false — 호출 측은 '못 찾음'으로 처리한다 */
+function takeLookup(env: LookupEnv): boolean {
+  if (!env.lookupBudget) return true;
+  if (env.lookupBudget.left <= 0) return false;
+  env.lookupBudget.left -= 1;
+  return true;
 }
 
 export interface BookQuery {
   title: string;
   author?: string;
   isbn?: string;
+  /**
+   * 제목이 (거의) 일치하면 저자가 달라도 인정한다 — AI 추천 검증용. 모델이 저자를 틀리게 쓰면 `제목 저자` 검색이
+   * 아예 0건이 되므로, 못 찾았을 때 제목만으로 한 번 더 찾는다(카카오만, 호출 수 절약). 호출 측은 반환된 실제 저자를 쓴다.
+   */
+  allowAuthorMismatch?: boolean;
 }
 
 export interface BookMatch {
@@ -116,7 +134,8 @@ function pickBest(query: BookQuery, candidates: Candidate[]): BookMatch | null {
   return best?.match ?? null;
 }
 
-async function fetchJson<T>(url: string, headers: Record<string, string>): Promise<T | null> {
+async function fetchJson<T>(env: LookupEnv, url: string, headers: Record<string, string>): Promise<T | null> {
+  if (!takeLookup(env)) return null;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), LOOKUP_TIMEOUT_MS);
   try {
@@ -143,7 +162,7 @@ async function searchKakao(env: LookupEnv, q: BookQuery): Promise<BookMatch | nu
     url.searchParams.set('query', q.author ? `${q.title} ${q.author}` : q.title);
     url.searchParams.set('size', '10');
   }
-  const json = await fetchJson<{ documents?: KakaoDoc[] }>(url.toString(), headers);
+  const json = await fetchJson<{ documents?: KakaoDoc[] }>(env, url.toString(), headers);
   const docs = json?.documents ?? [];
   const candidates: Candidate[] = docs.map((d) => ({
     title: d.title ?? '',
@@ -169,7 +188,7 @@ async function searchNaver(env: LookupEnv, q: BookQuery): Promise<BookMatch | nu
   const url = new URL('https://openapi.naver.com/v1/search/book.json');
   url.searchParams.set('query', q.isbn ? pickIsbn(q.isbn) : q.author ? `${q.title} ${q.author}` : q.title);
   url.searchParams.set('display', q.isbn ? '1' : '10');
-  const json = await fetchJson<{ items?: NaverItem[] }>(url.toString(), {
+  const json = await fetchJson<{ items?: NaverItem[] }>(env, url.toString(), {
     'X-Naver-Client-Id': env.NAVER_CLIENT_ID,
     'X-Naver-Client-Secret': env.NAVER_CLIENT_SECRET,
   });
@@ -209,5 +228,34 @@ export async function searchBook(env: LookupEnv, query: BookQuery): Promise<Book
     if (!title) return null;
   }
   const byTitle: BookQuery = { title, author: q.author };
-  return (await searchKakao(env, byTitle)) ?? (await searchNaver(env, byTitle));
+  const found = (await searchKakao(env, byTitle)) ?? (await searchNaver(env, byTitle));
+  if (found || !q.allowAuthorMismatch || !q.author) return found;
+  // 저자 없이 제목만으로 재검색 — pickBest가 제목 유사도 0.85 이상(일치·접두 일치)만 저자 없이 인정한다
+  return searchKakao(env, { title });
+}
+
+/**
+ * 저자의 책 목록(카카오 `target=person`) — 저자명이 질의 저자와 겹치는 책만, 정확도순 그대로.
+ * 키 없음·네트워크 오류는 빈 배열.
+ */
+export async function searchByAuthor(env: LookupEnv, author: string, size = 20): Promise<BookMatch[]> {
+  const name = author.trim();
+  if (!name || !env.KAKAO_REST_API_KEY) return [];
+  const url = new URL('https://dapi.kakao.com/v3/search/book');
+  url.searchParams.set('query', name);
+  url.searchParams.set('target', 'person');
+  url.searchParams.set('size', String(size));
+  const json = await fetchJson<{ documents?: KakaoDoc[] }>(env, url.toString(), { Authorization: `KakaoAK ${env.KAKAO_REST_API_KEY}` });
+  return (json?.documents ?? [])
+    .filter((d) => d.title && authorsOverlap(name, d.authors ?? []))
+    .map((d) => ({
+      title: d.title ?? '',
+      author: (d.authors ?? []).join(', '),
+      contents: (d.contents ?? '').trim(),
+      isbn: pickIsbn(d.isbn),
+      thumbnail: d.thumbnail ?? '',
+      publisher: d.publisher ?? '',
+      url: d.url ?? '',
+      source: 'kakao' as const,
+    }));
 }

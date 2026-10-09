@@ -1,12 +1,12 @@
 /**
- * AI 추천 공용 stale-while-revalidate 리졸버 — 인생책(lifeBooksSwr)·추천 도서(bookRecommend)가 공유한다.
+ * AI 추천 공용 stale-while-revalidate 리졸버 — 추천 도서(bookRecommend)·AI 컬렉션(aiCollections)이 공유한다.
  *
  * 지문이 바뀌면 캐시 미스지만 직전 결과(latest)를 즉시 돌려주고 새 결과는 waitUntil 백그라운드에서 만든다.
  * 맨 처음(latest 없음)·refresh=true만 동기 생성. 한도는 "실제로 생성하는 요청"만 센다(캐시·stale 응답은 소모 없음).
  */
 import { consumeRateLimit, RATE_LIMIT_MESSAGE } from '../middleware/rateLimit';
 import type { RecommendationSource } from './aiRecommend';
-import type { Provider } from './openrouter';
+import type { Provider } from './llm';
 
 export type SwrKv = Pick<KVNamespace, 'get' | 'put' | 'delete'>;
 
@@ -71,10 +71,10 @@ async function generateAndStore<T>(o: SwrOptions<T>, background: boolean): Promi
     ...result.extra, data: result.data, cached: false, source: result.source, provider: result.provider,
     generated_at: new Date(o.nowMs ?? Date.now()).toISOString(),
   };
-  // 백그라운드에서 OpenRouter 모델이 실패하면(큐레이션만 남음) 지난 AI 추천을 덮어쓰지 않는다 — 다음 조회 때 다시 시도
-  if (background && result.provider !== 'openrouter') return payload;
+  // 백그라운드에서 AI 모델이 모두 실패하면(provider null = 큐레이션만 남음) 지난 AI 추천을 덮어쓰지 않는다 — 다음 조회 때 다시 시도
+  if (background && result.provider === null) return payload;
   if (result.data.length > 0) {
-    const ttl = result.provider === 'openrouter' ? o.cacheTtlSec : o.fallbackTtlSec;
+    const ttl = result.provider !== null ? o.cacheTtlSec : o.fallbackTtlSec;
     await o.kv.put(o.cacheKey, JSON.stringify(payload), { expirationTtl: ttl });
     const latest: Stored<T> = { ...payload, fingerprint: o.fingerprint };
     await o.kv.put(o.latestKey, JSON.stringify(latest), { expirationTtl: o.latestTtlSec });

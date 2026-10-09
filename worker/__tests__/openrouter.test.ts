@@ -1,22 +1,22 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
-  chatCompletion, generateText, OpenRouterError, OPENROUTER_DAILY_BUDGET, OPENROUTER_BACKGROUND_BUDGET, OPENROUTER_MODEL, budgetKey,
-  OPENROUTER_MODEL_CURATOR, OPENROUTER_PAID_MODEL, OPENROUTER_REASONING_EFFORT, OPENROUTER_MAX_ATTEMPTS, supportsJsonMode, type GenerateEnv,
+  chatCompletion, OPENROUTER_DAILY_BUDGET, OPENROUTER_BACKGROUND_BUDGET, OPENROUTER_MODEL, budgetKey, OPENROUTER_FREE_MODELS,
+  OPENROUTER_MODEL_CURATOR, OPENROUTER_PAID_MODEL, OPENROUTER_REASONING_EFFORT, OPENROUTER_MAX_ATTEMPTS, supportsJsonMode,
+  type OpenRouterEnv,
 } from '../lib/openrouter';
 
 const NOW = Date.UTC(2026, 8, 27, 3, 0, 0); // KST 2026-09-27
 const OPTS = { messages: [{ role: 'user' as const, content: '안녕' }], maxTokens: 100, temperature: 0.3, retryDelayMs: 0 };
 
-function makeEnv(over: { key?: string | null; kv?: Record<string, string>; aiText?: string } = {}) {
+function makeEnv(over: { key?: string | null; kv?: Record<string, string> } = {}) {
   const kv = new Map(Object.entries(over.kv ?? {}));
-  const env: GenerateEnv = {
+  const env: OpenRouterEnv = {
     OPENROUTER_API_KEY: over.key === null ? undefined : (over.key ?? 'sk-test'),
     FRONTEND_URL: 'https://bookshelf.example',
     KV: {
       get: vi.fn(async (k: string) => kv.get(k) ?? null) as unknown as KVNamespace['get'],
       put: vi.fn(async (k: string, v: string) => { kv.set(k, v); }) as unknown as KVNamespace['put'],
     },
-    AI: { run: vi.fn(async () => ({ response: over.aiText ?? 'workers-ai 응답' })) },
   };
   return { env, kv };
 }
@@ -75,6 +75,28 @@ describe('chatCompletion', () => {
     expect(bodies[2].response_format).toBeUndefined();
     expect(supportsJsonMode(OPENROUTER_PAID_MODEL)).toBe(true);
     expect(supportsJsonMode('qwen/qwen3.8-27b:free')).toBe(false);
+  });
+
+  it('models 배열(OpenRouter 자체 폴백 라우팅): model 대신 models를 보내고, 전부 JSON 모드를 지원할 때만 response_format', async () => {
+    const fetchMock = vi.fn(async () => ok('{}'));
+    vi.stubGlobal('fetch', fetchMock);
+    const { env } = makeEnv();
+    await chatCompletion(env, { ...OPTS, json: true, models: OPENROUTER_FREE_MODELS }, NOW);
+    await chatCompletion(env, { ...OPTS, json: true, models: [OPENROUTER_FREE_MODELS[0]!, 'qwen/qwen3.8-27b:free'] }, NOW);
+    const bodies = fetchMock.mock.calls.map((c) => JSON.parse((c as unknown as [string, RequestInit])[1].body as string));
+    expect(bodies[0].models).toEqual([...OPENROUTER_FREE_MODELS]);
+    expect(bodies[0].model).toBeUndefined();
+    expect(bodies[0].response_format).toEqual({ type: 'json_object' });
+    expect(bodies[1].response_format).toBeUndefined();
+    expect(OPENROUTER_MODEL).toBe(OPENROUTER_FREE_MODELS[0]);
+  });
+
+  it('timeoutMs는 재시도를 포함한 전체 제한 — 대기 후 남은 시간이 없으면 재시도하지 않는다', async () => {
+    const fetchMock = vi.fn(async () => limited());
+    vi.stubGlobal('fetch', fetchMock);
+    const { env } = makeEnv();
+    await expect(chatCompletion(env, { ...OPTS, retryDelayMs: 500, timeoutMs: 300 }, NOW)).rejects.toMatchObject({ code: 'upstream' });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('무료 모델 예산은 계정 한도(하루 50회)보다 작고, 백그라운드 몫은 전체보다 작다', () => {
@@ -144,45 +166,5 @@ describe('chatCompletion', () => {
 
     vi.stubGlobal('fetch', vi.fn(async () => ok('   ')));
     await expect(chatCompletion(makeEnv().env, OPTS, NOW)).rejects.toMatchObject({ code: 'empty' });
-  });
-});
-
-describe('generateText', () => {
-  it('OpenRouter 성공이면 Workers AI를 부르지 않는다', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => ok('gemma')));
-    const { env } = makeEnv();
-    expect(await generateText(env, OPTS, { fallback: 'workers-ai' }, NOW)).toEqual({ text: 'gemma', provider: 'openrouter' });
-    expect(env.AI.run).not.toHaveBeenCalled();
-  });
-
-  it.each([
-    ['429 두 번', () => vi.fn(async () => limited()), {}],
-    ['타임아웃', () => vi.fn((_u: string, init: RequestInit) => new Promise((_r, rej) => {
-      init.signal?.addEventListener('abort', () => rej(Object.assign(new Error('x'), { name: 'AbortError' })));
-    })), { timeoutMs: 10 }],
-  ])('%s → Workers AI 폴백', async (_name, makeFetch, extra) => {
-    vi.stubGlobal('fetch', makeFetch());
-    const { env } = makeEnv({ aiText: '  폴백 응답 ' });
-    const res = await generateText(env, { ...OPTS, ...extra }, { fallback: 'workers-ai' }, NOW);
-    expect(res).toEqual({ text: '폴백 응답', provider: 'workers-ai' });
-    expect(env.AI.run).toHaveBeenCalledWith(expect.stringContaining('llama'), expect.objectContaining({ max_tokens: 100 }));
-  });
-
-  it('예산 초과·키 없음도 폴백, fetch 호출 없음', async () => {
-    const fetchMock = vi.fn();
-    vi.stubGlobal('fetch', fetchMock);
-    const a = makeEnv({ kv: { [budgetKey(NOW)]: String(OPENROUTER_DAILY_BUDGET) } });
-    expect((await generateText(a.env, OPTS, { fallback: 'workers-ai' }, NOW)).provider).toBe('workers-ai');
-    const b = makeEnv({ key: null });
-    expect((await generateText(b.env, OPTS, { fallback: 'workers-ai' }, NOW)).provider).toBe('workers-ai');
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it("fallback 'none'이면 OpenRouterError를 던지고 Workers AI를 부르지 않는다", async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => limited()));
-    const { env } = makeEnv();
-    const err = await generateText(env, OPTS, { fallback: 'none' }, NOW).catch((e) => e);
-    expect(err).toBeInstanceOf(OpenRouterError);
-    expect(env.AI.run).not.toHaveBeenCalled();
   });
 });

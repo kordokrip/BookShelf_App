@@ -42,6 +42,7 @@ describe('프롬프트·파싱', () => {
     expect(msgs[1]!.content).toContain('데미안 | 헤르만 헤세 | 해외문학 | 완독 | 별점 5/5');
     expect(msgs[1]!.content).toContain('사피엔스 | 유발 하라리 | 인문학 | 읽고 싶음');
     expect(msgs[0]!.content).toContain('절대 추천하지 마세요');
+    expect(msgs[0]!.content).toContain('based_on');
     const many: OwnedBook[] = Array.from({ length: 300 }, (_, i) => ({ title: `책${i}`, author: 'a', genre: null, rating: null, status: i % 2 ? 'wish' : 'done' }));
     expect(selectPromptBooks(many)).toHaveLength(MAX_PROMPT_BOOKS);
     expect(selectPromptBooks(many)[0]!.status).toBe('done');
@@ -67,7 +68,7 @@ function env(): RecommendEnv & { store: Map<string, string> } {
       put: (async (k: string, v: string) => { store.set(k, v); }) as unknown as KVNamespace['put'],
       delete: (async (k: string) => { store.delete(k); }) as unknown as KVNamespace['delete'],
     },
-    AI: { run: vi.fn(async () => ({ response: 'not json' })) },
+    AI: { run: vi.fn(async () => ({ response: 'not json' })) }, // 27B 단계는 JSON 검증 실패 → OpenRouter로 넘어간다
   } as unknown as RecommendEnv & { store: Map<string, string> };
 }
 /** 카카오 stub: real 맵의 제목 → isbn */
@@ -134,14 +135,14 @@ describe('buildRecommendations', () => {
   });
 });
 
-const item = (t: string): RecommendItem => ({ title: t, author: 'a', reason: 'r', thumbnail: '', publisher: '', isbn: '', url: '', verified: true });
+const item = (t: string): RecommendItem => ({ title: t, author: 'a', reason: 'r', thumbnail: '', publisher: '', isbn: '', url: '', verified: true, based_on: [] });
 const OLD = { data: [item('옛 추천'), item('사피엔스')], cached: false, source: 'openrouter' as const, provider: 'openrouter' as const };
 
 function swr(seed: Record<string, unknown> = {}) {
   const e = env();
   for (const [k, v] of Object.entries(seed)) e.store.set(k, JSON.stringify(v));
   const pending: Promise<unknown>[] = [];
-  const build = vi.fn(async () => ({ data: [item('새 추천')], source: 'openrouter' as const, provider: 'openrouter' as const }));
+  const build = vi.fn(async () => ({ data: [item('새 추천')], source: 'openrouter' as const, provider: 'openrouter' as const, basis: { done_count: 1, top_genres: [] } }));
   const deps = (over: Partial<RecommendDeps> = {}): RecommendDeps => ({
     env: e, userId: 'u1', books, favoriteGenres: [], forceRefresh: false, path: '/api/ai/recommend', subject: 'u:u1',
     waitUntil: (p) => { pending.push(p); }, build: build as unknown as RecommendDeps['build'], nowMs: 1_000_000, ...over,
@@ -152,9 +153,9 @@ function swr(seed: Record<string, unknown> = {}) {
 const ck = recommendCacheKey('u1', books);
 
 describe('resolveRecommendations (SWR·캐시·한도)', () => {
-  it('키 형식: ai_recommend:v2:{userId}:{fingerprint} / :latest', () => {
-    expect(ck).toMatch(/^ai_recommend:v2:u1:[0-9a-z]+$/);
-    expect(recommendLatestKey('u1')).toBe('ai_recommend:v2:u1:latest');
+  it('키 형식: ai_recommend:v3:{userId}:{fingerprint} / :latest', () => {
+    expect(ck).toMatch(/^ai_recommend:v3:u1:[0-9a-z]+$/);
+    expect(recommendLatestKey('u1')).toBe('ai_recommend:v3:u1:latest');
     expect(recommendCacheKey('u1', [...books, { ...books[0]!, title: '새책' }])).not.toBe(ck);
   });
 
@@ -213,7 +214,7 @@ describe('resolveRecommendations (SWR·캐시·한도)', () => {
     const puts: Array<[string, number | undefined]> = [];
     const orig = s.e.KV.put;
     s.e.KV.put = (async (k: string, v: string, o?: { expirationTtl?: number }) => { puts.push([k, o?.expirationTtl]); return (orig as (...a: unknown[]) => unknown)(k, v, o); }) as unknown as KVNamespace['put'];
-    const cur = vi.fn(async () => ({ data: [item('큐레이션')], source: 'curated-fallback' as const, provider: null }));
+    const cur = vi.fn(async () => ({ data: [item('큐레이션')], source: 'curated-fallback' as const, provider: null, basis: { done_count: 0, top_genres: [] } }));
     await resolveRecommendations(s.deps({ build: cur as unknown as RecommendDeps['build'] }));
     expect(puts.find(([k]) => k === ck)?.[1]).toBe(3600);
   });

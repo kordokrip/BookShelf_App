@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { OPENROUTER_MODEL, supportsJsonMode } from '../lib/openrouter';
+import { OPENROUTER_FREE_MODELS, supportsJsonMode } from '../lib/openrouter';
 import {
   parseBookIds, parseSuggestions, selectTargetBooks, suggestGenres, MAX_SUGGEST_BOOKS,
   type GenreBookRow, type GenreEnv,
@@ -28,7 +28,7 @@ function env(): GenreEnv {
   return {
     OPENROUTER_API_KEY: 'sk', KAKAO_REST_API_KEY: 'k',
     KV: { get: (async (k: string) => kv.get(k) ?? null) as unknown as KVNamespace['get'], put: (async (k: string, v: string) => { kv.set(k, v); }) as unknown as KVNamespace['put'] },
-    AI: { run: vi.fn(async () => ({ response: '{}' })) },
+    AI: { run: vi.fn(async (model: string) => { if (model.includes('qwen')) throw new Error('27B 불가'); return { response: '{}' }; }) },
   };
 }
 const json = (b: unknown) => new Response(JSON.stringify(b), { status: 200 });
@@ -102,7 +102,7 @@ describe('suggestGenres', () => {
         modelCalls++;
         const body = JSON.parse(String(init?.body)) as { messages: Array<{ content: string }>; response_format?: unknown };
         userPrompt = body.messages[1]!.content;
-        expect(body.response_format).toEqual(supportsJsonMode(OPENROUTER_MODEL) ? { type: 'json_object' } : undefined);
+        expect(body.response_format).toEqual(OPENROUTER_FREE_MODELS.every(supportsJsonMode) ? { type: 'json_object' } : undefined);
         return json({ choices: [{ message: { content: JSON.stringify({ suggestions: [{ id: 'b1', genre: '해외사', confidence: 'high' }, { id: 'b2', genre: '없는장르', confidence: 'high' }] }) } }] });
       }
       const q = new URL(u).searchParams.get('query') ?? '';
