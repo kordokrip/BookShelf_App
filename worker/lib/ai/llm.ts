@@ -77,6 +77,14 @@ export const LLM_PROVIDERS: readonly LlmProvider[] = ['gemini', 'gemini-lite', '
 export const DEFAULT_TIMEOUT_MS = 20_000;
 /** 남은 시간이 이보다 짧으면 더 시도하지 않는다 */
 export const MIN_ATTEMPT_MS = 1_500;
+/**
+ * 공급자 한 번 시도의 최대 시간 — 한 공급자가 전체 마감을 다 쓰면 다음 공급자가 시도할 시간이 없다
+ * (2026-10-10 스테이징: Gemini 3.8 Flash가 오래 기다린 끝에 503 "high demand" → Lite 타임아웃 → 엄선 목록).
+ * Workers AI·OpenRouter는 남은 시간을 그대로 쓴다.
+ */
+export const PROVIDER_ATTEMPT_MAX_MS: Partial<Record<LlmProvider, number>> = { gemini: 25_000, 'gemini-lite': 20_000 };
+export const attemptTimeout = (provider: LlmProvider, remainingMs: number): number =>
+  Math.min(remainingMs, PROVIDER_ATTEMPT_MAX_MS[provider] ?? remainingMs);
 const COUNTER_TTL_SEC = 26 * 60 * 60;
 const STATUS_TTL_SEC = 7 * 24 * 60 * 60;
 /** 상태 갱신 주기 — KV 쓰기(무료 하루 1000회)를 아끼려고 변화가 없으면 이 간격으로만 다시 쓴다 */
@@ -306,7 +314,7 @@ export async function generateText(
       } catch { attempts.push(`${provider}:kv_error`); continue; }
     }
     try {
-      const text = await callProvider(env, provider, opts, remaining, nowMs);
+      const text = await callProvider(env, provider, opts, attemptTimeout(provider, remaining), nowMs);
       if (opts.validate && !opts.validate(text)) throw new LlmError('invalid', '응답 검증 실패(형식 불량)', provider);
       await recordStatus(env, provider, true, '', nowMs);
       return { text, provider: exposed(provider) };

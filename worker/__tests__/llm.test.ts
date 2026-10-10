@@ -5,7 +5,7 @@ import { adminRouter } from '../routes/admin';
 import { createToken } from '../auth';
 import {
   generateText, getAiStatus, llmBudgetKey, llmStatusKey, LlmError, LLM_DAILY_CAP, LLM_BACKGROUND_CAP, GEMINI_URL, GEMINI_MODEL,
-  GEMINI_LITE_MODEL, GEMINI_PROXY_LOCATION, GEMINI_REASONING_EFFORT, GEMINI_TOKEN_HEADROOM, WORKERS_AI_MODEL, WORKERS_AI_FALLBACK_MODEL, type LlmEnv,
+  GEMINI_LITE_MODEL, GEMINI_PROXY_LOCATION, GEMINI_REASONING_EFFORT, attemptTimeout, GEMINI_TOKEN_HEADROOM, WORKERS_AI_MODEL, WORKERS_AI_FALLBACK_MODEL, type LlmEnv,
 } from '../lib/ai/llm';
 import { budgetKey, OPENROUTER_FREE_MODELS, OPENROUTER_DAILY_BUDGET } from '../lib/ai/openrouter';
 
@@ -264,3 +264,14 @@ describe('상태 기록 · GET /api/admin/ai-status', () => {
     expect(body.data[0]).toMatchObject({ provider: 'gemini', configured: true });
   });
 });
+
+describe('attemptTimeout — 한 공급자가 전체 마감을 다 쓰지 않게', () => {
+  it('Gemini 25초·Lite 20초 상한, Workers AI·OpenRouter는 남은 시간 그대로', () => {
+    expect(attemptTimeout('gemini', 60_000)).toBe(25_000);
+    expect(attemptTimeout('gemini-lite', 60_000)).toBe(20_000);
+    expect(attemptTimeout('gemini', 8_000)).toBe(8_000);
+    expect(attemptTimeout('workers-ai', 60_000)).toBe(60_000);
+    expect(attemptTimeout('openrouter', 30_000)).toBe(30_000);
+  });
+});
+

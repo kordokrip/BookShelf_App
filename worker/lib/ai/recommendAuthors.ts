@@ -12,6 +12,9 @@ const MIN_FAVORITE_RATING = 4;
 /** 세트·전집·합본은 "다른 작품"으로 부적합 */
 const BUNDLE_RE = /세트|전집|박스|합본|컬렉션|에디션 팩/;
 
+/** 제목에 한글이 한 글자라도 있는지 */
+const HANGUL_RE = /[가-힣]/;
+
 export interface AuthorSourceBook { title: string; author: string | null; rating: number | null; status: string }
 
 export interface FavoriteAuthor { name: string; books: string[]; score: number }
@@ -67,11 +70,15 @@ export async function topUpFavoriteAuthors(
   if (authors.length === 0) return [];
   const results = await Promise.all(authors.map((a) => searchByAuthor(env, a.name)));
   const taken = new Set(have.map((h) => normalizeTitle(h.title)));
+  // 같은 저자의 '다른 판본'(넛지 → 넛지 기프트 에디션)을 거르기 위해 내 책 제목 키를 모은다
+  const ownKeys = books.map((b) => normalizeTitle(b.title)).filter((k) => k.length >= 2);
   const out: RecommendItem[] = [];
   authors.forEach((a, i) => {
     const pick = (results[i] ?? []).find((m) =>
       !BUNDLE_RE.test(m.title)
       && !isOddEdition(m.title, m.author)
+      && HANGUL_RE.test(m.title) // 원서·영문판(Comet 등) 제외
+      && !ownKeys.some((k) => normalizeTitle(m.title).startsWith(k))
       && !taken.has(normalizeTitle(m.title))
       && !isExcludedBook(m.title, m.author, excluded, m.isbn));
     if (!pick) return;

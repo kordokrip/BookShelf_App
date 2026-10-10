@@ -139,6 +139,12 @@ describe('좋아한 작가의 다른 책', () => {
     expect(out.every((o) => o.reason.length <= 60)).toBe(true);
     expect(await topUpFavoriteAuthors({ KAKAO_REST_API_KEY: 'k' }, lib, excluded, [], 0)).toEqual([]);
   });
+
+  it('topUpFavoriteAuthors: 내 책의 다른 판본(데미안 리커버판)과 한글 없는 원서 제목은 건너뛴다', async () => {
+    stubWorld({ real: {}, byAuthor: { '헤르만 헤세': ['데미안 리커버 에디션', 'Siddhartha', '유리알 유희'], 양귀자: ['모순 개정판', '한계'] } });
+    const out = await topUpFavoriteAuthors({ KAKAO_REST_API_KEY: 'k' }, lib, excluded, [], 5);
+    expect(out.map((o) => o.title)).toEqual(['유리알 유희', '한계']);
+  });
 });
 
 describe('합쳐진 추천 — buildRecommendations', () => {
