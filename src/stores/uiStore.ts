@@ -146,6 +146,9 @@ interface UiState {
   // 프로필 팝업 (TopBar 아바타·SideNav 설정 버튼이 공유)
   profilePopupOpen: boolean;
   setProfilePopupOpen: (open: boolean) => void;
+  // 계정 삭제 확인 — 프로필 팝업 안에 두면 대화상자 클릭이 팝업 '바깥 클릭'으로 잡혀 함께 닫혀서 Root에 둔다
+  deleteAccountOpen: boolean;
+  setDeleteAccountOpen: (open: boolean) => void;
 
   // 인앱 알림
   notifications: NotificationItem[];
@@ -272,6 +275,8 @@ export const useUiStore = create<UiState>()(
 
       profilePopupOpen: false,
       setProfilePopupOpen: (open) => set({ profilePopupOpen: open }, false, 'ui/setProfilePopupOpen'),
+      deleteAccountOpen: false,
+      setDeleteAccountOpen: (open) => set({ deleteAccountOpen: open }, false, 'ui/setDeleteAccountOpen'),
 
       // 인앱 알림
       notifications: loadNotifications(),

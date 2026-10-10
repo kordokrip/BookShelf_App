@@ -28,6 +28,8 @@ export interface AuthUser {
   /** 개인 앱 테마 (서버 저장값, 없으면 null) */
   theme_accent?: string | null;
   theme_mode?: 'auto' | 'light' | 'dark' | null;
+  /** 비밀번호로 가입한 계정인지(false면 소셜 로그인) — 계정 삭제 본인 확인 방식 */
+  has_password?: boolean;
 }
 
 type AuthStatus = 'idle' | 'authenticated' | 'unauthenticated';
@@ -98,6 +100,7 @@ export const useAuthStore = create<AuthState>()(
                 created_at: raw.created_at,
                 theme_accent: raw.theme_accent ?? null,
                 theme_mode: raw.theme_mode ?? null,
+                has_password: raw.has_password,
               },
               status: 'authenticated',
               isLoading: false,
@@ -167,7 +170,7 @@ export const useAuthStore = create<AuthState>()(
         const requestedAt = Date.now();
         try {
           const res = await usersApi.getProfile();
-          const raw = res.data as AuthUser & { favorite_genres?: string | string[]; role?: string; created_at?: string; profile_emoji?: string | null; reminder_time?: string; reminder_enabled?: number; weekly_report_enabled?: number; theme_accent?: string | null; theme_mode?: 'auto' | 'light' | 'dark' | null };
+          const raw = res.data as AuthUser & { favorite_genres?: string | string[]; role?: string; created_at?: string; profile_emoji?: string | null; reminder_time?: string; reminder_enabled?: number; weekly_report_enabled?: number; theme_accent?: string | null; theme_mode?: 'auto' | 'light' | 'dark' | null; has_password?: boolean };
           const favoriteGenres =
             typeof raw.favorite_genres === 'string'
               ? (JSON.parse(raw.favorite_genres || '[]') as string[])
@@ -189,6 +192,7 @@ export const useAuthStore = create<AuthState>()(
                 weekly_report_enabled: raw.weekly_report_enabled,
                 theme_accent: raw.theme_accent ?? null,
                 theme_mode: raw.theme_mode ?? null,
+                has_password: raw.has_password,
               },
               status: 'authenticated',
               isLoading: false,

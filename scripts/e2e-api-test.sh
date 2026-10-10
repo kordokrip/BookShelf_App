@@ -1490,7 +1490,7 @@ HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" -X PATCH \
   -d '{"status":"dormant"}')
 BODY=$(cat "$TMPF"); rm -f "$TMPF"
 ELAPSED=$(( $(now_ms) - START ))
-if [[ "$HTTP_CODE" == "401" ]]; then
+if [[ "$HTTP_CODE" == "403" ]]; then
   pass_test $T "$NAME" $ELAPSED
 else
   fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE} (기대: 403)"
@@ -1516,7 +1516,7 @@ fi
 # ================================================================
 printf "\n%s── Group 17: 계정 삭제 (DELETE /api/users/me) (4개)%s\n" "$CYAN" "$NC"
 
-T=50; NAME="DELETE /api/users/me (잘못된 비밀번호 → 401)"; START=$(now_ms)
+T=50; NAME="DELETE /api/users/me (잘못된 비밀번호 → 403)"; START=$(now_ms)
 TMPF=$(mktemp /tmp/e2e_XXXXXX)
 HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" -X DELETE \
   "${BASE_URL}/api/users/me" \
@@ -1528,7 +1528,7 @@ ELAPSED=$(( $(now_ms) - START ))
 if [[ "$HTTP_CODE" == "403" ]]; then
   pass_test $T "$NAME" $ELAPSED
 else
-  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE} (기대: 401)"
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE} (기대: 403 — 401은 토큰 만료 의미라 쓰지 않음)"
 fi
 
 T=51; NAME="DELETE /api/users/me (user2 정리)"; START=$(now_ms)

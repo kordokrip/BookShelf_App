@@ -16,6 +16,7 @@ import { PushNotificationToggle } from "./PushNotificationToggle";
 import { useBackToClose } from "../../../hooks/useBackToClose";
 import { useNavigate } from "react-router";
 import { useDialogA11y } from "../../../hooks/useDialogA11y";
+import { useUiStore } from "../../../stores/uiStore";
 
 /* ─── 인사말 생성 ─────────────────────────────────── */
 function getGreeting(name: string): string {
@@ -217,6 +218,7 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const setDeleteAccountOpen = useUiStore((s) => s.setDeleteAccountOpen);
   const queryClient = useQueryClient();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -472,6 +474,17 @@ export function ProfilePopup({ onClose }: { onClose: () => void }) {
           <LogOut size={16} />
           로그아웃
         </button>
+        {/* 계정 삭제 — 관리자 계정은 서버가 막으므로 숨긴다 */}
+        {user?.role !== "admin" && (
+          <button
+            type="button"
+            onClick={() => { onClose(); setDeleteAccountOpen(true); }}
+            className="w-full min-h-11 mt-1 text-[#94A3B8] dark:text-[#64748B] hover:text-[#EF4444] dark:hover:text-[#FCA5A5] underline underline-offset-4 transition-colors"
+            style={{ fontSize: 12 }}
+          >
+            계정 삭제
+          </button>
+        )}
       </div>
     </motion.div>
   );

@@ -28,6 +28,13 @@ export const usersApi = {
   getProfile: () =>
     apiFetch<ApiResponse<User>>('/api/users/profile'),
 
+  /** 내 계정 영구 삭제 — 비밀번호 계정은 password, 소셜 로그인 계정은 confirm_email */
+  deleteMe: (data: { password: string } | { confirm_email: string }) =>
+    apiFetch<ApiResponse<{ deleted: boolean }>>('/api/users/me', {
+      method: 'DELETE',
+      body: JSON.stringify(data),
+    }),
+
   /** 사용자 조회 */
   get: (id: string) =>
     apiFetch<ApiResponse<User>>(`/api/users/${id}`),

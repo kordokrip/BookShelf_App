@@ -22,7 +22,7 @@ import type { Bindings, DbUser } from '../types';
 import { hashPassword, verifyPassword, createToken, createRefreshToken, authMiddleware } from '../auth';
 import { rateLimit } from '../middleware/rateLimit';
 import { logActivity } from './admin';
-import { getAccountDeletionBlock, purgeUserAccount, dormantBody } from '../lib/accountHelpers';
+import { checkEmailConfirmation, getAccountDeletionBlock, purgeUserAccount, dormantBody } from '../lib/accountHelpers';
 
 export const usersRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -38,9 +38,11 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+// 비밀번호 계정은 password, 소셜 로그인 계정은 confirm_email(가입 이메일 재입력)로 본인 확인
 const deleteAccountSchema = z.object({
-  password: z.string().min(1),
-});
+  password: z.string().min(1).optional(),
+  confirm_email: z.string().min(1).max(320).optional(),
+}).refine((v) => !!v.password || !!v.confirm_email);
 
 const upsertSchema = z.object({
   id: z.string().uuid(),
@@ -52,7 +54,8 @@ const upsertSchema = z.object({
 /** 안전한 사용자 응답 (password_hash 제외) */
 export function safeUser(user: DbUser) {
   const { password_hash: _, ...safe } = user;
-  return safe;
+  // 계정 삭제 화면이 본인 확인 방식(비밀번호 / 이메일 재입력)을 고르는 데 쓴다
+  return { ...safe, has_password: !!user.password_hash };
 }
 
 // ─── POST /api/users/register ─────────────────────────────────
@@ -172,11 +175,11 @@ usersRouter.delete(
   authMiddleware,
   zValidator('json', deleteAccountSchema, (result, c) => {
     // 본문이 없거나 비밀번호가 빠졌을 때 zod 원문 대신 안내 문구
-    if (!result.success) return c.json({ error: '계정을 삭제하려면 비밀번호를 입력해주세요.' }, 400);
+    if (!result.success) return c.json({ error: '계정을 삭제하려면 비밀번호(소셜 로그인은 이메일)를 입력해주세요.' }, 400);
   }),
   async (c) => {
     const userId = c.get('userId');
-    const { password } = c.req.valid('json');
+    const { password, confirm_email } = c.req.valid('json');
 
     const user = await c.env.DB.prepare(
       'SELECT * FROM users WHERE id = ?',
@@ -186,8 +189,13 @@ usersRouter.delete(
     const block = getAccountDeletionBlock(user);
     if (block) return c.json({ error: block.error }, block.status);
 
-    const valid = await verifyPassword(password, user.password_hash!);
-    if (!valid) return c.json({ error: '비밀번호가 올바르지 않습니다.' }, 401);
+    const emailCheck = checkEmailConfirmation(user, confirm_email);
+    if (emailCheck && emailCheck !== 'ok') return c.json({ error: emailCheck.error }, emailCheck.status);
+    if (!emailCheck) {
+      if (!password) return c.json({ error: '계정을 삭제하려면 비밀번호를 입력해주세요.' }, 400);
+      const valid = await verifyPassword(password, user.password_hash!);
+      if (!valid) return c.json({ error: '비밀번호가 올바르지 않습니다.' }, 403); // 401은 클라이언트가 토큰 만료로 보고 갱신·재시도한다
+    }
 
     await purgeUserAccount(c.env, userId);
 

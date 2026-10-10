@@ -10,7 +10,7 @@ export type AccountDeletionBlock =
 /**
  * 삭제를 막아야 하면 사유를, 진행 가능하면 null을 반환한다.
  * - 관리자 계정은 실수로 지우면 복구 수단이 없으므로 API로 삭제 불가
- * - 소셜 로그인 계정은 비밀번호 재확인 수단이 없어 아직 미지원
+ * 본인 확인은 checkDeletionConfirmation이 한다(비밀번호 계정은 비밀번호, 소셜 계정은 이메일 재입력).
  */
 export function getAccountDeletionBlock(
   user: Pick<DbUser, 'role' | 'password_hash'>,
@@ -18,10 +18,22 @@ export function getAccountDeletionBlock(
   if (user.role === 'admin') {
     return { status: 403, error: '관리자 계정은 삭제할 수 없습니다.' };
   }
-  if (!user.password_hash) {
-    return { status: 400, error: '소셜 로그인 계정의 탈퇴는 아직 지원하지 않습니다.' };
-  }
   return null;
+}
+
+/**
+ * 소셜 로그인 계정(비밀번호 없음)의 본인 확인 — 로그인된 토큰 + 계정 이메일 재입력(관리자 삭제와 같은 방식).
+ * 비밀번호 계정이면 null을 돌려 호출 측이 비밀번호를 검증하게 한다.
+ */
+export function checkEmailConfirmation(
+  user: Pick<DbUser, 'email' | 'password_hash'>,
+  confirmEmail: string | undefined,
+): { status: 400; error: string } | 'ok' | null {
+  if (user.password_hash) return null;
+  if (!confirmEmail) return { status: 400, error: '계정을 삭제하려면 가입한 이메일을 입력해 주세요.' };
+  return confirmEmail.trim().toLowerCase() === user.email.trim().toLowerCase()
+    ? 'ok'
+    : { status: 400, error: '이메일이 계정과 일치하지 않습니다.' };
 }
 
 // ─── 휴면 처리 / 계정 정리 공용 ─────────────────────────────────
