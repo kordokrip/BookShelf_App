@@ -95,7 +95,6 @@
 | `/api/groups/*` | `worker/routes/groups.ts` | `authMiddleware` (전체) ★ (24차) — 그룹/멤버 승인/채팅 삭제/일정(전원,2개/일)/피드백 |
 | `/api/notifications/*` | `worker/routes/notifications.ts` | `authMiddleware` (전체) ★ (24차) — 알림 목록/미읽음/읽음 처리 |
 | `/api/push/*` | `worker/routes/push.ts` | 엔드포인트별(대부분 auth 필요) |
-| `/api/share/*` | `worker/routes/share.ts` | `authMiddleware` (전체) ★ (21차) — 통계 보고서 공유 |
 | `/api/discover/*` | `worker/routes/discover.ts` | `authMiddleware` (전체) |
 | `/api/admin/*` | `worker/routes/admin.ts` | `authMiddleware` + 관리자 권한 |
 | `GET *` | SPA 폴백 | 없음 (ASSETS 서빙) |
@@ -850,7 +849,7 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 | GET | `/api/users/:id` | **authMiddleware** | — | `{data: user}` (자신: 전체, 타인: 공개 필드) | `routes/users.ts` |
 | POST | `/api/users` | **authMiddleware** | `{id, email, name, avatar_url?}` | `{data: user}` 201 | `routes/users.ts` |
 | PATCH | `/api/users/profile` | **authMiddleware** | `{name?, favorite_genres?, reading_goal?, avatar_url?, profile_emoji?, reminder_*?, weekly_report_enabled?, theme_accent?: 'indigo'\|'ocean'\|'forest'\|'sunset'\|'rose'\|'graphite'\|null, theme_mode?: 'auto'\|'light'\|'dark'\|null}` (zod 검증 ✅; 테마 필드는 0017, GET/PATCH 응답에 `theme_accent`·`theme_mode` 포함) | `{data}` (SELECT 시 role 포함 ★16차) | `routes/users.ts` |
-| DELETE | `/api/users/me` | **authMiddleware** + rate limit `delete_account` 5회/분 | `{password}` | `{data:{deleted:true}}` · 401 비밀번호 불일치 · 403 관리자 · 400 소셜 계정 | `routes/users.ts` (FK CASCADE로 연관 데이터 삭제, `group_messages.deleted_by` NULL 처리, R2 `covers/{userId}/` 정리) |
+| DELETE | `/api/users/me` | **authMiddleware** + rate limit `delete_account` 5회/분 | `{password}`(비밀번호 계정) 또는 `{confirm_email}`(소셜 로그인 계정, 가입 이메일 재입력·대소문자 무시) | `{data:{deleted:true}}` · 403 비밀번호 불일치(44차: 401은 클라이언트가 토큰 만료로 보고 갱신·재시도하므로 403) · 403 관리자 · 400 이메일 불일치/누락 | `routes/users.ts` (FK CASCADE로 연관 데이터 삭제, `group_messages.deleted_by` NULL 처리, R2 `covers/{userId}/` 정리) |
 
 ### 기능 플래그 (`/api/flags`)
 
@@ -895,13 +894,13 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 
 노트 컬럼: `page_number`(시작 페이지), `end_page`(0015, 범위 끝 — `page_number` 이상), `session_id`(0015, 몰입 타이머 세션 연결), `tags`(0015, AI 태그 JSON 배열).
 
-**AI 태깅(Phase 4)**: `POST /api/notes`·내용이 바뀐 `PUT /api/notes/:id` 후 `waitUntil`로 비동기 실행(`lib/noteTagger.ts`). 20자 이상인 모든 노트(2026-09-27 전체 공개 — 이전에는 `ai_tags` 플래그 사용자만, ADR-003 예외). 모델 `@cf/meta/llama-3.1-8b-instruct-fast`, temperature 0.2, 형식 예시 1쌍 포함. 키워드 최대 4개(노트 본문에 실제로 나온 2글자 이상 단어만 — 음차·지어낸 단어 차단) + 감정 1개(고정 목록 `NOTE_EMOTIONS`, 맞지 않으면 생략) → 최대 5개(`lib/noteTags.ts`). 사용자별 하루 호출 상한 `DAILY_TAG_QUOTA`(`ai_tag_quota:{userId}:{KST날짜}`), 같은 내용 캐시 `ai_tag:{TAG_CACHE_VERSION}:{sha256}` 7일(태그 규칙 변경 시 버전 올림). 내용 수정 시 `tags=NULL` 후 재태깅, 태깅 중 내용이 바뀌면 덮어쓰지 않음.
+**AI 태깅(Phase 4)**: `POST /api/notes`·내용이 바뀐 `PUT /api/notes/:id` 후 `waitUntil`로 비동기 실행(`lib/ai/noteTagger.ts`). 20자 이상인 모든 노트(2026-09-27 전체 공개 — 이전에는 `ai_tags` 플래그 사용자만, ADR-003 예외). 모델 `@cf/meta/llama-3.1-8b-instruct-fast`, temperature 0.2, 형식 예시 1쌍 포함. 키워드 최대 4개(노트 본문에 실제로 나온 2글자 이상 단어만 — 음차·지어낸 단어 차단) + 감정 1개(고정 목록 `NOTE_EMOTIONS`, 맞지 않으면 생략) → 최대 5개(`lib/ai/noteTags.ts`). 사용자별 하루 호출 상한 `DAILY_TAG_QUOTA`(`ai_tag_quota:{userId}:{KST날짜}`), 같은 내용 캐시 `ai_tag:{TAG_CACHE_VERSION}:{sha256}` 7일(태그 규칙 변경 시 버전 올림). 내용 수정 시 `tags=NULL` 후 재태깅, 태깅 중 내용이 바뀌면 덮어쓰지 않음.
 
 | Method | 경로 | 인증 | 요청 | 응답 | Worker 파일 |
 |---|---|---|---|---|---|
 | GET | `/api/notes` | **authMiddleware** | `?book_id=&type=&search=&tag=&limit=&offset=` — `tag`(Phase 4): AI 태그 정확 일치(`json_each(tags)`) | `{data: Note[], count}` | `routes/notes.ts` |
 | GET | `/api/notes/export` | **authMiddleware** | `?book_id=` | Markdown 파일 (페이지 범위는 `(p.12–15)` 표기) | `routes/notes.ts` |
-| GET | `/api/notes/daily-quote` | **authMiddleware** | — | `{data: {source:'ai', kind:'quote', text, context, why, book:{id,title,author,cover_image,cover_color}, provider, disclaimer:true} \| {source:'ai', kind:'reflection', intro, question, book:{...}, provider} \| {source:'note', note: Note & {book_title, book_author, book_cover_image, book_cover_color}} \| null, date}` — 사용자·KST 날짜별 하루 고정(43차). 날짜 해시로 명문장/성찰 질문을 번갈아 고르고, 책은 완독 중 별점 4~5점·최근 90일 완독 가중. 책 소개(카카오/네이버 `contents`, 400자)를 근거로 넣는다. **명문장은 Gemini 공급자만**(다른 모델은 문장을 지어내서) — 못 쓰면 성찰 질문으로 바꾼다. 성찰 질문은 공급자 체인 전체. 노트 내용은 모델에 보내지 않는다. 둘 다 백그라운드 상한(`LLM_BACKGROUND_CAP`). AI 실패 시 내 노트(짧은 캐시), 노트도 없으면 `data: null` | KV `daily_quote:v2:{userId}:{date}` 26시간, 잠금 `daily_quote_lock:{userId}:{date}`. `lib/dailyQuote.ts`, `lib/dailyCard.ts`. `/:id` 앞에 선언 |
+| GET | `/api/notes/daily-quote` | **authMiddleware** | — | `{data: {source:'ai', kind:'quote', text, context, why, book:{id,title,author,cover_image,cover_color}, provider, disclaimer:true} \| {source:'ai', kind:'reflection', intro, question, book:{...}, provider} \| {source:'note', note: Note & {book_title, book_author, book_cover_image, book_cover_color}} \| null, date}` — 사용자·KST 날짜별 하루 고정(43차). 날짜 해시로 명문장/성찰 질문을 번갈아 고르고, 책은 완독 중 별점 4~5점·최근 90일 완독 가중. 책 소개(카카오/네이버 `contents`, 400자)를 근거로 넣는다. **명문장은 Gemini 공급자만**(다른 모델은 문장을 지어내서) — 못 쓰면 성찰 질문으로 바꾼다. 성찰 질문은 공급자 체인 전체. 노트 내용은 모델에 보내지 않는다. 둘 다 백그라운드 상한(`LLM_BACKGROUND_CAP`). AI 실패 시 내 노트(짧은 캐시), 노트도 없으면 `data: null` | KV `daily_quote:v2:{userId}:{date}` 26시간, 잠금 `daily_quote_lock:{userId}:{date}`. `lib/ai/dailyQuote.ts`, `lib/ai/dailyCard.ts`. `/:id` 앞에 선언 |
 | GET | `/api/notes/random` | **authMiddleware** | — | `{data: Note & {book_title, book_author, book_cover_image, book_cover_color} \| null}` — 오늘의 회고. 사용자·KST 날짜별 결정적 선택(`pickDailyIndex`), 노트가 없으면 `null` | `routes/notes.ts` + `lib/noteHelpers.ts` |
 | GET | `/api/notes/:id` | **authMiddleware** | — | `{data: Note}` | `routes/notes.ts` |
 | POST | `/api/notes` | **authMiddleware** ✅ | `{book_id, type?, content, page_number?, end_page?, color?}` | `{data: Note}` 201 · 400 범위 오류 | `routes/notes.ts` |
@@ -919,10 +918,10 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 
 | Method | 경로 | 인증 | 요청 | 응답 | 캐시 |
 |---|---|---|---|---|---|
-| POST | `/api/ai/summarize` | **authMiddleware** (한도는 사용자별 `ai_sum`, 5회/분) | `{title, author, isbn?, description?, refresh?}` — `refresh: true`면 KV 캐시 읽기를 건너뛰고 재생성(결과는 다시 캐시에 기록, 사용자별 `ai_sum` 한도는 그대로 적용; 프론트 "다시 생성") · 20자 이상 description이 없으면 서버가 카카오→네이버에서 책 소개 조회(ISBN 우선, 제목 유사도 검증) | 근거 있음: `{summary, cached, provider: 'openrouter'\|'workers-ai', grounded: true, source: 'kakao'\|'naver'\|'client'}` · 근거 없음(모델 미호출): `{summary: null, reason: 'no_source', cached: false, provider: null}` · 실패 500 | KV `ai_summary:v4:{SHA-256(isbn·제목·저자·소개 전체)}` 7일 — Workers AI 폴백 결과는 1시간(성공 결과만, 요약 800자 상한). `lib/aiSummary.ts` |
-| GET | `/api/ai/recommend` | **authMiddleware** (한도 `ai_rec` 사용자별 3회/10분 — 핸들러 안에서 **실제 생성할 때만** 소모, 초과 시 429 `{error}`. `ai_sum`과 공유 금지) | `?refresh=true` | `{data: [{title, author, reason(60자 요청·80자에서 자름), thumbnail, publisher, isbn, url, verified, based_on: string[]}], basis: {done_count, top_genres[]}, generated_at, cached, stale?: true, source: 'gemini'\|'workers-ai'\|'openrouter'\|'curated-fallback', provider: 'gemini'\|'workers-ai'\|'openrouter'\|null}` — **43차: 인생책 통합('당신을 위한 AI추천 도서')**. 서재 전체(완독·별점 가중, ≤200권)로 후보 14권 + `based_on`(내 책 제목 검증) → 서재 제외(제목·저자·ISBN) → 카카오/네이버 실존 검증(제목이 정확히 맞고 저자만 틀리면 실제 저자로 교정) → ≤10권. 제외: 본제목(부제·판본 표기 제거) 일치, 977 ISBN(정기간행물), 어학판·오디오북·원서·'편집부'·'무제', 이유에 한자·긴 영단어가 섞인 후보. 부족하면 즐겨 읽은 작가(별점 4+ 완독 저자 최대 4명)의 다른 책 → 큐레이션. 책 조회는 요청당 36회 상한(`RECOMMEND_LOOKUP_BUDGET`, Workers 무료 플랜 외부 fetch 50회). `?refresh=true`는 KV `ai_rec_seen:{userId}`(최근 40권)를 제외(보강 뒤에도 6권 미만일 때만 맨 뒤에 다시 씀) | SWR(`lib/aiSwr.ts`): 지문 캐시 미스 + `latest` → 즉시 `stale` 반환 + `waitUntil` 재생성(26초 제한). 동기 생성 60초 제한. KV `ai_recommend:v4:{userId}:{hash}` 24시간, `:latest` 30일. 공급자 체인(`lib/llm.ts`). `lib/bookRecommend.ts`, `lib/recommendShared.ts`, `lib/recommendAuthors.ts` |
-| GET | `/api/ai/collections` | **authMiddleware** (한도 `ai_col` 사용자별 3회/10분 — 실제 생성 때만 소모, 초과 시 429. `ai_sum`·`ai_rec`와 공유 금지) | `?refresh=true` | 200 `{data: {collections: [{key(이름 해시), name(≤12자), emoji, description(≤60자), insight(≤40자), book_ids: string[]}], basis: {total_books, done_count, top_genres[]}}, cached, stale?: true, generated_at, provider: 'gemini'\|'workers-ai'\|'openrouter'\|null}` · 책 6권 미만(모델 미호출): `{data: {collections: [], basis}, reason: 'not_enough_books', cached: false, provider: null}` · 모델 실패 503 `{error}`(가짜 대체 없음) | 서재 전체(≤400권, 제목·저자·장르·별점·상태·노트 수)를 번호로 모델에 전달(DB id 미전송) → 4~7개 테마 묶음. 번호→id 복원, 잘못된·중복 번호·3권 미만 묶음 제거, 최대 7개. SWR(`lib/aiSwr.ts`): KV `ai_collections:v1:{userId}:{hash(전체 책)}` 24시간, `:latest` 30일(stale 시 삭제된 책 제외), 락 `ai_collections_lock:{userId}`. 동기 생성 타임아웃 40초, 공급자 체인(`lib/llm.ts`), json 모드, maxTokens 2500. `lib/aiCollections.ts` |
-| POST | `/api/books/genre-suggestions` | **authMiddleware** → rateLimit(`ai_genre`, 사용자별 3회/10분) | `{book_ids?: string[]}` (최대 40, 문자열 배열이 아니면 400). 없으면 본인 책 중 장르 '기타'/NULL/빈 값 최신순 최대 40권, 있으면 본인 소유 id만 | `{data: [{id, title, author, current_genre, suggested_genre, confidence: 'high'\|'low'}], provider: 'openrouter'\|'workers-ai'\|null}` — 카카오/네이버 책 소개(≤200자)를 근거로 배치 모델 1회(JSON). 입력에 없는 id·목록 밖 장르·'기타'는 제외. 대상이 없으면 모델 호출 없이 `{data: [], provider: null}`. **DB 쓰기 없음**(적용은 클라이언트가 `PUT /api/books/:id {genre}`). 표준 장르 목록 `lib/genres.ts`(프론트 `GenreKey`와 vitest로 동기화), `lib/genreSuggestions.ts` |
+| POST | `/api/ai/summarize` | **authMiddleware** (한도는 사용자별 `ai_sum`, 5회/분) | `{title, author, isbn?, description?, refresh?}` — `refresh: true`면 KV 캐시 읽기를 건너뛰고 재생성(결과는 다시 캐시에 기록, 사용자별 `ai_sum` 한도는 그대로 적용; 프론트 "다시 생성") · 20자 이상 description이 없으면 서버가 카카오→네이버에서 책 소개 조회(ISBN 우선, 제목 유사도 검증) | 근거 있음: `{summary, cached, provider: 'openrouter'\|'workers-ai', grounded: true, source: 'kakao'\|'naver'\|'client'}` · 근거 없음(모델 미호출): `{summary: null, reason: 'no_source', cached: false, provider: null}` · 실패 500 | KV `ai_summary:v4:{SHA-256(isbn·제목·저자·소개 전체)}` 7일 — Workers AI 폴백 결과는 1시간(성공 결과만, 요약 800자 상한). `lib/ai/aiSummary.ts` |
+| GET | `/api/ai/recommend` | **authMiddleware** (한도 `ai_rec` 사용자별 3회/10분 — 핸들러 안에서 **실제 생성할 때만** 소모, 초과 시 429 `{error}`. `ai_sum`과 공유 금지) | `?refresh=true` | `{data: [{title, author, reason(60자 요청·80자에서 자름), thumbnail, publisher, isbn, url, verified, based_on: string[]}], basis: {done_count, top_genres[]}, generated_at, cached, stale?: true, source: 'gemini'\|'workers-ai'\|'openrouter'\|'curated-fallback', provider: 'gemini'\|'workers-ai'\|'openrouter'\|null}` — **43차: 인생책 통합('당신을 위한 AI추천 도서')**. 서재 전체(완독·별점 가중, ≤200권)로 후보 14권 + `based_on`(내 책 제목 검증) → 서재 제외(제목·저자·ISBN) → 카카오/네이버 실존 검증(제목이 정확히 맞고 저자만 틀리면 실제 저자로 교정) → ≤10권. 제외: 본제목(부제·판본 표기 제거) 일치, 977 ISBN(정기간행물), 어학판·오디오북·원서·'편집부'·'무제', 이유에 한자·긴 영단어가 섞인 후보. 부족하면 즐겨 읽은 작가(별점 4+ 완독 저자 최대 4명)의 다른 책 → 큐레이션. 책 조회는 요청당 36회 상한(`RECOMMEND_LOOKUP_BUDGET`, Workers 무료 플랜 외부 fetch 50회). `?refresh=true`는 KV `ai_rec_seen:{userId}`(최근 40권)를 제외(보강 뒤에도 6권 미만일 때만 맨 뒤에 다시 씀) | SWR(`lib/ai/aiSwr.ts`): 지문 캐시 미스 + `latest` → 즉시 `stale` 반환 + `waitUntil` 재생성(26초 제한). 동기 생성 60초 제한. KV `ai_recommend:v4:{userId}:{hash}` 24시간, `:latest` 30일. 공급자 체인(`lib/ai/llm.ts`). `lib/ai/bookRecommend.ts`, `lib/ai/recommendShared.ts`, `lib/ai/recommendAuthors.ts` |
+| GET | `/api/ai/collections` | **authMiddleware** (한도 `ai_col` 사용자별 3회/10분 — 실제 생성 때만 소모, 초과 시 429. `ai_sum`·`ai_rec`와 공유 금지) | `?refresh=true` | 200 `{data: {collections: [{key(이름 해시), name(≤12자), emoji, description(≤60자), insight(≤40자), book_ids: string[]}], basis: {total_books, done_count, top_genres[]}}, cached, stale?: true, generated_at, provider: 'gemini'\|'workers-ai'\|'openrouter'\|null}` · 책 6권 미만(모델 미호출): `{data: {collections: [], basis}, reason: 'not_enough_books', cached: false, provider: null}` · 모델 실패 503 `{error}`(가짜 대체 없음) | 서재 전체(≤400권, 제목·저자·장르·별점·상태·노트 수)를 번호로 모델에 전달(DB id 미전송) → 4~7개 테마 묶음. 번호→id 복원, 잘못된·중복 번호·3권 미만 묶음 제거, 최대 7개. SWR(`lib/ai/aiSwr.ts`): KV `ai_collections:v1:{userId}:{hash(전체 책)}` 24시간, `:latest` 30일(stale 시 삭제된 책 제외), 락 `ai_collections_lock:{userId}`. 동기 생성 타임아웃 40초, 공급자 체인(`lib/ai/llm.ts`), json 모드, maxTokens 2500. `lib/ai/aiCollections.ts` |
+| POST | `/api/books/genre-suggestions` | **authMiddleware** → rateLimit(`ai_genre`, 사용자별 3회/10분) | `{book_ids?: string[]}` (최대 40, 문자열 배열이 아니면 400). 없으면 본인 책 중 장르 '기타'/NULL/빈 값 최신순 최대 40권, 있으면 본인 소유 id만 | `{data: [{id, title, author, current_genre, suggested_genre, confidence: 'high'\|'low'}], provider: 'openrouter'\|'workers-ai'\|null}` — 카카오/네이버 책 소개(≤200자)를 근거로 배치 모델 1회(JSON). 입력에 없는 id·목록 밖 장르·'기타'는 제외. 대상이 없으면 모델 호출 없이 `{data: [], provider: null}`. **DB 쓰기 없음**(적용은 클라이언트가 `PUT /api/books/:id {genre}`). 표준 장르 목록 `lib/genres.ts`(프론트 `GenreKey`와 vitest로 동기화), `lib/ai/genreSuggestions.ts` |
 | POST | `/api/ai/ocr` | optionalAuth | FormData(`image` 파일, 최대 5MB) | `{text, confidence}` ★ (FEAT-102) | 없음 |
 
 ### 통계 (`/api/stats`) ★ 신규 (2026-03-28)
@@ -1015,17 +1014,9 @@ totals:       { totalPages: number; totalMinutes: number }
 
 **Cron**: `*/15 * * * *` (15분마다) 트리거 → `sendDailyReminders()`가 현재 시각과 사용자별 `reminder_time` 슬롯이 일치하는 사용자에게 독서 리마인더 발송 (`worker/index.ts` scheduled)
 
-### 공유 리포트 (`/api/share`)
+### 공유 리포트 (`/api/share`) — 44차 삭제
 
-> 34차: UI(SharePage·SideNav 배지·`shareApi`) 제거. 기존 데이터 보존과 e2e 유지를 위해 API는 남겨 두었고 현재 화면 호출은 없다.
-
-| Method | 경로 | 인증 | 요청 | 응답 | Worker 파일 |
-|---|---|---|---|---|---|
-| POST | `/api/share/report` | **authMiddleware** | `{recipient_email, message?}` (zod) | `{success: true}` | `routes/share.ts` — 미존재 수신자도 동일 응답(이메일 열거 방지) |
-| GET | `/api/share/inbox` | **authMiddleware** | — | `{data: SharedReport[]}` | `routes/share.ts` |
-| GET | `/api/share/sent` | **authMiddleware** | — | `{data: SharedReport[]}` | `routes/share.ts` |
-| PATCH | `/api/share/:id/read` | **authMiddleware** | — | `{success: true}` | `routes/share.ts` |
-| GET | `/api/share/unread-count` | **authMiddleware** | — | `{data: {count}}` | `routes/share.ts` |
+> 34차에 화면(SharePage·`shareApi`)을 없앤 뒤 e2e에서만 쓰이던 API(`worker/routes/share.ts`, e2e TEST 33~35)를 2026-10-10에 삭제했다. 통계 공유는 독서 통계의 '내 통계 공유'(이미지)·'요약 복사'로 한다. `shared_reports` 테이블과 기존 행은 그대로 두었다(계정 삭제 시 CASCADE로 정리).
 
 ### 온라인 상태 (`/api/presence`)
 
@@ -1045,7 +1036,7 @@ totals:       { totalPages: number; totalMinutes: number }
 | Method | 경로 | 요청 | 응답 | 비고 |
 |---|---|---|---|---|
 | POST | `/api/admin/seed-admins` | — | `{results: {email, updated}[]}` | 최초 1회 관리자 시드, rate limit 5회/60s |
-| GET | `/api/admin/ai-status` | — | `{data: [{provider: 'gemini'\|'gemini-lite'\|'workers-ai'\|'openrouter', model, configured, used_today, cap, last_ok_at, last_error_at, last_error}]}` | 43차: AI 공급자 상태(키 값은 노출하지 않음). 상태는 KV `llm_status:{provider}`, 사용량은 `llm_budget:{provider}:{KST 날짜}`(OpenRouter는 `or_budget:{날짜}`). `lib/llm.ts` `getAiStatus` |
+| GET | `/api/admin/ai-status` | — | `{data: [{provider: 'gemini'\|'gemini-lite'\|'workers-ai'\|'openrouter', model, configured, used_today, cap, last_ok_at, last_error_at, last_error}]}` | 43차: AI 공급자 상태(키 값은 노출하지 않음). 상태는 KV `llm_status:{provider}`, 사용량은 `llm_budget:{provider}:{KST 날짜}`(OpenRouter는 `or_budget:{날짜}`). `lib/ai/llm.ts` `getAiStatus` |
 | GET | `/api/admin/stats` | — | `{data: {users, books, engagement, charts, topUsers}}` | 대시보드 요약 통계 |
 | GET | `/api/admin/users` | `?q=&role=&status=&sort=&order=&page=&size=` | `{data: AdminUser[], meta}` | 회원 목록 검색/정렬/페이지네이션. 각 항목에 `status`('active'\|'dormant'), `dormant_at` 포함, `status` 필터 지원 |
 | GET | `/api/admin/users/:id` | — | `{data: AdminUserDetail}` | 회원 상세(독서 통계, 최근 도서/활동 포함) |

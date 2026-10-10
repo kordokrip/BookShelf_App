@@ -1,6 +1,6 @@
 # BookShelf App — 현재 상태 스냅샷
 
-> **최종 업데이트:** 2026-10-10 (43차: 무료 AI 공급자 체인·AI 추천 통합·회고 성찰 질문·기능 말풍선·하단 메뉴 컬렉션 / 42차: OpenRouter 무료 모델(Qwen 3.8 27B)로 전환 / 41차: AI 컬렉션·인생책 근거 — OpenRouter 크레딧 충전 필요 / 40차: 관리자 회원 휴면·삭제 / 39차: 수정요청 9건·운영 회원 정리·독서 기록 중복 버그 / 38차: 화면 문구·중복 정리, 용어 통일 / 37차: AI 모델을 Gemini 3.8 Flash로 교체 / 36차: 잃은 장르 AI 추천 복구·인생책 즉시 표시·기본 대화상자 제거 / 35차: 전체 화면 점검·수정)
+> **최종 업데이트:** 2026-10-10 (44차: 백엔드·프론트·DB 교차 검증·계정 삭제 화면·코드/문서 정리 / 43차: 무료 AI 공급자 체인·AI 추천 통합). 이전 차수는 `docs/CHANGELOG.md`
 > **Git 브랜치:** `main` (kordokrip/BookShelf_App)
 > **E2E 테스트:** `bash scripts/e2e-api-test.sh --url <대상>` → **전체 PASS** ✅ (2026-10-03 스테이징·프로덕션 확인, 테스트 개수는 `grep -n '^  TOTAL=' scripts/e2e-api-test.sh`로 확인)
 > **상세 세션 리포트:** `docs/sessions/2026-10-05-refactoring-requests.md` (직전: `2026-10-03-ipad-ai-theme.md`)
@@ -87,7 +87,6 @@
 /api/collections   → 컬렉션 도메인
 /api/push          → 웹 푸시 구독 관리
 /api/groups        → 독서 모임 CRUD + 채팅(Durable Object WebSocket) + 일정
-/api/share         → 통계 공유 보고서
 /api/notifications → 알림 목록/읽음 처리
 /api/discover      → 책 탐색/발견 기능
 /api/admin         → 관리자 대시보드 (9개 엔드포인트)
@@ -135,7 +134,7 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 | `0001_initial.sql` | 초기 users/books/sessions/notes |
 | `0002_fts5_notes.sql` | 노트 FTS5 전문검색 |
 | `0003_notes_review_type.sql` | notes type 'review' 추가 |
-| `0004_user_role.sql` | users.role (user\|admin) — no-op 래퍼(실제 컬럼 추가는 프로덕션에 이미 반영되어 있던 것으로 확인됨, 2026-08-14 조사) |
+| `0004_user_role.sql` | users.role (user\|admin) — 44차에 ALTER로 채움(운영·스테이징은 이미 적용됨으로 기록돼 재실행 안 됨, 새 DB에서만 실행) |
 | `0005_collections.sql` | 컬렉션 도메인 스키마 |
 | `0006_push_subscriptions.sql` | 웹 푸시 구독 스키마 |
 | `0007_profile_emoji.sql` | 프로필 이모지 |
@@ -218,10 +217,11 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 | 독서 세션 + 타이머 | ✅ 완료 |
 | 노트 CRUD + FTS5 검색 | ✅ 완료 |
 | 통계 + 연간결산 + 성취배지 | ✅ 완료 |
-| AI 요약·추천(인생책 통합)·AI 컬렉션·오늘의 회고·장르 추천 | ✅ 2026-10-10 공급자 체인(`worker/lib/llm.ts`): Gemini(`GEMINI_API_KEY`, 무료 등급) → Gemini Lite → Workers AI `@cf/qwen/qwen3.8-27b` → OpenRouter 무료 목록 → (요약·장르만) Workers AI 8B. 키 없음·상한·404/429/5xx·타임아웃이면 다음 공급자. 상태는 관리자 대시보드 'AI 공급자 상태'. 명문장은 Gemini만(다른 모델은 문장을 지어냄). 42차 무료 Qwen은 무료 중단으로 404였음(`docs/sessions/2026-10-10-free-ai-quality.md`). **Gemini 키 미등록 상태면 Workers AI가 1순위라 추천 첫 생성 30~60초** |
+| AI 요약·추천(인생책 통합)·AI 컬렉션·오늘의 회고·장르 추천 | ✅ 2026-10-10 공급자 체인(`worker/lib/ai/llm.ts`): Gemini(`GEMINI_API_KEY`, 무료 등급) → Gemini Lite → Workers AI `@cf/qwen/qwen3.8-27b` → OpenRouter 무료 목록 → (요약·장르만) Workers AI 8B. 키 없음·상한·404/429/5xx·타임아웃이면 다음 공급자. 상태는 관리자 대시보드 'AI 공급자 상태'. 명문장은 Gemini만(다른 모델은 문장을 지어냄). 42차 무료 Qwen은 무료 중단으로 404였음(`docs/sessions/2026-10-10-free-ai-quality.md`). **Gemini 키 미등록 상태면 Workers AI가 1순위라 추천 첫 생성 30~60초** |
 | 독서 모임 + 실시간 채팅(DO WebSocket) + 일정 | ✅ 완료 |
-| 통계 공유 | ✅ 2026-10-03 보고서 화면 → 독서 통계 '내 통계 공유'(이미지 Web Share/PNG)·'요약 복사'. `/api/share`는 데이터 보존용으로 남김 |
+| 통계 공유 | ✅ 2026-10-03 보고서 화면 → 독서 통계 '내 통계 공유'(이미지 Web Share/PNG)·'요약 복사'. `/api/share`는 44차에 삭제(`shared_reports` 테이블·데이터는 보존) |
 | 관리자 대시보드 | ✅ 완료 |
+| 계정 삭제(본인) | ✅ 2026-10-10 프로필 팝업 [계정 삭제] — 비밀번호 계정은 비밀번호, 소셜 로그인 계정은 가입 이메일 재입력(`DELETE /api/users/me`, 관리자 계정은 불가) |
 | 컬렉션 / 책 탐색(discover) / 웹 푸시 | ✅ 완료 |
 | PWA + 오프라인 지원 | ✅ 완료 |
 | **접근성 (WCAG 2.1 AA)** | 1차 감사 완료(`docs/A11Y_AUDIT_2026-07.md`, 2026-07) + **다크모드 대비 위반 16곳 후속 발견·수정 완료**(2026-08-14) — 감사 문서 자체의 "미해결" 섹션은 계속 정직하게 유지할 것, 상위 문서에서 "100% 완료"로 과장 인용하지 말 것 |

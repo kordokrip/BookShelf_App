@@ -40,7 +40,7 @@
 
 ## 반영
 
-### AI 공급자 체인 (`worker/lib/llm.ts`)
+### AI 공급자 체인 (`worker/lib/ai/llm.ts`)
 - **순서**
   1. Gemini
   2. Gemini Lite

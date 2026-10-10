@@ -66,15 +66,11 @@ PWA 정적 자산(아이콘, iOS startup 이미지, `sw.js`/workbox 프리캐시
 
 **스테이징 사용 절차:** `git push origin main:staging`(또는 작업 브랜치를 `staging`에 push) → CI가 마이그레이션 + 배포 → `bash scripts/e2e-api-test.sh --url https://bookshelf-api-staging.kordokrip.workers.dev`. 스테이징 worker 시크릿은 프로덕션과 별도이며 이름은 `npx wrangler secret list --env staging`으로 확인한다.
 
-**AI 공급자 시크릿 (43차)**: 모든 AI 기능(요약·장르·추천·AI 컬렉션·오늘의 카드)은 `worker/lib/llm.ts`의 공급자 체인을 거친다. 순서: Gemini(`GEMINI_API_KEY`, Google AI Studio 무료 등급) → Gemini Lite(같은 키, 별도 상한) → Workers AI 큰 모델(바인딩, 하루 1만 뉴런 무료) → OpenRouter 무료 모델 목록(`OPENROUTER_API_KEY`, 계정 하루 50회). 키가 없거나 공급자별 일일 상한(`LLM_DAILY_CAP`, KV `llm_budget:{provider}:{KST 날짜}`)·404·429·5xx·타임아웃이면 다음 공급자로 넘어간다. 모델 id·상한은 `llm.ts`·`openrouter.ts` 상수에서 확인한다. 공급자 상태는 관리자 대시보드 "AI 공급자 상태"(`GET /api/admin/ai-status`)에서 본다 — 무료 모델이 사라지면 여기 오류로 드러난다. 시크릿은 production/staging 각각 `npx wrangler secret put GEMINI_API_KEY [--env staging]`, `npx wrangler secret put OPENROUTER_API_KEY [--env staging]`로 등록하고 `npx wrangler secret list`로 이름만 확인한다. 로컬은 `.dev.vars`에 같은 이름(커밋 금지). Gemini 무료 등급은 보낸 내용이 Google 서비스 개선에 쓰일 수 있어 노트 본문은 보내지 않는다.
+**AI 공급자 시크릿 (43차)**: 모든 AI 기능(요약·장르·추천·AI 컬렉션·오늘의 카드)은 `worker/lib/ai/llm.ts`의 공급자 체인을 거친다. 순서: Gemini(`GEMINI_API_KEY`, Google AI Studio 무료 등급) → Gemini Lite(같은 키, 별도 상한) → Workers AI 큰 모델(바인딩, 하루 1만 뉴런 무료) → OpenRouter 무료 모델 목록(`OPENROUTER_API_KEY`, 계정 하루 50회). 키가 없거나 공급자별 일일 상한(`LLM_DAILY_CAP`, KV `llm_budget:{provider}:{KST 날짜}`)·404·429·5xx·타임아웃이면 다음 공급자로 넘어간다. 모델 id·상한은 `llm.ts`·`openrouter.ts` 상수에서 확인한다. 공급자 상태는 관리자 대시보드 "AI 공급자 상태"(`GET /api/admin/ai-status`)에서 본다 — 무료 모델이 사라지면 여기 오류로 드러난다. 시크릿은 production/staging 각각 `npx wrangler secret put GEMINI_API_KEY [--env staging]`, `npx wrangler secret put OPENROUTER_API_KEY [--env staging]`로 등록하고 `npx wrangler secret list`로 이름만 확인한다. 로컬은 `.dev.vars`에 같은 이름(커밋 금지). Gemini 무료 등급은 보낸 내용이 Google 서비스 개선에 쓰일 수 있어 노트 본문은 보내지 않는다.
 
 > 최초 부트스트랩 예외: 2026-09-27 스테이징 D1을 만든 직후 0001~0014 마이그레이션을 로컬에서 `--remote --env staging`으로 1회 직접 적용했다(빈 DB 초기화). 이후 스테이징 D1 변경도 CI 경로로만 한다.
 >
-> **알려진 스키마 드리프트 — `users.role`:** 프로덕션의 `users.role` 컬럼은 마이그레이션 파일에 기록되지 않은 경로로 추가됐다(`0004_user_role.sql`은 no-op이고, 이를 고치는 마이그레이션은 프로덕션에서 `duplicate column`으로 실패해 `1592da8`에서 되돌림). 그래서 **마이그레이션만으로 새로 만든 D1(로컬·스테이징)에는 `role`이 없어** `/api/flags`와 프로필 수정 등이 500을 낸다. 새 D1을 만들면 마이그레이션 적용 직후 다음을 1회 실행한다(스테이징은 2026-09-27 적용 완료):
->
-> ```bash
-> npx wrangler d1 execute <db-name> --local|--remote [--env staging] --command "ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'"
-> ```
+> **`users.role` 스키마 드리프트 — 44차에 해소**: 예전 `0004_user_role.sql`은 빈 마이그레이션이라 마이그레이션만으로 만든 새 DB에는 `users.role`이 없었다(운영 컬럼은 과거 수동 추가). 새 마이그레이션으로 ALTER를 넣으면 운영에서 `duplicate column`으로 실패하므로(`1592da8`), **이미 적용됨으로 기록된 0004 파일 자체**에 `ALTER TABLE users ADD COLUMN role …`을 넣었다. 운영·스테이징·기존 로컬은 `d1_migrations`에 0004가 있어 다시 실행되지 않고, 새 DB에서만 실행된다. 확인: 임시 로컬 DB에 `npx wrangler d1 migrations apply bookshelf-db --local --persist-to <임시 폴더>` 후 열 목록이 운영(`--remote`)과 같은지 비교한다.
 
 ---
 
@@ -215,4 +211,4 @@ npm view wrangler@<올리려는 버전> peerDependencies
 
 같은 조사에서 서비스 워커 precache가 JS/CSS를 빠뜨려, 404가 올바르게 나와도 구 `index.html` + 사라진 진입 JS 조합으로 앱이 부팅하지 못한다는 것도 확인했다. `vite.config.ts` `globPatterns`에 `js,css`를 추가해 해결했다(ADR-001 보완 절).
 
-**마이그레이션만으로 새 DB를 만들 때 주의 (2026-10-05 확인)**: `0004_user_role.sql`은 빈 마이그레이션이라 `users.role` 열을 만들지 않는다(운영·스테이징·기존 로컬 DB에는 과거에 직접 추가돼 있다). 마이그레이션만으로 만든 새 로컬 DB는 `no such column: role`로 프로필·플래그 API가 실패하므로, 새 DB는 `worker/db/schema.sql`로 만들거나 `ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'`를 한 번 실행한다. 기존 DB에 이미 열이 있어 이 ALTER를 마이그레이션으로 넣으면 실패하므로 마이그레이션 파일로는 추가하지 않는다.
+**마이그레이션만으로 새 DB를 만들 때 (44차 갱신)**: `0004_user_role.sql`이 이제 `users.role`을 만든다. 마이그레이션만으로 만든 DB와 `worker/db/schema.sql`, 운영 D1의 열·인덱스·트리거가 같음을 확인했다(2026-10-10).
