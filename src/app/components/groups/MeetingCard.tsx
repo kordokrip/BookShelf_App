@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'motion/react';
 import { Calendar, Trash2, Clock, MapPin, BookOpen } from 'lucide-react';
 import { FeedbackSection } from './FeedbackSection';
 import type { GroupMeeting } from '../../../lib/api';

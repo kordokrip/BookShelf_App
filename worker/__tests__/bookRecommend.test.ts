@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { buildExcludedSet, isExcludedBook, normalizeIsbn } from '../lib/aiRecommend';
+import { buildExcludedSet, isExcludedBook, normalizeIsbn } from '../lib/ai/aiRecommend';
 import {
   buildRecommendations, buildRecommendMessages, parseRecommendCandidates, recommendCacheKey, recommendLatestKey,
   recommendLockKey, resolveRecommendations, selectPromptBooks, MAX_PROMPT_BOOKS, RECOMMEND_LOCK_TTL_SEC,
   RESULT_MAX, type OwnedBook, type RecommendDeps, type RecommendEnv, type RecommendItem,
-} from '../lib/bookRecommend';
+} from '../lib/ai/bookRecommend';
 
 afterEach(() => { vi.unstubAllGlobals(); });
 

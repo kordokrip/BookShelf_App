@@ -5,7 +5,7 @@
  * - 그룹 상세(채팅·멤버·일정) 내지 탭
  */
 import { useState, lazy, Suspense } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { Users, Plus, LogIn, Crown, ChevronRight, Search, Clock, BookOpen, Compass } from 'lucide-react';
 import { useGroups, useCreateGroup, useJoinGroup } from '../../hooks/useGroups';
 import { useAuthStore } from '../../stores/authStore';

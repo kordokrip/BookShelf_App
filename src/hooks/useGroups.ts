@@ -231,15 +231,6 @@ export function useUpdateReadReceipt(groupId: string) {
 // Notifications Hooks
 // ═══════════════════════════════════════════════════════════════
 
-/** 서버 알림 목록 */
-export function useNotifications() {
-  return useQuery({
-    queryKey: queryKeys.notifications.list(),
-    queryFn: () => notificationsApi.list(),
-    select: (res) => res.data,
-  });
-}
-
 /** 서버 알림 미읽음 개수 (30초 폴링) */
 export function useNotificationUnreadCount() {
   return useQuery({
@@ -248,17 +239,6 @@ export function useNotificationUnreadCount() {
     select: (res) => res.data.count,
     refetchInterval: 30_000,
     refetchIntervalInBackground: false,
-  });
-}
-
-/** 개별 알림 읽음 */
-export function useMarkNotificationRead() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => notificationsApi.markRead(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.notifications.all });
-    },
   });
 }
 

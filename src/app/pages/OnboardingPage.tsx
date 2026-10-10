@@ -9,7 +9,7 @@
  */
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ONBOARDING_SLIDES as slides } from "../components/onboarding/onboardingSlides";
 import { AuthPreviewNav } from "../components/auth/AuthPreviewNav";

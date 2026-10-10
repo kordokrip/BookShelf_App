@@ -9,7 +9,7 @@
  * - 넓은 화면에서 책등이 막대그래프처럼 늘어나지 않도록 쌓기 영역 폭을 제한한다.
  */
 import { useMemo } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "motion/react";
 import { useNavigate } from "react-router";
 import type { UIBook } from "../../../types/book";
 import {

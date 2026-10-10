@@ -3,7 +3,7 @@
  * role="dialog" + aria-modal, Esc 닫기·포커스 이동/복원은 useDialogA11y, 뒤로 가기는 useBackToClose.
  */
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { useCreateCollection, useUpdateCollection } from "../../../hooks/useCollections";
 import { useBackToClose } from "../../../hooks/useBackToClose";
 import { useDialogA11y } from "../../../hooks/useDialogA11y";

@@ -5,7 +5,7 @@
  * 첫 검색 결과를 무조건 믿지 않고 제목 유사도(+저자 겹침)를 확인해 엉뚱한 책이 붙는 것을 막는다.
  * 네트워크·키 문제는 모두 null로 삼킨다(호출 측이 "근거 없음"으로 처리).
  */
-import { normalizeTitle } from './aiRecommend';
+import { normalizeTitle } from './ai/aiRecommend';
 
 export interface LookupEnv {
   KAKAO_REST_API_KEY?: string;

@@ -5,7 +5,7 @@
  */
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import { ChevronLeft, BookOpen, Plus, LibraryBig, Trash2, Layers, Pencil, X } from "lucide-react";
 import {
   useCollections,

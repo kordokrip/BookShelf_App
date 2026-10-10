@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { tagNote, DAILY_TAG_QUOTA, type TaggerEnv } from '../lib/noteTagger';
+import { tagNote, DAILY_TAG_QUOTA, type TaggerEnv } from '../lib/ai/noteTagger';
 
 const CONTENT = '주인공이 알을 깨고 나오는 장면에서 자아를 찾는 성장의 고통과 용기를 함께 느꼈다';
 const NOW = Date.UTC(2026, 8, 27, 3, 0, 0); // KST 2026-09-27

@@ -36,17 +36,3 @@ export function resolveFeatureFlags(
   return parseFeatureFlags(raw, known);
 }
 
-/**
- * 서버에서 플래그를 확인해야 하는 예외적인 경우용 (ADR-003 예외 — 비용·데이터 전송이 걸린 기능,
- * 예: 전체 공개 전의 ai_tags). 일반 기능은 UI만 플래그로 가리고 서버는 분기하지 않는다.
- */
-export async function userHasFlag(
-  db: D1Database,
-  raw: string | undefined,
-  userId: string,
-  flag: FeatureFlag,
-): Promise<boolean> {
-  if (parseFeatureFlags(raw).includes(flag)) return true;
-  const user = await db.prepare('SELECT role FROM users WHERE id = ?').bind(userId).first<{ role: string }>();
-  return resolveFeatureFlags(raw, user?.role).includes(flag);
-}

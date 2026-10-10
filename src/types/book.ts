@@ -327,7 +327,7 @@ export interface ApiBookNote {
   updated_at: string;
 }
 
-/** notes.tags(JSON 배열 문자열) → 배열, 손상된 값은 빈 배열 (worker/lib/noteTags.readTags와 동일 규칙) */
+/** notes.tags(JSON 배열 문자열) → 배열, 손상된 값은 빈 배열 (worker/lib/ai/noteTags.readTags와 동일 규칙) */
 export function parseNoteTags(raw: string | null | undefined): string[] {
   if (!raw) return [];
   try {

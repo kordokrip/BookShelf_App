@@ -74,8 +74,3 @@ export type CreateBookInput = Omit<
 
 export type UpdateBookInput = Partial<CreateBookInput>;
 
-export interface InitialData {
-  bookCounts: { done: number; reading: number; wish: number };
-  user: User | null;
-  lastSessionDate: string | null;
-}

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { summarizeBook, cleanSummary, buildSummaryMessages, summaryCacheKey, type SummarizeEnv } from '../lib/aiSummary';
+import { summarizeBook, cleanSummary, buildSummaryMessages, summaryCacheKey, type SummarizeEnv } from '../lib/ai/aiSummary';
 
 afterEach(() => { vi.unstubAllGlobals(); });
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseTagResponse, readTags, shouldTag, buildTagMessages, MAX_TAGS, NOTE_EMOTIONS } from '../lib/noteTags';
+import { parseTagResponse, readTags, shouldTag, buildTagMessages, MAX_TAGS, NOTE_EMOTIONS } from '../lib/ai/noteTags';
 
 /** 대부분의 케이스에서 쓰는 노트 본문 — 키워드는 여기에 나온 단어여야 남는다 */
 const NOTE = '알을 깨고 나오는 성장의 순간, 자아를 찾는 용기와 선택, 몰입과 기억에 대한 문장';

@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { buildExcludedSet } from '../lib/aiRecommend';
+import { buildExcludedSet } from '../lib/ai/aiRecommend';
 import {
   buildRecommendations, buildRecommendMessages, resolveRecommendations, parseRecommendCandidates, CANDIDATE_COUNT, RESULT_MAX,
   TEMP_NORMAL, TEMP_REFRESH, type OwnedBook, type RecommendDeps, type RecommendEnv,
-} from '../lib/bookRecommend';
-import { pickFavoriteAuthors, authorReason, topUpFavoriteAuthors, primaryAuthor } from '../lib/recommendAuthors';
+} from '../lib/ai/bookRecommend';
+import { pickFavoriteAuthors, authorReason, topUpFavoriteAuthors, primaryAuthor } from '../lib/ai/recommendAuthors';
 import {
   stripRatingEcho, titleLookup, validateBasedOn, verifyCandidates, loadSeen, seenKey, SEEN_MAX, SEEN_TTL_SEC,
-} from '../lib/recommendShared';
+} from '../lib/ai/recommendShared';
 import { searchByAuthor } from '../lib/bookLookup';
 
 afterEach(() => { vi.unstubAllGlobals(); });
@@ -287,7 +287,7 @@ describe('합쳐진 추천 — resolveRecommendations (seen·SWR)', () => {
 
 describe('43차 QA 보완', () => {
   it('짧은 제목도 판본·부제만 다르면 내 책으로 본다(넛지 ↔ 넛지(파이널 에디션)·넛지 : 부제)', async () => {
-    const { buildExcludedSet, isExcludedBook, mainTitleKey } = await import('../lib/aiRecommend');
+    const { buildExcludedSet, isExcludedBook, mainTitleKey } = await import('../lib/ai/aiRecommend');
     expect(mainTitleKey('넛지(파이널 에디션)')).toBe('넛지');
     expect(mainTitleKey('넛지 : 똑똑한 선택을 이끄는 힘')).toBe('넛지');
     expect(mainTitleKey('넛지')).toBe('');
@@ -300,7 +300,7 @@ describe('43차 QA 보완', () => {
   });
 
   it('작가 보강 이유의 목적격 조사: 받침 있으면 을, 없으면 를, 한글이 아니면 을(를)', async () => {
-    const { objectParticle, authorReason } = await import('../lib/recommendAuthors');
+    const { objectParticle, authorReason } = await import('../lib/ai/recommendAuthors');
     expect(objectParticle('데미안')).toBe('을');
     expect(objectParticle('넛지')).toBe('를');
     expect(objectParticle('1Q84')).toBe('을(를)');
@@ -308,7 +308,7 @@ describe('43차 QA 보완', () => {
   });
 
   it('어색한 판본(어학판·오디오북·편집부·무제)과 깨진 이유 문장을 걸러 낸다', async () => {
-    const { isOddEdition, isGarbledReason } = await import('../lib/recommendShared');
+    const { isOddEdition, isGarbledReason } = await import('../lib/ai/recommendShared');
     expect(isOddEdition('THE LITTLE PRINCE: 영어로 즐기는 명작의 향기(MP3CD1장포함)', '앙투안 드 생텍쥐페리')).toBe(true);
     expect(isOddEdition('브레인', '한국뇌과학연구원 편집부')).toBe(true);
     expect(isOddEdition('무제', '누군가')).toBe(true);

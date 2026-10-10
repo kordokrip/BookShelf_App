@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   buildExcludedSet, isExcludedBook, extractJsonArray, extractJsonObject, normalizeRecommendations,
   buildCuratedRecommendations, sanitizeForPrompt, hashString, parseFavoriteGenres,
-} from '../lib/aiRecommend';
+} from '../lib/ai/aiRecommend';
 
 describe('aiRecommend 헬퍼', () => {
   const excluded = buildExcludedSet([{ title: '데미안 (개정판)', author: '헤르만 헤세' }, { title: '모순', author: null }]);

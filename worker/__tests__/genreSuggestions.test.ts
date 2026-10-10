@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { OPENROUTER_FREE_MODELS, supportsJsonMode } from '../lib/openrouter';
+import { OPENROUTER_FREE_MODELS, supportsJsonMode } from '../lib/ai/openrouter';
 import {
   parseBookIds, parseSuggestions, selectTargetBooks, suggestGenres, MAX_SUGGEST_BOOKS,
   type GenreBookRow, type GenreEnv,
-} from '../lib/genreSuggestions';
+} from '../lib/ai/genreSuggestions';
 
 afterEach(() => { vi.unstubAllGlobals(); });
 

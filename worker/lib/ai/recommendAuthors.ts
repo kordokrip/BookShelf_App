@@ -3,7 +3,7 @@
  * (target=person)으로 찾아 채운다. 모델을 쓰지 않으므로 환각이 없고(실제 출간 도서), 서재에 이미 있는 책은 건너뛴다.
  */
 import { isExcludedBook, normalizeTitle } from './aiRecommend';
-import { searchByAuthor, type LookupEnv } from './bookLookup';
+import { searchByAuthor, type LookupEnv } from '../bookLookup';
 import { isOddEdition, type RecommendItem } from './recommendShared';
 
 export const FAVORITE_AUTHOR_MAX = 4;

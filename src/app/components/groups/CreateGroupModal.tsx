@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { useDialogA11y } from '../../../hooks/useDialogA11y';
 
 const EMOJI_OPTIONS = ['📖', '📚', '🎯', '💡', '🌟', '🔥', '🎨', '🌈', '☕', '🏆', '💬', '🧠'];

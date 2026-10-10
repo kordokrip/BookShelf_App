@@ -13,7 +13,7 @@
  * 상태(마지막 성공/실패)는 `llm_status:{provider}`에 기록 — GET /api/admin/ai-status에서 읽는다.
  */
 import { extractAiText } from './aiText';
-import { kstDateString } from './noteHelpers';
+import { kstDateString } from '../noteHelpers';
 import {
   budgetKey, chatCompletion, OPENROUTER_BACKGROUND_BUDGET, OPENROUTER_DAILY_BUDGET, OPENROUTER_FREE_MODELS,
   type ChatOptions, type OpenRouterEnv,

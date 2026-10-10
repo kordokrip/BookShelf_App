@@ -20,10 +20,10 @@ import type { Bindings, DbNote } from '../types';
 import { authMiddleware } from '../auth';
 import { logActivity } from './admin';
 import { validatePageRange, formatPageRange, kstDateString, pickDailyIndex } from '../lib/noteHelpers';
-import { shouldTag } from '../lib/noteTags';
-import { tagNote } from '../lib/noteTagger';
-import { generateDailyCard } from '../lib/dailyCard';
-import { DAILY_QUOTE_FALLBACK_TTL_SEC, DAILY_QUOTE_TTL_SEC, dailyQuoteCacheKey, type QuoteBook } from '../lib/dailyQuote';
+import { shouldTag } from '../lib/ai/noteTags';
+import { tagNote } from '../lib/ai/noteTagger';
+import { generateDailyCard } from '../lib/ai/dailyCard';
+import { DAILY_QUOTE_FALLBACK_TTL_SEC, DAILY_QUOTE_TTL_SEC, dailyQuoteCacheKey, type QuoteBook } from '../lib/ai/dailyQuote';
 
 export const notesRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 

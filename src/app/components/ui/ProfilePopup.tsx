@@ -7,7 +7,7 @@
  * - 로그아웃 버튼
  */
 import { useState, useEffect, forwardRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import { LogOut, X, Camera, Palette, ChevronRight, Users, LibraryBig, CalendarRange, UserCog } from "lucide-react";
 import { useAuthStore, type AuthUser } from "../../../stores/authStore";
 import { usersApi } from "../../../lib/api";

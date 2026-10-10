@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'motion/react';
 import { Plus } from 'lucide-react';
 import { useGroupMeetings, useCreateMeeting, useDeleteMeeting } from '../../../hooks/useGroups';
 import { MeetingCard } from './MeetingCard';

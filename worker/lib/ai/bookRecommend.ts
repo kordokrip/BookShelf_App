@@ -10,7 +10,7 @@ import {
   normalizeTitle, sanitizeForPrompt, type ReadingProfileBook, type RecommendationSource,
 } from './aiRecommend';
 import { resolveSwr, type SwrKv, type SwrPayload, type SwrResponse } from './aiSwr';
-import { searchBook, type LookupEnv } from './bookLookup';
+import { searchBook, type LookupEnv } from '../bookLookup';
 import { generateText, type GenerateEnv, type Provider } from './llm';
 import type { ChatMessage } from './openrouter';
 import { topUpFavoriteAuthors } from './recommendAuthors';

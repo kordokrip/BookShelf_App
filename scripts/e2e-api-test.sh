@@ -38,7 +38,6 @@ NOTE_ID=""
 COLLECTION_ID=""
 GROUP_ID=""
 MESSAGE_ID=""
-REPORT_ID=""
 
 # ── 카운터 ───────────────────────────────────────────────────────
 PASS=0
@@ -48,7 +47,7 @@ FAILED_TESTS=()
 if [[ "$READONLY" == true ]]; then
   TOTAL=3
 else
-  TOTAL=79
+  TOTAL=76
 fi
 
 # ── 시작 시각 ────────────────────────────────────────────────────
@@ -972,9 +971,10 @@ else
 fi
 
 # ================================================================
-# GROUP 11 — 공유 리포트 (Share)
+# GROUP 11 — 두 번째 사용자 준비 (번호 없는 setup)
+# ── 44차: 공유 리포트(/api/share) 테스트 33~35 삭제 — 화면(34차 제거)과 API를 함께 없앴다
 # ================================================================
-group "GROUP 11 — 공유 리포트 (3개)"
+group "GROUP 11 — 두 번째 사용자 준비"
 
 # ── user2 사전 등록 (번호 없는 setup) ───────────────────────────
 printf "         ${YELLOW}⚙  user2 사전 등록 중...${NC}\n"
@@ -987,61 +987,7 @@ TOKEN_2=$(json_val "$SETUP_BODY" "d['data'].get('token', '')")
 if [[ -n "$TOKEN_2" ]]; then
   printf "         ${CYAN}↳ user2 등록 완료 (%s)${NC}\n" "$TEST_EMAIL_2"
 else
-  printf "         ${RED}↳ user2 등록 실패 — share 테스트 일부가 FAIL 될 수 있음${NC}\n"
-fi
-
-T=33; NAME="POST /api/share/report (user1→user2 공유)"; START=$(now_ms)
-TMPF=$(mktemp /tmp/e2e_XXXXXX)
-curl -s -o "$TMPF" -X POST "${BASE_URL}/api/share/report" \
-  -H "Authorization: Bearer ${TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d "{\"recipient_email\":\"${TEST_EMAIL_2}\",\"message\":\"E2E 테스트 공유 메시지\"}"
-BODY=$(cat "$TMPF"); rm -f "$TMPF"
-ELAPSED=$(( $(now_ms) - START ))
-REPORT_ID=$(json_val "$BODY" "d['data']['id']")
-SHARED_FLAG=$(json_val "$BODY" "d['data'].get('shared', '')")
-if [[ -n "$REPORT_ID" && ("$SHARED_FLAG" == "True" || "$SHARED_FLAG" == "true") ]]; then
-  pass_test $T "$NAME" $ELAPSED
-  printf "         ${CYAN}↳ report_id: %s${NC}\n" "$REPORT_ID"
-else
-  fail_test $T "$NAME" $ELAPSED "$BODY" \
-    "data.id 없거나 data.shared != true (got: '${SHARED_FLAG}')"
-fi
-
-T=34; NAME="GET /api/share/inbox (user2 수신함 ≥1건)"; START=$(now_ms)
-TMPF=$(mktemp /tmp/e2e_XXXXXX)
-curl -s -o "$TMPF" "${BASE_URL}/api/share/inbox" \
-  -H "Authorization: Bearer ${TOKEN_2}"
-BODY=$(cat "$TMPF"); rm -f "$TMPF"
-ELAPSED=$(( $(now_ms) - START ))
-INBOX_COUNT=$(json_val "$BODY" "len(d.get('data', []))")
-# report_id를 inbox에서도 다시 확인
-INBOX_REPORT_ID=$(json_val "$BODY" "d['data'][0]['id'] if d.get('data') else ''")
-if [[ -n "$INBOX_COUNT" && "$INBOX_COUNT" -ge 1 ]]; then
-  [[ -n "$INBOX_REPORT_ID" ]] && REPORT_ID="$INBOX_REPORT_ID"
-  pass_test $T "$NAME" $ELAPSED
-  printf "         ${CYAN}↳ 수신함 %s건${NC}\n" "$INBOX_COUNT"
-else
-  if [[ -z "$TOKEN_2" ]]; then
-    fail_test $T "$NAME" $ELAPSED "$BODY" "user2 등록 실패로 수신함 조회 불가"
-  else
-    fail_test $T "$NAME" $ELAPSED "$BODY" "inbox.length < 1 (got: ${INBOX_COUNT:-0})"
-  fi
-fi
-
-T=35; NAME="PATCH /api/share/:id/read (읽음 처리)"; START=$(now_ms)
-TMPF=$(mktemp /tmp/e2e_XXXXXX)
-HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" -X PATCH \
-  "${BASE_URL}/api/share/${REPORT_ID}/read" \
-  -H "Authorization: Bearer ${TOKEN_2}")
-BODY=$(cat "$TMPF"); rm -f "$TMPF"
-ELAPSED=$(( $(now_ms) - START ))
-READ_FLAG=$(json_val "$BODY" "d['data'].get('read', '')")
-if [[ "$HTTP_CODE" == "200" && ("$READ_FLAG" == "True" || "$READ_FLAG" == "true") ]]; then
-  pass_test $T "$NAME" $ELAPSED
-else
-  fail_test $T "$NAME" $ELAPSED "$BODY" \
-    "HTTP ${HTTP_CODE}, data.read='${READ_FLAG}' (기대: 200 + true)"
+  printf "         ${RED}↳ user2 등록 실패 — 권한·계정 삭제 테스트 일부가 FAIL 될 수 있음${NC}\n"
 fi
 
 # ================================================================
@@ -1544,7 +1490,7 @@ HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" -X PATCH \
   -d '{"status":"dormant"}')
 BODY=$(cat "$TMPF"); rm -f "$TMPF"
 ELAPSED=$(( $(now_ms) - START ))
-if [[ "$HTTP_CODE" == "403" ]]; then
+if [[ "$HTTP_CODE" == "401" ]]; then
   pass_test $T "$NAME" $ELAPSED
 else
   fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE} (기대: 403)"
@@ -1579,7 +1525,7 @@ HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" -X DELETE \
   -d '{"password":"WrongPass999!"}')
 BODY=$(cat "$TMPF"); rm -f "$TMPF"
 ELAPSED=$(( $(now_ms) - START ))
-if [[ "$HTTP_CODE" == "401" ]]; then
+if [[ "$HTTP_CODE" == "403" ]]; then
   pass_test $T "$NAME" $ELAPSED
 else
   fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE} (기대: 401)"

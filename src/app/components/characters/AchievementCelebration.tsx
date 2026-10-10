@@ -4,7 +4,7 @@
  * 모션 줄이기 설정 시 등장 애니메이션을 생략한다.
  */
 import { useEffect, useRef } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "motion/react";
 import { Modal } from "../ui/Modal";
 import { useCelebrationStore } from "../../../stores/celebrationStore";
 import { useAchievements } from "../../../hooks/useAchievements";

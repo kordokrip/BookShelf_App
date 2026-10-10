@@ -8,7 +8,7 @@
  * 반환 null이면 호출 측(라우트)이 내 노트로 대체한다.
  */
 import { extractJsonObject } from './aiRecommend';
-import { searchBook, type LookupEnv } from './bookLookup';
+import { searchBook, type LookupEnv } from '../bookLookup';
 import {
   buildQuoteMessages, buildReflectionMessages, chooseKind, pickQuoteBook, validateQuote, validateReflection,
   DESCRIPTION_MAX_LEN, type CardKind, type QuoteBook,

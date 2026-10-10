@@ -8,7 +8,7 @@
  */
 import { extractAiText } from './aiText';
 import { buildTagMessages, parseTagResponse, shouldTag } from './noteTags';
-import { kstDateString } from './noteHelpers';
+import { kstDateString } from '../noteHelpers';
 
 export const TAG_MODEL = '@cf/meta/llama-3.1-8b-instruct-fast';
 export const DAILY_TAG_QUOTA = 50;

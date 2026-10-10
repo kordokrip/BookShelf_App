@@ -2,9 +2,9 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   parseCollections, buildCollectionMessages, resolveCollections, collectionsCacheKey, collectionsLatestKey, collectionsBasis,
   COLLECTIONS_ERROR, COLLECTIONS_RATE, type CollectionBook, type CollectionsEnv,
-} from '../lib/aiCollections';
-import { OPENROUTER_FREE_MODELS, supportsJsonMode } from '../lib/openrouter';
-import { hashString } from '../lib/aiRecommend';
+} from '../lib/ai/aiCollections';
+import { OPENROUTER_FREE_MODELS, supportsJsonMode } from '../lib/ai/openrouter';
+import { hashString } from '../lib/ai/aiRecommend';
 
 afterEach(() => { vi.unstubAllGlobals(); });
 

@@ -1,4 +1,4 @@
-import type { StatsResponse, InitialData } from './types';
+import type { StatsResponse } from './types';
 import { ApiError, apiFetch, BASE_URL } from './client';
 
 // ─── Search API ───────────────────────────────────────────────
@@ -64,10 +64,6 @@ export const statsApi = {
 };
 
 // ─── Initial Data API ─────────────────────────────────────────
-
-export const initialDataApi = {
-  load: () => apiFetch<InitialData>('/api/initial-data'),
-};
 
 // ─── OCR API ──────────────────────────────────────────────────
 

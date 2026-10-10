@@ -6,8 +6,8 @@ import { createToken } from '../auth';
 import {
   generateText, getAiStatus, llmBudgetKey, llmStatusKey, LlmError, LLM_DAILY_CAP, LLM_BACKGROUND_CAP, GEMINI_URL, GEMINI_MODEL,
   GEMINI_LITE_MODEL, GEMINI_REASONING_EFFORT, GEMINI_TOKEN_HEADROOM, WORKERS_AI_MODEL, WORKERS_AI_FALLBACK_MODEL, type LlmEnv,
-} from '../lib/llm';
-import { budgetKey, OPENROUTER_FREE_MODELS, OPENROUTER_DAILY_BUDGET } from '../lib/openrouter';
+} from '../lib/ai/llm';
+import { budgetKey, OPENROUTER_FREE_MODELS, OPENROUTER_DAILY_BUDGET } from '../lib/ai/openrouter';
 
 const NOW = Date.UTC(2026, 9, 10, 3, 0, 0); // KST 2026-10-10
 const OPTS = { messages: [{ role: 'user' as const, content: '안녕' }], maxTokens: 100, temperature: 0.3, retryDelayMs: 0 };

@@ -6,7 +6,7 @@
  * 3. OpenRouter 모델 우선, 실패 시 Workers AI. 성공 결과만 7일 캐시(`ai_summary:v4:{sha256}`, 폴백 결과는 1시간)
  */
 import { sanitizeForPrompt } from './aiRecommend';
-import { searchBook, type LookupEnv } from './bookLookup';
+import { searchBook, type LookupEnv } from '../bookLookup';
 import { generateText, type GenerateEnv, type Provider } from './llm';
 import type { ChatMessage } from './openrouter';
 

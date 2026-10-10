@@ -4,7 +4,7 @@
  * 지문이 바뀌면 캐시 미스지만 직전 결과(latest)를 즉시 돌려주고 새 결과는 waitUntil 백그라운드에서 만든다.
  * 맨 처음(latest 없음)·refresh=true만 동기 생성. 한도는 "실제로 생성하는 요청"만 센다(캐시·stale 응답은 소모 없음).
  */
-import { consumeRateLimit, RATE_LIMIT_MESSAGE } from '../middleware/rateLimit';
+import { consumeRateLimit, RATE_LIMIT_MESSAGE } from '../../middleware/rateLimit';
 import type { RecommendationSource } from './aiRecommend';
 import type { Provider } from './llm';
 

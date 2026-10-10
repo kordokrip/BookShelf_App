@@ -9,7 +9,7 @@
  */
 import { sanitizeForPrompt } from './aiRecommend';
 import type { ChatMessage } from './openrouter';
-import { pickDailyIndex } from './noteHelpers';
+import { pickDailyIndex } from '../noteHelpers';
 import { stripRatingEcho } from './recommendShared';
 
 export const DAILY_QUOTE_CACHE_VERSION = 'v2';

@@ -6,7 +6,7 @@
  * - 독서 시작/종료 보고, 영구 삭제
  */
 import { useState, useRef, useCallback, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { useParams, useNavigate, useSearchParams } from "react-router";
 import { FeatureHint } from "../components/onboarding/FeatureHint";
 import { useBack } from "../../hooks/useBack";

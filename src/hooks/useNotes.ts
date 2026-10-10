@@ -40,19 +40,6 @@ export function useBookNotes(bookId: string) {
 }
 
 /**
- * 오늘의 회고 노트 (GET /api/notes/random)
- * - 서버가 사용자·KST 날짜별로 같은 노트를 돌려주므로 1시간 캐시해도 하루 동안 일관됨
- * - notes.all 하위 키라 노트 추가·수정·삭제 시 함께 무효화됨
- */
-export function useDailyNote() {
-  return useQuery({
-    queryKey: queryKeys.notes.daily(),
-    queryFn: async () => (await notesApi.daily()).data,
-    staleTime: 60 * 60_000,
-  });
-}
-
-/**
  * 오늘의 명문장 (GET /api/notes/daily-quote) — 내 노트 또는 AI가 고른 문장
  * - 서버가 KST 날짜별로 고정해 주므로 1시간 캐시 · 실패해도 재시도하지 않음(카드는 조용히 숨김)
  */
@@ -68,7 +55,7 @@ export function useDailyQuote() {
 /** 노트 생성 */
 /** AI 태그는 저장 응답 후 서버에서 비동기로 붙으므로, 잠시 뒤 노트 목록을 다시 불러와 반영 */
 const TAG_REFRESH_DELAY_MS = 8000;
-/** worker/lib/noteTags.ts MIN_TAG_CONTENT_LENGTH와 같게 — 이보다 짧으면 서버가 태깅하지 않으므로 다시 불러올 필요 없음 */
+/** worker/lib/ai/noteTags.ts MIN_TAG_CONTENT_LENGTH와 같게 — 이보다 짧으면 서버가 태깅하지 않으므로 다시 불러올 필요 없음 */
 const MIN_TAG_CONTENT_LENGTH = 20;
 const willBeTagged = (content: string) => content.trim().length >= MIN_TAG_CONTENT_LENGTH;
 

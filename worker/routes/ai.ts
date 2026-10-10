@@ -2,11 +2,11 @@ import { Hono } from 'hono';
 import type { Bindings } from '../types';
 import { authMiddleware } from '../auth';
 import { rateLimit } from '../middleware/rateLimit';
-import { extractAiText } from '../lib/aiText';
-import { parseFavoriteGenres } from '../lib/aiRecommend';
-import { resolveRecommendations, type OwnedBook } from '../lib/bookRecommend';
-import { summarizeBook } from '../lib/aiSummary';
-import { resolveCollections, COLLECTIONS_MAX_BOOKS, type CollectionBook } from '../lib/aiCollections';
+import { extractAiText } from '../lib/ai/aiText';
+import { parseFavoriteGenres } from '../lib/ai/aiRecommend';
+import { resolveRecommendations, type OwnedBook } from '../lib/ai/bookRecommend';
+import { summarizeBook } from '../lib/ai/aiSummary';
+import { resolveCollections, COLLECTIONS_MAX_BOOKS, type CollectionBook } from '../lib/ai/aiCollections';
 
 const aiRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 

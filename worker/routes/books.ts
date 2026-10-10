@@ -25,7 +25,7 @@ import { deriveFinishedDate } from '../lib/bookHelpers';
 import { achievementEventFor } from '../lib/achievementsDb';
 import { createBookSchema, updateBookSchema } from '../lib/bookSchemas';
 import { rateLimit } from '../middleware/rateLimit';
-import { parseBookIds, selectTargetBooks, suggestGenres } from '../lib/genreSuggestions';
+import { parseBookIds, selectTargetBooks, suggestGenres } from '../lib/ai/genreSuggestions';
 
 export const booksRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 

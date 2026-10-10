@@ -3,7 +3,7 @@
  * 후보 검증(서재 제외 → 카카오/네이버 실존 확인 → 표지·실제 저자 보강), based_on 검증, 별점 표현 제거, 최근 추천 기억.
  */
 import { buildExcludedSet, isExcludedBook, normalizeTitle } from './aiRecommend';
-import { searchBook, type LookupEnv } from './bookLookup';
+import { searchBook, type LookupEnv } from '../bookLookup';
 
 export interface RecommendItem {
   title: string;

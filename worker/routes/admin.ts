@@ -19,7 +19,7 @@ import { createMiddleware } from 'hono/factory';
 import type { Bindings } from '../types';
 import { authMiddleware } from '../auth';
 import { rateLimit } from '../middleware/rateLimit';
-import { getAiStatus } from '../lib/llm';
+import { getAiStatus } from '../lib/ai/llm';
 
 // ─── 활동 로그 헬퍼 (fire-and-forget) ────────────────────────
 export async function logActivity(

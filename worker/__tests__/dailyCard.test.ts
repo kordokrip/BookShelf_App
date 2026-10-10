@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { generateDailyCard } from '../lib/dailyCard';
-import { chooseKind, pickQuoteBook, type QuoteBook } from '../lib/dailyQuote';
-import type { LlmEnv } from '../lib/llm';
+import { generateDailyCard } from '../lib/ai/dailyCard';
+import { chooseKind, pickQuoteBook, type QuoteBook } from '../lib/ai/dailyQuote';
+import type { LlmEnv } from '../lib/ai/llm';
 
 afterEach(() => { vi.unstubAllGlobals(); });
 

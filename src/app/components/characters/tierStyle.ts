@@ -11,7 +11,6 @@ export const TIER_STYLE: Record<AchievementTier, { bg: string; border: string; l
   platinum: { bg: "#F5F3FF", border: "#7C3AED", label: "#4C1D95" },
 };
 
-export const DEFAULT_TIER_STYLE = TIER_STYLE.bronze;
 
 /** 캐릭터 단계 → 프레임 색 (0단계 회색, 이후 동·은·금·보라, 최종은 보라) */
 export function stageFrameColor(stageIndex: number, stageCount: number): string {

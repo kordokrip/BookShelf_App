@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   chooseKind, pickQuoteBook, bookWeight, validateQuote, validateReflection, buildQuoteMessages, buildReflectionMessages,
   dailyQuoteCacheKey, MAX_QUOTE_LEN, type QuoteBook,
-} from '../lib/dailyQuote';
+} from '../lib/ai/dailyQuote';
 
 const book = (id: string, genre: string | null, extra: Partial<QuoteBook> = {}): QuoteBook =>
   ({ id, title: `책${id}`, author: '저자', genre, cover_image: null, cover_color: null, ...extra });

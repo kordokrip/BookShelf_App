@@ -1,7 +1,7 @@
-import { buildRecommendMessages } from '../../worker/lib/bookRecommend';
-import { buildSummaryMessages } from '../../worker/lib/aiSummary';
-import { buildQuoteMessages, buildReflectionMessages } from '../../worker/lib/dailyQuote';
-import { buildGenreMessages } from '../../worker/lib/genreSuggestions';
+import { buildRecommendMessages } from '../../worker/lib/ai/bookRecommend';
+import { buildSummaryMessages } from '../../worker/lib/ai/aiSummary';
+import { buildQuoteMessages, buildReflectionMessages } from '../../worker/lib/ai/dailyQuote';
+import { buildGenreMessages } from '../../worker/lib/ai/genreSuggestions';
 const done = [
   ['데미안','헤르만 헤세','해외문학',5],['채식주의자','한강','현대문학',4],['어린 왕자','앙투안 드 생텍쥐페리','해외문학',5],
   ['사피엔스','유발 하라리','인문학',4],['코스모스','칼 세이건','과학/수학',5],['아몬드','손원평','현대문학',4],

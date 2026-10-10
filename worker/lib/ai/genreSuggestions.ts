@@ -5,8 +5,8 @@
  * 모델 출력은 엄격히 검증한다 — 입력에 없는 id, 목록에 없는 장르, '기타'는 버린다.
  */
 import { extractJsonObject, sanitizeForPrompt } from './aiRecommend';
-import { searchBook, type LookupEnv } from './bookLookup';
-import { FALLBACK_GENRE, GENRES, isGenre } from './genres';
+import { searchBook, type LookupEnv } from '../bookLookup';
+import { FALLBACK_GENRE, GENRES, isGenre } from '../genres';
 import { generateText, type GenerateEnv, type Provider } from './llm';
 
 export const MAX_SUGGEST_BOOKS = 40;
