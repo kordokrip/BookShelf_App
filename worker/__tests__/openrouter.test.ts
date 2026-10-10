@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   chatCompletion, OPENROUTER_DAILY_BUDGET, OPENROUTER_BACKGROUND_BUDGET, OPENROUTER_MODEL, budgetKey, OPENROUTER_FREE_MODELS,
-  OPENROUTER_MODEL_CURATOR, OPENROUTER_PAID_MODEL, OPENROUTER_REASONING_EFFORT, OPENROUTER_MAX_ATTEMPTS, supportsJsonMode,
+  OPENROUTER_PAID_MODEL, OPENROUTER_REASONING_EFFORT, OPENROUTER_MAX_ATTEMPTS, supportsJsonMode,
   type OpenRouterEnv,
 } from '../lib/ai/openrouter';
 
@@ -36,8 +36,6 @@ describe('chatCompletion', () => {
     const body = JSON.parse((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
     expect(body.model).toBe('anthropic/claude-x');
     expect(body.reasoning).toEqual({ effort: 'low' });
-    expect(typeof OPENROUTER_MODEL_CURATOR).toBe('string');
-    expect(OPENROUTER_MODEL_CURATOR.length).toBeGreaterThan(0);
   });
 
   it('성공: 헤더·모델·본문을 올바르게 보내고 예산을 1 소모', async () => {

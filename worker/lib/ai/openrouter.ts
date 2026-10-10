@@ -4,7 +4,7 @@
  * - 모델: 무료 모델 목록(`OPENROUTER_FREE_MODELS`)을 OpenRouter의 `models` 배열(자체 폴백 라우팅)로 보낸다.
  *   무료 모델은 수시로 내려가거나(404 "unavailable for free") 혼잡(429)해서 하나에 의존하지 않는다.
  *   계정 구매 크레딧이 $0이라 유료 모델은 402로 막힌다. 크레딧을 충전하면 `OPENROUTER_PAID_MODEL`로 되돌린다.
- *   과거 비교: docs/sessions/2026-10-05-free-model.md, docs/sessions/2026-10-04-ai-model-switch.md
+ *   과거 비교·결정 이력: `docs/AI_PROVIDERS.md`
  * - 무료 모델 한도: 구매 크레딧이 없으면 하루 50회(계정 전체). 현재 사용량은 GET /api/v1/key의
  *   free_model_daily_requests로 확인한다. 아래 일일 예산을 그보다 작게 둔다.
  * - 비용 상한: KV 전역 일일 예산(`or_budget:{KST 날짜}`)을 넘기면 호출하지 않고 폴백한다
@@ -33,11 +33,6 @@ export const OPENROUTER_PAID_MODEL = 'google/gemini-3.8-flash';
  * (응답 usage.completion_tokens_details). Gemini는 'none'을 거절하므로 'minimal'.
  */
 export const OPENROUTER_REASONING_EFFORT: ReasoningEffort = 'none';
-/**
- * 품질이 중요한 큐레이션(AI 컬렉션·인생책)용 모델. 작업별 모델 분리 — 벤치마크 뒤 이 값만 바꾸면 된다.
- * 지금은 기본 모델과 같다. 모델 id가 'anthropic/'이거나 effort 'none'이 거절되면 호출 측에서 reasoningEffort를 조정한다.
- */
-export const OPENROUTER_MODEL_CURATOR: string = OPENROUTER_MODEL;
 /**
  * JSON 모드(response_format)를 지원하는 공급자가 없는 모델 — 이 모델에 response_format·require_parameters를
  * 보내면 404(공급자 없음)가 난다. 프롬프트가 'JSON만' 요구하고 호출 측이 extractJsonObject로 꺼내므로 생략해도 된다.
