@@ -25,6 +25,7 @@ import { flagsRouter } from './routes/flags';
 import { achievementsRouter } from './routes/achievements';
 import { shouldServeSpaFallback } from './lib/spaFallback';
 import { authMiddleware } from './auth';
+import { isPregenerateWindow, pregenerateDailyCards } from './lib/dailyCardService';
 export { ChatRoom } from './durable/ChatRoom';
 export { GeminiProxy } from './durable/GeminiProxy';
 
@@ -120,6 +121,14 @@ const COVER_PROXY_ALLOWED_DOMAINS = [
   'covers.openlibrary.org',
 ];
 
+async function sha256Hex(text: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** 표지 이미지 캐시 기간(브라우저) — 표지 URL은 같은 주소면 같은 이미지라 길게 둔다 */
+const COVER_CACHE_MAX_AGE_SEC = 30 * 24 * 60 * 60;
+
 app.get('/api/cover-proxy', async (c) => {
   const rawUrl = c.req.query('url');
   if (!rawUrl) return c.json({ error: 'url 파라미터가 필요합니다.' }, 400);
@@ -143,6 +152,21 @@ app.get('/api/cover-proxy', async (c) => {
   );
   if (!isAllowed) return c.json({ error: '허용되지 않는 도메인입니다.' }, 403);
 
+  // R2 캐시: 표지마다 매번 원본(카카오 CDN 등)을 다시 받느라 장당 0.9~1.1초 걸렸다(2026-10-11 운영 측정).
+  // 한 번 받은 표지는 R2에 두고 다음부터 거기서 준다. (Cache API는 workers.dev 주소에서 동작이 보장되지 않아 R2를 쓴다)
+  const r2Key = `cover-cache/${await sha256Hex(decoded)}`;
+  const stored = await c.env.R2.get(r2Key).catch(() => null);
+  if (stored) {
+    return new Response(stored.body, {
+      headers: {
+        'Content-Type': stored.httpMetadata?.contentType ?? 'image/jpeg',
+        'Cache-Control': `public, max-age=${COVER_CACHE_MAX_AGE_SEC}, immutable`,
+        'Access-Control-Allow-Origin': '*',
+        'X-Cover-Cache': 'hit',
+      },
+    });
+  }
+
   try {
     const upstream = await fetch(decoded, { redirect: 'follow' });
     if (!upstream.ok) return c.json({ error: '이미지를 가져오는데 실패했습니다.' }, 502);
@@ -159,11 +183,17 @@ app.get('/api/cover-proxy', async (c) => {
       return c.json({ error: '이미지가 너무 큽니다.' }, 413);
     }
 
-    return new Response(upstream.body, {
+    // 본문을 한 번 읽어 응답과 R2 저장에 같이 쓴다(표지는 수십 KB)
+    const bytes = await upstream.arrayBuffer();
+    c.executionCtx.waitUntil(
+      c.env.R2.put(r2Key, bytes, { httpMetadata: { contentType } }).catch(() => undefined),
+    );
+    return new Response(bytes, {
       headers: {
         'Content-Type': contentType,
-        'Cache-Control': 'public, max-age=604800, stale-while-revalidate=86400',
+        'Cache-Control': `public, max-age=${COVER_CACHE_MAX_AGE_SEC}, immutable`,
         'Access-Control-Allow-Origin': '*',
+        'X-Cover-Cache': 'miss',
       },
     });
   } catch {
@@ -268,5 +298,11 @@ export default {
         console.log(`[Cron] Push reminders sent: ${result.sent}, failed: ${result.failed}`);
       }),
     );
+    // KST 04시 첫 실행에만: 최근 활동 사용자의 오늘의 회고 카드를 미리 만들어 첫 화면이 기다리지 않게 한다
+    if (isPregenerateWindow(Date.now())) {
+      ctx.waitUntil(
+        pregenerateDailyCards(env).then((r) => console.log(`[Cron] 오늘의 카드 미리 만들기: ${r.made}명, 건너뜀 ${r.skipped}`)),
+      );
+    }
   },
 };

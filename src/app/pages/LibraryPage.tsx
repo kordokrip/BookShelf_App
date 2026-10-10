@@ -4,11 +4,11 @@
  * - 툴바(보기·정렬·검색·장르·컬렉션), 그리드/리스트/심어나무 레이아웃 전환
  * - 컨렉션 폸 표시
  */
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { ChevronRight } from "lucide-react";
 import type { UIBook, GenreKey } from "../../types/book";
 import { ALL_GENRES } from "../../types/book";
-import { useBooks, useRefreshBookCovers } from "../../hooks/useBooks";
+import { useBooks, useDailyCoverBackfill } from "../../hooks/useBooks";
 import { DoneBookCard } from "../components/books/BookCard";
 import { DailyRecallCard } from "../components/notes/DailyRecallCard";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -217,18 +217,9 @@ export function LibraryPage() {
   const { data: books = [], isLoading, isError, refetch } = useBooks({ status: 'done' });
   const loadState = isLoading ? "loading" : isError ? "error" : "success";
   const navigate = useNavigate();
-  const refreshCovers = useRefreshBookCovers();
 
-  // 세션 1회: isbn은 있으나 커버가 없는 책 자동 백필
-  useEffect(() => {
-    const KEY = 'covers_refreshed_v1';
-    if (!sessionStorage.getItem(KEY)) {
-      sessionStorage.setItem(KEY, '1');
-      refreshCovers.mutate();
-    }
-  // refreshCovers.mutate는 안정적이므로 deps 생략
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // ISBN은 있으나 표지가 없는 책 자동 채우기(하루 1회)
+  useDailyCoverBackfill();
 
   // Genre counts for filter bar
   const genreCounts = ALL_GENRES.reduce((acc, g) => {

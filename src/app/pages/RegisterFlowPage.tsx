@@ -14,7 +14,7 @@ import { GENRE_CONFIG, COVER_GRADIENTS, detectGenre } from "../../types/book";
 import { Skeleton } from "../components/ui/skeleton";
 import type { SearchBook } from "../../lib/api";
 import { searchApi } from "../../lib/api";
-import ISBNScanner from "../components/books/ISBNScanner";
+import { LazyISBNScanner as ISBNScanner } from "../components/books/LazyISBNScanner";
 import { SafeAreaTop } from "../components/navigation/SafeAreaTop";
 
 /* ─── 타입 ──────────────────────────────────────────────────── */

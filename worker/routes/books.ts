@@ -156,7 +156,7 @@ booksRouter.get('/', authMiddleware, async (c) => {
   const genre = c.req.query('genre');
   const sort = c.req.query('sort') ?? 'created_at_desc';
   // SEC-04: limit 최댓값 검증
-  const limit = Math.min(Math.max(1, parseInt(c.req.query('limit') ?? '100')), 500);
+  const limit = Math.min(Math.max(1, parseInt(c.req.query('limit') ?? '100')), 1000);
   const offset = Math.max(0, parseInt(c.req.query('offset') ?? '0'));
 
   let query = `SELECT *, CASE WHEN goal_date IS NOT NULL AND goal_date < date('now') AND status = 'reading' THEN 1 ELSE 0 END AS is_overdue FROM books WHERE user_id = ?`;

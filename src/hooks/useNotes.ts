@@ -43,11 +43,26 @@ export function useBookNotes(bookId: string) {
  * 오늘의 명문장 (GET /api/notes/daily-quote) — 내 노트 또는 AI가 고른 문장
  * - 서버가 KST 날짜별로 고정해 주므로 1시간 캐시 · 실패해도 재시도하지 않음(카드는 조용히 숨김)
  */
+/** 서버가 카드를 백그라운드로 만드는 중(pending)이면 이 간격으로 다시 묻는다(최대 DAILY_QUOTE_MAX_POLLS번) */
+export const DAILY_QUOTE_POLL_MS = 4_000;
+export const DAILY_QUOTE_MAX_POLLS = 6;
+
+/** 다시 물을지 — pending이고 아직 횟수가 남았을 때만(무한 반복 방지) */
+export function dailyQuoteRefetchInterval(
+  res: { pending?: boolean } | undefined,
+  dataUpdateCount: number,
+): number | false {
+  return res?.pending && dataUpdateCount <= DAILY_QUOTE_MAX_POLLS ? DAILY_QUOTE_POLL_MS : false;
+}
+
 export function useDailyQuote() {
   return useQuery({
     queryKey: queryKeys.notes.dailyQuote(),
-    queryFn: async () => (await notesApi.dailyQuote()).data,
-    staleTime: 60 * 60_000,
+    queryFn: () => notesApi.dailyQuote(),
+    select: (res) => res.data,
+    // pending 응답은 오래 두지 않는다 — 다음 화면 진입 때 다시 확인
+    staleTime: (q) => (q.state.data?.pending ? 0 : 60 * 60_000),
+    refetchInterval: (q) => dailyQuoteRefetchInterval(q.state.data, q.state.dataUpdateCount),
     retry: false,
   });
 }

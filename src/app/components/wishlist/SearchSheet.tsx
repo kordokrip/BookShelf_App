@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Search, X, ScanLine } from "lucide-react";
-import ISBNScanner from "../books/ISBNScanner";
+import { LazyISBNScanner as ISBNScanner } from "../books/LazyISBNScanner";
 import type { SearchBook } from "../../../lib/api";
 import { ApiError } from "../../../lib/api";
 import { useAddBook } from "../../../hooks/useBooks";

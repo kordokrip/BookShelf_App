@@ -21,7 +21,7 @@ import {
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "../components/ui/alert-dialog";
 import { useNavigate, useSearchParams } from "react-router";
-import { useBooks, useUpdateBook, useRefreshBookCovers, useDeleteBook } from "../../hooks/useBooks";
+import { useBooks, useUpdateBook, useDailyCoverBackfill, useDeleteBook } from "../../hooks/useBooks";
 import { useAddSession } from "../../hooks/useSessions";
 import { useReadingTimer } from "../../hooks/useReadingTimer";
 import { useQueryClient } from "@tanstack/react-query";
@@ -801,19 +801,11 @@ export function ReadingPage() {
   const timer = useReadingTimer((elapsedMinutes) => {
     setTimerPromptMinutes(elapsedMinutes);
   });
-  const refreshCovers = useRefreshBookCovers();
   const user = useAuthStore((s) => s.user);
   const { data: stats } = useStats();
 
-  // 세션 1회: isbn은 있으나 커버가 없는 책 자동 백필
-  useEffect(() => {
-    const KEY = 'covers_refreshed_v1';
-    if (!sessionStorage.getItem(KEY)) {
-      sessionStorage.setItem(KEY, '1');
-      refreshCovers.mutate();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // ISBN은 있으나 표지가 없는 책 자동 채우기(하루 1회)
+  useDailyCoverBackfill();
 
   function handleSave(page: number, newTotalPages?: number, goalDate?: string) {
     if (!selectedBook) return;

@@ -80,6 +80,8 @@ CREATE TABLE IF NOT EXISTS books (
 CREATE INDEX IF NOT EXISTS idx_books_user_id ON books (user_id);
 CREATE INDEX IF NOT EXISTS idx_books_status  ON books (user_id, status);
 CREATE INDEX IF NOT EXISTS idx_books_genre   ON books (user_id, genre);
+-- 0019: 목록 정렬(created_at DESC)까지 인덱스로
+CREATE INDEX IF NOT EXISTS idx_books_user_created ON books(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_books_isbn    ON books (isbn);
 
 CREATE TRIGGER IF NOT EXISTS update_books_timestamp
@@ -124,6 +126,7 @@ CREATE TABLE IF NOT EXISTS notes (
 
 CREATE INDEX IF NOT EXISTS idx_notes_book_id ON notes(book_id);
 CREATE INDEX IF NOT EXISTS idx_notes_user_id ON notes(user_id);
+CREATE INDEX IF NOT EXISTS idx_notes_user_created ON notes(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_notes_type    ON notes(type);
 CREATE INDEX IF NOT EXISTS idx_notes_session_id ON notes(session_id);
 

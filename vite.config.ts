@@ -88,6 +88,11 @@ export default defineConfig({
       output: {
         // 청크 분리 — 초기 번들 크기 최적화
         manualChunks: (id) => {
+          // clsx는 recharts도 쓰는 작은 유틸이라 규칙이 없으면 vendor-charts에 묶여, 앱 진입부터 차트 라이브러리(약 400KB)를
+          // 함께 받게 됐다(2026-10-11 측정: index.html이 vendor-charts를 modulepreload). UI 공용 청크로 고정한다.
+          if (id.includes('/node_modules/clsx/') || id.includes('/node_modules/tailwind-merge/')) {
+            return 'vendor-ui';
+          }
           if (id.includes('recharts') || id.includes('d3-') || id.includes('victory')) {
             return 'vendor-charts';
           }

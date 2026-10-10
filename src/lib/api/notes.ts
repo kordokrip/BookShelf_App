@@ -83,7 +83,7 @@ export const notesApi = {
 
   /** 오늘의 명문장 (내 노트 또는 AI 선정, 없으면 data: null) */
   dailyQuote: () =>
-    apiFetch<ApiResponse<DailyQuote | null> & { date?: string }>('/api/notes/daily-quote'),
+    apiFetch<ApiResponse<DailyQuote | null> & { date?: string; pending?: boolean }>('/api/notes/daily-quote'),
 
   /** 단일 노트 조회 */
   get: (id: string) =>

@@ -22,8 +22,7 @@ import { logActivity } from './admin';
 import { validatePageRange, formatPageRange, kstDateString, pickDailyIndex } from '../lib/noteHelpers';
 import { shouldTag } from '../lib/ai/noteTags';
 import { tagNote } from '../lib/ai/noteTagger';
-import { generateDailyCard } from '../lib/ai/dailyCard';
-import { DAILY_QUOTE_FALLBACK_TTL_SEC, DAILY_QUOTE_TTL_SEC, dailyQuoteCacheKey, type QuoteBook } from '../lib/ai/dailyQuote';
+import { buildAndStoreDailyCard, readDailyCard, tryLockDailyCard } from '../lib/dailyCardService';
 
 export const notesRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -268,56 +267,15 @@ notesRouter.get('/random', authMiddleware, async (c) => {
 notesRouter.get('/daily-quote', authMiddleware, async (c) => {
   const userId = c.get('userId');
   const date = kstDateString(Date.now());
-  const cacheKey = dailyQuoteCacheKey(userId, date);
 
-  const cached = await c.env.KV.get(cacheKey);
-  if (cached) {
-    try {
-      return c.json({ data: JSON.parse(cached), date });
-    } catch { /* 손상된 캐시는 재생성 */ }
+  const cached = await readDailyCard(c.env, userId, date);
+  if (cached !== undefined) return c.json({ data: cached, date });
+
+  // 없으면 기다리지 않는다 — 백그라운드에서 만들고(잠금으로 한 번만) 화면은 몇 초 뒤 다시 묻는다
+  if (await tryLockDailyCard(c.env, userId, date)) {
+    c.executionCtx.waitUntil(buildAndStoreDailyCard(c.env, userId, date));
   }
-
-  const remember = (data: unknown, ttl: number) =>
-    c.env.KV.put(cacheKey, JSON.stringify(data), { expirationTtl: ttl }).catch(() => undefined);
-
-  // AI: 완독한 책 한 권을 날짜별로 고르고(고평점·최근 완독 우선) 카드를 만든다
-  try {
-    const { results } = await c.env.DB.prepare(
-      `SELECT id, title, author, genre, cover_image, cover_color, rating, finished_date FROM books
-       WHERE user_id = ? AND status = 'done' ORDER BY created_at ASC, id ASC LIMIT 500`,
-    ).bind(userId).all<QuoteBook>();
-    // 같은 사용자의 동시 요청(탭 두 개 등)이 모델을 두 번 부르지 않도록 짧은 잠금
-    const lockKey = `daily_quote_lock:${userId}:${date}`;
-    if ((results ?? []).length > 0 && !(await c.env.KV.get(lockKey))) {
-      await c.env.KV.put(lockKey, '1', { expirationTtl: 60 }).catch(() => undefined);
-      const data = await generateDailyCard(c.env, userId, date, results ?? []);
-      if (data) {
-        await remember(data, DAILY_QUOTE_TTL_SEC);
-        return c.json({ data, date });
-      }
-    }
-  } catch (err) {
-    console.warn('[daily-quote] AI 실패 → 노트로 대체:', err instanceof Error ? err.message : err);
-  }
-
-  // 대체: 내 노트(날짜별 결정적 선택, quote 노트 우선) — 일시 장애일 수 있으니 짧게만 캐시
-  const noteSelect = `SELECT n.*, b.title AS book_title, b.author AS book_author,
-            b.cover_image AS book_cover_image, b.cover_color AS book_cover_color
-     FROM notes n JOIN books b ON b.id = n.book_id`;
-  for (const onlyQuotes of [true, false]) {
-    const where = onlyQuotes ? "WHERE n.user_id = ? AND n.type = 'quote'" : 'WHERE n.user_id = ?';
-    const countRow = await c.env.DB.prepare(`SELECT COUNT(*) AS total FROM notes n ${where}`)
-      .bind(userId).first<{ total: number }>();
-    const index = pickDailyIndex(userId, date, countRow?.total ?? 0);
-    if (index === null) continue;
-    const note = await c.env.DB.prepare(`${noteSelect} ${where} ORDER BY n.created_at ASC, n.id ASC LIMIT 1 OFFSET ?`)
-      .bind(userId, index).first();
-    if (!note) continue;
-    const data = { source: 'note', note };
-    await remember(data, DAILY_QUOTE_FALLBACK_TTL_SEC);
-    return c.json({ data, date });
-  }
-  return c.json({ data: null, date });
+  return c.json({ data: null, date, pending: true });
 });
 
 // ─── GET /api/notes/:id ──────────────────────────────────────
