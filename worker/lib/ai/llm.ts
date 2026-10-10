@@ -199,7 +199,11 @@ async function callGemini(
         ...(opts.json ? { response_format: { type: 'json_object' } } : {}),
       }),
     });
-    if (!res.ok) throw new LlmError('upstream', `HTTP ${res.status}`, provider);
+    if (!res.ok) {
+      // 원인 파악용으로 오류 본문 앞부분을 남긴다(관리자 'AI 공급자 상태'에도 표시) — 키 값은 본문에 없다
+      const detail = (await res.text().catch(() => '')).replace(/\s+/g, ' ').match(/"message":\s*"([^"]{0,140})/)?.[1] ?? '';
+      throw new LlmError('upstream', `HTTP ${res.status}${detail ? ` ${detail}` : ''}`, provider);
+    }
     const json = (await res.json().catch(() => null)) as { choices?: Array<{ message?: { content?: unknown } }> } | null;
     const content = json?.choices?.[0]?.message?.content;
     const text = typeof content === 'string' ? content.trim() : '';
