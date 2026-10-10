@@ -5,7 +5,7 @@ import { adminRouter } from '../routes/admin';
 import { createToken } from '../auth';
 import {
   generateText, getAiStatus, llmBudgetKey, llmStatusKey, LlmError, LLM_DAILY_CAP, LLM_BACKGROUND_CAP, GEMINI_URL, GEMINI_MODEL,
-  GEMINI_LITE_MODEL, GEMINI_REASONING_EFFORT, GEMINI_TOKEN_HEADROOM, WORKERS_AI_MODEL, WORKERS_AI_FALLBACK_MODEL, type LlmEnv,
+  GEMINI_LITE_MODEL, GEMINI_PROXY_LOCATION, GEMINI_REASONING_EFFORT, GEMINI_TOKEN_HEADROOM, WORKERS_AI_MODEL, WORKERS_AI_FALLBACK_MODEL, type LlmEnv,
 } from '../lib/ai/llm';
 import { budgetKey, OPENROUTER_FREE_MODELS, OPENROUTER_DAILY_BUDGET } from '../lib/ai/openrouter';
 
@@ -63,6 +63,24 @@ describe('generateText — 1순위 gemini', () => {
     // 3.8 Flash는 'minimal'을 거절하므로 'low', Lite는 'minimal'(2026-10-10 실측)
     expect(f.mock.calls.map((c) => bodyOf(c).reasoning_effort)).toEqual(['low', 'minimal']);
     expect(kv.get(llmBudgetKey('gemini-lite', NOW))).toBe('1');
+  });
+});
+
+describe('generateText — Gemini 중계(지역 제한 우회)', () => {
+  it('GEMINI_PROXY가 있으면 북미 위치 힌트로 중계 객체를 거치고, 키는 보내지 않는다', async () => {
+    const globalFetch = vi.fn();
+    vi.stubGlobal('fetch', globalFetch);
+    const stubFetch = vi.fn(async () => chat('중계 응답'));
+    const get = vi.fn(() => ({ fetch: stubFetch }));
+    const { env } = makeEnv();
+    const proxied = { ...env, GEMINI_PROXY: { idFromName: vi.fn(() => 'id-us'), get } } as unknown as LlmEnv;
+    expect(await generateText(proxied, OPTS, { fallback: 'none' }, NOW)).toEqual({ text: '중계 응답', provider: 'gemini' });
+    expect(get).toHaveBeenCalledWith('id-us', { locationHint: GEMINI_PROXY_LOCATION });
+    const [, init] = stubFetch.mock.calls[0] as unknown as [string, RequestInit];
+    const headers = init.headers as Record<string, string>;
+    expect(headers['x-gemini-url']).toBe(GEMINI_URL);
+    expect(headers.Authorization).toBeUndefined();
+    expect(globalFetch).not.toHaveBeenCalled();
   });
 });
 

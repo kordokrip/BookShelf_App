@@ -134,6 +134,8 @@ export interface Bindings {
   // 스토리지
   DB: D1Database;
   CHAT_ROOM: DurableObjectNamespace;
+  /** Gemini 중계(미국 위치) — worker/durable/GeminiProxy.ts */
+  GEMINI_PROXY: DurableObjectNamespace;
   /** @deprecated JWT Refresh Token 저장 용도는 KV로 이전됨. 차후 제거 예정. */
   SESSIONS: KVNamespace;
   KV: KVNamespace;

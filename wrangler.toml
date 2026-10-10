@@ -56,9 +56,18 @@ binding = "AI"
 name = "CHAT_ROOM"
 class_name = "ChatRoom"
 
+# ─── Durable Objects — Gemini 중계(미국 위치, Gemini의 지역 제한 우회) ───
+[[durable_objects.bindings]]
+name = "GEMINI_PROXY"
+class_name = "GeminiProxy"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["ChatRoom"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["GeminiProxy"]
 
 # ─── Cron Trigger — 독서 리마인더 (15분마다 실행, 사용자별 reminder_time 슬롯과 매칭) ─
 [triggers]
@@ -124,6 +133,10 @@ binding = "AI"
 [[env.staging.durable_objects.bindings]]
 name = "CHAT_ROOM"
 class_name = "ChatRoom"
+
+[[env.staging.durable_objects.bindings]]
+name = "GEMINI_PROXY"
+class_name = "GeminiProxy"
 
 # 스테이징은 리마인더 푸시 cron을 돌리지 않는다
 [env.staging.triggers]

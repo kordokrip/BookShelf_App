@@ -32,12 +32,17 @@ export interface TextResult {
 
 export interface LlmEnv extends OpenRouterEnv {
   GEMINI_API_KEY?: string;
+  /** 미국에 둔 Gemini 중계 Durable Object(운영·스테이징). 없으면(테스트·로컬) 직접 호출 */
+  GEMINI_PROXY?: Pick<DurableObjectNamespace, 'idFromName' | 'get'>;
   AI: { run: (model: string, input: unknown) => Promise<unknown> };
 }
 /** 이전 이름 호환 */
 export type GenerateEnv = LlmEnv;
 
 // ─── 상수(모델·상한·시간) ─────────────────────────────────────
+/** Gemini 중계 Durable Object 이름·위치 힌트(북미 서부) — worker/durable/GeminiProxy.ts */
+export const GEMINI_PROXY_NAME = 'gemini-proxy-us';
+export const GEMINI_PROXY_LOCATION = 'wnam';
 export const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
 /** 출시 뒤 실제 id 확인 필요 — 이 상수만 바꾸면 된다 */
 export const GEMINI_MODEL = 'gemini-3.8-flash';
@@ -186,19 +191,27 @@ async function callGemini(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(GEMINI_URL, {
-      method: 'POST',
-      signal: controller.signal,
-      headers: { Authorization: `Bearer ${env.GEMINI_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model,
-        messages: opts.messages,
-        max_tokens: opts.maxTokens + GEMINI_TOKEN_HEADROOM,
-        temperature: opts.temperature,
-        reasoning_effort: effort,
-        ...(opts.json ? { response_format: { type: 'json_object' } } : {}),
-      }),
+    const body = JSON.stringify({
+      model,
+      messages: opts.messages,
+      max_tokens: opts.maxTokens + GEMINI_TOKEN_HEADROOM,
+      temperature: opts.temperature,
+      reasoning_effort: effort,
+      ...(opts.json ? { response_format: { type: 'json_object' } } : {}),
     });
+    // Workers 데이터센터 위치에서는 Gemini가 "User location is not supported"(400)로 막으므로
+    // 운영·스테이징은 미국에 둔 중계 객체(GeminiProxy)를 거친다. 키는 중계 객체가 자기 env에서 붙인다.
+    const res = env.GEMINI_PROXY
+      ? await env.GEMINI_PROXY
+        .get(env.GEMINI_PROXY.idFromName(GEMINI_PROXY_NAME), { locationHint: GEMINI_PROXY_LOCATION })
+        .fetch('https://gemini-proxy/chat', {
+          method: 'POST', signal: controller.signal, body,
+          headers: { 'Content-Type': 'application/json', 'x-gemini-url': GEMINI_URL },
+        })
+      : await fetch(GEMINI_URL, {
+        method: 'POST', signal: controller.signal, body,
+        headers: { Authorization: `Bearer ${env.GEMINI_API_KEY}`, 'Content-Type': 'application/json' },
+      });
     if (!res.ok) {
       // 원인 파악용으로 오류 본문 앞부분을 남긴다(관리자 'AI 공급자 상태'에도 표시) — 키 값은 본문에 없다
       const detail = (await res.text().catch(() => '')).replace(/\s+/g, ' ').match(/"message":\s*"([^"]{0,140})/)?.[1] ?? '';

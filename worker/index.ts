@@ -26,6 +26,7 @@ import { achievementsRouter } from './routes/achievements';
 import { shouldServeSpaFallback } from './lib/spaFallback';
 import { authMiddleware } from './auth';
 export { ChatRoom } from './durable/ChatRoom';
+export { GeminiProxy } from './durable/GeminiProxy';
 
 // ─── App 인스턴스 ─────────────────────────────────────────────
 const app = new Hono<{ Bindings: Bindings }>();
