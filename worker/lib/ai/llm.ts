@@ -42,10 +42,16 @@ export const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/open
 /** 출시 뒤 실제 id 확인 필요 — 이 상수만 바꾸면 된다 */
 export const GEMINI_MODEL = 'gemini-3.8-flash';
 export const GEMINI_LITE_MODEL = 'gemini-3.5-flash-lite';
-/** Gemini 3 계열은 추론을 끌 수 없다('none'은 2.5 계열만) → 가장 낮은 'minimal' */
-export const GEMINI_REASONING_EFFORT = 'minimal';
-/** Gemini는 추론 토큰도 max_tokens에 포함하므로 여유를 더한다 */
-export const GEMINI_TOKEN_HEADROOM = 300;
+/**
+ * 모델별 추론 정도(2026-10-10 실측, 키 등록 후 서재 78권으로 비교).
+ * - gemini-3.8-flash: 직접 API는 'minimal'을 400("Thinking level MINIMAL is not supported")으로 거절한다.
+ *   'low'가 추천 품질 최고(후보 12권 중 실존 11 + 저자 교정 1, 9.6초), 'none'은 없는 책 3권.
+ * - gemini-3.5-flash-lite: 'minimal' 허용, 추천 4.7초·실존 9 + 교정 1, 컬렉션 78권 전부 분류.
+ */
+export const GEMINI_REASONING_EFFORT = 'low';
+export const GEMINI_LITE_REASONING_EFFORT = 'minimal';
+/** Gemini는 추론 토큰도 max_tokens에 포함하므로 여유를 더한다('low'는 추론 토큰이 조금 더 든다) */
+export const GEMINI_TOKEN_HEADROOM = 600;
 export const WORKERS_AI_MODEL = '@cf/qwen/qwen3.8-27b';
 export const WORKERS_AI_FALLBACK_MODEL = '@cf/meta/llama-3.1-8b-instruct-fast';
 /** Workers AI 27B 출력 속도(토큰/초) — 남은 시간 판단용 */
@@ -174,7 +180,9 @@ export async function getAiStatus(env: LlmEnv, nowMs = Date.now()): Promise<Prov
 }
 
 // ─── 공급자별 호출 ────────────────────────────────────────────
-async function callGemini(env: LlmEnv, model: string, opts: LlmOptions, timeoutMs: number, provider: LlmProvider): Promise<string> {
+async function callGemini(
+  env: LlmEnv, model: string, effort: string, opts: LlmOptions, timeoutMs: number, provider: LlmProvider,
+): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -187,7 +195,7 @@ async function callGemini(env: LlmEnv, model: string, opts: LlmOptions, timeoutM
         messages: opts.messages,
         max_tokens: opts.maxTokens + GEMINI_TOKEN_HEADROOM,
         temperature: opts.temperature,
-        reasoning_effort: GEMINI_REASONING_EFFORT,
+        reasoning_effort: effort,
         ...(opts.json ? { response_format: { type: 'json_object' } } : {}),
       }),
     });
@@ -228,8 +236,8 @@ function extractChoiceText(response: unknown): string {
 
 async function callProvider(env: LlmEnv, provider: LlmProvider, opts: LlmOptions, timeoutMs: number, nowMs: number): Promise<string> {
   switch (provider) {
-    case 'gemini': return callGemini(env, GEMINI_MODEL, opts, timeoutMs, provider);
-    case 'gemini-lite': return callGemini(env, GEMINI_LITE_MODEL, opts, timeoutMs, provider);
+    case 'gemini': return callGemini(env, GEMINI_MODEL, GEMINI_REASONING_EFFORT, opts, timeoutMs, provider);
+    case 'gemini-lite': return callGemini(env, GEMINI_LITE_MODEL, GEMINI_LITE_REASONING_EFFORT, opts, timeoutMs, provider);
     case 'workers-ai': return callWorkersAi(env, opts, timeoutMs);
     case 'openrouter': {
       try {

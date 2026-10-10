@@ -60,6 +60,8 @@ describe('generateText — 1순위 gemini', () => {
     const { env, kv } = makeEnv();
     expect(await generateText(env, OPTS, { fallback: 'none' }, NOW)).toEqual({ text: 'lite 응답', provider: 'gemini' });
     expect(f.mock.calls.map((c) => bodyOf(c).model)).toEqual([GEMINI_MODEL, GEMINI_LITE_MODEL]);
+    // 3.8 Flash는 'minimal'을 거절하므로 'low', Lite는 'minimal'(2026-10-10 실측)
+    expect(f.mock.calls.map((c) => bodyOf(c).reasoning_effort)).toEqual(['low', 'minimal']);
     expect(kv.get(llmBudgetKey('gemini-lite', NOW))).toBe('1');
   });
 });

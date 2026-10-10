@@ -217,7 +217,7 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 | 독서 세션 + 타이머 | ✅ 완료 |
 | 노트 CRUD + FTS5 검색 | ✅ 완료 |
 | 통계 + 연간결산 + 성취배지 | ✅ 완료 |
-| AI 요약·추천(인생책 통합)·AI 컬렉션·오늘의 회고·장르 추천 | ✅ 2026-10-10 공급자 체인(`worker/lib/ai/llm.ts`): Gemini(`GEMINI_API_KEY`, 무료 등급) → Gemini Lite → Workers AI `@cf/qwen/qwen3.8-27b` → OpenRouter 무료 목록 → (요약·장르만) Workers AI 8B. 키 없음·상한·404/429/5xx·타임아웃이면 다음 공급자. 상태는 관리자 대시보드 'AI 공급자 상태'. 명문장은 Gemini만(다른 모델은 문장을 지어냄). 42차 무료 Qwen은 무료 중단으로 404였음(`docs/sessions/2026-10-10-free-ai-quality.md`). **Gemini 키 미등록 상태면 Workers AI가 1순위라 추천 첫 생성 30~60초** |
+| AI 요약·추천(인생책 통합)·AI 컬렉션·오늘의 회고·장르 추천 | ✅ 2026-10-10 공급자 체인(`worker/lib/ai/llm.ts`): Gemini(`GEMINI_API_KEY`, 무료 등급) → Gemini Lite → Workers AI `@cf/qwen/qwen3.8-27b` → OpenRouter 무료 목록 → (요약·장르만) Workers AI 8B. 키 없음·상한·404/429/5xx·타임아웃이면 다음 공급자. 상태는 관리자 대시보드 'AI 공급자 상태'. 명문장은 Gemini만(다른 모델은 문장을 지어냄). 42차 무료 Qwen은 무료 중단으로 404였음(`docs/sessions/2026-10-10-free-ai-quality.md`). 2026-10-10 Gemini 키 등록(운영·스테이징) — 3.8 Flash(추론 `low`, 무료 분당 5회) → 3.5 Flash-Lite(`minimal`) |
 | 독서 모임 + 실시간 채팅(DO WebSocket) + 일정 | ✅ 완료 |
 | 통계 공유 | ✅ 2026-10-03 보고서 화면 → 독서 통계 '내 통계 공유'(이미지 Web Share/PNG)·'요약 복사'. `/api/share`는 44차에 삭제(`shared_reports` 테이블·데이터는 보존) |
 | 관리자 대시보드 | ✅ 완료 |

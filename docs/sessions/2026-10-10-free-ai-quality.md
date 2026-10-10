@@ -136,3 +136,18 @@
 - **스테이징 QA 데이터**
   - subagent-user2에 책 9권과 노트 1개가 남아 있다.
   - QA 에이전트의 삭제가 권한 분류기에 막혀 정리하지 않았다. 사용자 판단이 필요하다.
+
+## 후속 — Gemini 키 등록·실측 (같은 날)
+- 키 등록: 사용자가 로컬 파일에 넣은 키를 운영·스테이징 시크릿(`wrangler secret put`, 파일 입력)과 `.dev.vars`에 등록했다. 값은 출력하지 않았다.
+- 모델 id 확인(`GET /v1beta/models`): `gemini-3.8-flash`, `gemini-3.5-flash-lite` 모두 있다.
+- **버그**: 직접 API는 3.8 Flash의 `reasoning_effort: 'minimal'`을 400으로 거절한다(OpenRouter 경유 때는 허용됐다). 그대로였다면 모든 호출이 Lite로 넘어갔다. 모델별 값을 따로 둔다: 3.8 Flash는 `low`, Lite는 `minimal`. 추론 여유 토큰은 600이다.
+- **무료 한도**: 3.8 Flash는 분당 5회(`GenerateRequestsPerMinutePerProjectPerModel-FreeTier`)라 넘으면 429 → Lite로 넘어간다. 하루 한도는 AI Studio에서 확인한다.
+
+| 모델(서재 78권) | 통합 추천(후보 12) | AI 컬렉션 | 명문장 | 성찰 |
+|---|---|---|---|---|
+| gemini-3.8-flash `low` | 9.6초 · 실존 11 + 저자 교정 1 · 없는 책 0 · 근거 11/12 | (분당 한도로 미측정) | 2.9초 | — |
+| gemini-3.8-flash `none` | 8.0초 · 실존 9 · 없는 책 3 | — | — | 3.4초 |
+| gemini-3.5-flash-lite `minimal` | 4.7초 · 실존 9 + 교정 1 · 없는 책 2 · 근거 12/12 | 3.1초 · 78권 전부 | 1.3초 | 1.1초 |
+
+- **명문장 한계**: 책 소개 없이 물으면 Gemini도 원문에 없는 문장을 만든다(예: 작별하지 않는다). 운영은 책 소개를 근거로 넣고 "원문과 다를 수 있어요" 고지를 유지한다.
+
