@@ -36,6 +36,7 @@ bash scripts/e2e-api-test.sh
 - `docs/` 내 문서: 코드 변경과 정합성 유지 필수
   - API 스펙 변경 → `docs/TRACE_MAP.md` 업데이트
   - DB 스키마 변경 → `PROJECT_STATUS.md`의 D1 마이그레이션 표 업데이트
+  - AI 공급자·모델·한도 변경 → `docs/AI_PROVIDERS.md`(현행 구성 + 결정 이력) 업데이트
 - `docs/CI_CD.md`: 배포 파이프라인·버전 정책·로컬 개발 절차 문서. 관련 설정(wrangler 버전, CI 워크플로 등) 변경 시 함께 갱신
 - 문서에 특정 버전 번호·수치(패키지 버전, 테스트 개수 등)를 하드코딩하지 말 것 — 금방 낡는다. 부득이하게 적어야 하면 "확인 방법"도 같이 적어라(예: "현재 wrangler 버전은 `npx wrangler --version`으로 확인")
 - 세션 단위 상세 리포트가 필요하면 `docs/sessions/YYYY-MM-DD-주제.md`로 별도 작성하고 `docs/CHANGELOG.md`에 링크만 추가 (PROJECT_STATUS.md/CHANGELOG.md 본문에 통째로 중복 기술하지 말 것 — 과거 `docs/WORK_SUMMARY_*.md` 패턴이 이 문제로 삭제됨)

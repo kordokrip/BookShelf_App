@@ -16,7 +16,7 @@ React 18 + TypeScript + Vite PWA 프론트엔드(`src/`)를 개발·수정하는
 - `src/stores/` — 전역 상태 (uiStore 등)
 
 ## 프로젝트 컨텍스트 (UX 기준선)
-`docs/BookShelf_UI_UX.md`(페이지별 상세 명세 포함)와 `docs/A11Y_AUDIT_2026-07.md`가 이 프로젝트의 UX 기준선이다. 화면을 만들거나 고치기 전에 해당 페이지 섹션을 먼저 확인할 것.
+`docs/BookShelf_UI_UX.md`(페이지별 상세 명세 포함)와 `docs/sessions/2026-07-31-a11y-audit.md`가 이 프로젝트의 UX 기준선이다. 화면을 만들거나 고치기 전에 해당 페이지 섹션을 먼저 확인할 것.
 - 레이아웃: 모바일은 BottomNavBar, 데스크톱은 SideNav + TopBar (Root.tsx 내부 렌더링).
 - **`/register-flow`, `/notes-search`는 Root 레이아웃 외부의 독립 라우트라 TopBar가 없다 — safe-area-top spacer를 직접 추가해야 한다** (누락 시 노치/다이나믹 아일랜드 기기에서 콘텐츠가 잘림).
 - 3-state 테마 시스템(라이트/다크/자동, `getTimeBasedTheme`)이 존재 — 새 UI는 세 상태 모두에서 대비를 확인.

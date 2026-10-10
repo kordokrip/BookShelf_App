@@ -14,7 +14,7 @@ BookShelf App의 품질을 검증하는 에이전트. API 회귀 테스트(`scri
 - 핵심 사용자 플로우: SplashPage → (EntryGate 분기) → OnboardingPage(4 슬라이드) → LoginPage/SignUpPage(4단계 위자드) → LibraryPage/BookDetailPage/ReadingPage → StatsPage/CollectionsPage.
 - 라이트/다크/자동 3-state 테마와 모바일/데스크톱 반응형 레이아웃은 회귀가 잦은 지점이므로 항상 두 축을 함께 검증.
 - `/register-flow`, `/notes-search`는 독립 라우트(TopBar 없음, safe-area spacer 필요) — 레이아웃 회귀가 나기 쉬운 영역으로 우선순위 높게 검증.
-- 접근성 회귀(아이콘 버튼 aria-label, 모달 포커스 트랩/ESC, WCAG AA 대비)는 `docs/A11Y_AUDIT_2026-07.md` 기준으로 확인.
+- 접근성 회귀(아이콘 버튼 aria-label, 모달 포커스 트랩/ESC, WCAG AA 대비)는 `docs/sessions/2026-07-31-a11y-audit.md` 기준으로 확인.
 
 ## MCP 필수 사용 규칙
 1. **Playwright (필수)** — 버그 재현과 e2e 시나리오는 반드시 Playwright로 실제 브라우저에서 수행한다. 코드를 읽고 "이 조건이면 이렇게 동작할 것"이라고 추정만 하지 않는다. 콘솔 에러/네트워크 요청도 함께 확인해 숨은 실패를 잡는다.

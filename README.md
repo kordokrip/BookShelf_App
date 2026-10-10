@@ -26,7 +26,7 @@ PC · iPad · iPhone · Android에서 쓰는 설치형 웹앱(PWA)
 | **개인화** | 앱 디자인(강조색 6종 × 자동·라이트·다크), 리마인더·주간 리포트·푸시 알림, 처음 사용자 기능 말풍선 |
 | **관리자** | 대시보드, 회원 관리(휴면·삭제), 활동 로그, 공지, AI 공급자 상태 |
 
-AI는 무료 공급자를 순서대로 쓰는 체인으로 동작한다(Gemini → Gemini Lite → Workers AI → OpenRouter 무료 모델). 하나가 막혀도 다음 공급자가 답하고, 모두 실패하면 엄선 목록·내 노트로 대체한다. 자세한 내용은 `docs/CI_CD.md`의 "AI 공급자 시크릿"을 본다.
+AI는 무료 공급자를 순서대로 쓰는 체인으로 동작한다(Gemini → Gemini Lite → Workers AI → OpenRouter 무료 모델). 하나가 막혀도 다음 공급자가 답하고, 모두 실패하면 엄선 목록·내 노트로 대체한다. 자세한 내용은 `docs/AI_PROVIDERS.md`.
 
 ## 🛠️ 기술 스택
 
@@ -101,6 +101,7 @@ bash scripts/e2e-api-test.sh --url http://localhost:8787   # 로컬 API e2e (기
 | `docs/TRACE_MAP.md` | 화면 → 훅 → API → DB 추적, API 명세 |
 | `docs/BookShelf_UI_UX.md` | 화면·컴포넌트 명세, 차수별 동기화 노트 |
 | `docs/CI_CD.md` | 배포 파이프라인, 시크릿, 로컬 개발 절차 |
+| `docs/AI_PROVIDERS.md` | AI 공급자 체인·모델·무료 한도, 모델 비교·결정 이력 |
 | `docs/QA_가이드.md` | QA 절차, 테스트 계정 원칙 |
 | `docs/CHANGELOG.md` · `docs/sessions/` | 차수별 변경 요약과 세션 상세 리포트 |
 | `docs/adr/` | 설계 결정 기록 |

@@ -4,7 +4,7 @@
 > 목적: 프로덕션 오류 발생 시 UI → Hook → API → DB 레이어를 빠르게 추적하기 위한 기준 문서
 >
 > **최신 변경**: 2026-08-15 — 다크모드 접근성 대비 수정 + 인프라 업그레이드 반영
-> - 다크모드 텍스트/배경 명도 대비 WCAG AA 위반 다수 수정 (커밋 `ac28f7e`) — 상세는 `docs/A11Y_AUDIT_2026-07.md`의 "2026-08 후속 수정" 절 참고
+> - 다크모드 텍스트/배경 명도 대비 WCAG AA 위반 다수 수정 (커밋 `ac28f7e`) — 상세는 `docs/sessions/2026-07-31-a11y-audit.md`의 "2026-08 후속 수정" 절 참고
 > - Wrangler 4.70.0 → 4.107.1 안전 업그레이드
 > - 책 등록 진입점 9곳 → 통일된 FAB(플로팅 액션 버튼) 중심으로 정리
 > **이전 변경**: 2026-05-31 — 반응형/뷰포트 리팩토링 + ISBN 스캐너 확장 반영
@@ -97,19 +97,10 @@
 | `/api/push/*` | `worker/routes/push.ts` | 엔드포인트별(대부분 auth 필요) |
 | `/api/discover/*` | `worker/routes/discover.ts` | `authMiddleware` (전체) |
 | `/api/admin/*` | `worker/routes/admin.ts` | `authMiddleware` + 관리자 권한 |
+| `GET /api/cover-proxy?url=` | `worker/index.ts` | 없음(허용 도메인만, 이미지 MIME·10MB 검사) — 45차: 받은 표지를 R2 `cover-cache/{sha256(url)}`에 저장해 재사용(`X-Cover-Cache: hit/miss`), 브라우저 캐시 30일 |
 | `GET *` | SPA 폴백 | 없음 (ASSETS 서빙) |
 
-### 1-C. 2026-05-31 커버리지 보강 체크
-
-| 보강 대상 | 반영 내용 | 상태 |
-|---|---|---|
-| 페이지 | `CollectionsPage`, `SharePage` 라우트 매핑(1-A) 반영 완료 | ✅ |
-| 페이지 | `CollectionsPage`, `SharePage`, `GroupsPage`, `AdminPage`, `LifeBooksPage`의 UI→Hook→API→DB 상세 트레이스 (2장) | ⚠️ 미기재 — 1-B/3장 API 매핑으로 대체 확인 |
-| API 라우트 | `collections`, `discover`, `push`, `admin` 라우트 매핑 추가 | ✅ |
-| 훅 | `useCollections`, `useDiscover`, `useOfflineQueue`, `usePushNotification`, `useViewport` 추적 반영 | ✅ |
-| DB | 마이그레이션 `0005`, `0006`, `0009` 및 관련 테이블 추적 반영 | ✅ |
-
-### 1-D. 검증 기반 자동 점검 (누락 방지)
+### 1-C. 검증 기반 자동 점검 (누락 방지)
 
 문서 업데이트 시 아래 자동 점검 결과를 함께 확인한다.
 
@@ -120,298 +111,17 @@
 | Hooks | `src/hooks/*.ts` 신규 훅이 문서(TRACE_MAP/PROJECT_STATUS/UI_UX)에 반영 | 신규 훅 설명 누락 |
 | Migrations | `worker/db/migrations/*.sql` 신규 파일이 D1 추적표에 반영 | 신규 migration 누락 |
 
-권장 스모크 명령:
-
-```bash
-for x in /collections /api/collections /api/discover /api/push /share /api/admin useCollections useDiscover useOfflineQueue usePushNotification 0005_collections 0006_push_subscriptions 0009_indexes_and_session_unique; do
-  rg -n "$x" PROJECT_STATUS.md docs/TRACE_MAP.md docs/BookShelf_UI_UX.md >/dev/null && echo "OK $x" || echo "MISS $x"
-done
-```
-
----
-
-## 2. 페이지별 전체 추적 (UI → Hook → API → Worker → DB)
-
-### OnboardingPage (`/onboarding`) — 2026-09-27 개편 (스플래시 통합)
-
-```
-OnboardingPage
-  → ONBOARDING_SLIDES (서재·기록·몰입·성장 4장 고정 — 2026-09-27 플래그 분기 제거)
-  → [로그인]/[바로 가입하기]/[무료로 시작하기] 클릭 → localStorage onboarding_seen=1 → /login · /signup
-EntryGate: onboarding_seen 등 방문 흔적 있으면 /login, 없으면 /onboarding
-```
-
-### Root 레이아웃 (`Root.tsx`)
-```
-<TooltipProvider delayDuration={200}>  ★ (16차) 앱 루트 이동 — Radix Tooltip 전역 래핑
-<Root>
-  ├── <SideNav />      — lg:block hidden, 240px↔68px 동적 너비 ★ (16차)
-  ├── <TopBar />       — fixed top, height: var(--topbar-h)
-  ├── <OfflineBanner /> — sticky top-0 z-40, uiStore.isOnline false 시 amber 배너 ★ (C-6)
-  ├── <main>           — min-h: calc(100svh - var(--topbar-h))
-  │                      pb: var(--page-pb) (모바일)
-  │                      lg:pb-0             (데스크톱)
-  │                      sidebarOpen ? "lg:ml-60" : "lg:ml-[68px]" ★ (16차) 동적 마진
-  │                      transition-all duration-300
-  │   └── <Outlet />   — 각 페이지 렌더링
-  └── <BottomNavBar /> — fixed bottom, lg:hidden
-
-CSS 변수:
-  --topbar-h:     56px   (TopBar 높이)
-  --bottomnav-h:  64px   (BottomNavBar 높이)
-  --page-pb:      calc(var(--bottomnav-h) + 1rem)  (= 80px)
-
-핵심 수정:
-  [BUG-013] main에 pb-[var(--page-pb)] lg:pb-0 추가
-  [16차] main 좌측 마진을 sidebarOpen 상태에 따라 동적 결정
-    sidebarOpen=true → lg:ml-60 (240px)
-    sidebarOpen=false → lg:ml-[68px] (68px)
-    transition-all duration-300 (부드러운 전환)
-```
-
----
-
-### BottomNavBar (`src/app/components/navigation/BottomNavBar.tsx`)
-```
-[마운트]
-useBookCount('reading') → reading 배지 카운트 (동적)
-useBookCount('wish')    → wish 배지 카운트 (동적)
-  - 99 초과 시 "99+" 표시
-
-[레이아웃]
-position: fixed bottom-0
-z-index: 50
-max-w: 640px (max-w-screen-sm), 가운데 정렬
-bg: white/95 + backdrop-blur-md (반투명 블러)
-
-[GPU 최적화]
-className="fixed-nav ..."
-  → transform: translateZ(0) (index.css .fixed-nav)
-  → iOS 스크롤 시 nav 떨림(jank) 방지
-
-[터치 피드백]
-active:scale-[0.92] 탭 시 미세 축소 애니메이션
-```
-
----
-
-### SideNav (`src/app/components/navigation/SideNav.tsx`) ★ 16차 전면 개편
-```
-[레이아웃]
-데스크톱(lg:) 전용 — hidden lg:flex flex-col
-position: fixed left-0 top-0, h-screen
-sidebarOpen=true  → w-60 (240px)
-sidebarOpen=false → w-[68px]
-transition-all duration-300 (부드러운 전환)
-
-[접기/펼치기 토글] ★ (16차)
-sidebarOpen=true  → ChevronsLeft 아이콘 (상단 우측)
-sidebarOpen=false → ChevronsRight 아이콘 (하단 보라색 w-11 h-11 버튼)
-toggleSidebar() → uiStore.sidebarOpen 반전 → localStorage 영속화
-
-[Tooltip 래핑] ★ (16차)
-접힌 상태(sidebarOpen=false) 시 각 메뉴 아이콘에 Radix UI Tooltip 표시
-  → 아이콘 hover 시 label 텍스트 표시 (side="right")
-펼친 상태 → Tooltip 비활성 (label 직접 노출)
-
-[메뉴 항목] (8개, 34차 기준 — 정의: SideNav.tsx navItems)
-BookMarked → "/" (완독)
-BookOpen → "/reading" (읽는 중)
-Star → "/wishlist" (읽을 책)
-BarChart2 → "/stats" (독서 통계)
-FileText → "/notes-search" (노트 & 검색)
-LibraryBig → "/collections" (컬렉션, 43차 — 인생책 항목은 삭제)
-Users → "/groups" (독서 모임)
-Palette → "/settings/appearance" (앱 디자인) — 모든 사용자 ★ 34차
-
-[Admin 체계] ★ (16차)
-isAdmin = user?.role === 'admin'
-  → ShieldCheck 아이콘 + "ADMIN" 배지 (bg-gradient violet→purple, 텍스트 xs)
-  → (34차) 디자인 시스템 링크 제거 — 앱 디자인은 모든 사용자에게 표시
-접힌 상태에서도 ShieldCheck → Tooltip "관리자" 표시
-
-[사용자 프로필 영역]
-하단: 사용자 아바타(이니셜) + 이름 + 이메일
-LogOut 아이콘 → authStore.logout() → navigate('/login')
-접힌 상태 → 아바타만 표시, Tooltip에 이름
-
-[데이터 소스]
-useAuthStore(s => s.user) → user.name, user.email, user.role
-useUiStore(s => s.sidebarOpen) → 접기/펼치기 상태
-useBooks({ status: 'done' }) → 완독 수/연간 프로필 정보
-useBookCount('reading'|'wish') → 읽는중/위시 배지 카운트
-```
-
----
-
-### EntryGate (`src/app/components/auth/EntryGate.tsx`) ★ 16차 신규
-```
-[경로] /entry
-
-[동작]
-useAuthStore(s => s.status) 구독
-  status === 'authenticated' → navigate("/", { replace: true })
-  status === 'unauthenticated' → 방문 흔적(has_visited·onboarding_seen·옛 splash/onboarding_dismissed) 있으면 "/login", 없으면 "/onboarding"
-  status === 'idle' || 'loading' → 로딩 스피너 표시
-(보호 라우트의 미인증 처리는 ProtectedRoute → "/entry". 2026-09-27부터 Root 레이아웃 자체도 보호)
-
-[용도]
-앱 최초 진입점 — 인증 상태에 따라 적절한 페이지로 라우팅
-딥링크 또는 북마크로 /entry 직접 접근 시 안전한 분기 제공
-```
-
----
-
-### uiStore 알림 시스템 (`src/stores/uiStore.ts`) ★ 15차 신규
-```
-[알림 흐름]
-useBooks.ts useAddBook onSuccess    → addNotification('book_added', '새 책을 서재에 추가했습니다', title)
-useBooks.ts useUpdateBook onSuccess → addNotification('book_updated', statusMsg, title)
-  statusMsg: done='📖 완독 축하드립니다!' / reading='📖 읽는 중으로 변경' / wish='💫 위시리스트에 추가'
-useNotes.ts useAddNote onSuccess    → addNotification('note_saved', '새 {typeLabel}를 저장했습니다', 'p.{page}')
-useSessions.ts useAddSession onSuccess → addNotification('session_saved', '독서 세션을 기록했습니다 ⏱️', '{pages}페이지·{mins}분')
-
-addNotification(type, message, detail?) → uiStore:
-  → new NotificationItem(uuid, type, message, detail, read=false, createdAt)
-  → notifications = [newItem, ...prev].slice(0, 20)  // max 20개 유지
-  → unreadCount = notifications.filter(n => !n.read).length
-  → saveNotifications()  // localStorage 저장
-
-[NotificationPanel 드롭다운 데이터 흐름]
-TopBar Bell 클릭 → notifOpen=true → <NotificationPanel />
-  마운트 시 markAllRead() 자동 호출 → unreadCount=0
-  각 항목: type별 아이콘 + message + detail(optional) + timeAgo(createdAt)
-  "모두 삭제" → clearNotifications() → notifications=[] → localStorage 삭제
-
-[앱 시작 시]
-App.tsx → loadNotifications()
-  → localStorage['bookshelf_notifications'] → JSON.parse → notifications 복구
-```
-
----
-
-### OfflineBanner (`src/app/components/ui/OfflineBanner.tsx`) ★ 신규 (C-6, 14차)
-```
-[마운트]
-useUiStore(s => s.isOnline) → isOnline: false → amber 배너 렌더링
-isOnline: true → null (렌더링 안 함)
-
-[레이아웃]
-sticky top-0 z-40
-bg: amber-50, border: amber-200
-텍스트: "📡 오프라인 상태입니다. 일부 기능이 제한될 수 있어요."
-
-[데이터 흐름]
-App.tsx window.addEventListener('offline') → setOnline(false) → OfflineBanner 표시
-App.tsx window.addEventListener('online')  → setOnline(true)  → OfflineBanner 숨김
-```
-
----
-
-### TopBar (`src/app/components/navigation/TopBar.tsx`) ★ 15~16차 전면 개편
-```
-[레이아웃]
-이전(14차): flex + h-14 + absolute left-1/2 (제목 절대 위치)
-현재(15차): grid grid-cols-[auto_1fr_auto]
-  left  (auto): 뒤로/메뉴 버튼 (NavigationLeft)
-  center (1fr): 타이틀 (truncate, 오버플로 말줄임)
-  right (auto): BookPlus ★(16차) + FileSearch ★(16차) + 테마토글(hidden sm:flex) + Bell(NotificationPanel)
-
-[아이콘 변경] ★ (16차)
-  Plus → BookPlus (책 등록)
-  Search → FileSearch (노트 검색)
-
-[themeMode 3-state 버튼]
-cycleThemeMode() 호출 → auto → light → dark 순환
-  auto  → Clock 아이콘
-  light → Sun 아이콘
-  dark  → Moon 아이콘
-hidden sm:flex (모바일에서 숨김)
-
-[Bell + NotificationPanel]
-unreadCount > 0 → Bell 위 빨간 배지 (9+ 표시)
-Bell 클릭 → notifOpen: true → <NotificationPanel onClose={() => setNotifOpen(false)} />
-  - autoFocus, 외부 클릭 → onClose()
-  - 열릴 때 자동 markAllRead() → unreadCount = 0
-  - 전체 삭제 → clearNotifications()
-  - 타입별 아이콘: book_added(BookOpen), session_saved(Clock),
-                  note_saved(FileText), sync(RefreshCw), info(Bell)
-  - timeAgo() 상대 시간 표시 (방금/N분전/N시간전/N일전)
-```
-
----
-
-### App.tsx 테마 시스템 (`src/app/App.tsx`) ★ 15차 추가
-```
-[themeMode 자동 테마] ★ (15차)
-useEffect → themeMode 구독
-  'auto' → getTimeBasedTheme()
-    → 06:00~18:00 = 'light', 나머지 = 'dark'
-    → document.documentElement.classList (light/dark 토글)
-    → setInterval(60_000) — 1분마다 재평가
-    → cleanup: clearInterval on unmount / themeMode 변경 시
-  'light' / 'dark' → 즉시 classList 적용
-
-[기존]
-window.addEventListener('offline') → setOnline(false)
-window.addEventListener('online')  → setOnline(true)
-useEffect cleanup: removeEventListener
-```
-
----
-
-### LoginPage (`/login`)
-```
-[로컬 로그인]
-UI(email+password submit) → authStore.login(email, password)
-  → usersApi.login({ email, password })
-    → POST /api/users/login
-      → D1: SELECT * FROM users WHERE email = ?
-      → verifyPassword(password, hash)  [SHA-256]
-      → createToken()  [JWT, 2h (exp: now + 7200)]
-    → localStorage.setItem('auth_token', token)
-    → authStore.user = 파싱된 사용자
-
-[Google 로그인] ★ (A-1, 14차)
-UI(Google 버튼) → window.location.href = '/api/auth/google/callback'
-  → Google 서버 → GET /api/auth/google/callback?code=
-    → POST https://oauth2.googleapis.com/token
-    → GET https://www.googleapis.com/oauth2/v2/userinfo
-    → D1: SELECT/INSERT/UPDATE users (google_id 기준 upsert)
-    → createToken()
-    → redirect("/?token=...&provider=google")
-  → App.tsx: URLSearchParams('token')
-    → localStorage.setItem('auth_token', token)
-    → URL 클린업
-```
-
----
-
-### SignUpPage (`/signup`)
-```
-UI(name+email+password+terms submit) → authStore.register(name, email, password)
-  → usersApi.register({ name, email, password })
-    → POST /api/users/register (zod 검증)
-      → D1: SELECT 이메일 중복 확인
-      → hashPassword() [SHA-256 + salt]
-      → D1: INSERT INTO users
-      → createToken()
-    → 성공 후 authStore.login() 자동 호출
-    → navigate('/register-flow')
-```
-
 ---
 
 ### LibraryPage (`/`)
 ```
-UI(마운트) → useBooks({ status: 'done' })
-  → booksApi.list({ status: 'done' })
-    → GET /api/books?status=done
-      → D1: SELECT * FROM books WHERE user_id=? AND status='done' ORDER BY created_at DESC
+UI(마운트) → useBooks({ status: 'done' })   ← 45차: 서재 전체 1회 요청을 모든 화면·배지가 공유, 상태는 select로 클라이언트에서 거름
+  → booksApi.list({ limit: 1000 })
+    → GET /api/books?limit=1000
+      → D1: SELECT * FROM books WHERE user_id=? ORDER BY created_at DESC  (idx_books_user_created, 0019)
 
 UI(정렬: date/rating/title) → 클라이언트 정렬 (API 재호출 없음)
-UI(장르 필터) → useBooks({ status: 'done', genre: selectedGenre })
-  → GET /api/books?status=done&genre=...
+UI(장르 필터) → 클라이언트 필터 (API 재호출 없음, 보기 줄 장르 시트)
 ```
 - **반환 데이터 흐름**: `DbBook(snake_case)` → `normalizeBook()` → `UIBook(camelCase)`
 - **월별 그룹화**: 클라이언트 `groupByMonth()` 함수
@@ -900,7 +610,7 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 |---|---|---|---|---|---|
 | GET | `/api/notes` | **authMiddleware** | `?book_id=&type=&search=&tag=&limit=&offset=` — `tag`(Phase 4): AI 태그 정확 일치(`json_each(tags)`) | `{data: Note[], count}` | `routes/notes.ts` |
 | GET | `/api/notes/export` | **authMiddleware** | `?book_id=` | Markdown 파일 (페이지 범위는 `(p.12–15)` 표기) | `routes/notes.ts` |
-| GET | `/api/notes/daily-quote` | **authMiddleware** | — | `{data: {source:'ai', kind:'quote', text, context, why, book:{id,title,author,cover_image,cover_color}, provider, disclaimer:true} \| {source:'ai', kind:'reflection', intro, question, book:{...}, provider} \| {source:'note', note: Note & {book_title, book_author, book_cover_image, book_cover_color}} \| null, date}` — 사용자·KST 날짜별 하루 고정(43차). 날짜 해시로 명문장/성찰 질문을 번갈아 고르고, 책은 완독 중 별점 4~5점·최근 90일 완독 가중. 책 소개(카카오/네이버 `contents`, 400자)를 근거로 넣는다. **명문장은 Gemini 공급자만**(다른 모델은 문장을 지어내서) — 못 쓰면 성찰 질문으로 바꾼다. 성찰 질문은 공급자 체인 전체. 노트 내용은 모델에 보내지 않는다. 둘 다 백그라운드 상한(`LLM_BACKGROUND_CAP`). AI 실패 시 내 노트(짧은 캐시), 노트도 없으면 `data: null` | KV `daily_quote:v2:{userId}:{date}` 26시간, 잠금 `daily_quote_lock:{userId}:{date}`. `lib/ai/dailyQuote.ts`, `lib/ai/dailyCard.ts`. `/:id` 앞에 선언 |
+| GET | `/api/notes/daily-quote` | **authMiddleware** | — | `{data: … , date, pending?: true}` — **45차: 캐시가 없으면 기다리지 않고 `{data:null, pending:true}`로 즉시 응답하고 `waitUntil`로 만든다(잠금 90초). 화면은 4초 간격 최대 6번 재조회. 매일 KST 04:00~04:14 Cron이 최근 14일 활동 사용자의 카드를 미리 만든다(`lib/dailyCardService.ts`).** data 형식: `{source:'ai', kind:'quote', text, context, why, book:{id,title,author,cover_image,cover_color}, provider, disclaimer:true} \| {source:'ai', kind:'reflection', intro, question, book:{...}, provider} \| {source:'note', note: Note & {book_title, book_author, book_cover_image, book_cover_color}} \| null, date}` — 사용자·KST 날짜별 하루 고정(43차). 날짜 해시로 명문장/성찰 질문을 번갈아 고르고, 책은 완독 중 별점 4~5점·최근 90일 완독 가중. 책 소개(카카오/네이버 `contents`, 400자)를 근거로 넣는다. **명문장은 Gemini 공급자만**(다른 모델은 문장을 지어내서) — 못 쓰면 성찰 질문으로 바꾼다. 성찰 질문은 공급자 체인 전체. 노트 내용은 모델에 보내지 않는다. 둘 다 백그라운드 상한(`LLM_BACKGROUND_CAP`). AI 실패 시 내 노트(짧은 캐시), 노트도 없으면 `data: null` | KV `daily_quote:v2:{userId}:{date}` 26시간, 잠금 `daily_quote_lock:{userId}:{date}`. `lib/ai/dailyQuote.ts`, `lib/ai/dailyCard.ts`. `/:id` 앞에 선언 |
 | GET | `/api/notes/random` | **authMiddleware** | — | `{data: Note & {book_title, book_author, book_cover_image, book_cover_color} \| null}` — 오늘의 회고. 사용자·KST 날짜별 결정적 선택(`pickDailyIndex`), 노트가 없으면 `null` | `routes/notes.ts` + `lib/noteHelpers.ts` |
 | GET | `/api/notes/:id` | **authMiddleware** | — | `{data: Note}` | `routes/notes.ts` |
 | POST | `/api/notes` | **authMiddleware** ✅ | `{book_id, type?, content, page_number?, end_page?, color?}` | `{data: Note}` 201 · 400 범위 오류 | `routes/notes.ts` |

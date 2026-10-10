@@ -4,6 +4,20 @@
 
 ---
 
+## 45차 (2026-10-11) — 속도 최적화(첫 화면·데이터·DB) + 문서·테스트 정리
+
+측정(운영, 서재 76권 계정) → 조치 → 결과:
+- 첫 화면 JS: 진입부터 차트 라이브러리(clsx가 vendor-charts에 묶임)·바코드 스캐너(@zxing)를 받던 문제 → 청크 고정·스캐너 지연 로딩. 서재 1118→726KB, 읽을 책 1527→724KB
+- 책 목록 4회 요청(전체·완독·읽는 중·읽을 책) → 서재 전체 1회 공유(상한 1000)
+- 오늘의 회고 10.0초(AI 생성 대기) → 즉시 pending 응답 + 백그라운드 생성 + KST 04시 미리 만들기 → 0.09~0.3초
+- 표지 프록시 장당 0.9~1.1초 → R2 캐시 0.25~0.29초
+- 0019 정렬 인덱스(books·notes user_id+created_at DESC), 표지 자동 채우기 하루 1회
+- 첫 로드(networkidle) 14.3초 → 1.4초(재방문)
+- 문서: AI 세션 리포트 3개 → `docs/AI_PROVIDERS.md`로 병합, UI/UX 동기화 노트 9개 → '현행 화면 원칙' 한 절, QA 가이드의 낡은 요약·TRACE_MAP의 낡은 커버리지 점검 삭제, 접근성 감사는 `docs/sessions/`로 이동
+- 테스트: 조사 테스트 3파일 → 1파일, 슬라이드 개수만 세던 테스트·죽은 상수 테스트 삭제, 새 동작(목록 공유·재조회·Cron 시간대) 테스트 추가
+
+---
+
 ## 44차 (2026-10-10) — 백엔드·프론트·DB 교차 검증, 계정 삭제 화면, 코드·문서 정리
 
 상세 경위: `docs/sessions/2026-10-10-verification-cleanup.md`
@@ -17,7 +31,7 @@
 
 ## 43차 (2026-10-10) — 무료 AI 공급자 체인, '당신을 위한 AI추천 도서', 오늘의 회고 성찰 질문, 기능 말풍선, 하단 메뉴 컬렉션
 
-상세 경위: `docs/sessions/2026-10-10-free-ai-quality.md`
+상세 경위: `docs/AI_PROVIDERS.md`
 
 - 진단: 42차 무료 모델(qwen3.8-27b:free)이 무료 중단(404)되어 운영 AI가 전부 대체 동작 중이었음
 - AI 공급자 체인: Gemini(무료 키) → Gemini Lite → Workers AI Qwen 3.8 27B → OpenRouter 무료 목록, 공급자 상태 관리자 카드(`GET /api/admin/ai-status`)
@@ -29,7 +43,7 @@
 
 ## 42차 (2026-10-05) — OpenRouter 무료 모델로 전환 (크레딧 $0 대응)
 
-상세 경위: `docs/sessions/2026-10-05-free-model.md`
+상세 경위: `docs/AI_PROVIDERS.md`
 
 - 모델: `qwen/qwen3.8-27b:free`(추론 none) — 무료 모델 6개를 서재 76권으로 비교해 유일하게 안정적으로 응답(AI 컬렉션 12.6초, 인생책 7.7초)
 - JSON 모드는 지원 모델에만 보냄(`supportsJsonMode`) — Qwen 무료 공급자는 response_format 미지원(404)
@@ -83,7 +97,7 @@
 
 ## 37차 (2026-10-04) — AI 모델 교체: Gemma 3 27B → Gemini 3.8 Flash
 
-상세 경위: `docs/sessions/2026-10-04-ai-model-switch.md` (비교 스크립트 `scripts/ai-bench/`)
+상세 경위: `docs/AI_PROVIDERS.md` (비교 스크립트 `scripts/ai-bench/`)
 
 - 실제 앱 프롬프트로 13개 모델 비교 → `google/gemini-3.8-flash`(추론 minimal): 인생책 2~3초·실재하고 안 읽은 책 6권 중 5~6권, 명문장 원문 재현 최상 (Gemma는 10~42초, 사용 가능 0~4권)
 - 비용은 약 4배(인생책 호출당 약 $0.0017) — 일일 호출 상한으로 최악 하루 약 $1.7

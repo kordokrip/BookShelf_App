@@ -1,25 +1,7 @@
 # BookShelf PWA — QA 통합 가이드
 
-> **최종 업데이트**: 2026-07-16  
-> **테스트 URL**: https://bookshelf-api.kordokrip.workers.dev  
-> **참고 Worker Version**: `df732bc7-8a69-461b-97a3-6a646259c35c` (반응형/뷰포트 리팩토링 배포)
-
-### 최신 검증 요약 (2026-04-28)
-
-- `npm run type-check` ✅ 통과
-- `npm run lint` ✅ 통과
-- `npm run build` ✅ 통과
-- `bash scripts/e2e-api-test.sh` ✅ 전체 PASS
-- `bash scripts/admin-api-test.sh` ⚠️ 기본 관리자 자격증명 없으면 로그인 단계 실패 가능
-  - 개선: `ADMIN_TOKEN` 환경변수 직접 주입 실행 지원
-
-### 최신 변경 반영 메모 (2026-07-16)
-
-- WebSocket 채팅 추가 (ADR-002): `localStorage.chat_ws=1` 플래그로 WS 모드 활성화
-- WS 비활성 시 기존 3초 폴링 그대로 동작 (폴백 유지)
-- DO ChatRoom 배포 시 `wrangler.toml` migration `v1` 자동 실행 (CI 배포)
-
----
+> **테스트 URL**: 운영 https://bookshelf-api.kordokrip.workers.dev · 스테이징 https://bookshelf-api-staging.kordokrip.workers.dev
+> **자동 검증**: `npm run type-check && npm run lint && npm run build && npm test`, API e2e `bash scripts/e2e-api-test.sh [--url …]`(테스트 수는 `grep -n '^  TOTAL=' scripts/e2e-api-test.sh`로 확인). 최근 결과는 `docs/CHANGELOG.md`에 차수별로 남긴다.
 
 ## WebSocket 채팅 로컬 테스트 가이드
 
