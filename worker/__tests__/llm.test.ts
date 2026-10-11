@@ -4,7 +4,7 @@ import type { Bindings } from '../types';
 import { adminRouter } from '../routes/admin';
 import { createToken } from '../auth';
 import {
-  generateText, getAiStatus, llmBudgetKey, llmStatusKey, LlmError, LLM_DAILY_CAP, LLM_BACKGROUND_CAP, GEMINI_URL, GEMINI_MODEL,
+  generateText, getAiStatus, llmBudgetKey, llmStatusKey, LlmError, LLM_DAILY_CAP, LLM_BACKGROUND_CAP, GEMINI_URL, GEMINI_MODEL, GEMINI_FLASH_MODELS,
   GEMINI_LITE_MODEL, GEMINI_PROXY_LOCATION, GEMINI_REASONING_EFFORT, attemptTimeout, GEMINI_TOKEN_HEADROOM, WORKERS_AI_MODEL, WORKERS_AI_FALLBACK_MODEL, type LlmEnv,
 } from '../lib/ai/llm';
 import { budgetKey, OPENROUTER_FREE_MODELS, OPENROUTER_DAILY_BUDGET } from '../lib/ai/openrouter';
@@ -103,9 +103,10 @@ describe('generateText — 체인 폴스루', () => {
   });
 
   it('429·5xx·타임아웃·빈 응답·네트워크 오류 각각 다음 공급자로 넘어가 마지막에 openrouter(models 배열)가 응답', async () => {
+    // gemini: Flash 모델 4개 모두 429(할당량) → lite 503
     const seq = [
-      () => new Response('x', { status: 429 }), // gemini
-      () => new Response('x', { status: 503 }), // lite
+      ...GEMINI_FLASH_MODELS.map(() => () => new Response('x', { status: 429 })),
+      () => new Response('x', { status: 503 }),
     ];
     const f = vi.fn(async (u: string) => {
       if (u === GEMINI_URL) return seq.shift()!();
@@ -115,8 +116,9 @@ describe('generateText — 체인 폴스루', () => {
     const { env } = makeEnv({ ai: () => ({ response: '' }) }); // workers-ai 빈 응답
     const res = await generateText(env, { ...OPTS, json: true }, { fallback: 'none' }, NOW);
     expect(res).toEqual({ text: '오픈라우터', provider: 'openrouter' });
-    const orBody = bodyOf(f.mock.calls[2]);
-    expect(urlOf(f.mock.calls[2])).toContain('openrouter.ai');
+    const orCall = f.mock.calls[GEMINI_FLASH_MODELS.length + 1];
+    const orBody = bodyOf(orCall);
+    expect(urlOf(orCall)).toContain('openrouter.ai');
     expect(orBody.models).toEqual([...OPENROUTER_FREE_MODELS]);
   });
 
@@ -240,7 +242,7 @@ describe('상태 기록 · GET /api/admin/ai-status', () => {
     });
     const rows = await getAiStatus(env, NOW);
     expect(rows.map((r) => r.provider)).toEqual(['gemini', 'gemini-lite', 'workers-ai', 'openrouter']);
-    expect(rows[0]).toMatchObject({ model: GEMINI_MODEL, configured: false, used_today: 0, cap: LLM_DAILY_CAP.gemini, last_ok_at: null, last_error_at: null, last_error: null });
+    expect(rows[0]).toMatchObject({ model: GEMINI_FLASH_MODELS.join(' > '), configured: false, used_today: 0, cap: LLM_DAILY_CAP.gemini, last_ok_at: null, last_error_at: null, last_error: null });
     expect(rows[2]).toMatchObject({ model: WORKERS_AI_MODEL, configured: true, used_today: 7, last_ok_at: '2026-10-10T00:00:00.000Z' });
     expect(rows[3]).toMatchObject({ used_today: 12, cap: OPENROUTER_DAILY_BUDGET, configured: true });
     expect(JSON.stringify(rows)).not.toContain('g-key');
@@ -272,6 +274,41 @@ describe('attemptTimeout — 한 공급자가 전체 마감을 다 쓰지 않게
     expect(attemptTimeout('gemini', 8_000)).toBe(8_000);
     expect(attemptTimeout('workers-ai', 60_000)).toBe(60_000);
     expect(attemptTimeout('openrouter', 30_000)).toBe(30_000);
+  });
+});
+
+describe('geminiEffort — 이 호출만 3.8 Flash 추론을 높인다', () => {
+  it('gemini에는 지정한 effort·여유 토큰, lite는 기본 minimal·기본 여유', async () => {
+    const f = vi.fn(async (_u: string, init?: RequestInit) =>
+      JSON.parse(String(init?.body)).model === GEMINI_MODEL ? new Response('busy', { status: 503 }) : chat('lite'));
+    vi.stubGlobal('fetch', f);
+    const { env } = makeEnv();
+    await generateText(env, { ...OPTS, geminiEffort: 'high', geminiReasoningHeadroom: 4000 }, { fallback: 'none' }, NOW);
+    const bodies = f.mock.calls.map((c) => bodyOf(c));
+    expect(bodies[0]).toMatchObject({ reasoning_effort: 'high', max_tokens: 100 + 4000 });
+    expect(bodies[1]).toMatchObject({ reasoning_effort: 'minimal', max_tokens: 100 + GEMINI_TOKEN_HEADROOM });
+  });
+});
+
+describe('Gemini Flash 모델 순환 — 모델별 하루 20회 할당량', () => {
+  it('429면 같은 공급자 안에서 다음 Flash 모델로, 성공하면 provider=gemini', async () => {
+    const f = vi.fn(async (_u: string, init?: RequestInit) => {
+      const model = JSON.parse(String(init?.body)).model;
+      return model === 'gemini-3.6-flash' ? chat('3.6 응답') : new Response('quota', { status: 429 });
+    });
+    vi.stubGlobal('fetch', f);
+    const { env } = makeEnv();
+    expect(await generateText(env, OPTS, { fallback: 'none' }, NOW)).toEqual({ text: '3.6 응답', provider: 'gemini' });
+    expect(f.mock.calls.map((c) => bodyOf(c).model)).toEqual(['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.6-flash']);
+  });
+
+  it('429가 아닌 오류(503)는 다른 Flash 모델을 시도하지 않고 다음 공급자(lite)로', async () => {
+    const f = vi.fn(async (_u: string, init?: RequestInit) =>
+      JSON.parse(String(init?.body)).model === GEMINI_MODEL ? new Response('busy', { status: 503 }) : chat('lite'));
+    vi.stubGlobal('fetch', f);
+    const { env } = makeEnv();
+    await generateText(env, OPTS, { fallback: 'none' }, NOW);
+    expect(f.mock.calls.map((c) => bodyOf(c).model)).toEqual([GEMINI_MODEL, GEMINI_LITE_MODEL]);
   });
 });
 

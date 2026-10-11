@@ -46,6 +46,12 @@ export const GEMINI_PROXY_LOCATION = 'wnam';
 export const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
 /** 출시 뒤 실제 id 확인 필요 — 이 상수만 바꾸면 된다 */
 export const GEMINI_MODEL = 'gemini-3.8-flash';
+/**
+ * 무료 등급 할당량은 '프로젝트·모델별 하루 20회'다(2026-10-11 확인: GenerateRequestsPerDayPerProjectPerModel-FreeTier 20).
+ * 'gemini' 공급자는 한 모델이 429(할당량 소진·분당 초과)면 같은 계열의 다음 Flash 모델로 넘어가 하루 약 80회를 쓴다.
+ * 3.7·3.6 Flash도 AI 요약('high')에서 순서·이름이 정확했다(데미안 실측).
+ */
+export const GEMINI_FLASH_MODELS = [GEMINI_MODEL, 'gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash'] as const;
 export const GEMINI_LITE_MODEL = 'gemini-3.5-flash-lite';
 /**
  * 모델별 추론 정도(2026-10-10 실측, 키 등록 후 서재 78권으로 비교).
@@ -70,7 +76,7 @@ export const LLM_BACKGROUND_CAP: Record<LlmProvider, number> = {
   gemini: 120, 'gemini-lite': 180, 'workers-ai': 10, openrouter: OPENROUTER_BACKGROUND_BUDGET,
 };
 export const LLM_MODEL_LABEL: Record<LlmProvider, string> = {
-  gemini: GEMINI_MODEL, 'gemini-lite': GEMINI_LITE_MODEL, 'workers-ai': WORKERS_AI_MODEL,
+  gemini: GEMINI_FLASH_MODELS.join(' > '), 'gemini-lite': GEMINI_LITE_MODEL, 'workers-ai': WORKERS_AI_MODEL,
   openrouter: OPENROUTER_FREE_MODELS.join(' > '),
 };
 export const LLM_PROVIDERS: readonly LlmProvider[] = ['gemini', 'gemini-lite', 'workers-ai', 'openrouter'];
@@ -83,8 +89,8 @@ export const MIN_ATTEMPT_MS = 1_500;
  * Workers AI·OpenRouter는 남은 시간을 그대로 쓴다.
  */
 export const PROVIDER_ATTEMPT_MAX_MS: Partial<Record<LlmProvider, number>> = { gemini: 25_000, 'gemini-lite': 20_000 };
-export const attemptTimeout = (provider: LlmProvider, remainingMs: number): number =>
-  Math.min(remainingMs, PROVIDER_ATTEMPT_MAX_MS[provider] ?? remainingMs);
+export const attemptTimeout = (provider: LlmProvider, remainingMs: number, overrideMs?: number): number =>
+  Math.min(remainingMs, overrideMs ?? PROVIDER_ATTEMPT_MAX_MS[provider] ?? remainingMs);
 const COUNTER_TTL_SEC = 26 * 60 * 60;
 const STATUS_TTL_SEC = 7 * 24 * 60 * 60;
 /** 상태 갱신 주기 — KV 쓰기(무료 하루 1000회)를 아끼려고 변화가 없으면 이 간격으로만 다시 쓴다 */
@@ -93,7 +99,11 @@ const STATUS_REFRESH_MS = 30 * 60 * 1000;
 export type LlmErrorCode = 'no_key' | 'budget' | 'upstream' | 'timeout' | 'empty' | 'invalid' | 'skipped' | 'exhausted';
 
 export class LlmError extends Error {
-  constructor(public readonly code: LlmErrorCode, message: string, public readonly provider?: LlmProvider) {
+  constructor(
+    public readonly code: LlmErrorCode, message: string, public readonly provider?: LlmProvider,
+    /** 상류 HTTP 상태(있을 때) — Gemini 모델별 할당량 소진(429) 판별용 */
+    public readonly status?: number,
+  ) {
     super(message);
     this.name = 'LlmError';
   }
@@ -108,6 +118,14 @@ export interface LlmOptions extends Omit<ChatOptions, 'model' | 'models' | 'budg
   expectedTokens?: number;
   /** 백그라운드성 호출 — 공급자별 일일 상한을 LLM_BACKGROUND_CAP으로 낮춘다 */
   background?: boolean;
+  /** 공급자 1회 시도 상한을 늘릴 때(긴 출력 — 예: A4 한 장 요약). 기본은 PROVIDER_ATTEMPT_MAX_MS */
+  attemptMaxMs?: number;
+  /**
+   * Gemini 3.8 Flash의 추론 정도를 이 호출만 높일 때(정확도가 중요한 긴 글 — AI 요약은 'high').
+   * 추론 토큰도 max_tokens에 포함되므로 geminiReasoningHeadroom으로 여유를 함께 준다. Lite는 항상 기본값.
+   */
+  geminiEffort?: 'low' | 'medium' | 'high';
+  geminiReasoningHeadroom?: number;
 }
 
 const withTimeout = <T>(p: Promise<T>, ms: number, onTimeout: () => Error): Promise<T> =>
@@ -202,7 +220,7 @@ async function callGemini(
     const body = JSON.stringify({
       model,
       messages: opts.messages,
-      max_tokens: opts.maxTokens + GEMINI_TOKEN_HEADROOM,
+      max_tokens: opts.maxTokens + (provider === 'gemini' && opts.geminiReasoningHeadroom ? opts.geminiReasoningHeadroom : GEMINI_TOKEN_HEADROOM),
       temperature: opts.temperature,
       reasoning_effort: effort,
       ...(opts.json ? { response_format: { type: 'json_object' } } : {}),
@@ -223,7 +241,7 @@ async function callGemini(
     if (!res.ok) {
       // 원인 파악용으로 오류 본문 앞부분을 남긴다(관리자 'AI 공급자 상태'에도 표시) — 키 값은 본문에 없다
       const detail = (await res.text().catch(() => '')).replace(/\s+/g, ' ').match(/"message":\s*"([^"]{0,140})/)?.[1] ?? '';
-      throw new LlmError('upstream', `HTTP ${res.status}${detail ? ` ${detail}` : ''}`, provider);
+      throw new LlmError('upstream', `HTTP ${res.status}${detail ? ` ${detail}` : ''}`, provider, res.status);
     }
     const json = (await res.json().catch(() => null)) as { choices?: Array<{ message?: { content?: unknown } }> } | null;
     const content = json?.choices?.[0]?.message?.content;
@@ -259,9 +277,26 @@ function extractChoiceText(response: unknown): string {
   return typeof content === 'string' ? content.trim() : '';
 }
 
+/** Flash 모델을 차례로 — 429(할당량)면 다음 모델, 다른 오류는 그대로 던져 체인이 다음 공급자로 넘어가게 한다 */
+async function callGeminiFlash(env: LlmEnv, opts: LlmOptions, timeoutMs: number): Promise<string> {
+  const deadline = Date.now() + timeoutMs;
+  let last: unknown = null;
+  for (const model of GEMINI_FLASH_MODELS) {
+    const remaining = deadline - Date.now();
+    if (remaining < MIN_ATTEMPT_MS) break;
+    try {
+      return await callGemini(env, model, opts.geminiEffort ?? GEMINI_REASONING_EFFORT, opts, remaining, 'gemini');
+    } catch (err) {
+      last = err;
+      if (!(err instanceof LlmError && err.status === 429)) throw err;
+    }
+  }
+  throw last instanceof Error ? last : new LlmError('timeout', '타임아웃', 'gemini');
+}
+
 async function callProvider(env: LlmEnv, provider: LlmProvider, opts: LlmOptions, timeoutMs: number, nowMs: number): Promise<string> {
   switch (provider) {
-    case 'gemini': return callGemini(env, GEMINI_MODEL, GEMINI_REASONING_EFFORT, opts, timeoutMs, provider);
+    case 'gemini': return callGeminiFlash(env, opts, timeoutMs);
     case 'gemini-lite': return callGemini(env, GEMINI_LITE_MODEL, GEMINI_LITE_REASONING_EFFORT, opts, timeoutMs, provider);
     case 'workers-ai': return callWorkersAi(env, opts, timeoutMs);
     case 'openrouter': {
@@ -314,7 +349,7 @@ export async function generateText(
       } catch { attempts.push(`${provider}:kv_error`); continue; }
     }
     try {
-      const text = await callProvider(env, provider, opts, attemptTimeout(provider, remaining), nowMs);
+      const text = await callProvider(env, provider, opts, attemptTimeout(provider, remaining, opts.attemptMaxMs), nowMs);
       if (opts.validate && !opts.validate(text)) throw new LlmError('invalid', '응답 검증 실패(형식 불량)', provider);
       await recordStatus(env, provider, true, '', nowMs);
       return { text, provider: exposed(provider) };
