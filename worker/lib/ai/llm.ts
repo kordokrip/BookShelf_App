@@ -277,7 +277,11 @@ function extractChoiceText(response: unknown): string {
   return typeof content === 'string' ? content.trim() : '';
 }
 
-/** Flash 모델을 차례로 — 429(할당량)면 다음 모델, 다른 오류는 그대로 던져 체인이 다음 공급자로 넘어가게 한다 */
+/**
+ * Flash 모델을 차례로 — 429(모델별 할당량)·503(그 모델 과부하 "high demand")면 다음 모델,
+ * 다른 오류(400·타임아웃 등)는 그대로 던져 체인이 다음 공급자로 넘어가게 한다.
+ * (2026-10-11 운영: 3.8 Flash 503 한 번에 AI 요약 전체가 실패하던 것을 막는다)
+ */
 async function callGeminiFlash(env: LlmEnv, opts: LlmOptions, timeoutMs: number): Promise<string> {
   const deadline = Date.now() + timeoutMs;
   let last: unknown = null;
@@ -288,7 +292,7 @@ async function callGeminiFlash(env: LlmEnv, opts: LlmOptions, timeoutMs: number)
       return await callGemini(env, model, opts.geminiEffort ?? GEMINI_REASONING_EFFORT, opts, remaining, 'gemini');
     } catch (err) {
       last = err;
-      if (!(err instanceof LlmError && err.status === 429)) throw err;
+      if (!(err instanceof LlmError && (err.status === 429 || err.status === 503))) throw err;
     }
   }
   throw last instanceof Error ? last : new LlmError('timeout', '타임아웃', 'gemini');

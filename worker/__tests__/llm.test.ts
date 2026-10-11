@@ -280,7 +280,7 @@ describe('attemptTimeout — 한 공급자가 전체 마감을 다 쓰지 않게
 describe('geminiEffort — 이 호출만 3.8 Flash 추론을 높인다', () => {
   it('gemini에는 지정한 effort·여유 토큰, lite는 기본 minimal·기본 여유', async () => {
     const f = vi.fn(async (_u: string, init?: RequestInit) =>
-      JSON.parse(String(init?.body)).model === GEMINI_MODEL ? new Response('busy', { status: 503 }) : chat('lite'));
+      JSON.parse(String(init?.body)).model === GEMINI_MODEL ? new Response('bad', { status: 400 }) : chat('lite'));
     vi.stubGlobal('fetch', f);
     const { env } = makeEnv();
     await generateText(env, { ...OPTS, geminiEffort: 'high', geminiReasoningHeadroom: 4000 }, { fallback: 'none' }, NOW);
@@ -302,9 +302,18 @@ describe('Gemini Flash 모델 순환 — 모델별 하루 20회 할당량', () =
     expect(f.mock.calls.map((c) => bodyOf(c).model)).toEqual(['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.6-flash']);
   });
 
-  it('429가 아닌 오류(503)는 다른 Flash 모델을 시도하지 않고 다음 공급자(lite)로', async () => {
+  it('503(그 모델 과부하)도 다음 Flash 모델로 넘어간다', async () => {
     const f = vi.fn(async (_u: string, init?: RequestInit) =>
-      JSON.parse(String(init?.body)).model === GEMINI_MODEL ? new Response('busy', { status: 503 }) : chat('lite'));
+      JSON.parse(String(init?.body)).model === GEMINI_MODEL ? new Response('busy', { status: 503 }) : chat('3.7 응답'));
+    vi.stubGlobal('fetch', f);
+    const { env } = makeEnv();
+    expect(await generateText(env, OPTS, { fallback: 'none' }, NOW)).toEqual({ text: '3.7 응답', provider: 'gemini' });
+    expect(f.mock.calls.map((c) => bodyOf(c).model)).toEqual([GEMINI_MODEL, 'gemini-3.7-flash']);
+  });
+
+  it('400 같은 다른 오류는 다른 Flash 모델을 시도하지 않고 다음 공급자(lite)로', async () => {
+    const f = vi.fn(async (_u: string, init?: RequestInit) =>
+      JSON.parse(String(init?.body)).model === GEMINI_MODEL ? new Response('bad', { status: 400 }) : chat('lite'));
     vi.stubGlobal('fetch', f);
     const { env } = makeEnv();
     await generateText(env, OPTS, { fallback: 'none' }, NOW);
