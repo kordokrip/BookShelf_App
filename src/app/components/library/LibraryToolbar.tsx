@@ -41,7 +41,7 @@ function SortDropdown({ value, onChange }: { value: SortKey; onChange: (v: SortK
         aria-label={`정렬: ${current.label}`}
         aria-expanded={open}
         aria-haspopup="menu"
-        className="flex items-center justify-center gap-0.5 h-11 min-w-[36px] px-1 text-[#64748B] dark:text-[#94A3B8]"
+        className="flex items-center justify-center gap-0.5 h-11 min-w-10 px-1 text-[#64748B] dark:text-[#94A3B8]"
         style={{ fontSize: 14, fontWeight: 400 }}
       >
         <span className="hidden min-[360px]:inline">{current.label}</span>
@@ -168,8 +168,8 @@ export function LibraryToolbar({
                   aria-label={label}
                   aria-pressed={viewMode === v}
                   title={label}
-                  // 320px 폭에서도 한 줄에 들어가도록 360px 미만은 30px (높이 44px 유지)
-                  className="flex items-center justify-center -my-2 w-[30px] min-[360px]:w-[34px] h-11"
+                  // 320px 폭에서도 한 줄 — 360px 미만은 36px, 이상은 40px (높이 44px 유지). 43차에 컬렉션 아이콘이 빠져 여유가 생겼다
+                  className="flex items-center justify-center -my-2 w-9 min-[360px]:w-10 h-11"
                 >
                   <span
                     className={`flex items-center justify-center rounded-lg transition-all ${viewMode === v ? "bg-white dark:bg-[#1E293B] shadow-sm text-indigo-600 dark:text-indigo-300" : "text-[#64748B] dark:text-[#94A3B8]"}`}
@@ -189,7 +189,7 @@ export function LibraryToolbar({
               ref={searchBtnRef}
               onClick={() => setSearching(true)}
               aria-label={hasQuery ? "검색 (검색어 적용 중)" : "검색"}
-              className={`${ICON_BTN} w-9 min-[360px]:w-10 h-11`}
+              className={`${ICON_BTN} w-10 h-11`}
             >
               <Search size={18} />
               {hasQuery && <span aria-hidden className="absolute top-2.5 right-2 w-2 h-2 rounded-full" style={{ backgroundColor: "var(--brand-600)" }} />}
@@ -200,7 +200,7 @@ export function LibraryToolbar({
               onClick={() => setGenreOpen(true)}
               aria-label={selectedGenre ? `장르 필터 (${selectedGenre} 선택됨)` : "장르 필터"}
               aria-haspopup="dialog"
-              className={`${ICON_BTN} w-9 min-[360px]:w-10 h-11`}
+              className={`${ICON_BTN} w-10 h-11`}
             >
               <SlidersHorizontal size={18} />
               {selectedGenre && <span aria-hidden className="absolute top-2.5 right-2 w-2 h-2 rounded-full" style={{ backgroundColor: "var(--brand-600)" }} />}

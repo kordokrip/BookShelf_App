@@ -78,7 +78,7 @@ export function SideNav() {
                   onClick={toggleSidebar}
                   aria-label="사이드바 접기"
                   aria-expanded={sidebarOpen}
-                  className="hidden lg:flex w-8 h-8 rounded-lg items-center justify-center text-[#64748B] dark:text-[#94A3B8] hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900 transition-colors flex-shrink-0"
+                  className="hidden lg:flex w-10 h-10 -mr-1 rounded-lg items-center justify-center text-[#64748B] dark:text-[#94A3B8] hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900 transition-colors flex-shrink-0"
                 >
                   <ChevronsLeft size={18} />
                 </button>

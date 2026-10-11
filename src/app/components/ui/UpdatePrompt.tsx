@@ -3,6 +3,7 @@ import { router } from "../../routes";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import { X, RefreshCw } from "lucide-react";
 import { useNoticeSlot } from "../../../stores/noticeStore";
+import { startUpdateChecks } from "../../../lib/swUpdate";
 
 // 하단에 주 CTA(고정 푸터)가 있는 Root 레이아웃 외부 독립 라우트
 const STANDALONE_PREFIXES = ["/register-flow", "/notes-search"];
@@ -21,7 +22,12 @@ export function UpdatePrompt() {
   const {
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
-  } = useRegisterSW();
+  } = useRegisterSW({
+    // 켜 둔 설치형 앱도 새 배포를 알 수 있게 주기적·화면 복귀 시 확인 (lib/swUpdate.ts)
+    onRegisteredSW(_swUrl, registration) {
+      if (registration) startUpdateChecks(registration);
+    },
+  });
 
   // 안내는 한 번에 하나 — 업데이트가 최우선
   const isTop = useNoticeSlot("update", needRefresh);

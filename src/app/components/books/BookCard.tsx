@@ -78,16 +78,17 @@ export function BookCover({ book, size = "md" }: { book: Book; size?: "sm" | "md
         <div className="px-2 pb-1.5 pt-0.5" style={{ backgroundColor: "rgba(8,11,20,0.62)" }}>
           <p
             className={`font-book break-keep ${titleClamp}`}
-            style={{ color: cover.ink, fontWeight: 700, fontSize: isLg ? 15 : 10.5, lineHeight: 1.25 }}
+            style={{ color: cover.ink, fontWeight: 700, fontSize: isLg ? 15 : 11, lineHeight: 1.25 }}
           >
             {book.title}
           </p>
-          <p
-            className="truncate mt-0.5"
-            style={{ color: cover.ink, opacity: 0.78, fontSize: isLg ? 11 : 9 }}
-          >
-            {book.author}
-          </p>
+          {/* 작은 표지(목록·격자 썸네일)는 옆에 제목·저자가 따로 보이므로 저자 줄을 생략한다 —
+              9px 글자는 읽히지 않았다(2026-10-11 반응형 점검, 최소 11px 기준) */}
+          {isLg && (
+            <p className="truncate mt-0.5" style={{ color: cover.ink, opacity: 0.78, fontSize: 11 }}>
+              {book.author}
+            </p>
+          )}
         </div>
       </div>
     </div>
