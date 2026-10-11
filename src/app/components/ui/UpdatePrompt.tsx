@@ -3,7 +3,7 @@ import { router } from "../../routes";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import { X, RefreshCw } from "lucide-react";
 import { useNoticeSlot } from "../../../stores/noticeStore";
-import { startUpdateChecks } from "../../../lib/swUpdate";
+import { applyUpdateAndReload, startUpdateChecks } from "../../../lib/swUpdate";
 
 // 하단에 주 CTA(고정 푸터)가 있는 Root 레이아웃 외부 독립 라우트
 const STANDALONE_PREFIXES = ["/register-flow", "/notes-search"];
@@ -33,7 +33,7 @@ export function UpdatePrompt() {
   const isTop = useNoticeSlot("update", needRefresh);
 
   function handleUpdate() {
-    updateServiceWorker(true);
+    applyUpdateAndReload(() => updateServiceWorker(true));
   }
 
   function handleDismiss() {

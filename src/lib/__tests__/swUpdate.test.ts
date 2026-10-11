@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { startUpdateChecks } from '../swUpdate';
+import { applyUpdateAndReload, startUpdateChecks } from '../swUpdate';
 
 afterEach(() => { vi.useRealTimers(); });
 
@@ -37,3 +37,28 @@ describe('startUpdateChecks — 켜 둔 앱도 새 버전을 확인', () => {
     stop();
   });
 });
+
+describe('applyUpdateAndReload — [업데이트] 후 반드시 새 화면으로', () => {
+  it('컨트롤러가 바뀌면 한 번만 새로고침(대기 시간이 지나도 다시 하지 않음)', () => {
+    vi.useFakeTimers();
+    const listeners: Record<string, () => void> = {};
+    const sw = { addEventListener: (t: string, f: () => void) => { listeners[t] = f; } } as unknown as ServiceWorkerContainer;
+    const reload = vi.fn();
+    const update = vi.fn();
+    applyUpdateAndReload(update, { sw, reload, fallbackMs: 1000 });
+    expect(update).toHaveBeenCalled();
+    listeners.controllerchange!();
+    vi.advanceTimersByTime(2000);
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('컨트롤러 교체 이벤트를 놓쳐도 대기 시간 뒤 새로고침', () => {
+    vi.useFakeTimers();
+    const reload = vi.fn();
+    applyUpdateAndReload(() => undefined, { sw: null, reload, fallbackMs: 1000 });
+    expect(reload).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1000);
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+});
+

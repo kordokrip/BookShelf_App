@@ -35,3 +35,27 @@ export function startUpdateChecks(
     win.removeEventListener('online', check);
   };
 }
+
+/** [업데이트]를 눌렀는데 컨트롤러 교체 이벤트를 놓쳤을 때 새로고침할 때까지 기다리는 시간 */
+export const UPDATE_RELOAD_FALLBACK_MS = 4_000;
+
+/**
+ * 새 서비스 워커를 적용하고 화면을 새로고침한다.
+ * vite-plugin-pwa(1.2)는 '이미 켜진 앱에서 나중에 발견된 새 버전'(isExternal)일 때 controlling 이벤트의
+ * isUpdate가 없어 새로고침하지 않는다 — [업데이트]를 눌러도 옛 화면과 안내가 그대로 남았다(2026-10-11 운영 재현).
+ * 컨트롤러가 바뀌면 직접 새로고침하고, 그 이벤트도 놓치면 잠시 뒤 새로고침한다(한 번만).
+ */
+export function applyUpdateAndReload(
+  update: () => Promise<unknown> | void,
+  opts: { sw?: Pick<ServiceWorkerContainer, 'addEventListener'> | null; reload?: () => void; win?: Pick<Window, 'setTimeout'>; fallbackMs?: number } = {},
+): void {
+  const win = opts.win ?? window;
+  const doReload = opts.reload ?? (() => window.location.reload());
+  let done = false;
+  const reloadOnce = () => { if (done) return; done = true; doReload(); };
+  const sw = opts.sw === undefined ? (typeof navigator !== 'undefined' ? navigator.serviceWorker : null) : opts.sw;
+  sw?.addEventListener('controllerchange', reloadOnce, { once: true });
+  void Promise.resolve(update()).catch(() => undefined);
+  win.setTimeout(reloadOnce, opts.fallbackMs ?? UPDATE_RELOAD_FALLBACK_MS);
+}
+

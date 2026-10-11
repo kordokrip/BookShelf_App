@@ -708,9 +708,9 @@ fi
 group "GROUP 7 — AI ⚠️  최대 60초 소요 (3개)"
 
 T=22; NAME="POST /api/ai/book-summary (완독 책 AI 요약 — 요약 또는 모르는 책 거절)"; START=$(now_ms)
-printf "         ${YELLOW}⏳ AI 요약 중... (최대 60초 대기)${NC}\n"
+printf "         ${YELLOW}⏳ AI 요약 중... (최대 100초 대기 — 서버 제한 95초)${NC}\n"
 TMPF=$(mktemp /tmp/e2e_XXXXXX)
-HTTP_CODE=$(curl -s --max-time 70 -o "$TMPF" -w "%{http_code}" -X POST "${BASE_URL}/api/ai/book-summary/${BOOK_ID_DONE}" \
+HTTP_CODE=$(curl -s --max-time 100 -o "$TMPF" -w "%{http_code}" -X POST "${BASE_URL}/api/ai/book-summary/${BOOK_ID_DONE}" \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" -d '{}')
 BODY=$(cat "$TMPF"); rm -f "$TMPF"
