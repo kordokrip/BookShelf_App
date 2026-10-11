@@ -86,9 +86,6 @@ export const queryKeys = {
     list: () => [...queryKeys.notifications.all, 'list'] as const,
     unreadCount: () => [...queryKeys.notifications.all, 'unread-count'] as const,
   },
-  initialData: {
-    all: ['initial-data'] as const,
-  },
   flags: {
     user: (userId: string) => ['flags', userId] as const,
   },

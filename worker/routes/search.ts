@@ -17,6 +17,7 @@
 import { Hono } from 'hono';
 import type { Bindings } from '../types';
 import { rateLimit } from '../middleware/rateLimit';
+import { authMiddleware } from '../auth';
 
 // ─── 카카오 API 응답 타입 ────────────────────────────────────
 interface KakaoDocument {
@@ -131,13 +132,13 @@ function naverItemToSearchBook(item: NaverBook, proxyOrigin: string): SearchBook
 }
 
 // ─── 라우터 ──────────────────────────────────────────────────
-export const searchRouter = new Hono<{ Bindings: Bindings }>();
+export const searchRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
 /**
  * GET /api/search/books?q=&page=1&size=10
  * 카카오 도서 검색 → 실패 시 네이버 폴백
  */
-searchRouter.get('/books', rateLimit({ limit: 20, windowMs: 60_000, keyPrefix: 'search' }), async (c) => {
+searchRouter.get('/books', authMiddleware, rateLimit({ limit: 20, windowMs: 60_000, keyPrefix: 'search', keyBy: 'user' }), async (c) => {
   const q = c.req.query('q')?.trim();
   if (!q || q.length < 1) {
     return c.json({ error: '검색어를 입력해주세요 (q 파라미터 필수)' }, 400);
@@ -232,7 +233,7 @@ searchRouter.get('/books', rateLimit({ limit: 20, windowMs: 60_000, keyPrefix: '
  * ISBN으로 단일 도서 조회 (카카오 + 네이버 병렬 조회, 정보 병합)
  * 크로스 검증: 두 소스 모두에서 데이터를 받아 품질 높은 정보 통합
  */
-searchRouter.get('/books/isbn', rateLimit({ limit: 10, windowMs: 60_000, keyPrefix: 'isbn' }), async (c) => {
+searchRouter.get('/books/isbn', authMiddleware, rateLimit({ limit: 10, windowMs: 60_000, keyPrefix: 'isbn', keyBy: 'user' }), async (c) => {
   const isbn = c.req.query('isbn')?.trim();
   if (!isbn) {
     return c.json({ error: 'isbn 파라미터가 필요합니다' }, 400);
@@ -334,7 +335,7 @@ searchRouter.get('/books/isbn', rateLimit({ limit: 10, windowMs: 60_000, keyPref
  * 책 페이지 수 + 카테고리를 Google Books → Open Library 순서로 조회.
  * categories 필드는 장르 자동 감지에 활용됩니다.
  */
-searchRouter.get('/pagecount', rateLimit({ limit: 15, windowMs: 60_000, keyPrefix: 'pagecount' }), async (c) => {
+searchRouter.get('/pagecount', authMiddleware, rateLimit({ limit: 15, windowMs: 60_000, keyPrefix: 'pagecount', keyBy: 'user' }), async (c) => {
   const isbn = c.req.query('isbn')?.trim();
   const title = c.req.query('title')?.trim();
   const author = c.req.query('author')?.trim();

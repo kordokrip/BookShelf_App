@@ -24,7 +24,6 @@ import { vitalsRouter } from './routes/vitals';
 import { flagsRouter } from './routes/flags';
 import { achievementsRouter } from './routes/achievements';
 import { shouldServeSpaFallback } from './lib/spaFallback';
-import { authMiddleware } from './auth';
 import { isPregenerateWindow, pregenerateDailyCards } from './lib/dailyCardService';
 export { ChatRoom } from './durable/ChatRoom';
 export { GeminiProxy } from './durable/GeminiProxy';
@@ -222,45 +221,10 @@ app.route('/api/vitals', vitalsRouter);
 app.route('/api/flags', flagsRouter);
 app.route('/api/achievements', achievementsRouter);
 
-// ─── GET /api/initial-data — 앱 첫 진입 시 일괄 로드 ──────────
-// BottomNavBar 상태별 카운트 + 사용자 프로필을 단일 요청으로 반환
-// → 초기 동시 요청 6~8개 → 1개로 감소
-app.get('/api/initial-data', authMiddleware, async (c) => {
-  const userId = c.get('userId');
-  const db = c.env.DB;
-
-  const [statusCounts, profile, recentActivity] = await db.batch([
-    db.prepare(
-      `SELECT status, COUNT(*) AS count FROM books WHERE user_id = ? GROUP BY status`,
-    ).bind(userId),
-    db.prepare(
-      `SELECT id, email, name, avatar_url, favorite_genres, reading_goal, role, created_at
-       FROM users WHERE id = ?`,
-    ).bind(userId),
-    db.prepare(
-      `SELECT session_date FROM reading_sessions
-       WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`,
-    ).bind(userId),
-  ]);
-
-  type StatusRow = { status: string; count: number };
-  const counts = { done: 0, reading: 0, wish: 0 };
-  for (const row of ((statusCounts?.results ?? []) as StatusRow[])) {
-    if (row.status in counts) counts[row.status as keyof typeof counts] = row.count;
-  }
-
-  type ActivityRow = { session_date: string };
-  const lastSession = (recentActivity?.results[0] as ActivityRow | undefined)?.session_date ?? null;
-
-  return c.json({
-    bookCounts: counts,
-    user: profile?.results[0] ?? null,
-    lastSessionDate: lastSession,
-  });
-});
-
 // ─── SPA 폴백 — PWA dist 파일 서빙 ───────────────────────────
 app.get('*', async (c) => {
+  // 등록되지 않은 /api/ 경로는 정적 파일·SPA 폴백 대신 JSON 404
+  if (c.req.path === '/api' || c.req.path.startsWith('/api/')) return c.json({ error: 'Not Found' }, 404);
   // Cloudflare Assets 바인딩으로 정적 파일 서빙
   const asset = await c.env.ASSETS.fetch(c.req.raw);
   if (asset.status !== 404) return asset;

@@ -18,6 +18,12 @@ describe('shouldServeSpaFallback', () => {
     expect(shouldServeSpaFallback('/assets/something')).toBe(false);
   });
 
+  it('없는 API 주소는 폴백하지 않음(JSON 404)', () => {
+    expect(shouldServeSpaFallback('/api/does-not-exist')).toBe(false);
+    expect(shouldServeSpaFallback('/api')).toBe(false);
+    expect(shouldServeSpaFallback('/apiary')).toBe(true);
+  });
+
   it('루트의 파일 요청도 폴백하지 않음', () => {
     expect(shouldServeSpaFallback('/sw.js')).toBe(false);
     expect(shouldServeSpaFallback('/manifest.webmanifest')).toBe(false);

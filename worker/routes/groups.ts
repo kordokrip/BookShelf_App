@@ -532,6 +532,11 @@ groupsRouter.post('/:id/mark-read', authMiddleware, async (c) => {
   const groupId = c.req.param('id');
   const db = c.env.DB;
 
+  // 멤버가 아니면(없는 모임 포함) 다른 모임 라우트와 같이 403 — 전에는 무엇이든 200이었다(2026-10-12 오류 경로 점검)
+  if (!(await isMember(db, groupId, userId))) {
+    return c.json({ error: '그룹 멤버만 읽음 처리할 수 있습니다.' }, 403);
+  }
+
   await db.batch([
     db.prepare(
       `UPDATE group_members SET last_read_at = datetime('now') WHERE group_id = ? AND user_id = ?`,

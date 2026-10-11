@@ -8,6 +8,8 @@
  */
 export function shouldServeSpaFallback(pathname: string): boolean {
   if (pathname.startsWith('/assets/')) return false;
+  // 없는 API 주소에 index.html(200)을 주면 클라이언트가 HTML을 JSON으로 읽다 실패한다 → JSON 404(2026-10-12 점검)
+  if (pathname === '/api' || pathname.startsWith('/api/')) return false;
   const lastSegment = pathname.split('/').pop() ?? '';
   // 확장자가 있는 마지막 세그먼트는 파일 요청으로 본다 (예: sw.js, manifest.webmanifest, favicon.ico)
   return !/\.[a-z0-9]+$/i.test(lastSegment);

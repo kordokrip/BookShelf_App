@@ -342,37 +342,3 @@ usersRouter.patch(
     return c.json({ data: user });
   },
 );
-
-// ─── GET /api/users/:id/stats ──────────────────────────────────
-// SEC: 인증 필수 (IDOR 방지 — 비로그인 사용자가 임의 userId의 통계를 열람하지 못하도록)
-usersRouter.get('/:id/stats', authMiddleware, async (c) => {
-  const id = c.req.param('id');
-
-  const [counts, genreStats, monthlyStats] = await Promise.all([
-    c.env.DB.prepare(
-      `SELECT status, COUNT(*) as count FROM books WHERE user_id = ? GROUP BY status`,
-    ).bind(id).all(),
-
-    c.env.DB.prepare(
-      `SELECT genre, COUNT(*) as count FROM books
-       WHERE user_id = ? AND status = 'done'
-       GROUP BY genre ORDER BY count DESC LIMIT 5`,
-    ).bind(id).all(),
-
-    c.env.DB.prepare(
-      `SELECT strftime('%Y-%m', finished_date) as month, COUNT(*) as count
-       FROM books
-       WHERE user_id = ? AND status = 'done'
-         AND finished_date >= date('now', '-12 months')
-       GROUP BY month ORDER BY month`,
-    ).bind(id).all(),
-  ]);
-
-  return c.json({
-    data: {
-      counts: counts.results,
-      genre_stats: genreStats.results,
-      monthly_stats: monthlyStats.results,
-    },
-  });
-});

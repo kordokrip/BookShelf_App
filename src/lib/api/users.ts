@@ -1,4 +1,4 @@
-import type { ApiResponse, User, StatsResponse } from './types';
+import type { ApiResponse, User } from './types';
 import { apiFetch } from './client';
 
 export interface AuthResponse {
@@ -65,7 +65,4 @@ export const usersApi = {
       body: JSON.stringify(data),
     }),
 
-  /** 독서 통계 조회 */
-  getStats: (userId: string) =>
-    apiFetch<StatsResponse>(`/api/users/${userId}/stats`),
 };

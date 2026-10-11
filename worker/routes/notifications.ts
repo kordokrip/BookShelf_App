@@ -50,9 +50,11 @@ notificationsRouter.patch('/:id/read', authMiddleware, async (c) => {
   const notifId = c.req.param('id');
   const db = c.env.DB;
 
-  await db.prepare(
+  const res = await db.prepare(
     'UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?',
   ).bind(notifId, userId).run();
+  // 없는(또는 남의) 알림이면 404 — 전에는 아무 행도 안 바뀌어도 200이었다(2026-10-12 오류 경로 점검)
+  if (!res.meta.changes) return c.json({ error: '알림을 찾을 수 없습니다.' }, 404);
 
   return c.json({ data: { read: true } });
 });

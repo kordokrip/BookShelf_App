@@ -47,7 +47,7 @@ FAILED_TESTS=()
 if [[ "$READONLY" == true ]]; then
   TOTAL=3
 else
-  TOTAL=76
+  TOTAL=77
 fi
 
 # ── 시작 시각 ────────────────────────────────────────────────────
@@ -186,39 +186,24 @@ if [[ "$READONLY" == true ]]; then
     print_summary
   fi
 
-  group "READONLY: 도서 검색 (2개)"
+  group "READONLY: 도서 검색 인증 (2개) — 검색은 로그인 필수(카카오·네이버 API 할당량 보호)"
 
-  T=2; NAME="GET /api/search/books?q=리액트"; START=$(now_ms)
-  TMPF=$(mktemp /tmp/e2e_XXXXXX)
-  curl -s -o "$TMPF" --get --data-urlencode "q=리액트" "${BASE_URL}/api/search/books"
-  BODY=$(cat "$TMPF"); rm -f "$TMPF"
+  T=2; NAME="GET /api/search/books (토큰 없음 → 401)"; START=$(now_ms)
+  HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --get --data-urlencode "q=리액트" "${BASE_URL}/api/search/books")
   ELAPSED=$(( $(now_ms) - START ))
-  SEARCH_BOOKS=$(json_val "$BODY" "len(d.get('books', []))")
-  if [[ -n "$SEARCH_BOOKS" && "$SEARCH_BOOKS" -ge 1 ]]; then
+  if [[ "$HTTP_CODE" == "401" ]]; then
     pass_test $T "$NAME" $ELAPSED
-    printf "         ${CYAN}↳ 검색 결과 %s건${NC}\n" "$SEARCH_BOOKS"
   else
-    fail_test $T "$NAME" $ELAPSED "$BODY" "검색 결과 없음 (got: ${SEARCH_BOOKS:-0})"
+    fail_test $T "$NAME" $ELAPSED "" "HTTP ${HTTP_CODE} (기대: 401)"
   fi
 
-  T=3; NAME="GET /api/search/books/isbn?isbn=9791165219642"; START=$(now_ms)
-  TMPF=$(mktemp /tmp/e2e_XXXXXX)
-  curl -s -o "$TMPF" "${BASE_URL}/api/search/books/isbn?isbn=9791165219642"
-  BODY=$(cat "$TMPF"); rm -f "$TMPF"
+  T=3; NAME="GET /api/search/books/isbn (토큰 없음 → 401)"; START=$(now_ms)
+  HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${BASE_URL}/api/search/books/isbn?isbn=9791165219642")
   ELAPSED=$(( $(now_ms) - START ))
-  ISBN_VAL=$(echo "$BODY" | python3 -c "
-import sys, json
-try:
-    d = json.load(sys.stdin)
-    b = d.get('book', d)
-    print(b.get('isbn', '') if isinstance(b, dict) else '')
-except Exception:
-    print('')
-" 2>/dev/null || echo "")
-  if [[ -n "$ISBN_VAL" ]]; then
+  if [[ "$HTTP_CODE" == "401" ]]; then
     pass_test $T "$NAME" $ELAPSED
   else
-    fail_test $T "$NAME" $ELAPSED "$BODY" "isbn 필드 없음"
+    fail_test $T "$NAME" $ELAPSED "" "HTTP ${HTTP_CODE} (기대: 401)"
   fi
 
   print_summary
@@ -671,7 +656,7 @@ group "GROUP 6 — 도서 검색 카카오/네이버 폴백 (2개)"
 
 T=20; NAME="GET /api/search/books?q=리액트"; START=$(now_ms)
 TMPF=$(mktemp /tmp/e2e_XXXXXX)
-curl -s -o "$TMPF" --get --data-urlencode "q=리액트" "${BASE_URL}/api/search/books"
+curl -s -o "$TMPF" --get --data-urlencode "q=리액트" "${BASE_URL}/api/search/books" -H "Authorization: Bearer ${TOKEN}"
 BODY=$(cat "$TMPF"); rm -f "$TMPF"
 ELAPSED=$(( $(now_ms) - START ))
 SEARCH_BOOKS=$(json_val "$BODY" "len(d.get('books', []))")
@@ -684,7 +669,7 @@ fi
 
 T=21; NAME="GET /api/search/books/isbn?isbn=9791165219642"; START=$(now_ms)
 TMPF=$(mktemp /tmp/e2e_XXXXXX)
-curl -s -o "$TMPF" "${BASE_URL}/api/search/books/isbn?isbn=9791165219642"
+curl -s -o "$TMPF" "${BASE_URL}/api/search/books/isbn?isbn=9791165219642" -H "Authorization: Bearer ${TOKEN}"
 BODY=$(cat "$TMPF"); rm -f "$TMPF"
 ELAPSED=$(( $(now_ms) - START ))
 ISBN_VAL=$(echo "$BODY" | python3 -c "
@@ -1513,6 +1498,21 @@ fi
 # ================================================================
 # GROUP 17 — 계정 삭제 (테스트 계정 정리 겸 검증)
 # ================================================================
+T=80; NAME="오류 응답 — 없는 API JSON 404 · 없는 알림 읽음 404 · 남의 모임 읽음 403"; START=$(now_ms)
+RID="00000000-0000-4000-8000-000000000000"
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+C1=$(curl -s -o "$TMPF" -w "%{http_code}" "${BASE_URL}/api/does-not-exist" -H "Authorization: Bearer ${TOKEN}")
+J1=$(json_val "$(cat "$TMPF")" "d.get('error') == 'Not Found'")
+C2=$(curl -s -o /dev/null -w "%{http_code}" -X PATCH "${BASE_URL}/api/notifications/${RID}/read" -H "Authorization: Bearer ${TOKEN}")
+C3=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${BASE_URL}/api/groups/${RID}/mark-read" -H "Authorization: Bearer ${TOKEN}" -H "Content-Type: application/json" -d '{}')
+rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+if [[ "$C1" == "404" && "$J1" == "True" && "$C2" == "404" && "$C3" == "403" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+else
+  fail_test $T "$NAME" $ELAPSED "" "없는 API ${C1}/${J1}, 알림 ${C2}, 모임 ${C3} (기대: 404/True, 404, 403)"
+fi
+
 printf "\n%s── Group 17: 계정 삭제 (DELETE /api/users/me) (4개)%s\n" "$CYAN" "$NC"
 
 T=50; NAME="DELETE /api/users/me (잘못된 비밀번호 → 403)"; START=$(now_ms)
