@@ -212,3 +212,5 @@ npm view wrangler@<올리려는 버전> peerDependencies
 같은 조사에서 서비스 워커 precache가 JS/CSS를 빠뜨려, 404가 올바르게 나와도 구 `index.html` + 사라진 진입 JS 조합으로 앱이 부팅하지 못한다는 것도 확인했다. `vite.config.ts` `globPatterns`에 `js,css`를 추가해 해결했다(ADR-001 보완 절).
 
 **마이그레이션만으로 새 DB를 만들 때 (44차 갱신)**: `0004_user_role.sql`이 이제 `users.role`을 만든다. 마이그레이션만으로 만든 DB와 `worker/db/schema.sql`, 운영 D1의 열·인덱스·트리거가 같음을 확인했다(2026-10-10).
+
+**남은 차이 (48차 확인, 의도적으로 유지)**: 운영 `users`의 `auth_provider`·`favorite_genres`·`reading_goal`은 NOT NULL 제약이 없다(새 DB는 NOT NULL, 기본값은 같다). 운영 데이터에 NULL은 0건이고 API가 NULL을 쓰는 경로도 없다(입력 검증이 값을 강제). 제약을 맞추려면 `users`를 재구성해야 하는데 여러 테이블이 ON DELETE CASCADE로 참조해 위험이 이득보다 커 그대로 둔다. 확인 쿼리: `SELECT SUM(auth_provider IS NULL), SUM(favorite_genres IS NULL), SUM(reading_goal IS NULL) FROM users`.

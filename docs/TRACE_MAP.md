@@ -98,7 +98,7 @@
 | `/api/discover/*` | `worker/routes/discover.ts` | `authMiddleware` (전체) |
 | `/api/admin/*` | `worker/routes/admin.ts` | `authMiddleware` + 관리자 권한 |
 | `GET /api/cover-proxy?url=` | `worker/index.ts` | 없음(허용 도메인만, 이미지 MIME·10MB 검사) — 45차: 받은 표지를 R2 `cover-cache/{sha256(url)}`에 저장해 재사용(`X-Cover-Cache: hit/miss`), 브라우저 캐시 30일 |
-| `GET *` | SPA 폴백 | 없음 (ASSETS 서빙) |
+| `GET *` | SPA 폴백 | 없음 (ASSETS 서빙). 48차: 등록되지 않은 `/api/*`는 폴백하지 않고 JSON 404 `{error:'Not Found'}` |
 
 ### 1-C. 검증 기반 자동 점검 (누락 방지)
 
@@ -542,6 +542,8 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 | POST | `/api/users/login` | 없음 | `{email, password}` | `{data:{user, token}}` | `routes/users.ts` |
 | GET | `/api/users/profile` | **authMiddleware** | — | `{data: user}` | `routes/users.ts` |
 | GET | `/api/users/:id` | **authMiddleware** | — | `{data: user}` (자신: 전체, 타인: 공개 필드) | `routes/users.ts` |
+
+> 48차 삭제: `GET /api/users/:id/stats`(로그인만 하면 남의 독서 통계를 볼 수 있었고 화면은 쓰지 않음 — 통계는 본인용 `GET /api/stats`), `GET /api/initial-data`(첫 화면 일괄 로드 — 45차 책 목록 1회 공유로 대체되어 호출처 없음).
 | POST | `/api/users` | **authMiddleware** | `{id, email, name, avatar_url?}` | `{data: user}` 201 | `routes/users.ts` |
 | PATCH | `/api/users/profile` | **authMiddleware** | `{name?, favorite_genres?, reading_goal?, avatar_url?, profile_emoji?, reminder_*?, weekly_report_enabled?, theme_accent?: 'indigo'\|'ocean'\|'forest'\|'sunset'\|'rose'\|'graphite'\|null, theme_mode?: 'auto'\|'light'\|'dark'\|null}` (zod 검증 ✅; 테마 필드는 0017, GET/PATCH 응답에 `theme_accent`·`theme_mode` 포함) | `{data}` (SELECT 시 role 포함 ★16차) | `routes/users.ts` |
 | DELETE | `/api/users/me` | **authMiddleware** + rate limit `delete_account` 5회/분 | `{password}`(비밀번호 계정) 또는 `{confirm_email}`(소셜 로그인 계정, 가입 이메일 재입력·대소문자 무시) | `{data:{deleted:true}}` · 403 비밀번호 불일치(44차: 401은 클라이언트가 토큰 만료로 보고 갱신·재시도하므로 403) · 403 관리자 · 400 이메일 불일치/누락 | `routes/users.ts` (FK CASCADE로 연관 데이터 삭제, `group_messages.deleted_by` NULL 처리, R2 `covers/{userId}/` 정리) |
@@ -602,7 +604,7 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 | PUT | `/api/notes/:id` | **authMiddleware** ✅ | `{type?, content?, page_number?, end_page?, color?}` | `{data: Note}` · 400 범위 오류(기존 값과 합쳐 검증) | `routes/notes.ts` |
 | DELETE | `/api/notes/:id` | **authMiddleware** ✅ | — | `{success: true}` | `routes/notes.ts` |
 
-### 검색 (`/api/search`) — 인증 없음
+### 검색 (`/api/search`) — **authMiddleware**(48차: 로그인 필수, 한도는 사용자별 — 카카오·네이버 API 할당량 보호. 검색을 쓰는 화면은 모두 로그인 화면이다)
 
 | Method | 경로 | 요청 | 응답 | 외부 API |
 |---|---|---|---|---|
@@ -661,7 +663,7 @@ totals:       { totalPages: number; totalMinutes: number }
 | GET | `/api/groups/:id/messages` | **authMiddleware** | `?limit=&before=` | `{data: Message[]}` | approved 멤버만 |
 | POST | `/api/groups/:id/messages` | **authMiddleware** | `{content}` | `{data: Message}` | approved만. 다른 멤버에게 채팅 알림 ★ |
 | DELETE | `/api/groups/:id/messages/:msgId` | **authMiddleware** | — | `{data: {deleted: true}}` | 리더만 삭제 ★ |
-| POST | `/api/groups/:id/mark-read` | **authMiddleware** | — | `{success: true}` | last_read_at 갱신 + 채팅 알림 읽음 ★ |
+| POST | `/api/groups/:id/mark-read` | **authMiddleware** | — | `{data: {read: true}}` · 403(멤버 아님·없는 모임, 48차) | last_read_at 갱신 + 채팅 알림 읽음 ★ |
 | GET | `/api/groups/:id/meetings` | **authMiddleware** | — | `{data: Meeting[]}` | |
 | POST | `/api/groups/:id/meetings` | **authMiddleware** | `{title, meeting_date, location?}` | `{data: Meeting}` / **429** | 모든 멤버 등록 가능, 하루 2개 제한 ★ |
 | DELETE | `/api/groups/:id/meetings/:mId` | **authMiddleware** | — | `{data: {deleted: true}}` | 본인 또는 리더 ★ |
@@ -674,7 +676,7 @@ totals:       { totalPages: number; totalMinutes: number }
 |---|---|---|---|---|---|
 | GET | `/api/notifications` | **authMiddleware** | `?limit=&offset=` | `{data: Notification[]}` | `routes/notifications.ts` |
 | GET | `/api/notifications/unread-count` | **authMiddleware** | — | `{data: {count: N}}` | `routes/notifications.ts` |
-| PATCH | `/api/notifications/:id/read` | **authMiddleware** | — | `{data: {success: true}}` | `routes/notifications.ts` |
+| PATCH | `/api/notifications/:id/read` | **authMiddleware** | — | `{data: {read: true}}` · 404(없는·남의 알림, 48차) | `routes/notifications.ts` |
 | POST | `/api/notifications/read-all` | **authMiddleware** | — | `{data: {success: true}}` | `routes/notifications.ts` |
 
 ### 컬렉션 (`/api/collections`)
