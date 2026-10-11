@@ -29,6 +29,8 @@ export const BOOK_SUMMARY_REASONING_HEADROOM = 4_500;
  */
 export const BOOK_SUMMARY_TIMEOUT_MS = 95_000;
 export const BOOK_SUMMARY_ATTEMPT_MS = 93_000;
+/** 이 시간 안에 첫 Flash 모델이 답하지 않으면 다음 모델을 함께 시작(평소 'high' 25~45초 → 그보다 조금 길게) */
+export const BOOK_SUMMARY_HEDGE_MS = 40_000;
 /** 분량 검증(공백 포함 글자 수) — A4 한 장 목표 1,800~2,200자, 너무 짧거나 길면 다음 공급자로 */
 export const SUMMARY_MIN_CHARS = 900;
 export const SUMMARY_MAX_CHARS = 4_000;
@@ -142,6 +144,7 @@ export async function generateBookSummary(
         maxTokens: BOOK_SUMMARY_MAX_TOKENS, temperature: 0.3, json: true,
         timeoutMs: BOOK_SUMMARY_TIMEOUT_MS, attemptMaxMs: BOOK_SUMMARY_ATTEMPT_MS,
         geminiEffort: BOOK_SUMMARY_EFFORT, geminiReasoningHeadroom: BOOK_SUMMARY_REASONING_HEADROOM,
+        geminiHedgeMs: BOOK_SUMMARY_HEDGE_MS,
         // Flash 4종('high')만 — Lite는 이 작업에서 인물 이름을 틀렸다(데미안 실측: '에바 부인' → '아바이에 부인')
         providers: ['gemini'],
         // known:false는 '형식 정상' — 다른 Gemini 모델에 다시 묻지 않고 거절로 끝낸다

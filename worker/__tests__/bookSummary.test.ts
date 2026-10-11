@@ -68,6 +68,7 @@ describe('generateBookSummary — Gemini만, 긴 출력용 시도 시간', () =>
     if (r.ok) expect(r.summary).toMatchObject({ provider: 'gemini', note_count: 0, generated_at: '2026-10-11T00:00:00.000Z' });
     const opts = gen.mock.calls[0]![1] as { providers: string[]; attemptMaxMs: number; json: boolean; geminiEffort: string; geminiReasoningHeadroom: number };
     expect(opts.geminiEffort).toBe('high');
+    expect((opts as unknown as { geminiHedgeMs: number }).geminiHedgeMs).toBe(40_000);
     expect(opts.geminiReasoningHeadroom).toBe(BOOK_SUMMARY_REASONING_HEADROOM);
     expect(opts.providers).toEqual(['gemini']);
     expect(opts.attemptMaxMs).toBe(BOOK_SUMMARY_ATTEMPT_MS);

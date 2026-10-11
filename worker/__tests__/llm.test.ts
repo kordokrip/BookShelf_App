@@ -321,3 +321,29 @@ describe('Gemini Flash 모델 순환 — 모델별 하루 20회 할당량', () =
   });
 });
 
+describe('geminiHedgeMs — 느린 Flash 모델이면 다음 모델을 함께 시작', () => {
+  it('첫 모델이 hedge 시간 안에 답이 없으면 다음 모델을 시작하고 먼저 온 답을 쓴다', async () => {
+    vi.useFakeTimers();
+    const f = vi.fn((_u: string, init?: RequestInit) => {
+      const model = JSON.parse(String(init?.body)).model;
+      if (model === GEMINI_MODEL) return new Promise<Response>(() => {}); // 응답 없음(느림)
+      return Promise.resolve(chat('3.7 응답'));
+    });
+    vi.stubGlobal('fetch', f);
+    const { env } = makeEnv();
+    const p = generateText(env, { ...OPTS, timeoutMs: 60_000, attemptMaxMs: 60_000, geminiHedgeMs: 1_000, providers: ['gemini'] }, { fallback: 'none' }, NOW);
+    await vi.advanceTimersByTimeAsync(1_000);
+    await expect(p).resolves.toEqual({ text: '3.7 응답', provider: 'gemini' });
+    expect(f.mock.calls.map((c) => bodyOf(c).model)).toEqual([GEMINI_MODEL, 'gemini-3.7-flash']);
+    vi.useRealTimers();
+  });
+
+  it('실패(429)하면 기다리지 않고 바로 다음 모델, 모두 실패하면 오류', async () => {
+    const f = vi.fn(async () => new Response('quota', { status: 429 }));
+    vi.stubGlobal('fetch', f);
+    const { env } = makeEnv();
+    await expect(generateText(env, { ...OPTS, geminiHedgeMs: 30_000, providers: ['gemini'] }, { fallback: 'none' }, NOW)).rejects.toBeInstanceOf(LlmError);
+    expect(f).toHaveBeenCalledTimes(GEMINI_FLASH_MODELS.length);
+  });
+});
+

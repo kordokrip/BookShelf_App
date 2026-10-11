@@ -126,6 +126,11 @@ export interface LlmOptions extends Omit<ChatOptions, 'model' | 'models' | 'budg
    */
   geminiEffort?: 'low' | 'medium' | 'high';
   geminiReasoningHeadroom?: number;
+  /**
+   * Flash 모델이 이 시간(ms) 안에 답하지 않으면 다음 Flash 모델을 '동시에' 시작해 먼저 온 답을 쓴다(헤지 요청).
+   * 긴 출력(AI 요약)용 — 2026-10-11 운영에서 3.8 Flash가 "hi"에도 78초 걸린 반면 3.6·3.5는 1초였다.
+   */
+  geminiHedgeMs?: number;
 }
 
 const withTimeout = <T>(p: Promise<T>, ms: number, onTimeout: () => Error): Promise<T> =>
@@ -283,6 +288,7 @@ function extractChoiceText(response: unknown): string {
  * (2026-10-11 운영: 3.8 Flash 503 한 번에 AI 요약 전체가 실패하던 것을 막는다)
  */
 async function callGeminiFlash(env: LlmEnv, opts: LlmOptions, timeoutMs: number): Promise<string> {
+  if (opts.geminiHedgeMs) return callGeminiFlashHedged(env, opts, timeoutMs, opts.geminiHedgeMs);
   const deadline = Date.now() + timeoutMs;
   let last: unknown = null;
   for (const model of GEMINI_FLASH_MODELS) {
@@ -296,6 +302,44 @@ async function callGeminiFlash(env: LlmEnv, opts: LlmOptions, timeoutMs: number)
     }
   }
   throw last instanceof Error ? last : new LlmError('timeout', '타임아웃', 'gemini');
+}
+
+/**
+ * 헤지 요청 — 첫 모델을 시작하고, hedgeMs 안에 답이 없거나 그 모델이 실패하면 다음 모델을 시작한다.
+ * 먼저 성공한 응답을 쓰고 나머지는 버린다(각 요청은 자기 제한 시간에 끝난다). 모두 실패하면 마지막 오류를 던진다.
+ */
+function callGeminiFlashHedged(env: LlmEnv, opts: LlmOptions, timeoutMs: number, hedgeMs: number): Promise<string> {
+  const deadline = Date.now() + timeoutMs;
+  const effort = opts.geminiEffort ?? GEMINI_REASONING_EFFORT;
+  return new Promise<string>((resolve, reject) => {
+    let next = 0;
+    let running = 0;
+    let settled = false;
+    let lastErr: unknown = null;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const finish = (fn: () => void) => { if (settled) return; settled = true; timers.forEach(clearTimeout); fn(); };
+    const canLaunch = () => next < GEMINI_FLASH_MODELS.length && deadline - Date.now() >= MIN_ATTEMPT_MS;
+    const maybeFail = () => {
+      if (running === 0 && !canLaunch()) finish(() => reject(lastErr instanceof Error ? lastErr : new LlmError('timeout', '타임아웃', 'gemini')));
+    };
+    const launch = () => {
+      if (settled || !canLaunch()) { maybeFail(); return; }
+      const model = GEMINI_FLASH_MODELS[next++]!;
+      running++;
+      const hedge = setTimeout(launch, hedgeMs);
+      timers.push(hedge);
+      callGemini(env, model, effort, opts, deadline - Date.now(), 'gemini').then(
+        (text) => finish(() => resolve(text)),
+        (err) => {
+          // 실패한 요청의 헤지 예약은 취소하고 바로 다음 모델로(한 실패가 두 요청을 띄우지 않게)
+          clearTimeout(hedge);
+          running--; lastErr = err;
+          if (canLaunch()) launch(); else maybeFail();
+        },
+      );
+    };
+    launch();
+  });
 }
 
 async function callProvider(env: LlmEnv, provider: LlmProvider, opts: LlmOptions, timeoutMs: number, nowMs: number): Promise<string> {
