@@ -219,7 +219,7 @@ export function RecommendedBooksTab() {
                           <Link
                             key={r.title}
                             to={`/book/${r.id}`}
-                            className="relative inline-flex max-w-full items-center truncate py-1 text-indigo-700 underline underline-offset-2 dark:text-indigo-200 after:absolute after:-inset-y-3 after:inset-x-0 after:content-['']"
+                            className="relative inline-flex min-w-10 max-w-full items-center justify-center truncate py-1 text-indigo-700 underline underline-offset-2 dark:text-indigo-200 after:absolute after:-inset-y-3 after:inset-x-0 after:content-['']"
                           >
                             {r.title}
                           </Link>

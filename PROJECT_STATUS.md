@@ -1,6 +1,6 @@
 # BookShelf App — 현재 상태 스냅샷
 
-> **최종 업데이트:** 2026-10-11 (46차: AI 요약 — 완독한 책 A4 한 장·전개 순서, 하루 3번 / 45차: 속도 최적화·문서 정리). 이전 차수는 `docs/CHANGELOG.md`
+> **최종 업데이트:** 2026-10-11 (47차: 반응형 교차 점검·보완 + 켜 둔 앱의 새 버전 안내 / 46차: AI 요약). 이전 차수는 `docs/CHANGELOG.md`
 > **Git 브랜치:** `main` (kordokrip/BookShelf_App)
 > **E2E 테스트:** `bash scripts/e2e-api-test.sh --url <대상>` → **전체 PASS** ✅ (2026-10-03 스테이징·프로덕션 확인, 테스트 개수는 `grep -n '^  TOTAL=' scripts/e2e-api-test.sh`로 확인)
 > **상세 세션 리포트:** `docs/sessions/2026-10-05-refactoring-requests.md` (직전: `2026-10-03-ipad-ai-theme.md`)
