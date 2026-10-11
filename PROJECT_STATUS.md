@@ -1,6 +1,6 @@
 # BookShelf App — 현재 상태 스냅샷
 
-> **최종 업데이트:** 2026-10-11 (45차: 속도 최적화 — 첫 화면 JS·책 목록 요청 통합·오늘의 회고 백그라운드 생성·표지 R2 캐시·정렬 인덱스 + 문서·테스트 정리 / 44차: 교차 검증·계정 삭제). 이전 차수는 `docs/CHANGELOG.md`
+> **최종 업데이트:** 2026-10-11 (46차: AI 요약 — 완독한 책 A4 한 장·전개 순서, 하루 3번 / 45차: 속도 최적화·문서 정리). 이전 차수는 `docs/CHANGELOG.md`
 > **Git 브랜치:** `main` (kordokrip/BookShelf_App)
 > **E2E 테스트:** `bash scripts/e2e-api-test.sh --url <대상>` → **전체 PASS** ✅ (2026-10-03 스테이징·프로덕션 확인, 테스트 개수는 `grep -n '^  TOTAL=' scripts/e2e-api-test.sh`로 확인)
 > **상세 세션 리포트:** `docs/sessions/2026-10-05-refactoring-requests.md` (직전: `2026-10-03-ipad-ai-theme.md`)
@@ -181,7 +181,7 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 - AI 추천: `ai_recommend:{userId}:{topGenres}` (1h)
 - AI 노트 태그: `ai_tag:{규칙버전}:{내용 해시}` (7일), 일일 한도 `ai_tag_quota:{userId}:{KST 날짜}`
 - Rate Limit: `rl:{prefix}:{path}:{ip}:{창 번호}` (고정 창 — 창 번호 = `floor(now / windowMs)`)
-- Rate limit prefix `ai_sum`(요약)과 `ai_rec`(추천)는 별도 버킷 — 공유 금지
+- AI 한도: 추천 `ai_rec`(rate limit)와 AI 요약 하루 카운터(`ai_book_summary_count`, 하루 3번)는 별도 — 공유 금지
 
 ---
 

@@ -240,7 +240,7 @@ Playwright·DevTools 에뮬레이션은 아래를 재현하지 못한다. 릴리
 |------|------|------|
 | `GET /api/notes?q=` FTS5 검색 | ✅ PASS | FTS5 MATCH + LIKE 폴백 |
 | `POST /api/notes` 노트 생성 | ✅ PASS | |
-| AI 독후감 요약 `POST /api/ai/summarize` | ✅ PASS | llama-3.1-8b-instruct-fast, KV 캐시 24h |
+| AI 요약 `POST /api/ai/book-summary/:bookId` | e2e TEST 22·68 | 완독 책만, 하루 3번, 모르는 책은 422 거절 |
 
 ---
 

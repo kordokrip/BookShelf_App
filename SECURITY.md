@@ -64,7 +64,7 @@ OWASP 권장 반복 횟수는 600,000+ 이지만, Cloudflare Workers의 CPU 시�
 | POST /api/users/login | 5회 | 60초 |
 | DELETE /api/users/me | 5회 | 60초 |
 | POST /api/auth/refresh | 10회 | 60초 |
-| POST /api/ai/summarize | 5회 | 60초 |
+| POST /api/ai/book-summary/:bookId (AI 요약) | 3회 | KST 하루(실제 생성 시에만 차감) |
 | GET /api/ai/recommend | 10회 | 60초 |
 | GET /api/ai/lifebooks | 3회 | 600초(10분) |
 | POST /api/ai/ocr | 3회 | 60초 |

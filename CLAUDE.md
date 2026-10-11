@@ -48,6 +48,6 @@ bash scripts/e2e-api-test.sh
 
 ## 아키텍처 메모
 - `/register-flow`, `/notes-search`: Root 레이아웃 **외부** 독립 라우트 → TopBar 없음 → safe-area-top spacer 직접 추가 필요
-- KV 캐시 키 패턴: `ai_recommend:{userId}:{genres}`, `ai_summary:{hash}`
-- rate limit prefix: `ai_sum` (요약), `ai_rec` (추천) — 공유하지 말 것
+- KV 캐시 키 패턴: `ai_recommend:{version}:{userId}:{fingerprint}`, `ai_book_summary:{version}:{userId}:{bookId}`
+- AI 한도: 추천 `ai_rec`(rate limit prefix), AI 요약은 하루 카운터 `ai_book_summary_count:{userId}:{KST 날짜}`(하루 3번) — 공유하지 말 것
 - TanStack Query staleTime: stats 30s, ai recommendations 1h

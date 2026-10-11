@@ -34,6 +34,7 @@
   - 가입 7일 미만이면서 접속 7회 미만인 사용자에게만 보인다.
   - 대상이 화면에 보일 때 정해진 순서로 하나씩 나온다. [알겠어요]·Esc·바깥 누르기로 닫으면 다시 나오지 않는다(localStorage `bs_hints_seen:{userId}`, 접속 수 `bs_visits:{userId}`). 대화상자가 열려 있으면 숨긴다.
 - **통계 공유**: 독서 통계의 '내 통계 공유'(이미지)와 '요약 복사'다(`/share`는 `/stats`로 이동).
+- **AI 요약**(책 정보 탭, `GET/POST /api/ai/book-summary/:bookId`): 완독한 책을 A4 한 장 분량·내용 전개 순서로 정리한다. 하루 3번까지이고, 만든 요약은 다시 볼 때 무료다. 근거는 AI 지식·책 소개·내 노트이고 "원문과 다를 수 있어요" 고지를 둔다.
 - **관리자 'AI 공급자 상태'**(`GET /api/admin/ai-status`): 공급자별 정상/오류/미설정, 오늘 사용/상한, 마지막 성공·오류 시각을 보인다.
 
 **테마·기기**
@@ -1011,7 +1012,7 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 | `useAddNote()` | **POST** `/api/notes` |
 | `useUpdateNote()` | **PUT** `/api/notes/:id` |
 | `useDeleteNote()` | **DELETE** `/api/notes/:id` |
-| `useBookSummaryMutation()` | **POST** `/api/ai/summarize` |
+| `useBookAISummary()`·`useCreateBookAISummary()` | **GET/POST** `/api/ai/book-summary/:bookId` |
 | `useSessions(bookId)` | **GET** `/api/sessions?book_id=` |
 | `useDeleteSession()` | **DELETE** `/api/sessions/:id` |
 
@@ -1079,12 +1080,12 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 
 #### BookInfoTab
 
-**AI 분석 섹션**:
-- `Sparkles` 아이콘 + "이 책은 무슨 내용일까?" 제목
-- "AI 분석 시작" 버튼 → `useBookSummaryMutation()` → **POST** `/api/ai/summarize`
-- **타이핑 애니메이션**: 30ms interval, 결과 문자 하나씩 표시
-- **캐시 결과**: `⚡` 배지("cached"), 즉시 표시
-- "다시 생성" 버튼 (`RefreshCw`)
+**AI 요약 섹션**(46차, `components/books/AISummarySection.tsx` — 예전 'AI 책 분석' 대체):
+- 제목 "AI 요약" + 오른쪽 "오늘 N/3회 남음"(완독한 책만)
+- 완독 전: "완독한 책에서 AI 요약을 만들 수 있어요…" 안내만
+- [AI 요약 만들기](48px) → 진행 문구 3단계 + 스켈레톤 → 단락별 소제목(h4)·본문(책 글꼴, 줄 간격 1.8)
+- 하단: "AI가 아는 책 내용과 책 소개, 내 노트 N개를 바탕으로 정리했어요 · 원문과 다를 수 있어요 · 시각", [복사], [다시 요약하기](남은 횟수 0이면 비활성)
+- 실패 문구: 하루 한도 / AI가 모르는 책(지어내지 않음, 횟수 유지) / 만드는 중 / 일시 실패
 
 **책 상세 정보**:
 - ISBN, 총 페이지, 추가일, 완독일(done), 현재페이지/총페이지(reading)
@@ -1781,7 +1782,7 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 
 | 엔드포인트 | 메서드 | UI 사용처 | 호출 트리거 |
 |-----------|--------|----------|-----------|
-| `/api/ai/summarize` | POST | BookDetailPage BookInfoTab | "AI 분석 시작" 버튼. 로그인 필요. 책 소개문(Kakao·Naver)에만 근거 — 소개문이 없으면 `reason:'no_source'`로 "분석할 수 없어요" 안내. 결과 아래 근거 한 줄("책 소개를 바탕으로 AI가 정리했어요", 38차에 제공 모델 표기 제거 / Workers AI) |
+| `/api/ai/book-summary/:bookId` | GET·POST | BookDetailPage BookInfoTab(AISummarySection) | AI 요약 — 완독한 책을 A4 한 장·내용 전개 순서로, 하루 3번 |
 | `/api/ai/lifebooks?refresh=` | GET | LifeBooksPage (38차: 읽을 책 화면의 추천 섹션 제거) | 진입 / "새로 추천" 버튼. 완독 전체 기반 → 읽은 책 제외 → 실재 검증. `source`로 "AI 추천"·"추천 목록" 표시. 429 시 "10분쯤 뒤에" 안내 |
 | `/api/ai/recommend?limit=&refresh=` | GET | — | (화면 호출 없음) |
 | `/api/ai/ocr` | POST | CameraOCRSheet | 사진 촬영 후 자동 |
