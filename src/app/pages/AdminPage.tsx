@@ -12,7 +12,7 @@ import { Users, BookOpen, BarChart2, Bell, Send, Trash2, Search, X, ChevronDown,
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { adminApi, type AdminUser, type AdminUserDetail, type AdminUserStatus } from "../../lib/api";
 import { useAuthStore } from "../../stores/authStore";
-import { useNavigate } from "react-router";
+import { Navigate, useNavigate } from "react-router";
 import { useToast } from "../components/ui/Toast";
 import { directionParticle } from "../../lib/koreanParticle";
 import {
@@ -931,10 +931,9 @@ export function AdminPage() {
     document.getElementById(`admin-tab-${next}`)?.focus();
   };
 
-  // 관리자가 아니면 홈으로
+  // 관리자가 아니면 홈으로 — 렌더 중 navigate() 호출은 무시돼 빈 화면이 남았다(2026-10-12 오류 경로 점검) → <Navigate>
   if (user && user.role !== "admin") {
-    navigate("/", { replace: true });
-    return null;
+    return <Navigate to="/" replace />;
   }
 
   return (
