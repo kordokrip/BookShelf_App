@@ -25,7 +25,7 @@ const FAIL_COPY: Record<BookSummaryFailReason, string> = {
 const PROGRESS_COPY = [
   "책 소개와 내 노트를 모으고 있어요…",
   "처음부터 끝까지 내용 흐름을 정리하고 있어요…",
-  "A4 한 장 분량으로 다듬고 있어요… (1분 정도 걸릴 수 있어요)",
+  "A4 한 장 분량으로 다듬고 있어요… (1~2분 걸릴 수 있어요)",
 ];
 
 function summaryText(s: BookSummary): string {

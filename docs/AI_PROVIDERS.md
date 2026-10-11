@@ -13,7 +13,7 @@
 - **키·시크릿**: `GEMINI_API_KEY`(Google AI Studio 무료 등급), `OPENROUTER_API_KEY`. 운영·스테이징 시크릿과 로컬 `.dev.vars`에 둔다. 무료 등급은 보낸 내용이 서비스 개선에 쓰일 수 있어 노트 본문은 보내지 않는다.
 - **무료 한도**: Gemini는 **모델별 하루 20회**(`GenerateRequestsPerDayPerProjectPerModel-FreeTier`)·분당 5회다. 'gemini' 공급자는 429(할당량)·503(그 모델 과부하)면 Flash 3.8 → 3.7 → 3.6 → 3.5로 넘어가 하루 약 80회를 쓰고, 다 쓰면 Lite로 넘어간다. Workers AI는 하루 1만 뉴런(추천 1회 약 450), OpenRouter 무료는 계정 하루 50회다. 앱의 공급자별 일일 상한은 `LLM_DAILY_CAP`·`LLM_BACKGROUND_CAP`이다.
 - **기능별 규칙**
-  - AI 요약(46차, `lib/ai/bookSummary.ts`): Flash 4종만 쓰고 추론은 `high`다. 데미안 실측에서 `low`·Lite는 사건 순서·인물 이름(피스톤·아바이에 부인)이 틀렸고, `high`는 3.8·3.7·3.6 모두 정확했다(25~42초). 하루 3번/사용자, 모르는 책은 `{"known":false}`로 거절한다.
+  - AI 요약(46차, `lib/ai/bookSummary.ts`): Flash 4종만 쓰고 추론은 `high`다. 데미안 실측에서 `low`·Lite는 사건 순서·인물 이름(피스톤·아바이에 부인)이 틀렸고, `high`는 3.8·3.7·3.6 모두 정확했다(25~42초, 운영에서 소년이 온다는 76초). `high`도 장 제목 일부는 틀릴 수 있다(소년이 온다: '일곱 개의 뺨'·'눈 덮인 램프' 오기) — 화면에 고지. 하루 3번/사용자, 모르는 책은 `{"known":false}`로 거절한다.
   - 명문장은 Gemini만 쓴다(다른 모델은 문장을 지어냄). 성찰 질문은 체인 전체를 쓴다.
   - 추천은 카카오/네이버 실존 검증과 저자 교정, 즐겨 읽은 작가 보강, 판본·원서·잡지 제외, 책 조회 요청당 36회 상한을 적용한다.
   - 오늘의 회고 카드는 백그라운드로 만들고, 매일 KST 04시 Cron이 미리 만든다(`worker/lib/dailyCardService.ts`).

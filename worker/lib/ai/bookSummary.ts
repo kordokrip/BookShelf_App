@@ -24,11 +24,11 @@ export const BOOK_SUMMARY_MAX_TOKENS = 3200;
 export const BOOK_SUMMARY_EFFORT = 'high' as const;
 export const BOOK_SUMMARY_REASONING_HEADROOM = 4_500;
 /**
- * 제한 80초 — 'high'는 한 번에 25~45초 걸리고(실측 3.7 Flash 42초), 앞 모델이 할당량 429면 다음 Flash 모델로 넘어간다.
- * 사용자가 버튼을 눌러 기다리는 요청이라 Workers 백그라운드 30초 제약과 무관하다.
+ * 제한 95초 — 'high'는 한 번에 25~76초 걸리고(운영 실측: 소년이 온다 76초), 앞 모델이 429·503이면 다음 Flash 모델로 넘어간다.
+ * 사용자가 버튼을 눌러 기다리는 요청이라 Workers 백그라운드 30초 제약과 무관하다(100초 미만으로 둔다).
  */
-export const BOOK_SUMMARY_TIMEOUT_MS = 80_000;
-export const BOOK_SUMMARY_ATTEMPT_MS = 78_000;
+export const BOOK_SUMMARY_TIMEOUT_MS = 95_000;
+export const BOOK_SUMMARY_ATTEMPT_MS = 93_000;
 /** 분량 검증(공백 포함 글자 수) — A4 한 장 목표 1,800~2,200자, 너무 짧거나 길면 다음 공급자로 */
 export const SUMMARY_MIN_CHARS = 900;
 export const SUMMARY_MAX_CHARS = 4_000;
