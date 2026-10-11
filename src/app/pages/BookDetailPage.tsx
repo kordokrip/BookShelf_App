@@ -11,7 +11,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router";
 import { FeatureHint } from "../components/onboarding/FeatureHint";
 import { useBack } from "../../hooks/useBack";
 import { useBackToClose } from "../../hooks/useBackToClose";
-import { ChevronLeft, MoreVertical, FileText, AlignLeft, Camera, Pencil, Trash2, BookMarked, BookOpen, Heart, ScanLine, Clock, Search, Share2, Sparkles, RefreshCw, PencilLine, FolderPlus } from "lucide-react";
+import { ChevronLeft, MoreVertical, FileText, AlignLeft, Camera, Pencil, Trash2, BookMarked, BookOpen, Heart, ScanLine, Clock, Search, Share2, PencilLine, FolderPlus } from "lucide-react";
 import type { BookNote } from "../../types/book";
 import type { UIBook } from "../../types/book";
 import { BookCover } from "../components/books/BookCard";
@@ -20,8 +20,8 @@ import { useToast } from "../components/ui/Toast";
 import { useBookDetail, useDeleteBook, useUpdateBook } from "../../hooks/useBooks";
 import { useBookNotes, useAddNote, useUpdateNote, useDeleteNote } from "../../hooks/useNotes";
 import { useSessions, useDeleteSession } from "../../hooks/useSessions";
-import { useBookSummary as useBookSummaryMutation, RATE_LIMIT_RETRY_COPY } from "../../hooks/useAI";
-import { ApiError, coverApi, queryKeys } from "../../lib/api";
+import { AISummarySection } from "../components/books/AISummarySection";
+import { coverApi, queryKeys } from "../../lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../components/ui/sheet";
 import {
@@ -638,14 +638,8 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
 }
 
 /* ─── Book Info Tab ──────────────────────────────────────────── */
-function BookInfoTab({ book, onEditBook }: { book: UIBook; onEditBook: () => void }) {
-  const [summaryResult, setSummaryResult] = useState<string | null>(null);
-  const [displayedSummary, setDisplayedSummary] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
-  // 서버가 책 소개를 못 찾아 분석을 거절한 상태 (환각 방지)
-  const [noSource, setNoSource] = useState(false);
+function BookInfoTab({ book }: { book: UIBook }) {
   const [goalDateVal, setGoalDateVal] = useState(book.goalDate ?? "");
-  const summarizeMutation = useBookSummaryMutation();
   const updateBook = useUpdateBook();
   const { showToast } = useToast();
 
@@ -662,44 +656,6 @@ function BookInfoTab({ book, onEditBook }: { book: UIBook; onEditBook: () => voi
     { label: "등록일", value: book.addedDate.replace(/-/g, ".") },
     ...(book.status === "done" && book.finishedDate ? [{ label: "완독일", value: book.finishedDate.replace(/-/g, ".") }] : []),
   ];
-
-  // 타이핑 애니메이션 효과
-  useEffect(() => {
-    if (!summaryResult) {
-      setDisplayedSummary("");
-      setIsTyping(false);
-      return;
-    }
-    setDisplayedSummary("");
-    setIsTyping(true);
-    let i = 0;
-    const timer = setInterval(() => {
-      i++;
-      setDisplayedSummary(summaryResult.slice(0, i));
-      if (i >= summaryResult.length) {
-        clearInterval(timer);
-        setIsTyping(false);
-      }
-    }, 18);
-    return () => clearInterval(timer);
-  }, [summaryResult]);
-
-  const handleSummarize = async (refresh = false) => {
-    setSummaryResult(null);
-    setNoSource(false);
-    try {
-      const res = await summarizeMutation.mutateAsync({
-        title: book.title,
-        author: book.author,
-        ...(book.isbn ? { isbn: book.isbn } : {}),
-        ...(refresh ? { refresh: true } : {}),
-      });
-      if (res.summary) setSummaryResult(res.summary);
-      else setNoSource(true);
-    } catch {
-      // 오류는 summarizeMutation.isError 로 표시
-    }
-  };
 
   const handleRate = async (rating: number) => {
     try {
@@ -827,121 +783,8 @@ function BookInfoTab({ book, onEditBook }: { book: UIBook; onEditBook: () => voi
         )}
       </div>
 
-      {/* AI 분석 섹션 */}
-      <div className="rounded-2xl overflow-hidden border border-violet-200 dark:border-violet-800 [background:linear-gradient(135deg,var(--brand2-50)_0%,var(--brand-50)_100%)] dark:[background:var(--brand-900)]">
-        {/* Header */}
-        <div className="px-4 pt-4 pb-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div
-              className="w-7 h-7 rounded-xl flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg, var(--brand2-600), var(--brand-600))" }}
-            >
-              <Sparkles size={14} className="text-white" />
-            </div>
-            <span className="text-[color:var(--brand2-900)] dark:text-[color:var(--brand-200)]" style={{ fontSize: 14, fontWeight: 700 }}>AI 책 분석</span>
-          </div>
-          {summaryResult && !summarizeMutation.isPending && (
-            <button
-              onClick={() => void handleSummarize(true)}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-violet-600 dark:text-[color:var(--brand-200)] hover:bg-white/60 dark:hover:bg-white/10 transition-colors"
-              style={{ fontSize: 11, fontWeight: 600 }}
-            >
-              <RefreshCw size={11} />
-              다시 생성
-            </button>
-          )}
-        </div>
-
-        {/* Idle: 분석 시작 버튼 */}
-        {!summaryResult && !summarizeMutation.isPending && !summarizeMutation.isError && (
-          <div className="px-4 pb-4 flex flex-col gap-3">
-            {noSource ? (
-              <div
-                role="status"
-                className="rounded-xl p-3 border border-violet-200 bg-white/70 dark:bg-white/10 dark:border-white/20 text-violet-900 dark:text-violet-100 flex flex-col items-start gap-2"
-                style={{ fontSize: 12, lineHeight: 1.65 }}
-              >
-                <p>책 소개를 찾지 못해 분석할 수 없어요. 제목·저자가 정확한지 확인해 보세요.</p>
-                <button
-                  onClick={() => onEditBook()}
-                  className="min-h-11 px-3 rounded-xl border border-violet-300 dark:border-white/30 text-violet-700 dark:text-[color:var(--brand-200)] hover:bg-white/60 dark:hover:bg-white/10 transition-colors"
-                  style={{ fontSize: 12, fontWeight: 600 }}
-                >
-                  책 정보 수정
-                </button>
-              </div>
-            ) : (
-              <p className="text-[color:var(--brand2-700)] dark:text-[color:var(--brand-200)]" style={{ fontSize: 12, lineHeight: 1.65 }}>
-                AI가 이 책의 핵심 내용과 읽어야 할 이유를 분석해 드립니다
-              </p>
-            )}
-            {!noSource && (
-              <FeatureHint id="book-ai-summary" text="책 소개를 바탕으로 핵심 내용을 AI가 짧게 정리해 드려요" side="top">
-              <button
-                onClick={() => void handleSummarize()}
-                className="flex items-center justify-center gap-2 py-3 rounded-xl text-white transition-all active:scale-[0.98]"
-                style={{ background: "linear-gradient(135deg, var(--brand2-600), var(--brand-600))", fontSize: 14, fontWeight: 700 }}
-              >
-                <Sparkles size={15} />
-                AI 분석 시작
-              </button>
-              </FeatureHint>
-            )}
-          </div>
-        )}
-
-        {/* Loading: 스켈레톤 */}
-        {summarizeMutation.isPending && (
-          <div className="px-4 pb-4 flex flex-col gap-2">
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-4 h-4 rounded-full border-2 border-violet-600 border-t-transparent animate-spin" />
-              <span className="text-[color:var(--brand2-700)] dark:text-[color:var(--brand-200)]" style={{ fontSize: 12, fontWeight: 600 }}>AI가 분석 중...</span>
-            </div>
-            <div className="h-3 rounded-full animate-pulse bg-[color:var(--brand2-200)] dark:bg-white/20" style={{ width: "100%" }} />
-            <div className="h-3 rounded-full animate-pulse bg-[color:var(--brand2-200)] dark:bg-white/20" style={{ width: "80%" }} />
-            <div className="h-3 rounded-full animate-pulse bg-[color:var(--brand2-200)] dark:bg-white/20" style={{ width: "60%" }} />
-          </div>
-        )}
-
-        {/* Result: 타이핑 애니메이션 */}
-        {summaryResult && !summarizeMutation.isPending && (
-          <div className="px-4 pb-4">
-            <div className="rounded-xl p-3.5 border border-violet-200 dark:border-white/20 bg-white/75 dark:bg-white/10">
-              <p className="text-[#3B1F70] dark:text-[#E2E8F0]" style={{ fontSize: 13, lineHeight: 1.85 }}>
-                {displayedSummary}
-                {isTyping && (
-                  <span
-                    className="inline-block ml-0.5 rounded-sm animate-pulse align-middle"
-                    style={{ width: 2, height: 14, background: "var(--brand2-600)" }}
-                  />
-                )}
-              </p>
-            </div>
-            <p className="mt-1.5 text-right text-violet-700 dark:text-[color:var(--brand-200)]" style={{ fontSize: 11 }}>
-              책 소개를 바탕으로 AI가 정리했어요
-            </p>
-          </div>
-        )}
-
-        {/* Error: 재시도 */}
-        {summarizeMutation.isError && !summarizeMutation.isPending && (
-          <div className="px-4 pb-4 flex flex-col gap-2">
-            <p className="text-red-600" style={{ fontSize: 12 }}>
-              {summarizeMutation.error instanceof ApiError && summarizeMutation.error.status === 429
-                ? `AI 요청이 잠시 많아요. ${RATE_LIMIT_RETRY_COPY}`
-                : "분석 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."}
-            </p>
-            <button
-              onClick={() => void handleSummarize()}
-              className="self-start flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
-              style={{ fontSize: 12, fontWeight: 600 }}
-            >
-              <RefreshCw size={11} />
-              다시 시도
-            </button>
-          </div>
-        )}
-      </div>
+      {/* AI 요약 — 완독한 책을 A4 한 장 분량, 내용 흐름 순서로 */}
+      <AISummarySection bookId={book.id} isDone={book.status === "done"} />
 
       {/* 독서 기록 삭제 확인 */}
       <AlertDialog open={deletingSessionId !== null} onOpenChange={(o) => { if (!o) setDeletingSessionId(null); }}>
@@ -1275,7 +1118,7 @@ export function BookDetailPage() {
           {activeTab === "notes" ? (
             <NotesTab notes={notes} bookId={id!} currentPage={book?.currentPage ?? undefined} />
           ) : (
-            <BookInfoTab book={book} onEditBook={() => setShowEdit(true)} />
+            <BookInfoTab book={book} />
           )}
         </div>
       </div>

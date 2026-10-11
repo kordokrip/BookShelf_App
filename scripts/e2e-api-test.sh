@@ -705,27 +705,40 @@ fi
 # ================================================================
 # GROUP 7 — Workers AI (AI 추론 최대 30초)
 # ================================================================
-group "GROUP 7 — Workers AI ⚠️  최대 30초 소요 (2개)"
+group "GROUP 7 — AI ⚠️  최대 60초 소요 (3개)"
 
-T=22; NAME="POST /api/ai/summarize (LLM 요약 생성)"; START=$(now_ms)
-printf "         ${YELLOW}⏳ AI 추론 중... (최대 30초 대기)${NC}\n"
+T=22; NAME="POST /api/ai/book-summary (완독 책 AI 요약 — 요약 또는 모르는 책 거절)"; START=$(now_ms)
+printf "         ${YELLOW}⏳ AI 요약 중... (최대 60초 대기)${NC}\n"
 TMPF=$(mktemp /tmp/e2e_XXXXXX)
-curl -s --max-time 30 -o "$TMPF" -X POST "${BASE_URL}/api/ai/summarize" \
+HTTP_CODE=$(curl -s --max-time 70 -o "$TMPF" -w "%{http_code}" -X POST "${BASE_URL}/api/ai/book-summary/${BOOK_ID_DONE}" \
   -H "Authorization: Bearer ${TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d '{"title":"리액트를 다루는 기술","author":"김민준","description":"리액트 핵심 개념부터 실무 활용까지 다루는 종합 가이드. 컴포넌트, 훅, 상태관리를 상세히 설명한다."}'
+  -H "Content-Type: application/json" -d '{}')
 BODY=$(cat "$TMPF"); rm -f "$TMPF"
 ELAPSED=$(( $(now_ms) - START ))
-SUMMARY=$(json_val "$BODY" "d.get('summary', '')")
-AI_ERR=$(json_val "$BODY" "d.get('error', '')")
-if [[ -n "$SUMMARY" ]]; then
+# 테스트 책(가상 제목)은 모델이 모르는 책이라 422 unknown_book(지어내지 않음, 횟수 유지)이 정상.
+# 모델이 요약을 만들었다면 200 + 단락 3개 이상. 503(생성 실패)은 실패로 본다(알려진 오류를 PASS로 가리지 않는다).
+OK22=$(json_val "$BODY" "(d.get('reason') == 'unknown_book' and d.get('remaining_today') == 3) or len((d.get('data') or {}).get('sections', [])) >= 3")
+if [[ ("$HTTP_CODE" == "422" || "$HTTP_CODE" == "200") && "$OK22" == "True" ]]; then
   pass_test $T "$NAME" $ELAPSED
-  printf "         ${CYAN}↳ cached: %s${NC}\n" "$(json_val "$BODY" "d.get('cached', '')")"
+  printf "         ${CYAN}↳ HTTP %s (%s)${NC}\n" "$HTTP_CODE" "$(json_val "$BODY" "d.get('reason') or 'summary'")"
 else
-  # 의도적으로 "AI 요약에 실패했습니다" 등 알려진 에러 메시지를 자동 PASS 처리하지 않는다.
-  # (과거 이 자동 PASS 마스킹 때문에 폐기된 Workers AI 모델 500 에러가 몇 달간 CI에서 가려졌음 — 재발 방지)
-  fail_test $T "$NAME" $ELAPSED "$BODY" \
-    "summary 없음 — AI 응답 실패 또는 타임아웃 (error: '${AI_ERR:-알 수 없음}')"
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE} (기대: 422 unknown_book·remaining 3 또는 200 + sections≥3)"
+fi
+
+T=68; NAME="GET /api/ai/book-summary + 읽는 중 책 POST → 400 not_done + 없는 책 404 (모델 호출 없음)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+G_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" "${BASE_URL}/api/ai/book-summary/${BOOK_ID_DONE}" -H "Authorization: Bearer ${TOKEN}")
+G_OK=$(json_val "$(cat "$TMPF")" "d.get('daily_limit') == 3 and isinstance(d.get('remaining_today'), int) and 'data' in d")
+P_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" -X POST "${BASE_URL}/api/ai/book-summary/${BOOK_ID_READING}" \
+  -H "Authorization: Bearer ${TOKEN}" -H "Content-Type: application/json" -d '{}')
+P_REASON=$(json_val "$(cat "$TMPF")" "d.get('reason', '')")
+N_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${BASE_URL}/api/ai/book-summary/00000000-0000-0000-0000-000000000000" -H "Authorization: Bearer ${TOKEN}")
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+if [[ "$G_CODE" == "200" && "$G_OK" == "True" && "$P_CODE" == "400" && "$P_REASON" == "not_done" && "$N_CODE" == "404" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "GET ${G_CODE}/${G_OK}, POST(읽는 중) ${P_CODE}/${P_REASON}, 없는 책 ${N_CODE} (기대: 200/True, 400/not_done, 404)"
 fi
 
 T=23; NAME="GET /api/ai/recommend (서재 전체 기반 추천 도서)"; START=$(now_ms)
@@ -1358,20 +1371,6 @@ else
   fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE} (기대: 400 또는 422)"
 fi
 
-T=68; NAME="POST /api/ai/summarize (책 소개 없는 가짜 책 → no_source)"; START=$(now_ms)
-TMPF=$(mktemp /tmp/e2e_XXXXXX)
-HTTP_CODE=$(curl -s --max-time 30 -o "$TMPF" -w "%{http_code}" -X POST "${BASE_URL}/api/ai/summarize" \
-  -H "Authorization: Bearer ${TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d '{"title":"zxqv유령의서재qwjk9981","author":"존재하지않는저자qqzz"}')
-BODY=$(cat "$TMPF"); rm -f "$TMPF"
-ELAPSED=$(( $(now_ms) - START ))
-NO_SRC=$(json_val "$BODY" "d['summary'] is None and d['reason'] == 'no_source' and d['cached'] is False and d['provider'] is None")
-if [[ "$HTTP_CODE" == "200" && "$NO_SRC" == "True" ]]; then
-  pass_test $T "$NAME" $ELAPSED
-else
-  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE}, no_source=${NO_SRC} (기대: 200 + summary null, reason no_source — 모델 호출 없이)"
-fi
 
 T=69; NAME="PUT /api/books/:id 부분 수정(rating만) → genre·current_page·priority 유지"; START=$(now_ms)
 TMPF=$(mktemp /tmp/e2e_XXXXXX)

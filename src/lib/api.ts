@@ -58,7 +58,7 @@ export const queryKeys = {
   ai: {
     all: ['ai'] as const,
     recommendations: () => [...queryKeys.ai.all, 'recommendations'] as const,
-    summary: (isbn: string) => [...queryKeys.ai.all, 'summary', isbn] as const,
+    bookSummary: (bookId: string) => [...queryKeys.ai.all, 'book-summary', bookId] as const,
   },
   achievements: {
     all: ['achievements'] as const,

@@ -5,42 +5,84 @@ import { rateLimit } from '../middleware/rateLimit';
 import { extractAiText } from '../lib/ai/aiText';
 import { parseFavoriteGenres } from '../lib/ai/aiRecommend';
 import { resolveRecommendations, type OwnedBook } from '../lib/ai/bookRecommend';
-import { summarizeBook } from '../lib/ai/aiSummary';
+import {
+  BOOK_SUMMARY_DAILY_LIMIT, BOOK_SUMMARY_LOCK_TTL_SEC, BOOK_SUMMARY_TTL_SEC, bookSummaryCountKey, bookSummaryKey, bookSummaryLockKey,
+  generateBookSummary, type BookSummary, type SummaryBook, type SummaryNote,
+} from '../lib/ai/bookSummary';
+import { searchBook } from '../lib/bookLookup';
+import { kstDateString } from '../lib/noteHelpers';
 import { resolveCollections, COLLECTIONS_MAX_BOOKS, type CollectionBook } from '../lib/ai/aiCollections';
 
 const aiRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
-// ─── POST /api/ai/summarize — 책 소개 기반 한국어 요약 ────────
-// 책 소개(클라이언트 description 또는 카카오/네이버 조회)를 근거로만 요약한다. 근거가 없으면 모델을 호출하지 않는다.
-// 한도는 사용자별(IP 공유 시 서로 영향 없음) — 그래서 authMiddleware가 rateLimit보다 먼저 실행된다.
-aiRouter.post(
-  '/summarize',
-  authMiddleware,
-  rateLimit({ limit: 5, windowMs: 60_000, keyPrefix: 'ai_sum', keyBy: 'user' }),
-  async (c) => {
-    const body = await c.req.json().catch(() => null) as {
-      description?: unknown; title?: unknown; author?: unknown; isbn?: unknown; refresh?: unknown;
-    } | null;
-    const title = typeof body?.title === 'string' ? body.title.trim() : '';
-    const author = typeof body?.author === 'string' ? body.author.trim() : '';
-    if (!title || !author) {
-      return c.json({ error: '책 제목과 저자 정보가 필요합니다' }, 400);
-    }
+// ─── AI 요약 — 완독한 책을 A4 한 장 분량, 내용 전개 순서로 (예전 POST /api/ai/summarize 대체) ─────────
+// GET  /api/ai/book-summary/:bookId → 저장된 요약(없으면 null) + 오늘 남은 횟수. 모델 호출 없음
+// POST /api/ai/book-summary/:bookId {refresh?} → 저장된 요약이 있으면 그대로(무료), 없거나 refresh면 생성
+// 한도: 사용자당 KST 하루 3번(BOOK_SUMMARY_DAILY_LIMIT), 실제로 요약을 만들었을 때만 센다. 근거·모델은 lib/ai/bookSummary.ts
+async function summaryContext(c: { env: Bindings }, userId: string, bookId: string) {
+  const book = await c.env.DB.prepare('SELECT id, title, author, status, isbn FROM books WHERE id = ? AND user_id = ?')
+    .bind(bookId, userId).first<SummaryBook>();
+  const date = kstDateString(Date.now());
+  const used = parseInt((await c.env.KV.get(bookSummaryCountKey(userId, date))) ?? '0', 10) || 0;
+  return { book, date, used, remaining: Math.max(0, BOOK_SUMMARY_DAILY_LIMIT - used) };
+}
 
-    try {
-      const result = await summarizeBook(c.env, {
-        title,
-        author,
-        isbn: typeof body?.isbn === 'string' ? body.isbn : undefined,
-        description: typeof body?.description === 'string' ? body.description : undefined,
-      }, { refresh: body?.refresh === true });
-      return c.json(result);
-    } catch (err) {
-      console.error('AI 요약 오류:', err);
-      return c.json({ error: 'AI 요약에 실패했습니다' }, 500);
+aiRouter.get('/book-summary/:bookId', authMiddleware, async (c) => {
+  const userId = c.get('userId');
+  const { book, remaining } = await summaryContext(c, userId, c.req.param('bookId'));
+  if (!book) return c.json({ error: '책을 찾을 수 없습니다.' }, 404);
+  const raw = await c.env.KV.get(bookSummaryKey(userId, book.id));
+  let data: BookSummary | null = null;
+  try { data = raw ? (JSON.parse(raw) as BookSummary) : null; } catch { data = null; }
+  return c.json({ data, remaining_today: remaining, daily_limit: BOOK_SUMMARY_DAILY_LIMIT });
+});
+
+aiRouter.post('/book-summary/:bookId', authMiddleware, async (c) => {
+  const userId = c.get('userId');
+  const body = (await c.req.json().catch(() => null)) as { refresh?: unknown } | null;
+  const { book, date, used, remaining } = await summaryContext(c, userId, c.req.param('bookId'));
+  if (!book) return c.json({ error: '책을 찾을 수 없습니다.' }, 404);
+  if (book.status !== 'done') {
+    return c.json({ error: '완독한 책에서 AI 요약을 만들 수 있어요.', reason: 'not_done' }, 400);
+  }
+  const cacheKey = bookSummaryKey(userId, book.id);
+  if (body?.refresh !== true) {
+    const raw = await c.env.KV.get(cacheKey);
+    if (raw) {
+      try { return c.json({ data: JSON.parse(raw) as BookSummary, cached: true, remaining_today: remaining, daily_limit: BOOK_SUMMARY_DAILY_LIMIT }); } catch { /* 손상 → 다시 만든다 */ }
     }
-  },
-);
+  }
+  if (remaining <= 0) {
+    return c.json({ error: `AI 요약은 하루 ${BOOK_SUMMARY_DAILY_LIMIT}번까지 만들 수 있어요. 내일 다시 시도해 주세요.`, reason: 'daily_limit', remaining_today: 0 }, 429);
+  }
+  const lockKey = bookSummaryLockKey(userId, book.id);
+  if (await c.env.KV.get(lockKey)) {
+    return c.json({ error: '이 책의 요약을 만드는 중이에요. 잠시 후 다시 확인해 주세요.', reason: 'in_progress' }, 409);
+  }
+  await c.env.KV.put(lockKey, '1', { expirationTtl: BOOK_SUMMARY_LOCK_TTL_SEC }).catch(() => undefined);
+  try {
+    const [match, notesRes] = await Promise.all([
+      searchBook(c.env, { title: book.title, author: book.author ?? undefined, isbn: book.isbn ?? undefined }).catch(() => null),
+      c.env.DB.prepare(
+        `SELECT type, content, page_number, end_page FROM notes WHERE user_id = ? AND book_id = ?
+         ORDER BY created_at ASC LIMIT 200`,
+      ).bind(userId, book.id).all<SummaryNote>(),
+    ]);
+    const result = await generateBookSummary(c.env, book, match?.contents ?? '', notesRes.results ?? []);
+    if (!result.ok) {
+      return result.reason === 'unknown_book'
+        ? c.json({ error: 'AI가 이 책을 잘 알지 못해 요약하지 않았어요(지어낸 내용 방지). 남은 횟수는 줄지 않았어요.', reason: 'unknown_book', remaining_today: remaining }, 422)
+        : c.json({ error: 'AI 요약을 만들지 못했어요. 잠시 후 다시 시도해 주세요.', reason: 'failed', remaining_today: remaining }, 503);
+    }
+    await Promise.all([
+      c.env.KV.put(cacheKey, JSON.stringify(result.summary), { expirationTtl: BOOK_SUMMARY_TTL_SEC }),
+      c.env.KV.put(bookSummaryCountKey(userId, date), String(used + 1), { expirationTtl: 26 * 60 * 60 }),
+    ]);
+    return c.json({ data: result.summary, cached: false, remaining_today: remaining - 1, daily_limit: BOOK_SUMMARY_DAILY_LIMIT });
+  } finally {
+    await c.env.KV.delete(lockKey).catch(() => undefined);
+  }
+});
 
 // ─── GET /api/ai/recommend — 서재 전체 기반 '당신을 위한 AI추천 도서' (예전 인생책 통합) ──────
 // 완독·읽는 중·읽고 싶은 책 전부를 모델에 주고(완독·고평점 강조), 서재에 있는 책은 제목·저자·ISBN으로 걸러 낸 뒤 실존 검증한다.

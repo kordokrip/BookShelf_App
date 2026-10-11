@@ -52,3 +52,14 @@ describe('추천 도서 refetch 간격', () => {
     expect(lifeBooksRefetchInterval({ stale: false }, 1)).toBe(false);
   });
 });
+
+describe('bookSummaryFailReason — 서버 reason을 화면 문구 키로', () => {
+  it('알려진 사유는 그대로, 그 밖은 failed', async () => {
+    const { bookSummaryFailReason } = await import('../useAI');
+    expect(bookSummaryFailReason({ body: { reason: 'daily_limit' } })).toBe('daily_limit');
+    expect(bookSummaryFailReason({ body: { reason: 'unknown_book' } })).toBe('unknown_book');
+    expect(bookSummaryFailReason(new Error('x'))).toBe('failed');
+    expect(bookSummaryFailReason(null)).toBe('failed');
+  });
+});
+

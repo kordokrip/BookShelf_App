@@ -1,5 +1,5 @@
 import { buildRecommendMessages } from '../../worker/lib/ai/bookRecommend';
-import { buildSummaryMessages } from '../../worker/lib/ai/aiSummary';
+import { buildBookSummaryMessages } from '../../worker/lib/ai/bookSummary';
 import { buildQuoteMessages, buildReflectionMessages } from '../../worker/lib/ai/dailyQuote';
 import { buildGenreMessages } from '../../worker/lib/ai/genreSuggestions';
 const done = [
@@ -17,7 +17,7 @@ const genreBooks = [
 const descs = new Map([['b1', desc], ['b2', '우주의 기원과 생명의 진화를 다룬 칼 세이건의 대표 과학 교양서.'], ['b3', '아들러 심리학을 철학자와 청년의 대화로 풀어낸 책.']]);
 console.log(JSON.stringify({
   recommend: buildRecommendMessages(done as never, ['해외문학', '인문학']),
-  summary: buildSummaryMessages('데미안', '헤르만 헤세', desc),
+  summary: buildBookSummaryMessages({ id: 'b', title: '데미안', author: '헤르만 헤세', status: 'done' }, desc, []),
   quote: buildQuoteMessages({ id: 'b1', title: '데미안', author: '헤르만 헤세', genre: '해외문학', cover_image: null, cover_color: null, rating: 5 }, desc),
   reflection: buildReflectionMessages({ id: 'b1', title: '데미안', author: '헤르만 헤세', genre: '해외문학', cover_image: null, cover_color: null, rating: 5 }, desc),
   genre: buildGenreMessages(genreBooks as never, descs),

@@ -60,16 +60,23 @@ export function lifeBooksSourceLabel(res?: Pick<LifeBooksResponse, 'source'> | n
 /** 429(요청 한도) 안내 문구 — 서버 제한 창이 10분 */
 export const RATE_LIMIT_RETRY_COPY = '10분쯤 뒤에 다시 시도해 주세요';
 
-export interface SummarizeResponse {
-  /** null이면 분석하지 않음 (reason 참고) */
-  summary: string | null;
-  cached: boolean;
-  provider?: AIProvider | null;
-  grounded?: boolean;
-  source?: 'kakao' | 'naver' | 'client';
-  /** 'no_source': 책 소개 정보를 못 찾아 환각 방지를 위해 분석을 거절 */
-  reason?: 'no_source';
+/** AI 요약(완독한 책, A4 한 장 분량, 내용 전개 순서) — GET/POST /api/ai/book-summary/:bookId */
+export interface BookSummarySection { heading: string; body: string }
+export interface BookSummary {
+  sections: BookSummarySection[];
+  char_count: number;
+  generated_at: string;
+  provider: AIProvider;
+  note_count: number;
 }
+export interface BookSummaryResponse {
+  data: BookSummary | null;
+  cached?: boolean;
+  remaining_today: number;
+  daily_limit: number;
+}
+/** 실패 사유(서버 reason) — 화면 문구 선택용 */
+export type BookSummaryFailReason = 'not_done' | 'daily_limit' | 'in_progress' | 'unknown_book' | 'failed';
 
 /** 추천 도서 응답 — GET /api/ai/recommend (인생책과 같은 항목 모양) */
 export type RecommendResponse = LifeBooksResponse;
@@ -84,23 +91,36 @@ export function filterOwnedRecommendations(
   return items.filter((b) => !set.has(norm(b.title)));
 }
 
-/** 책 설명 요약 */
-export function useBookSummary() {
-  return useMutation({
-    mutationFn: ({ description, title, author, isbn, refresh }: {
-      description?: string;
-      title: string;
-      author: string;
-      isbn?: string;
-      /** true면 서버 캐시를 건너뛰고 다시 생성 */
-      refresh?: boolean;
-    }) =>
-      apiFetch<SummarizeResponse>('/api/ai/summarize', {
-        method: 'POST',
-        body: JSON.stringify({ description, title, author, isbn, ...(refresh ? { refresh: true } : {}) }),
-      }),
+/** 저장된 AI 요약 + 오늘 남은 횟수(모델 호출 없음) */
+export function useBookAISummary(bookId: string) {
+  return useQuery({
+    queryKey: queryKeys.ai.bookSummary(bookId),
+    queryFn: () => apiFetch<BookSummaryResponse>(`/api/ai/book-summary/${bookId}`),
+    staleTime: 5 * 60_000,
     retry: false,
   });
+}
+
+/** AI 요약 만들기(또는 다시 만들기) — 성공하면 조회 캐시를 바로 갱신 */
+export function useCreateBookAISummary(bookId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (refresh: boolean) =>
+      apiFetch<BookSummaryResponse>(`/api/ai/book-summary/${bookId}`, {
+        method: 'POST',
+        body: JSON.stringify(refresh ? { refresh: true } : {}),
+      }),
+    onSuccess: (res) => qc.setQueryData(queryKeys.ai.bookSummary(bookId), res),
+    onError: () => qc.invalidateQueries({ queryKey: queryKeys.ai.bookSummary(bookId) }),
+    retry: false,
+  });
+}
+
+/** 실패 응답 → 사유 */
+export function bookSummaryFailReason(err: unknown): BookSummaryFailReason {
+  const reason = (err as { body?: { reason?: unknown } } | null)?.body?.reason;
+  return reason === 'not_done' || reason === 'daily_limit' || reason === 'in_progress' || reason === 'unknown_book'
+    ? reason : 'failed';
 }
 
 /** 당신을 위한 AI추천 도서(인생책 + 추천 도서 통합) — stale이면 30초 뒤 최대 2회 다시 조회 */
