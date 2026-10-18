@@ -47,7 +47,7 @@ FAILED_TESTS=()
 if [[ "$READONLY" == true ]]; then
   TOTAL=3
 else
-  TOTAL=78
+  TOTAL=79
 fi
 
 # ── 시작 시각 ────────────────────────────────────────────────────
@@ -966,6 +966,51 @@ if [[ "$HTTP_CODE" == "200" && ("$DELETED_FLAG" == "True" || "$DELETED_FLAG" == 
 else
   fail_test $T "$NAME" $ELAPSED "$BODY" \
     "HTTP ${HTTP_CODE}, data.deleted='${DELETED_FLAG}' (기대: 200 + true)"
+fi
+
+# WS 기본 켜짐(2026-10-19~): HTTP로 보낸 메시지·삭제가 ChatRoom DO를 거쳐 접속 중인 소켓에 바로 와야 한다.
+# Node 22+ 내장 WebSocket으로 접속해 둔 채 HTTP 전송·삭제를 하고, 각 이벤트를 5초 안에 받는지 본다.
+T=82; NAME="WS /api/groups/:id/ws — HTTP 전송·삭제가 소켓으로 실시간 도착"; START=$(now_ms)
+WS_RESULT=$(BASE_URL="$BASE_URL" TOKEN="$TOKEN" GROUP_ID="$GROUP_ID" node -e '
+const { BASE_URL, TOKEN, GROUP_ID } = process.env;
+if (typeof WebSocket === "undefined") { console.log("NO_WEBSOCKET(Node 22+ 필요)"); process.exit(0); }
+const wsUrl = BASE_URL.replace(/^http/, "ws") + "/api/groups/" + GROUP_ID + "/ws?token=" + encodeURIComponent(TOKEN);
+const api = (path, init = {}) => fetch(BASE_URL + path, { ...init, headers: { Authorization: "Bearer " + TOKEN, "Content-Type": "application/json", ...(init.headers || {}) } });
+const ws = new WebSocket(wsUrl);
+const seen = { message: null, deleted: null };
+const done = (r) => { try { ws.close(); } catch {} console.log(r); process.exit(0); };
+const timer = setTimeout(() => done("TIMEOUT message=" + !!seen.message + " deleted=" + !!seen.deleted), 15000);
+// 소켓 이벤트가 HTTP 응답보다 먼저 올 수 있으므로(실측) 받은 id를 모아 두고 응답 뒤에 대조한다
+let msgId = null;
+const got = { message: new Set(), deleted: new Set() };
+const step = async () => {
+  if (!msgId) return;
+  if (!seen.message && got.message.has(msgId)) {
+    seen.message = Date.now();
+    await api("/api/groups/" + GROUP_ID + "/messages/" + msgId, { method: "DELETE" });
+  }
+  if (seen.message && got.deleted.has(msgId)) { clearTimeout(timer); done("OK"); }
+};
+ws.onerror = () => { clearTimeout(timer); done("WS_ERROR"); };
+ws.onmessage = async ({ data }) => {
+  const m = JSON.parse(data);
+  if (m.type === "message" && m.data && m.data.id) got.message.add(m.data.id);
+  if (m.type === "message_deleted" && m.data && m.data.id) got.deleted.add(m.data.id);
+  await step();
+};
+ws.onopen = async () => {
+  await new Promise((r) => setTimeout(r, 300));
+  const res = await api("/api/groups/" + GROUP_ID + "/messages", { method: "POST", body: JSON.stringify({ content: "E2E WS 실시간 확인" }) });
+  msgId = (await res.json()).data?.id ?? null;
+  if (!msgId) { clearTimeout(timer); done("POST_FAILED " + res.status); }
+  await step();
+};
+' 2>&1 | tail -1)
+ELAPSED=$(( $(now_ms) - START ))
+if [[ "$WS_RESULT" == "OK" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+else
+  fail_test $T "$NAME" $ELAPSED "" "결과: ${WS_RESULT} (기대: OK — message·message_deleted 이벤트 수신)"
 fi
 
 # ================================================================

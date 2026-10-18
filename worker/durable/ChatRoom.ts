@@ -1,5 +1,6 @@
 import { DurableObject } from 'cloudflare:workers';
 import type { Bindings } from '../types';
+import { BROADCAST_PATH } from '../lib/chatBroadcast';
 
 interface WsAttachment {
   userId: string;
@@ -12,9 +13,15 @@ interface WsAttachment {
  * 클라이언트 → 워커(JWT 검증) → DO stub.fetch() → WebSocket 업그레이드
  * 메시지 수신 → 룸 전체 브로드캐스트 → D1 write-behind (group_messages 테이블)
  * 접속/해제 시 Presence 브로드캐스트 (KV heartbeat 대체)
+ * HTTP로 보낸 메시지·삭제는 워커가 POST /broadcast로 넘겨 같은 소켓들에 전달한다(2026-10-19~)
  */
 export class ChatRoom extends DurableObject<Bindings> {
   override async fetch(request: Request): Promise<Response> {
+    // 워커 내부 호출 전용(DO는 바인딩으로만 닿는다): HTTP로 저장된 메시지·삭제를 접속 중인 소켓에 전달
+    if (request.method === 'POST' && new URL(request.url).pathname === BROADCAST_PATH) {
+      this.broadcastRaw(await request.text());
+      return new Response(null, { status: 204 });
+    }
     if (request.headers.get('Upgrade') !== 'websocket') {
       return new Response('WebSocket upgrade required', { status: 426 });
     }
@@ -99,6 +106,12 @@ export class ChatRoom extends DurableObject<Bindings> {
   override async webSocketError(ws: WebSocket): Promise<void> {
     try { ws.close(); } catch { /* already closed */ }
     this.broadcastPresence(ws);
+  }
+
+  private broadcastRaw(payload: string): void {
+    for (const s of this.ctx.getWebSockets()) {
+      try { s.send(payload); } catch { /* closed */ }
+    }
   }
 
   private broadcastPresence(exclude?: WebSocket): void {

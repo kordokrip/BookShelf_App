@@ -22,6 +22,7 @@ import { Jwt } from 'hono/utils/jwt';
 import type { Bindings } from '../types';
 import { authMiddleware } from '../auth';
 import { rateLimit } from '../middleware/rateLimit';
+import { broadcastToRoom } from '../lib/chatBroadcast';
 
 export const groupsRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -470,6 +471,9 @@ groupsRouter.post('/:id/messages', authMiddleware, rateLimit({ limit: 30, window
     WHERE m.id = ?
   `).bind(id).first();
 
+  // 접속 중인 WS 사용자에게 즉시 전달 (응답은 기다리지 않음)
+  if (msg) c.executionCtx.waitUntil(broadcastToRoom(c.env.CHAT_ROOM, groupId, { type: 'message', data: msg }));
+
   return c.json({ data: msg }, 201);
 });
 
@@ -484,9 +488,15 @@ groupsRouter.delete('/:id/messages/:messageId', authMiddleware, async (c) => {
     return c.json({ error: '모임장만 메시지를 삭제할 수 있습니다.' }, 403);
   }
 
-  await db.prepare(
-    `UPDATE group_messages SET deleted_at = datetime('now'), deleted_by = ? WHERE id = ? AND group_id = ?`,
-  ).bind(userId, messageId, groupId).run();
+  const deleted = await db.prepare(
+    `UPDATE group_messages SET deleted_at = datetime('now'), deleted_by = ? WHERE id = ? AND group_id = ? RETURNING deleted_at`,
+  ).bind(userId, messageId, groupId).first<{ deleted_at: string }>();
+
+  if (deleted) {
+    c.executionCtx.waitUntil(broadcastToRoom(c.env.CHAT_ROOM, groupId, {
+      type: 'message_deleted', data: { id: messageId, deleted_at: deleted.deleted_at },
+    }));
+  }
 
   return c.json({ data: { deleted: true } });
 });

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useQueryClient, type InfiniteData } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { TOKEN_KEY, queryKeys } from '../lib/api';
 import type { GroupMessage } from '../lib/api';
+import { insertIncomingMessage, markMessageDeleted, type MessagePages } from '../lib/chatCache';
 
 const WS_FLAG = 'chat_ws';
 const INITIAL_BACKOFF_MS = 1_000;
@@ -25,6 +26,7 @@ export interface UseGroupChatResult {
  * 그룹 채팅 WebSocket 훅
  *
  * localStorage에 chat_ws=1 이 있을 때만 WS 연결을 시도한다.
+ * 서버는 HTTP로 저장된 메시지·삭제를 ChatRoom DO로 넘겨 이 소켓으로 즉시 보낸다(worker/lib/chatBroadcast.ts).
  * 연결 실패 시 지수 백오프(1s → 2s → 4s … 30s)로 재연결.
  * WS 메시지 수신 시 TanStack Query 무한 쿼리 캐시를 직접 패치한다.
  * 연결 중에는 useGroupMessages가 폴링을 30초 안전망으로 늦추므로, (재)연결 직후 한 번 다시 불러와
@@ -65,26 +67,13 @@ export function useGroupChat(groupId: string): UseGroupChatResult {
         setOnlineUsers((m['onlineUsers'] as string[] | undefined) ?? []);
       } else if (m['type'] === 'message') {
         const newMsg = m['data'] as GroupMessage | undefined;
-        if (!newMsg) return;
-
-        // TanStack Query 무한 쿼리 캐시에 새 메시지를 첫 페이지 선두에 삽입
-        // (useGroupMessages의 select가 pages.flatMap().reverse()로 정렬하므로
-        //  DESC 정렬인 pages[0]의 앞에 넣어야 화면상 맨 아래에 표시됨)
-        qc.setQueryData<InfiniteData<{ data: GroupMessage[] }, string | undefined>>(
-          queryKeys.groups.messages(groupId),
-          (old) => {
-            if (!old) return old;
-            const isDup = old.pages.some((p) => p.data.some((x) => x.id === newMsg.id));
-            if (isDup) return old;
-            return {
-              ...old,
-              pages: [
-                { data: [newMsg, ...(old.pages[0]?.data ?? [])] },
-                ...old.pages.slice(1),
-              ],
-            };
-          },
-        );
+        if (!newMsg?.id) return;
+        qc.setQueryData<MessagePages>(queryKeys.groups.messages(groupId), (old) => insertIncomingMessage(old, newMsg));
+      } else if (m['type'] === 'message_deleted') {
+        const d = m['data'] as { id?: string; deleted_at?: string } | undefined;
+        if (!d?.id || !d.deleted_at) return;
+        const { id, deleted_at } = d;
+        qc.setQueryData<MessagePages>(queryKeys.groups.messages(groupId), (old) => markMessageDeleted(old, id, deleted_at));
       }
     };
 

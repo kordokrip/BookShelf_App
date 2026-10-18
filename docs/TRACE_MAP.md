@@ -661,8 +661,8 @@ totals:       { totalPages: number; totalMinutes: number }
 | DELETE | `/api/groups/:id/leave` | **authMiddleware** | — | `{data: {left: true}}` | 멤버 탈퇴 |
 | DELETE | `/api/groups/:id/members/:userId` | **authMiddleware** | — | `{data: {removed: true}}` | 리더 직권 탈퇴 |
 | GET | `/api/groups/:id/messages` | **authMiddleware** | `?limit=&before=` | `{data: Message[]}` | approved 멤버만 |
-| POST | `/api/groups/:id/messages` | **authMiddleware** | `{content}` | `{data: Message}` | approved만. 다른 멤버에게 채팅 알림 ★ |
-| DELETE | `/api/groups/:id/messages/:msgId` | **authMiddleware** | — | `{data: {deleted: true}}` | 리더만 삭제 ★ |
+| POST | `/api/groups/:id/messages` | **authMiddleware** | `{content}` | `{data: Message}` | approved만. 다른 멤버에게 채팅 알림 ★. 저장 후 ChatRoom DO로 `{type:'message'}` 실시간 전달(ADR-002) |
+| DELETE | `/api/groups/:id/messages/:msgId` | **authMiddleware** | — | `{data: {deleted: true}}` | 리더만 삭제 ★. 소프트 삭제 후 DO로 `{type:'message_deleted', data:{id, deleted_at}}` 전달 |
 | POST | `/api/groups/:id/mark-read` | **authMiddleware** | — | `{data: {read: true}}` · 403(멤버 아님·없는 모임, 48차) | last_read_at 갱신 + 채팅 알림 읽음 ★ |
 | GET | `/api/groups/:id/meetings` | **authMiddleware** | — | `{data: Meeting[]}` | |
 | POST | `/api/groups/:id/meetings` | **authMiddleware** | `{title, meeting_date, location?}` | `{data: Meeting}` / **429** | 모든 멤버 등록 가능, 하루 2개 제한 ★ |
