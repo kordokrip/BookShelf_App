@@ -1324,7 +1324,6 @@ maxAge: 86400 (24h)
 | 바인딩 | 타입 | 용도 |
 |---|---|---|
 | `DB` | D1Database | 메인 데이터베이스 |
-| `SESSIONS` | KVNamespace | (예약, 현재 미사용) |
 | `KV` | KVNamespace | AI 결과 캐시(AI 요약 180일·추천 24시간 등). Rate Limiting·AI 한도 카운터는 2026-10-19부터 D1 `counters` 테이블(ADR-005) |
 | `R2` | R2Bucket | 표지 이미지 저장 |
 | `AI` | Ai | Workers AI (llama-3.1-8b-instruct-fast, llama-3.2-11b-vision) |

@@ -62,7 +62,7 @@ PWA 정적 자산(아이콘, iOS startup 이미지, `sw.js`/workbox 프리캐시
 - **Apply D1 migrations (Staging)** — `d1 migrations apply bookshelf-db-staging --remote --env staging` 후 `deploy --env staging`
 - health check 없이 결과만 로그로 출력
 
-**스테이징 리소스**(2026-09-27 생성, ID는 `wrangler.toml [env.staging]` 참고): D1 `bookshelf-db-staging`, KV 1개(`KV`·`SESSIONS` 바인딩 공유), R2 `bookshelf-covers-staging`. AI와 Durable Object 바인딩도 env에 명시돼 있다(wrangler env는 바인딩을 상속하지 않음). 스테이징은 리마인더 cron을 끈다(`[env.staging.triggers] crons = []`).
+**스테이징 리소스**(2026-09-27 생성, ID는 `wrangler.toml [env.staging]` 참고): D1 `bookshelf-db-staging`, KV 1개(`KV` 바인딩, 예전 `SESSIONS` 바인딩은 2026-10-19 제거), R2 `bookshelf-covers-staging`. AI와 Durable Object 바인딩도 env에 명시돼 있다(wrangler env는 바인딩을 상속하지 않음). 스테이징은 리마인더 cron을 끈다(`[env.staging.triggers] crons = []`).
 
 **스테이징 사용 절차:** `git push origin main:staging`(또는 작업 브랜치를 `staging`에 push) → CI가 마이그레이션 + 배포 → `bash scripts/e2e-api-test.sh --url https://bookshelf-api-staging.kordokrip.workers.dev`. 스테이징 worker 시크릿은 프로덕션과 별도이며 이름은 `npx wrangler secret list --env staging`으로 확인한다.
 

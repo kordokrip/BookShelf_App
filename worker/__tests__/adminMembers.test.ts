@@ -51,7 +51,7 @@ function makeEnv() {
     list: async ({ prefix }: { prefix: string }) => ({ objects: [...r2.keys()].filter((k) => k.startsWith(prefix)).map((key) => ({ key })), truncated: false }),
     delete: async (keys: string[]) => { keys.forEach((k) => r2.delete(k)); },
   };
-  const env = { DB, KV, R2, SESSIONS: { get: async () => null, put: async () => {}, delete: async () => {} }, JWT_SECRET: 'test-secret', FRONTEND_URL: 'https://app.test' } as unknown as Bindings;
+  const env = { DB, KV, R2, JWT_SECRET: 'test-secret', FRONTEND_URL: 'https://app.test' } as unknown as Bindings;
   return { env, users, logs, stmts, kv, r2 };
 }
 

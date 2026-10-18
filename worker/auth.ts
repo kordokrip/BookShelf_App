@@ -23,7 +23,7 @@ export async function createToken(
   );
 }
 
-/** Refresh Token 생성 (30일, SESSIONS KV 저장) */
+/** Refresh Token 생성 (30일, KV `refresh:{token}` 저장) */
 export async function createRefreshToken(
   userId: string,
   kv: KVNamespace,

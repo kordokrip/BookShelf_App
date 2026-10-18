@@ -22,13 +22,8 @@ database_id = "013db269-dc7a-4a60-9920-ed40c12ab623"
 migrations_dir = "worker/db/migrations"
 
 # ─── KV Namespaces ───────────────────────────────────────────
-# 세션 / JWT Refresh Token 저장
-# (worker/routes/auth.ts POST /refresh: KV 우선 조회, 없으면 SESSIONS 폴백 후 KV로 이관)
-[[kv_namespaces]]
-binding = "SESSIONS"
-id = "3cb76beb5e9e49b3be2373d3f2a84972"
-preview_id = "5a7a6a79089849898491a7000cc5de1c"
-
+# (예전 SESSIONS 바인딩은 2026-10-19 제거 — refresh token은 2026-04-08부터 KV에 저장, 남은 SESSIONS 토큰은 30일 TTL로 모두 만료.
+#  네임스페이스 3cb76beb…는 계정에 남아 있으며 필요하면 대시보드에서 지운다)
 # AI 캐시 + 범용 KV
 [[kv_namespaces]]
 binding = "KV"
@@ -114,13 +109,8 @@ database_name = "bookshelf-db-staging"
 database_id = "3760f0ef-30e3-4519-bcde-216b6039b890"
 migrations_dir = "worker/db/migrations"
 
-# SESSIONS는 deprecated(refresh token은 KV로 이전) — 바인딩만 유지하도록 같은 네임스페이스 공유
 [[env.staging.kv_namespaces]]
 binding = "KV"
-id = "b758ab900d114b5b8c0ab0f1a595a35c"
-
-[[env.staging.kv_namespaces]]
-binding = "SESSIONS"
 id = "b758ab900d114b5b8c0ab0f1a595a35c"
 
 [[env.staging.r2_buckets]]

@@ -257,7 +257,7 @@ describe('상태 기록 · GET /api/admin/ai-status', () => {
     const { env, kv } = makeEnv();
     const roles: Record<string, string> = { admin1: 'admin', plain: 'user' };
     const DB = { prepare: () => { let id = ''; const st = { bind: (x: string) => { id = x; return st; }, first: async () => (roles[id] ? { role: roles[id] } : null) }; return st; } };
-    const bindings = { ...env, DB, SESSIONS: { get: async () => null }, JWT_SECRET: 'test-secret', FRONTEND_URL: 'https://app.test' } as unknown as Bindings;
+    const bindings = { ...env, DB, JWT_SECRET: 'test-secret', FRONTEND_URL: 'https://app.test' } as unknown as Bindings;
     void kv;
     const app = new Hono<{ Bindings: Bindings }>();
     app.route('/api/admin', adminRouter);

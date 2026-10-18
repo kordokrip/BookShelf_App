@@ -204,16 +204,7 @@ authRouter.post(
       return c.json({ error: 'refreshToken이 필요합니다.' }, 400);
     }
 
-    // ARCH-01: KV 우선, SESSIONS 폴백 (마이그레이션)
-    let userId = await verifyRefreshToken(refreshToken, c.env.KV);
-    if (!userId) {
-      userId = await verifyRefreshToken(refreshToken, c.env.SESSIONS);
-      if (userId) {
-        // 마이그레이션: SESSIONS → KV
-        await c.env.KV.put(`refresh:${refreshToken}`, userId, { expirationTtl: 60 * 60 * 24 * 30 });
-        await c.env.SESSIONS.delete(`refresh:${refreshToken}`);
-      }
-    }
+    const userId = await verifyRefreshToken(refreshToken, c.env.KV);
     if (!userId) {
       return c.json({ error: '유효하지 않거나 만료된 토큰입니다.' }, 401);
     }
