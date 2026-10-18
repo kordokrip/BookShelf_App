@@ -44,11 +44,12 @@ export async function verifyRefreshToken(
 /**
  * PBKDF2-SHA256 비밀번호 해싱. 저장 형식 `pbkdf2:{반복 횟수}:{salt hex}:{hash hex}`.
  * 예전 형식 `pbkdf2:{salt}:{hash}`(3칸)는 10,000회로 만든 것 — 검증은 그대로 되고, 로그인 때 새 횟수로 다시 해시한다.
- * 100,000회: 예전(10,000)의 10배. 유료 플랜이라 CPU 여유는 있지만, Workers 런타임의 PBKDF2 상한이 과거 100,000이었어서
- * 운영 확인 없이 그 이상은 쓰지 않는다(가입·로그인 전체가 실패할 수 있음). 로컬 workerd 측정: 100,000회 약 5ms.
+ * 600,000회: OWASP 2023 권장치(PBKDF2-HMAC-SHA256). Workers 런타임의 과거 상한(100,000)은 스테이징 가입·로그인 e2e로
+ * 넘는 것을 확인하고 올렸다. edge 실측(wrangler tail): 100,000회 로그인 CPU 26~33ms → 600,000회는 약 100ms대 추가(유료 플랜 한도 안).
+ * 형식에 횟수가 들어 있어 상수를 내려도 이미 저장된 해시는 그대로 검증된다(되돌리기 안전).
  * (레거시 SHA-256 해시 경로는 2026-10-19 운영·스테이징 0건 확인 후 제거)
  */
-export const PBKDF2_ITERATIONS = 100_000;
+export const PBKDF2_ITERATIONS = 600_000;
 const OLD_FORMAT_ITERATIONS = 10_000;
 
 const toHex = (bytes: Uint8Array) => [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
