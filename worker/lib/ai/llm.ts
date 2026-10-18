@@ -18,6 +18,7 @@ import {
   budgetKey, chatCompletion, OPENROUTER_BACKGROUND_BUDGET, OPENROUTER_DAILY_BUDGET, OPENROUTER_FREE_MODELS,
   type ChatOptions, type OpenRouterEnv,
 } from './openrouter';
+import { consumeCounter, dailyExpiresAtSec, readCounter } from '../counters';
 
 export type LlmProvider = 'gemini' | 'gemini-lite' | 'workers-ai' | 'openrouter';
 /** API 응답에 노출되는 공급자(gemini-lite는 gemini로 보고) */
@@ -91,7 +92,6 @@ export const MIN_ATTEMPT_MS = 1_500;
 export const PROVIDER_ATTEMPT_MAX_MS: Partial<Record<LlmProvider, number>> = { gemini: 25_000, 'gemini-lite': 20_000 };
 export const attemptTimeout = (provider: LlmProvider, remainingMs: number, overrideMs?: number): number =>
   Math.min(remainingMs, overrideMs ?? PROVIDER_ATTEMPT_MAX_MS[provider] ?? remainingMs);
-const COUNTER_TTL_SEC = 26 * 60 * 60;
 const STATUS_TTL_SEC = 7 * 24 * 60 * 60;
 /** 상태 갱신 주기 — KV 쓰기(무료 하루 1000회)를 아끼려고 변화가 없으면 이 간격으로만 다시 쓴다 */
 const STATUS_REFRESH_MS = 30 * 60 * 1000;
@@ -143,17 +143,14 @@ export const llmBudgetKey = (provider: LlmProvider, nowMs: number) => `llm_budge
 export const llmStatusKey = (provider: LlmProvider) => `llm_status:${provider}`;
 
 /** 오늘 사용 횟수. OpenRouter는 전송 계층의 기존 카운터를 쓴다 */
-export async function usedToday(env: Pick<LlmEnv, 'KV'>, provider: LlmProvider, nowMs: number): Promise<number> {
+export async function usedToday(env: Pick<LlmEnv, 'DB'>, provider: LlmProvider, nowMs: number): Promise<number> {
   const key = provider === 'openrouter' ? budgetKey(nowMs) : llmBudgetKey(provider, nowMs);
-  return parseInt((await env.KV.get(key)) ?? '0', 10) || 0;
+  return readCounter(env.DB, key, nowMs);
 }
 
-/** 오늘 남은 상한 확인 후 1 소모(OpenRouter는 chatCompletion 안에서 소모). KV에 원자적 증가가 없어 약간의 오차는 허용 */
-async function consumeLlmBudget(env: Pick<LlmEnv, 'KV'>, provider: LlmProvider, nowMs: number, cap: number): Promise<boolean> {
-  const used = await usedToday(env, provider, nowMs);
-  if (used >= cap) return false;
-  await env.KV.put(llmBudgetKey(provider, nowMs), String(used + 1), { expirationTtl: COUNTER_TTL_SEC });
-  return true;
+/** 오늘 남은 상한 확인 후 1 소모(OpenRouter는 chatCompletion 안에서 소모). D1 원자적 카운터 — ADR-005 */
+async function consumeLlmBudget(env: Pick<LlmEnv, 'DB'>, provider: LlmProvider, nowMs: number, cap: number): Promise<boolean> {
+  return (await consumeCounter(env.DB, llmBudgetKey(provider, nowMs), cap, dailyExpiresAtSec(nowMs), nowMs)) !== null;
 }
 
 export interface LlmStatus { last_ok_at: string | null; last_error_at: string | null; last_error: string | null }

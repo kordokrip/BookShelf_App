@@ -5,7 +5,7 @@
  * 맨 처음(latest 없음)·refresh=true만 동기 생성. 한도는 "실제로 생성하는 요청"만 센다(캐시·stale 응답은 소모 없음).
  */
 import { consumeRateLimit, RATE_LIMIT_MESSAGE } from '../../middleware/rateLimit';
-import type { CounterDb } from '../counters';
+import { acquireLock, releaseLock, type CounterDb } from '../counters';
 import type { RecommendationSource } from './aiRecommend';
 import type { Provider } from './llm';
 
@@ -33,7 +33,7 @@ export interface SwrGenerated<T> {
 
 export interface SwrOptions<T> {
   kv: SwrKv;
-  /** 한도 카운터용 D1 (KV는 원자적 증가가 없어 한도가 걸리지 않는다 — ADR-005) */
+  /** 한도 카운터·재생성 잠금용 D1 (KV는 원자적 증가가 없어 한도·잠금이 걸리지 않는다 — ADR-005) */
   db: CounterDb;
   cacheKey: string;
   latestKey: string;
@@ -101,13 +101,16 @@ export async function resolveSwr<T>(o: SwrOptions<T>): Promise<SwrResponse<T>> {
       const staleData = o.filterStale ? await o.filterStale(latest.data) : latest.data;
       if (staleData.length > 0) {
         // 락이 없고 한도가 남았을 때만 백그라운드 재생성을 시작한다(둘 다 실패해도 stale은 그대로 응답)
-        if (!(await kv.get(o.lockKey)) && (await rate())) {
-          await kv.put(o.lockKey, '1', { expirationTtl: o.lockTtlSec });
-          o.waitUntil((async () => {
-            try { await generateAndStore(o, true); }
-            catch (err) { console.error(`${o.label} 백그라운드 재생성 실패:`, err); }
-            finally { await kv.delete(o.lockKey).catch(() => undefined); }
-          })());
+        if (await acquireLock(o.db, o.lockKey, o.lockTtlSec, o.nowMs)) {
+          if (await rate()) {
+            o.waitUntil((async () => {
+              try { await generateAndStore(o, true); }
+              catch (err) { console.error(`${o.label} 백그라운드 재생성 실패:`, err); }
+              finally { await releaseLock(o.db, o.lockKey).catch(() => undefined); }
+            })());
+          } else {
+            await releaseLock(o.db, o.lockKey).catch(() => undefined);
+          }
         }
         const { fingerprint: _fp, ...rest } = latest;
         void _fp;

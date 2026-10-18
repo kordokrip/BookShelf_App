@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { generateDailyCard } from '../lib/ai/dailyCard';
 import { chooseKind, pickQuoteBook, type QuoteBook } from '../lib/ai/dailyQuote';
 import type { LlmEnv } from '../lib/ai/llm';
+import { makeSqliteD1 } from './helpers/sqliteD1';
 
 afterEach(() => { vi.unstubAllGlobals(); });
 
@@ -26,6 +27,7 @@ function makeEnv(over: { gemini?: boolean; ai?: (m: string) => unknown } = {}) {
   const kv = new Map<string, string>();
   const env: LlmEnv & { KAKAO_REST_API_KEY?: string } = {
     GEMINI_API_KEY: over.gemini === false ? undefined : 'g',
+    DB: makeSqliteD1(),
     KV: {
       get: (async (k: string) => kv.get(k) ?? null) as unknown as KVNamespace['get'],
       put: (async (k: string, v: string) => { kv.set(k, v); }) as unknown as KVNamespace['put'],

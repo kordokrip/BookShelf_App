@@ -36,3 +36,15 @@ export function counterRows(db: D1Database, prefix: string): { key: string; coun
 }
 
 export const counterSum = (db: D1Database, prefix: string) => counterRows(db, prefix).reduce((n, r) => n + r.count, 0);
+
+/** 카운터 행을 미리 심는다(기본 만료: 아주 먼 미래) */
+export function seedCounter(db: D1Database, key: string, count: number, expiresAtSec = 4_102_444_800): void {
+  (db as D1Database & { raw: DatabaseSync }).raw
+    .prepare('INSERT OR REPLACE INTO counters (key, count, expires_at) VALUES (?, ?, ?)').run(key, count, expiresAtSec);
+}
+
+/** 카운터 값(문자열, 예전 KV 값 비교와 같은 모양) — 행이 없으면 undefined */
+export function counterValue(db: D1Database, key: string): string | undefined {
+  const row = (db as D1Database & { raw: DatabaseSync }).raw.prepare('SELECT count FROM counters WHERE key = ?').get(key) as { count: number } | undefined;
+  return row ? String(row.count) : undefined;
+}

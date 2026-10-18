@@ -8,6 +8,7 @@ import {
   GEMINI_LITE_MODEL, GEMINI_PROXY_LOCATION, GEMINI_REASONING_EFFORT, attemptTimeout, GEMINI_TOKEN_HEADROOM, WORKERS_AI_MODEL, WORKERS_AI_FALLBACK_MODEL, type LlmEnv,
 } from '../lib/ai/llm';
 import { budgetKey, OPENROUTER_FREE_MODELS, OPENROUTER_DAILY_BUDGET } from '../lib/ai/openrouter';
+import { makeSqliteD1, seedCounter, counterValue } from './helpers/sqliteD1';
 
 const NOW = Date.UTC(2026, 9, 10, 3, 0, 0); // KST 2026-10-10
 const OPTS = { messages: [{ role: 'user' as const, content: '안녕' }], maxTokens: 100, temperature: 0.3, retryDelayMs: 0 };
@@ -16,9 +17,13 @@ afterEach(() => { vi.unstubAllGlobals(); });
 
 function makeEnv(over: { gemini?: boolean; openrouter?: boolean; kv?: Record<string, string>; ai?: (model: string, input: unknown) => unknown } = {}) {
   const kv = new Map(Object.entries(over.kv ?? {}));
+  const DB = makeSqliteD1();
+  // 하루 예산은 D1 카운터(ADR-005) — 시드 중 예산 키는 카운터로 옮긴다
+  for (const [k, v] of kv) if (/^(llm_budget|or_budget):/.test(k)) seedCounter(DB, k, parseInt(v, 10));
   const env: LlmEnv = {
     GEMINI_API_KEY: over.gemini === false ? undefined : 'g-key',
     OPENROUTER_API_KEY: over.openrouter === false ? undefined : 'or-key',
+    DB,
     KV: {
       get: vi.fn(async (k: string) => kv.get(k) ?? null) as unknown as KVNamespace['get'],
       put: vi.fn(async (k: string, v: string) => { kv.set(k, v); }) as unknown as KVNamespace['put'],
@@ -38,7 +43,7 @@ describe('generateText — 1순위 gemini', () => {
   it('OpenAI 호환 엔드포인트로 키·모델·reasoning_effort·JSON 모드를 보내고 provider=gemini', async () => {
     const f = vi.fn(async () => chat(' 안녕 '));
     vi.stubGlobal('fetch', f);
-    const { env, kv } = makeEnv();
+    const { env } = makeEnv();
     const res = await generateText(env, { ...OPTS, json: true }, { fallback: 'none' }, NOW);
     expect(res).toEqual({ text: '안녕', provider: 'gemini' });
     const [url, init] = f.mock.calls[0] as unknown as [string, RequestInit];
@@ -49,7 +54,7 @@ describe('generateText — 1순위 gemini', () => {
       model: GEMINI_MODEL, reasoning_effort: GEMINI_REASONING_EFFORT, response_format: { type: 'json_object' },
       max_tokens: 100 + GEMINI_TOKEN_HEADROOM,
     });
-    expect(kv.get(llmBudgetKey('gemini', NOW))).toBe('1');
+    expect(counterValue(env.DB as D1Database, llmBudgetKey('gemini', NOW))).toBe('1');
     expect(env.AI.run).not.toHaveBeenCalled();
   });
 
@@ -57,12 +62,12 @@ describe('generateText — 1순위 gemini', () => {
     const f = vi.fn(async (_u: string, init?: RequestInit) =>
       JSON.parse(String(init?.body)).model === GEMINI_MODEL ? new Response('nf', { status: 404 }) : chat('lite 응답'));
     vi.stubGlobal('fetch', f);
-    const { env, kv } = makeEnv();
+    const { env } = makeEnv();
     expect(await generateText(env, OPTS, { fallback: 'none' }, NOW)).toEqual({ text: 'lite 응답', provider: 'gemini' });
     expect(f.mock.calls.map((c) => bodyOf(c).model)).toEqual([GEMINI_MODEL, GEMINI_LITE_MODEL]);
     // 3.8 Flash는 'minimal'을 거절하므로 'low', Lite는 'minimal'(2026-10-10 실측)
     expect(f.mock.calls.map((c) => bodyOf(c).reasoning_effort)).toEqual(['low', 'minimal']);
-    expect(kv.get(llmBudgetKey('gemini-lite', NOW))).toBe('1');
+    expect(counterValue(env.DB as D1Database, llmBudgetKey('gemini-lite', NOW))).toBe('1');
   });
 });
 
@@ -87,14 +92,14 @@ describe('generateText — Gemini 중계(지역 제한 우회)', () => {
 describe('generateText — 체인 폴스루', () => {
   it('gemini 키 없음 → workers-ai(qwen 27B, thinking 끔, 지정 파라미터)', async () => {
     vi.stubGlobal('fetch', vi.fn());
-    const { env, kv } = makeEnv({ gemini: false });
+    const { env } = makeEnv({ gemini: false });
     const res = await generateText(env, OPTS, { fallback: 'none' }, NOW);
     expect(res).toEqual({ text: '워커스 응답', provider: 'workers-ai' });
     expect(env.AI.run).toHaveBeenCalledWith(WORKERS_AI_MODEL, expect.objectContaining({
       max_tokens: 100, temperature: 0.3, chat_template_kwargs: { enable_thinking: false },
     }));
     expect(fetch).not.toHaveBeenCalled();
-    expect(kv.get(llmBudgetKey('workers-ai', NOW))).toBe('1');
+    expect(counterValue(env.DB as D1Database, llmBudgetKey('workers-ai', NOW))).toBe('1');
   });
 
   it('workers-ai가 OpenAI 호환 형태(choices)로 답해도 텍스트를 꺼낸다', async () => {
@@ -134,11 +139,11 @@ describe('generateText — 체인 폴스루', () => {
   it('일일 상한 도달 → 다음 공급자(카운터는 더 오르지 않음)', async () => {
     const f = vi.fn(async () => chat('lite'));
     vi.stubGlobal('fetch', f);
-    const { env, kv } = makeEnv({ kv: { [llmBudgetKey('gemini', NOW)]: String(LLM_DAILY_CAP.gemini) } });
+    const { env } = makeEnv({ kv: { [llmBudgetKey('gemini', NOW)]: String(LLM_DAILY_CAP.gemini) } });
     const res = await generateText(env, OPTS, { fallback: 'none' }, NOW);
     expect(res.provider).toBe('gemini');
     expect(bodyOf(f.mock.calls[0]).model).toBe(GEMINI_LITE_MODEL);
-    expect(kv.get(llmBudgetKey('gemini', NOW))).toBe(String(LLM_DAILY_CAP.gemini));
+    expect(counterValue(env.DB as D1Database, llmBudgetKey('gemini', NOW))).toBe(String(LLM_DAILY_CAP.gemini));
   });
 
   it('background 호출은 더 낮은 상한을 쓴다', async () => {
@@ -188,12 +193,12 @@ describe('generateText — 허용 목록·남은 시간·마지막 수단', () =
 
   it('workers-ai는 남은 시간이 예상 소요(expectedTokens/25초)보다 짧으면 건너뛰고 예산도 쓰지 않는다', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => chat('or')));
-    const { env, kv } = makeEnv({ gemini: false });
+    const { env } = makeEnv({ gemini: false });
     // 1000토큰 → 40초 필요, 마감 20초
     const res = await generateText(env, { ...OPTS, expectedTokens: 1000, timeoutMs: 20_000 }, { fallback: 'none' }, NOW);
     expect(res.provider).toBe('openrouter');
     expect(env.AI.run).not.toHaveBeenCalled();
-    expect(kv.has(llmBudgetKey('workers-ai', NOW))).toBe(false);
+    expect((counterValue(env.DB as D1Database, llmBudgetKey('workers-ai', NOW)) !== undefined)).toBe(false);
     // 같은 요청도 마감이 충분하면 workers-ai를 쓴다
     const again = await generateText(env, { ...OPTS, expectedTokens: 1000, timeoutMs: 60_000 }, { fallback: 'none' }, NOW);
     expect(again.provider).toBe('workers-ai');

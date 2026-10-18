@@ -11,6 +11,7 @@ import type { Bindings } from '../types';
 import { generateDailyCard } from './ai/dailyCard';
 import { DAILY_QUOTE_FALLBACK_TTL_SEC, DAILY_QUOTE_TTL_SEC, dailyQuoteCacheKey, type QuoteBook } from './ai/dailyQuote';
 import { kstDateString, pickDailyIndex } from './noteHelpers';
+import { acquireLock } from './counters';
 
 /** 같은 사용자의 동시 생성(탭 두 개·Cron과 겹침)을 막는 잠금 — 생성 제한 시간(약 20초)보다 넉넉하게 */
 export const DAILY_CARD_LOCK_TTL_SEC = 90;
@@ -61,11 +62,9 @@ export async function buildAndStoreDailyCard(env: Bindings, userId: string, date
 }
 
 /** 잠금을 잡았으면 true — 이미 누가 만들고 있으면 false */
-export async function tryLockDailyCard(env: Pick<Bindings, 'KV'>, userId: string, date: string): Promise<boolean> {
-  const lockKey = dailyCardLockKey(userId, date);
-  if (await env.KV.get(lockKey)) return false;
-  await env.KV.put(lockKey, '1', { expirationTtl: DAILY_CARD_LOCK_TTL_SEC }).catch(() => undefined);
-  return true;
+export async function tryLockDailyCard(env: Pick<Bindings, 'DB'>, userId: string, date: string): Promise<boolean> {
+  // D1 원자적 잠금(ADR-005) — 풀지 않고 TTL로 만료시킨다
+  return acquireLock(env.DB, dailyCardLockKey(userId, date), DAILY_CARD_LOCK_TTL_SEC);
 }
 
 /** KST 04:00~04:14(15분 Cron 한 번)에만 true */

@@ -12,6 +12,7 @@ import {
 import { searchBook } from '../lib/bookLookup';
 import { kstDateString } from '../lib/noteHelpers';
 import { resolveCollections, COLLECTIONS_MAX_BOOKS, type CollectionBook } from '../lib/ai/aiCollections';
+import { acquireLock, consumeCounter, dailyExpiresAtSec, readCounter, refundCounter, releaseLock } from '../lib/counters';
 
 const aiRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -23,7 +24,7 @@ async function summaryContext(c: { env: Bindings }, userId: string, bookId: stri
   const book = await c.env.DB.prepare('SELECT id, title, author, status, isbn FROM books WHERE id = ? AND user_id = ?')
     .bind(bookId, userId).first<SummaryBook>();
   const date = kstDateString(Date.now());
-  const used = parseInt((await c.env.KV.get(bookSummaryCountKey(userId, date))) ?? '0', 10) || 0;
+  const used = await readCounter(c.env.DB, bookSummaryCountKey(userId, date));
   return { book, date, used, remaining: Math.max(0, BOOK_SUMMARY_DAILY_LIMIT - used) };
 }
 
@@ -40,7 +41,7 @@ aiRouter.get('/book-summary/:bookId', authMiddleware, async (c) => {
 aiRouter.post('/book-summary/:bookId', authMiddleware, async (c) => {
   const userId = c.get('userId');
   const body = (await c.req.json().catch(() => null)) as { refresh?: unknown } | null;
-  const { book, date, used, remaining } = await summaryContext(c, userId, c.req.param('bookId'));
+  const { book, date, remaining } = await summaryContext(c, userId, c.req.param('bookId'));
   if (!book) return c.json({ error: '책을 찾을 수 없습니다.' }, 404);
   if (book.status !== 'done') {
     return c.json({ error: '완독한 책에서 AI 요약을 만들 수 있어요.', reason: 'not_done' }, 400);
@@ -56,11 +57,19 @@ aiRouter.post('/book-summary/:bookId', authMiddleware, async (c) => {
     return c.json({ error: `AI 요약은 하루 ${BOOK_SUMMARY_DAILY_LIMIT}번까지 만들 수 있어요. 내일 다시 시도해 주세요.`, reason: 'daily_limit', remaining_today: 0 }, 429);
   }
   const lockKey = bookSummaryLockKey(userId, book.id);
-  if (await c.env.KV.get(lockKey)) {
+  if (!(await acquireLock(c.env.DB, lockKey, BOOK_SUMMARY_LOCK_TTL_SEC))) {
     return c.json({ error: '이 책의 요약을 만드는 중이에요. 잠시 후 다시 확인해 주세요.', reason: 'in_progress' }, 409);
   }
-  await c.env.KV.put(lockKey, '1', { expirationTtl: BOOK_SUMMARY_LOCK_TTL_SEC }).catch(() => undefined);
+  // 하루 한도는 생성 전에 1회 예약하고, 세지 않는 결과(모르는 책·실패·예외)면 되돌린다 — 동시 요청으로 한도를 넘지 못하게(ADR-005)
+  const countKey = bookSummaryCountKey(userId, date);
+  let reserved: number | null = null;
+  let counted = false;
   try {
+    reserved = await consumeCounter(c.env.DB, countKey, BOOK_SUMMARY_DAILY_LIMIT, dailyExpiresAtSec());
+    if (reserved === null) {
+      return c.json({ error: `AI 요약은 하루 ${BOOK_SUMMARY_DAILY_LIMIT}번까지 만들 수 있어요. 내일 다시 시도해 주세요.`, reason: 'daily_limit', remaining_today: 0 }, 429);
+    }
+    const remainingBefore = BOOK_SUMMARY_DAILY_LIMIT - (reserved - 1);
     const [match, notesRes] = await Promise.all([
       searchBook(c.env, { title: book.title, author: book.author ?? undefined, isbn: book.isbn ?? undefined }).catch(() => null),
       c.env.DB.prepare(
@@ -71,16 +80,15 @@ aiRouter.post('/book-summary/:bookId', authMiddleware, async (c) => {
     const result = await generateBookSummary(c.env, book, match?.contents ?? '', notesRes.results ?? []);
     if (!result.ok) {
       return result.reason === 'unknown_book'
-        ? c.json({ error: 'AI가 이 책을 잘 알지 못해 요약하지 않았어요(지어낸 내용 방지). 남은 횟수는 줄지 않았어요.', reason: 'unknown_book', remaining_today: remaining }, 422)
-        : c.json({ error: 'AI 요약을 만들지 못했어요. 잠시 후 다시 시도해 주세요.', reason: 'failed', remaining_today: remaining }, 503);
+        ? c.json({ error: 'AI가 이 책을 잘 알지 못해 요약하지 않았어요(지어낸 내용 방지). 남은 횟수는 줄지 않았어요.', reason: 'unknown_book', remaining_today: remainingBefore }, 422)
+        : c.json({ error: 'AI 요약을 만들지 못했어요. 잠시 후 다시 시도해 주세요.', reason: 'failed', remaining_today: remainingBefore }, 503);
     }
-    await Promise.all([
-      c.env.KV.put(cacheKey, JSON.stringify(result.summary), { expirationTtl: BOOK_SUMMARY_TTL_SEC }),
-      c.env.KV.put(bookSummaryCountKey(userId, date), String(used + 1), { expirationTtl: 26 * 60 * 60 }),
-    ]);
-    return c.json({ data: result.summary, cached: false, remaining_today: remaining - 1, daily_limit: BOOK_SUMMARY_DAILY_LIMIT });
+    await c.env.KV.put(cacheKey, JSON.stringify(result.summary), { expirationTtl: BOOK_SUMMARY_TTL_SEC });
+    counted = true;
+    return c.json({ data: result.summary, cached: false, remaining_today: BOOK_SUMMARY_DAILY_LIMIT - reserved, daily_limit: BOOK_SUMMARY_DAILY_LIMIT });
   } finally {
-    await c.env.KV.delete(lockKey).catch(() => undefined);
+    if (reserved !== null && !counted) await refundCounter(c.env.DB, countKey).catch(() => undefined);
+    await releaseLock(c.env.DB, lockKey).catch(() => undefined);
   }
 });
 

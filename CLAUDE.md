@@ -50,4 +50,5 @@ bash scripts/e2e-api-test.sh
 - `/register-flow`, `/notes-search`: Root 레이아웃 **외부** 독립 라우트 → TopBar 없음 → safe-area-top spacer 직접 추가 필요
 - KV 캐시 키 패턴: `ai_recommend:{version}:{userId}:{fingerprint}`, `ai_book_summary:{version}:{userId}:{bookId}`
 - AI 한도: 추천 `ai_rec`(rate limit prefix), AI 요약은 하루 카운터 `ai_book_summary_count:{userId}:{KST 날짜}`(하루 3번) — 공유하지 말 것
+- 한도·카운터·잠금은 KV가 아니라 D1 `counters` 테이블(`worker/lib/counters.ts`, ADR-005)에 둔다. KV는 최종 일관성이라 get→put 카운터가 동작하지 않는다(캐시 용도로만 사용)
 - TanStack Query staleTime: stats 30s, ai recommendations 1h

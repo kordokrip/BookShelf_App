@@ -9,6 +9,7 @@
 import { extractAiText } from './aiText';
 import { buildTagMessages, parseTagResponse, shouldTag } from './noteTags';
 import { kstDateString } from '../noteHelpers';
+import { consumeCounter, dailyExpiresAtSec } from '../counters';
 
 export const TAG_MODEL = '@cf/meta/llama-3.1-8b-instruct-fast';
 export const DAILY_TAG_QUOTA = 50;
@@ -52,9 +53,8 @@ export async function tagNote(
       outcome = 'cached';
     } else {
       const quotaKey = `ai_tag_quota:${note.userId}:${kstDateString(nowMs)}`;
-      const used = parseInt((await env.KV.get(quotaKey)) ?? '0', 10);
-      if (used >= DAILY_TAG_QUOTA) return 'quota-exceeded';
-      await env.KV.put(quotaKey, String(used + 1), { expirationTtl: 26 * 60 * 60 });
+      // 하루 한도 확인 + 1 소모를 원자적으로 (D1 카운터 — ADR-005)
+      if ((await consumeCounter(env.DB, quotaKey, DAILY_TAG_QUOTA, dailyExpiresAtSec(nowMs), nowMs)) === null) return 'quota-exceeded';
 
       const response = await env.AI.run(TAG_MODEL, { messages: buildTagMessages(note.content), max_tokens: 120, temperature: TAG_TEMPERATURE });
       tags = parseTagResponse(extractAiText(response), note.content);

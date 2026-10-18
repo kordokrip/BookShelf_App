@@ -12,6 +12,7 @@
  * - 실패(키 없음·예산 초과·타임아웃·재시도 후에도 실패)는 OpenRouterError로 던져 호출 측이 폴백하게 한다
  */
 import { kstDateString } from '../noteHelpers';
+import { consumeCounter, dailyExpiresAtSec, type CounterDb } from '../counters';
 
 export type ReasoningEffort = 'minimal' | 'low' | 'none';
 
@@ -87,6 +88,8 @@ export interface OpenRouterEnv {
   OPENROUTER_API_KEY?: string;
   FRONTEND_URL?: string;
   KV: Pick<KVNamespace, 'get' | 'put'>;
+  /** 하루 예산 카운터 (D1 원자적 카운터 — ADR-005) */
+  DB: CounterDb;
 }
 
 export type OpenRouterErrorCode = 'no_key' | 'budget' | 'upstream' | 'timeout' | 'empty';
@@ -98,21 +101,16 @@ export class OpenRouterError extends Error {
   }
 }
 
-const BUDGET_TTL_SEC = 26 * 60 * 60;
-
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 export function budgetKey(nowMs: number): string {
   return `or_budget:${kstDateString(nowMs)}`;
 }
 
-/** 오늘 남은 예산 확인 후 1 소모. 초과면 false (KV는 원자적 증가가 없어 약간의 오차는 허용) */
+/** 오늘 남은 예산 확인 후 1 소모. 초과면 false (D1 원자적 카운터 — ADR-005) */
 async function consumeBudget(env: OpenRouterEnv, nowMs: number, cap = OPENROUTER_DAILY_BUDGET): Promise<boolean> {
-  const key = budgetKey(nowMs);
-  const used = parseInt((await env.KV.get(key)) ?? '0', 10) || 0;
-  if (used >= Math.min(cap, OPENROUTER_DAILY_BUDGET)) return false;
-  await env.KV.put(key, String(used + 1), { expirationTtl: BUDGET_TTL_SEC });
-  return true;
+  const limit = Math.min(cap, OPENROUTER_DAILY_BUDGET);
+  return (await consumeCounter(env.DB, budgetKey(nowMs), limit, dailyExpiresAtSec(nowMs), nowMs)) !== null;
 }
 
 async function postOnce(env: OpenRouterEnv, opts: ChatOptions, timeoutMs: number): Promise<Response> {

@@ -5,7 +5,7 @@ import {
   recommendLockKey, resolveRecommendations, selectPromptBooks, MAX_PROMPT_BOOKS, RECOMMEND_LOCK_TTL_SEC,
   RESULT_MAX, type OwnedBook, type RecommendDeps, type RecommendEnv, type RecommendItem,
 } from '../lib/ai/bookRecommend';
-import { makeSqliteD1, counterSum } from './helpers/sqliteD1';
+import { makeSqliteD1, counterSum, counterValue, seedCounter } from './helpers/sqliteD1';
 
 afterEach(() => { vi.unstubAllGlobals(); });
 
@@ -174,17 +174,18 @@ describe('resolveRecommendations (SWR·캐시·한도)', () => {
     expect(r.body).toMatchObject({ stale: true, cached: true });
     expect((r.body as { data: RecommendItem[] }).data.map((d) => d.title)).toEqual(['옛 추천']); // 사피엔스는 위시에 있어 제외
     expect(s.pending).toHaveLength(1);
-    expect(s.e.store.get(recommendLockKey('u1'))).toBe('1');
+    expect(counterValue(s.e.DB as D1Database, recommendLockKey('u1'))).toBe('1'); // 잠금은 D1 카운터(ADR-005)
     await Promise.all(s.pending);
     expect(s.build).toHaveBeenCalledTimes(1);
     expect(s.rl()).toBe(1);
     expect(JSON.parse(s.e.store.get(ck)!).data[0].title).toBe('새 추천');
-    expect(s.e.store.has(recommendLockKey('u1'))).toBe(false);
+    expect(counterValue(s.e.DB as D1Database, recommendLockKey('u1'))).toBeUndefined();
     expect(RECOMMEND_LOCK_TTL_SEC).toBe(120);
   });
 
   it('락이 있으면 재생성 없음', async () => {
-    const s = swr({ [recommendLatestKey('u1')]: OLD, [recommendLockKey('u1')]: 1 });
+    const s = swr({ [recommendLatestKey('u1')]: OLD });
+    seedCounter(s.e.DB as D1Database, recommendLockKey('u1'), 1);
     await resolveRecommendations(s.deps());
     expect(s.pending).toHaveLength(0);
     expect(s.rl()).toBe(0);

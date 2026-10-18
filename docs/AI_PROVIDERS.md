@@ -117,6 +117,7 @@ Qwen 무료의 다른 작업(앱 프롬프트 그대로):
 - **일일 예산**
   - 전체 `OPENROUTER_DAILY_BUDGET` 45회(계정 한도 50보다 작게), 오늘의 명문장 몫 `OPENROUTER_BACKGROUND_BUDGET` 15회로 낮췄다.
   - 예산을 넘기면 기존 폴백으로 넘어간다: 요약·추천은 Workers AI, 인생책은 엄선 목록, 명문장은 내 노트, AI 컬렉션은 안내 문구.
+  - 저장 위치(2026-10-19~): 공급자별 하루 예산(`llm_budget:*`·`or_budget:*`), 노트 태그 쿼터(`ai_tag_quota:*`), AI 요약 하루 횟수(`ai_book_summary_count:*`), 생성 잠금(`*_lock:*`)은 D1 `counters` 테이블의 원자적 카운터다(ADR-005). 예전 KV get→put은 최종 일관성 때문에 몰린 요청을 막지 못했다.
 - **테스트**: JSON 모드 분기, 무료 예산 < 50.
 
 ### 알려진 한계

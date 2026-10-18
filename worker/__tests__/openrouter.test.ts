@@ -4,15 +4,20 @@ import {
   OPENROUTER_PAID_MODEL, OPENROUTER_REASONING_EFFORT, OPENROUTER_MAX_ATTEMPTS, supportsJsonMode,
   type OpenRouterEnv,
 } from '../lib/ai/openrouter';
+import { makeSqliteD1, seedCounter, counterValue } from './helpers/sqliteD1';
 
 const NOW = Date.UTC(2026, 8, 27, 3, 0, 0); // KST 2026-09-27
 const OPTS = { messages: [{ role: 'user' as const, content: '안녕' }], maxTokens: 100, temperature: 0.3, retryDelayMs: 0 };
 
 function makeEnv(over: { key?: string | null; kv?: Record<string, string> } = {}) {
   const kv = new Map(Object.entries(over.kv ?? {}));
+  const DB = makeSqliteD1();
+  // 하루 예산은 D1 카운터(ADR-005) — 시드 중 예산 키는 카운터로 옮긴다
+  for (const [k, v] of kv) if (/^(llm_budget|or_budget):/.test(k)) seedCounter(DB, k, parseInt(v, 10));
   const env: OpenRouterEnv = {
     OPENROUTER_API_KEY: over.key === null ? undefined : (over.key ?? 'sk-test'),
     FRONTEND_URL: 'https://bookshelf.example',
+    DB,
     KV: {
       get: vi.fn(async (k: string) => kv.get(k) ?? null) as unknown as KVNamespace['get'],
       put: vi.fn(async (k: string, v: string) => { kv.set(k, v); }) as unknown as KVNamespace['put'],
@@ -41,7 +46,7 @@ describe('chatCompletion', () => {
   it('성공: 헤더·모델·본문을 올바르게 보내고 예산을 1 소모', async () => {
     const fetchMock = vi.fn(async () => ok(' 요약 결과 '));
     vi.stubGlobal('fetch', fetchMock);
-    const { env, kv } = makeEnv();
+    const { env } = makeEnv();
     const res = await chatCompletion(env, { ...OPTS, json: true }, NOW);
     expect(res).toEqual({ text: '요약 결과', provider: 'openrouter' });
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
@@ -55,7 +60,7 @@ describe('chatCompletion', () => {
     expect(body.provider).toMatchObject({ sort: 'throughput' });
     expect(body.reasoning).toEqual({ effort: OPENROUTER_REASONING_EFFORT });
     expect(body.max_tokens).toBe(100);
-    expect(kv.get(budgetKey(NOW))).toBe('1');
+    expect(counterValue(env.DB as D1Database, budgetKey(NOW))).toBe('1');
   });
 
   it('JSON 모드: 지원 모델에만 response_format·require_parameters를 보내고, 무료 Qwen에는 보내지 않는다', async () => {
@@ -105,19 +110,19 @@ describe('chatCompletion', () => {
   it('429 후 재시도 성공 — 예산은 호출당 1만 소모', async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(limited()).mockResolvedValueOnce(ok('두 번째에 성공'));
     vi.stubGlobal('fetch', fetchMock);
-    const { env, kv } = makeEnv();
+    const { env } = makeEnv();
     expect((await chatCompletion(env, OPTS, NOW)).text).toBe('두 번째에 성공');
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(kv.get(budgetKey(NOW))).toBe('1');
+    expect(counterValue(env.DB as D1Database, budgetKey(NOW))).toBe('1');
   });
 
   it('429가 최대 시도 횟수만큼 이어지면 upstream 에러', async () => {
     const fetchMock = vi.fn(async () => limited());
     vi.stubGlobal('fetch', fetchMock);
-    const { env, kv } = makeEnv();
+    const { env } = makeEnv();
     await expect(chatCompletion(env, OPTS, NOW)).rejects.toMatchObject({ name: 'OpenRouterError', code: 'upstream' });
     expect(fetchMock).toHaveBeenCalledTimes(OPENROUTER_MAX_ATTEMPTS);
-    expect(kv.get(budgetKey(NOW))).toBe('1');
+    expect(counterValue(env.DB as D1Database, budgetKey(NOW))).toBe('1');
   });
 
   it('4xx(429 제외)는 재시도 없이 실패', async () => {

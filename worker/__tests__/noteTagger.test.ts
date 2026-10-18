@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { tagNote, DAILY_TAG_QUOTA, type TaggerEnv } from '../lib/ai/noteTagger';
+import { makeSqliteD1, seedCounter, counterValue } from './helpers/sqliteD1';
 
 const CONTENT = '주인공이 알을 깨고 나오는 장면에서 자아를 찾는 성장의 고통과 용기를 함께 느꼈다';
 const NOW = Date.UTC(2026, 8, 27, 3, 0, 0); // KST 2026-09-27
@@ -7,6 +8,8 @@ const NOW = Date.UTC(2026, 8, 27, 3, 0, 0); // KST 2026-09-27
 function fakeEnv(opts: { aiResponse?: unknown; aiThrows?: boolean; kv?: Record<string, string>; changes?: number } = {}) {
   const kv = new Map(Object.entries(opts.kv ?? {}));
   const updates: unknown[][] = [];
+  const counters = makeSqliteD1();
+  for (const [k, v] of kv) if (k.startsWith('ai_tag_quota:')) seedCounter(counters, k, parseInt(v, 10));
   const env: TaggerEnv = {
     AI: {
       run: vi.fn(async () => {
@@ -19,24 +22,25 @@ function fakeEnv(opts: { aiResponse?: unknown; aiThrows?: boolean; kv?: Record<s
       put: vi.fn(async (k: string, v: string) => { kv.set(k, v); }) as unknown as KVNamespace['put'],
     },
     DB: {
-      prepare: () => ({
+      // 하루 쿼터는 D1 카운터(ADR-005) → 실제 SQLite, 노트 UPDATE만 기록용 대역
+      prepare: (sql: string) => (sql.includes('counters') ? counters.prepare(sql) : {
         bind: (...args: unknown[]) => ({
           run: async () => { updates.push(args); return { meta: { changes: opts.changes ?? 1 } }; },
         }),
       }),
     } as unknown as D1Database,
   };
-  return { env, kv, updates };
+  return { env, kv, updates, counters };
 }
 
 describe('tagNote', () => {
   const note = { id: 'n1', userId: 'u1', content: CONTENT };
 
   it('정상: AI 응답을 파싱해 태그 저장 + 캐시·쿼터 기록', async () => {
-    const { env, kv, updates } = fakeEnv();
+    const { env, kv, updates, counters } = fakeEnv();
     expect(await tagNote(env, note, NOW)).toBe('tagged');
     expect(updates[0]).toEqual(['["성장","자아","희망"]', 'n1', 'u1', CONTENT]);
-    expect(kv.get('ai_tag_quota:u1:2026-09-27')).toBe('1');
+    expect(counterValue(counters, 'ai_tag_quota:u1:2026-09-27')).toBe('1');
     expect([...kv.keys()].some((k) => k.startsWith('ai_tag:'))).toBe(true);
     // 분류 작업이라 낮은 temperature로 호출
     expect(env.AI.run).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ temperature: 0.2 }));

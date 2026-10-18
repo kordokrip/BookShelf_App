@@ -4,6 +4,7 @@ import {
   parseBookIds, parseSuggestions, selectTargetBooks, suggestGenres, MAX_SUGGEST_BOOKS,
   type GenreBookRow, type GenreEnv,
 } from '../lib/ai/genreSuggestions';
+import { makeSqliteD1 } from './helpers/sqliteD1';
 
 afterEach(() => { vi.unstubAllGlobals(); });
 
@@ -26,7 +27,7 @@ function fakeDb(results: GenreBookRow[]) {
 function env(): GenreEnv {
   const kv = new Map<string, string>();
   return {
-    OPENROUTER_API_KEY: 'sk', KAKAO_REST_API_KEY: 'k',
+    OPENROUTER_API_KEY: 'sk', KAKAO_REST_API_KEY: 'k', DB: makeSqliteD1(),
     KV: { get: (async (k: string) => kv.get(k) ?? null) as unknown as KVNamespace['get'], put: (async (k: string, v: string) => { kv.set(k, v); }) as unknown as KVNamespace['put'] },
     AI: { run: vi.fn(async (model: string) => { if (model.includes('qwen')) throw new Error('27B 불가'); return { response: '{}' }; }) },
   };
