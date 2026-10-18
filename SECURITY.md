@@ -57,6 +57,7 @@ OWASP 권장치는 600,000+다. 유료 플랜이라 CPU 시간 여유는 있다(
 |-----------|------|--------|
 | POST /api/users/register | 3회 | 60초 |
 | POST /api/users/login | 5회 | 60초 |
+| POST /api/users/login (**계정 단위**, 실패만 셈) | 10회 실패 | 900초(15분) 고정 창 — 닿으면 맞는 비밀번호도 429 `login_locked`, 성공 시 기록 삭제. 키는 이메일 해시(`worker/lib/loginGuard.ts`) |
 | DELETE /api/users/me | 5회 | 60초 |
 | POST /api/auth/refresh | 10회 | 60초 |
 | POST /api/ai/book-summary/:bookId (AI 요약) | 3회 | KST 하루(실제 생성 시에만 차감) |

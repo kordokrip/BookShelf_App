@@ -539,7 +539,7 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 | Method | 경로 | 인증 | 요청 Body | 응답 | Worker 파일 |
 |---|---|---|---|---|---|
 | POST | `/api/users/register` | 없음 | `{name, email, password}` | `{data:{user, token}}` 201 | `routes/users.ts` |
-| POST | `/api/users/login` | 없음 | `{email, password}` | `{data:{user, token}}` | `routes/users.ts` |
+| POST | `/api/users/login` | 없음 | `{email, password}` | `{data:{user, token}}` · 429 `{error, reason:'login_locked'}`(같은 이메일 15분 실패 10회, `lib/loginGuard.ts`) | `routes/users.ts` |
 | GET | `/api/users/profile` | **authMiddleware** | — | `{data: user}` | `routes/users.ts` |
 | GET | `/api/users/:id` | **authMiddleware** | — | `{data: user}` (자신: 전체, 타인: 공개 필드) | `routes/users.ts` |
 

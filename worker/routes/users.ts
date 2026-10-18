@@ -23,6 +23,7 @@ import { hashPassword, verifyPassword, needsRehash, createToken, createRefreshTo
 import { rateLimit } from '../middleware/rateLimit';
 import { logActivity } from './admin';
 import { checkEmailConfirmation, getAccountDeletionBlock, purgeUserAccount, dormantBody } from '../lib/accountHelpers';
+import { clearLoginFailures, isLoginLocked, LOGIN_LOCKED_MESSAGE, recordLoginFailure } from '../lib/loginGuard';
 
 export const usersRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -105,11 +106,17 @@ usersRouter.post(
   async (c) => {
     const { email, password } = c.req.valid('json');
 
+    // 계정 단위 실패 한도(15분 10회) — 잠긴 동안은 맞는 비밀번호도 거절해 추측을 이어 갈 수 없게 한다
+    if (await isLoginLocked(c.env.DB, email)) {
+      return c.json({ error: LOGIN_LOCKED_MESSAGE, reason: 'login_locked' }, 429);
+    }
+
     let user = await c.env.DB.prepare(
       'SELECT * FROM users WHERE email = ?',
     ).bind(email).first<DbUser>();
 
     if (!user) {
+      await recordLoginFailure(c.env.DB, email); // 없는 계정도 똑같이 센다(존재 여부 구분 불가)
       return c.json({ error: '이메일 또는 비밀번호가 올바르지 않습니다.' }, 401);
     }
     if (!user.password_hash) {
@@ -118,8 +125,10 @@ usersRouter.post(
 
     const valid = await verifyPassword(password, user.password_hash);
     if (!valid) {
+      await recordLoginFailure(c.env.DB, email);
       return c.json({ error: '이메일 또는 비밀번호가 올바르지 않습니다.' }, 401);
     }
+    await clearLoginFailures(c.env.DB, email);
 
     // 휴면 계정 차단 — 비밀번호 확인 뒤에 알려 계정 존재 여부가 새지 않게 한다
     if (user.status === 'dormant') {
