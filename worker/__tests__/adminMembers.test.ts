@@ -199,6 +199,22 @@ describe('관리자 회원 관리 API', () => {
         body: JSON.stringify({ email: 'act@t.dev', password: 'Passw0rd!' }),
       });
       expect(res.status).toBe(200);
+      // 이미 현재 반복 횟수로 저장된 해시는 다시 쓰지 않는다
+      expect(ctx.stmts.some((s) => s.includes('UPDATE users SET password_hash'))).toBe(false);
+    });
+
+    it('예전 10,000회 형식 비밀번호도 로그인되고, 그 자리에서 현재 횟수로 다시 해시한다', async () => {
+      const salt = new Uint8Array(16);
+      const km = await crypto.subtle.importKey('raw', new TextEncoder().encode('Passw0rd!'), 'PBKDF2', false, ['deriveBits']);
+      const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 10_000, hash: 'SHA-256' }, km, 256);
+      const hex = (b: ArrayBuffer | Uint8Array) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('');
+      addUser(ctx.users, { id: 'old', email: 'old@t.dev', password_hash: `pbkdf2:${hex(salt)}:${hex(bits)}` });
+      const res = await call('/api/users/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'old@t.dev', password: 'Passw0rd!' }),
+      });
+      expect(res.status).toBe(200);
+      expect(ctx.stmts.some((s) => s.includes('UPDATE users SET password_hash'))).toBe(true);
     });
 
     it('refresh: 휴면이면 403, 활성이면 200', async () => {

@@ -41,72 +41,58 @@ export async function verifyRefreshToken(
   return kv.get(`refresh:${token}`);
 }
 
-/** SHA-256 비밀번호 해싱 (salt 포함) - 레거시용 */
-async function hashPasswordLegacy(password: string, salt: string): Promise<string> {
-  const data = new TextEncoder().encode(`${salt}:${password}`);
-  const hash = await crypto.subtle.digest('SHA-256', data);
-  const hex = [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, '0')).join('');
-  return `${salt}:${hex}`;
-}
-
 /**
- * PBKDF2 비밀번호 해싱
- * CF Workers CPU 한도(10-50ms) 제약으로 10,000 iterations 사용.
- * (OWASP 권장 600,000은 ~300ms 소요 → Workers CPU 초과 → 500 에러)
+ * PBKDF2-SHA256 비밀번호 해싱. 저장 형식 `pbkdf2:{반복 횟수}:{salt hex}:{hash hex}`.
+ * 예전 형식 `pbkdf2:{salt}:{hash}`(3칸)는 10,000회로 만든 것 — 검증은 그대로 되고, 로그인 때 새 횟수로 다시 해시한다.
+ * 100,000회: 예전(10,000)의 10배. 유료 플랜이라 CPU 여유는 있지만, Workers 런타임의 PBKDF2 상한이 과거 100,000이었어서
+ * 운영 확인 없이 그 이상은 쓰지 않는다(가입·로그인 전체가 실패할 수 있음). 로컬 workerd 측정: 100,000회 약 5ms.
+ * (레거시 SHA-256 해시 경로는 2026-10-19 운영·스테이징 0건 확인 후 제거)
  */
-export async function hashPassword(password: string): Promise<string> {
-  const saltBytes = crypto.getRandomValues(new Uint8Array(16));
-  const saltHex = [...saltBytes].map(b => b.toString(16).padStart(2, '0')).join('');
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(password),
-    'PBKDF2',
-    false,
-    ['deriveBits'],
-  );
-  const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', salt: saltBytes, iterations: 10_000, hash: 'SHA-256' },
-    keyMaterial,
-    256,
-  );
-  const hashHex = [...new Uint8Array(bits)].map(b => b.toString(16).padStart(2, '0')).join('');
-  return `pbkdf2:${saltHex}:${hashHex}`;
+export const PBKDF2_ITERATIONS = 100_000;
+const OLD_FORMAT_ITERATIONS = 10_000;
+
+const toHex = (bytes: Uint8Array) => [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
+const fromHex = (hex: string): Uint8Array<ArrayBuffer> => new Uint8Array((hex.match(/.{2}/g) ?? []).map((h) => parseInt(h, 16)));
+
+async function pbkdf2(password: string, salt: Uint8Array<ArrayBuffer>, iterations: number): Promise<Uint8Array> {
+  const keyMaterial = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations, hash: 'SHA-256' }, keyMaterial, 256);
+  return new Uint8Array(bits);
 }
 
-/** 비밀번호 검증 (PBKDF2 + 레거시 SHA-256 모두 지원) */
-export async function verifyPassword(password: string, stored: string): Promise<boolean> {
-  if (stored.startsWith('pbkdf2:')) {
-    const parts = stored.split(':');
-    if (parts.length !== 3) return false;
-    const saltHex = parts[1]!;
-    const storedHashHex = parts[2]!;
-    const saltBytes = new Uint8Array(saltHex.match(/.{2}/g)!.map(h => parseInt(h, 16)));
-    const keyMaterial = await crypto.subtle.importKey(
-      'raw',
-      new TextEncoder().encode(password),
-      'PBKDF2',
-      false,
-      ['deriveBits'],
-    );
-    const bits = await crypto.subtle.deriveBits(
-      { name: 'PBKDF2', salt: saltBytes, iterations: 10_000, hash: 'SHA-256' },
-      keyMaterial,
-      256,
-    );
-    const derivedBytes = new Uint8Array(bits);
-    const storedBytes = new Uint8Array(storedHashHex.match(/.{2}/g)!.map(h => parseInt(h, 16)));
-    if (derivedBytes.length !== storedBytes.length) return false;
-    let diff = 0;
-    for (let i = 0; i < derivedBytes.length; i++) {
-      diff |= (derivedBytes[i]! ^ storedBytes[i]!);
-    }
-    return diff === 0;
+function parseStoredHash(stored: string): { iterations: number; salt: Uint8Array<ArrayBuffer>; hash: Uint8Array } | null {
+  const parts = stored.split(':');
+  if (parts[0] !== 'pbkdf2') return null;
+  if (parts.length === 3) return { iterations: OLD_FORMAT_ITERATIONS, salt: fromHex(parts[1]!), hash: fromHex(parts[2]!) };
+  if (parts.length === 4) {
+    const iterations = Number(parts[1]);
+    if (!Number.isInteger(iterations) || iterations <= 0) return null;
+    return { iterations, salt: fromHex(parts[2]!), hash: fromHex(parts[3]!) };
   }
-  // 레거시 SHA-256 경로 (하위 호환)
-  const [salt] = stored.split(':');
-  if (!salt) return false;
-  const legacy = await hashPasswordLegacy(password, salt);
-  return legacy === stored;
+  return null;
+}
+
+export async function hashPassword(password: string): Promise<string> {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const hash = await pbkdf2(password, salt, PBKDF2_ITERATIONS);
+  return `pbkdf2:${PBKDF2_ITERATIONS}:${toHex(salt)}:${toHex(hash)}`;
+}
+
+/** 비밀번호 검증 (상수 시간 비교). 알 수 없는 형식은 false */
+export async function verifyPassword(password: string, stored: string): Promise<boolean> {
+  const parsed = parseStoredHash(stored);
+  if (!parsed) return false;
+  const derived = await pbkdf2(password, parsed.salt, parsed.iterations);
+  if (derived.length !== parsed.hash.length) return false;
+  let diff = 0;
+  for (let i = 0; i < derived.length; i++) diff |= derived[i]! ^ parsed.hash[i]!;
+  return diff === 0;
+}
+
+/** 현재 반복 횟수보다 약하게 저장된 해시인지 (로그인 성공 직후 다시 해시할 대상) */
+export function needsRehash(stored: string): boolean {
+  const parsed = parseStoredHash(stored);
+  return !parsed || parsed.iterations < PBKDF2_ITERATIONS;
 }
 
 /** ARCH-04: JWT 페이로드 런타임 타입 검증 */

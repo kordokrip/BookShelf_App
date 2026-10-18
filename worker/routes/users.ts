@@ -19,7 +19,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { HTTPException } from 'hono/http-exception';
 import type { Bindings, DbUser } from '../types';
-import { hashPassword, verifyPassword, createToken, createRefreshToken, authMiddleware } from '../auth';
+import { hashPassword, verifyPassword, needsRehash, createToken, createRefreshToken, authMiddleware } from '../auth';
 import { rateLimit } from '../middleware/rateLimit';
 import { logActivity } from './admin';
 import { checkEmailConfirmation, getAccountDeletionBlock, purgeUserAccount, dormantBody } from '../lib/accountHelpers';
@@ -126,8 +126,8 @@ usersRouter.post(
       return c.json(dormantBody(), 403);
     }
 
-    // 레거시 SHA-256 해시 → PBKDF2 투명 마이그레이션
-    if (!user.password_hash.startsWith('pbkdf2:')) {
+    // 약한 해시(예전 10,000회 형식) → 현재 반복 횟수로 투명하게 다시 해시
+    if (needsRehash(user.password_hash)) {
       const newHash = await hashPassword(password);
       await c.env.DB.prepare(
         'UPDATE users SET password_hash = ? WHERE id = ?',
