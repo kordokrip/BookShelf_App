@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Hono } from 'hono';
 import type { Bindings } from '../types';
 import { adminMembersRouter } from '../routes/adminMembers';
@@ -213,6 +213,22 @@ describe('관리자 회원 관리 API', () => {
       expect(r1.status).toBe(403);
       expect(await r1.json()).toEqual(DORMANT);
       expect((await post(good)).status).toBe(200);
+    });
+
+    it('refresh: TTL 갱신 쓰기가 실패해도(KV 429 등) 유효한 토큰이면 200', async () => {
+      addUser(ctx.users, { id: 'act', email: 'act@t.dev' });
+      const token = await createRefreshToken('act', ctx.env.KV);
+      const put = ctx.env.KV.put;
+      ctx.env.KV.put = (async (k: string, v: string, o?: unknown) => {
+        if (k === `refresh:${token}`) throw new Error('KV PUT failed: 429 Too Many Requests');
+        return (put as (k: string, v: string, o?: unknown) => Promise<void>)(k, v, o);
+      }) as unknown as KVNamespace['put'];
+      const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const res = await call('/api/auth/refresh', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refreshToken: token }),
+      });
+      spy.mockRestore();
+      expect(res.status).toBe(200);
     });
 
     it('authMiddleware: KV 휴면 키가 있으면 유효한 JWT도 403, 없으면 통과', async () => {
