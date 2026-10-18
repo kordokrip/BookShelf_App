@@ -8,8 +8,9 @@ const WS_FLAG = 'chat_ws';
 const INITIAL_BACKOFF_MS = 1_000;
 const MAX_BACKOFF_MS = 30_000;
 
-function isWsEnabled(): boolean {
-  try { return localStorage.getItem(WS_FLAG) === '1'; } catch { return false; }
+/** 기본 켜짐(2026-10-19~). localStorage chat_ws='0'이면 끈다(문제 시 폴링만으로 되돌리는 탈출구) */
+export function isWsEnabled(): boolean {
+  try { return localStorage.getItem(WS_FLAG) !== '0'; } catch { return true; }
 }
 
 function buildWsUrl(groupId: string, token: string): string {
@@ -25,7 +26,7 @@ export interface UseGroupChatResult {
 /**
  * 그룹 채팅 WebSocket 훅
  *
- * localStorage에 chat_ws=1 이 있을 때만 WS 연결을 시도한다.
+ * 기본으로 WS 연결을 시도한다(localStorage chat_ws='0'이면 끔 — 폴링만 사용).
  * 서버는 HTTP로 저장된 메시지·삭제를 ChatRoom DO로 넘겨 이 소켓으로 즉시 보낸다(worker/lib/chatBroadcast.ts).
  * 연결 실패 시 지수 백오프(1s → 2s → 4s … 30s)로 재연결.
  * WS 메시지 수신 시 TanStack Query 무한 쿼리 캐시를 직접 패치한다.

@@ -5,7 +5,7 @@
 
 ## WebSocket 채팅 로컬 테스트 가이드
 
-> WS 기능은 `localStorage.chat_ws=1` 플래그가 있어야 활성화됩니다.
+> WS는 2026-10-19부터 기본으로 켜집니다. `localStorage.chat_ws='0'`이면 꺼지고 3초 폴링만 씁니다(ADR-002).
 
 ### 사전 준비
 
@@ -18,11 +18,11 @@ npx wrangler dev --local --persist
 ### WS 모드 활성화 (브라우저 콘솔)
 
 ```javascript
-// 활성화
-localStorage.setItem('chat_ws', '1');
+// 끄기 (폴링 폴백만 사용)
+localStorage.setItem('chat_ws', '0');
 location.reload();
 
-// 비활성화 (폴링 폴백으로 전환)
+// 다시 켜기 (기본값)
 localStorage.removeItem('chat_ws');
 location.reload();
 ```
@@ -35,7 +35,8 @@ location.reload();
 | 2 | 첫 번째 탭 채팅 열면 "{n}명 접속 중" 배지 표시 | 두 번째 탭 열면 카운트 증가 |
 | 3 | 한 탭 닫기 | 남은 탭에서 카운트 감소 |
 | 4 | 네트워크 차단 후 복구 | 지수 백오프 재연결 (1s→2s→4s…) |
-| 5 | `chat_ws` 미설정 (기본) | 3초 폴링으로 정상 동작 |
+| 5 | `chat_ws='0'` (끔) | 3초 폴링으로 정상 동작 |
+| 7 | 한 탭에서 메시지 삭제(모임장) | 다른 탭에 즉시 "삭제된 메시지입니다." (`message_deleted` 프레임) |
 | 6 | WS 연결 실패 (잘못된 그룹 멤버) | 403 에러, 폴링 폴백 동작 |
 
 ### 디버깅
@@ -43,6 +44,7 @@ location.reload();
 DevTools → Network → WS 탭에서 프레임 내용 확인:
 - `{"type":"presence","onlineUsers":["user-id-1","user-id-2"]}`
 - `{"type":"message","data":{...}}`
+- `{"type":"message_deleted","data":{"id":"…","deleted_at":"…"}}`
 - `{"type":"pong"}` (30초마다 ping/pong)
 
 ---
@@ -573,5 +575,5 @@ open lighthouse-a11y.html
 |------|------|------|
 | OCR 한국어 인식 | ⚠️ 부분 지원 | CF Dashboard에서 llama-3.2-11b 라이선스 수락 필요 (코드 변경 불필요) |
 | SplashPage 자동 이동 없음 | ⚠️ 설계 결정 | 버튼 클릭 기반 (자동 타이머 없음) |
-| WebSocket 채팅 | ✅ 구현됨 (ADR-002) | `localStorage.chat_ws=1` 플래그로 활성화, 기본값은 3초 폴링 폴백 |
+| WebSocket 채팅 | ✅ 기본 켜짐 (ADR-002, 2026-10-19~) | HTTP 전송·삭제도 DO로 실시간 전달. `localStorage.chat_ws='0'`이면 끄고 3초 폴링 |
 | 관리자 API 스크립트 기본 로그인 | ⚠️ 환경 의존 | 기본 자격증명이 없으면 실패. `ADMIN_TOKEN` 실행 경로 사용 권장 |

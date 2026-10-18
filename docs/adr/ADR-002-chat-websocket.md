@@ -1,6 +1,6 @@
 # ADR-002: 그룹 채팅 전송 방식 — D1 폴링 → Durable Objects WebSocket
 
-**상태**: 채택 (2026-07-16)  
+**상태**: 승인됨 (2026-07-16 채택, 2026-10-19 기본 켜짐으로 전환·구현 완료)  
 **결정자**: 개발팀  
 **관련 문서**: 없음 (초기 설계 검토 자료는 정리됨)
 
@@ -39,15 +39,29 @@ Cloudflare **Durable Objects + WebSocket Hibernation API**를 도입하되,
 ### 프론트엔드
 
 - `src/hooks/useGroupChat.ts` — WS 연결, 지수 백오프 재연결, TQ 캐시 패치
-- `localStorage.chat_ws = '1'` 플래그로 WS 활성화 (없으면 폴링 유지)
+- ~~`localStorage.chat_ws = '1'` 플래그로 WS 활성화~~ → 2026-10-19부터 **기본 켜짐**, `localStorage.chat_ws = '0'`이면 끔(폴링만 — 문제 시 탈출구)
 - `ChatTab.tsx` — `isWsConnected` 시 `wsOnlineUsers.length`로 온라인 카운트 교체
 
 ### 단계적 전환
 
 ```
-WS 비활성 (기본): 3초 폴링 그대로 동작
-WS 활성:          WS로 실시간 수신 + 폴링이 안전망 역할
-                  (2026-10-19~ 연결 중에는 폴링을 30초로 늦추고, (재)연결 직후 1회 재조회로 끊긴 동안의 메시지를 메운다)
+WS 연결 (기본):   WS로 실시간 수신 + 30초 폴링이 안전망, (재)연결 직후 1회 재조회로 끊긴 동안의 메시지를 메움
+WS 미연결·chat_ws='0': 3초 폴링
+```
+
+### 2026-10-19 보완 — HTTP 전송의 실시간 전달
+
+전환 전 확인 결과, 채팅 전송은 처음부터 HTTP `POST /api/groups/:id/messages`(알림·rate limit·읽음 갱신 포함)였고
+서버가 이 메시지를 DO로 넘기지 않아 **WS는 접속 상태만 실시간이고 메시지는 폴링으로 받고 있었다**.
+(그래서 같은 날 먼저 배포한 "WS 연결 중 폴링 30초"는 플래그 사용자에게 최대 30초 지연을 만들었다 — 이 보완으로 해소)
+
+- 저장 후 `worker/lib/chatBroadcast.ts`의 `broadcastToRoom`이 모임의 ChatRoom DO에 내부 `POST /broadcast`를 보내고,
+  DO가 접속 중인 모든 소켓에 `{type:'message', data}`를 전달한다. 소프트 삭제는 `{type:'message_deleted', data:{id, deleted_at}}`.
+- 실패해도 요청은 성공(메시지는 D1에 있고 안전망 폴링이 메움).
+- 클라이언트 캐시 반영: `src/lib/chatCache.ts`(`insertIncomingMessage`·`markMessageDeleted`, id 중복 무시).
+- 검증: e2e TEST 82(실제 WebSocket 접속 상태에서 HTTP 전송·삭제 이벤트 수신). 실측으로 소켓 이벤트가 HTTP 응답보다 먼저 도착한다.
+
+```
 ```
 
 ---
