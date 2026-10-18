@@ -5,6 +5,7 @@ import {
   recommendLockKey, resolveRecommendations, selectPromptBooks, MAX_PROMPT_BOOKS, RECOMMEND_LOCK_TTL_SEC,
   RESULT_MAX, type OwnedBook, type RecommendDeps, type RecommendEnv, type RecommendItem,
 } from '../lib/ai/bookRecommend';
+import { makeSqliteD1, counterSum } from './helpers/sqliteD1';
 
 afterEach(() => { vi.unstubAllGlobals(); });
 
@@ -62,7 +63,7 @@ const json = (b: unknown) => new Response(JSON.stringify(b), { status: 200 });
 function env(): RecommendEnv & { store: Map<string, string> } {
   const store = new Map<string, string>();
   return {
-    store, OPENROUTER_API_KEY: 'sk', KAKAO_REST_API_KEY: 'k',
+    store, OPENROUTER_API_KEY: 'sk', KAKAO_REST_API_KEY: 'k', DB: makeSqliteD1(),
     KV: {
       get: (async (k: string) => store.get(k) ?? null) as unknown as KVNamespace['get'],
       put: (async (k: string, v: string) => { store.set(k, v); }) as unknown as KVNamespace['put'],
@@ -147,7 +148,7 @@ function swr(seed: Record<string, unknown> = {}) {
     env: e, userId: 'u1', books, favoriteGenres: [], forceRefresh: false, path: '/api/ai/recommend', subject: 'u:u1',
     waitUntil: (p) => { pending.push(p); }, build: build as unknown as RecommendDeps['build'], nowMs: 1_000_000, ...over,
   });
-  const rl = () => [...e.store.keys()].filter((k) => k.startsWith('rl:ai_rec:')).reduce((n, k) => n + parseInt(e.store.get(k)!, 10), 0);
+  const rl = () => counterSum(e.DB as D1Database, 'rl:ai_rec:');
   return { e, deps, build, pending, rl };
 }
 const ck = recommendCacheKey('u1', books);

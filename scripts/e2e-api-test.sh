@@ -47,7 +47,7 @@ FAILED_TESTS=()
 if [[ "$READONLY" == true ]]; then
   TOTAL=3
 else
-  TOTAL=77
+  TOTAL=78
 fi
 
 # ── 시작 시각 ────────────────────────────────────────────────────
@@ -1572,6 +1572,27 @@ if [[ "$HTTP_CODE" == "401" ]]; then
   pass_test $T "$NAME" $ELAPSED
 else
   fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE} (기대: 401)"
+fi
+
+# ================================================================
+# GROUP 18 — Rate limit 실동작 (예전 KV 카운터는 최종 일관성 때문에 429가 한 번도 나지 않았다 — ADR-005)
+# 로그인 한도(같은 IP 분당 5회)를 없는 계정으로 넘겨 본다. 앞선 로그인과 같은 창이면 더 일찍 429가 난다.
+# ================================================================
+T=81; NAME="POST /api/users/login 연속 요청 → 한도 초과 시 429"; START=$(now_ms)
+RL_CODES=""
+for _ in 1 2 3 4 5 6 7; do
+  C=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${BASE_URL}/api/users/login" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"e2e_rl_${TIMESTAMP}@test.dev\",\"password\":\"${TEST_PASS}\"}")
+  RL_CODES="${RL_CODES}${C} "
+  [[ "$C" == "429" ]] && break
+done
+ELAPSED=$(( $(now_ms) - START ))
+if [[ "$RL_CODES" == *"429"* ]]; then
+  pass_test $T "$NAME" $ELAPSED
+  printf "         ${CYAN}↳ %s${NC}\n" "$RL_CODES"
+else
+  fail_test $T "$NAME" $ELAPSED "" "7회 연속 요청에 429 없음: ${RL_CODES}(기대: 한도 5회 뒤 429)"
 fi
 
 # ================================================================

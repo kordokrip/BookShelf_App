@@ -7,6 +7,7 @@
  */
 import { analyzeTopGenres, extractJsonObject, hashString, sanitizeForPrompt } from './aiRecommend';
 import { resolveSwr, type SwrKv, type SwrPayload } from './aiSwr';
+import type { CounterDb } from '../counters';
 import { generateText, type GenerateEnv, type Provider } from './llm';
 
 export const COLLECTIONS_CACHE_VERSION = 'v1';
@@ -143,7 +144,7 @@ export function parseCollections(text: string, books: CollectionBook[]): AiColle
   return out;
 }
 
-export type CollectionsEnv = GenerateEnv & { KV: SwrKv };
+export type CollectionsEnv = GenerateEnv & { KV: SwrKv; DB: CounterDb };
 
 export interface CollectionsDeps {
   env: CollectionsEnv;
@@ -179,6 +180,7 @@ export async function resolveCollections(deps: CollectionsDeps): Promise<Collect
   try {
     swr = await resolveSwr<AiCollection>({
       kv: env.KV,
+      db: env.DB,
       cacheKey: collectionsCacheKey(userId, books),
       latestKey: collectionsLatestKey(userId),
       lockKey: collectionsLockKey(userId),

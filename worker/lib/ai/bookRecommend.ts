@@ -10,6 +10,7 @@ import {
   normalizeTitle, sanitizeForPrompt, type ReadingProfileBook, type RecommendationSource,
 } from './aiRecommend';
 import { resolveSwr, type SwrKv, type SwrPayload, type SwrResponse } from './aiSwr';
+import type { CounterDb } from '../counters';
 import { searchBook, type LookupEnv } from '../bookLookup';
 import { generateText, type GenerateEnv, type Provider } from './llm';
 import type { ChatMessage } from './openrouter';
@@ -20,7 +21,7 @@ import {
 } from './recommendShared';
 
 export type { RecommendItem } from './recommendShared';
-export type RecommendEnv = GenerateEnv & LookupEnv & { KV: SwrKv };
+export type RecommendEnv = GenerateEnv & LookupEnv & { KV: SwrKv; DB: CounterDb };
 
 export const RECOMMEND_CACHE_VERSION = 'v4';
 export const RECOMMEND_CACHE_TTL_SEC = 24 * 60 * 60;
@@ -264,6 +265,7 @@ export async function resolveRecommendations(deps: RecommendDeps): Promise<Recom
   const excluded = buildExcluded(books);
   return resolveSwr<RecommendItem>({
     kv: env.KV,
+    db: env.DB,
     cacheKey: recommendCacheKey(userId, books),
     latestKey: recommendLatestKey(userId),
     lockKey: recommendLockKey(userId),

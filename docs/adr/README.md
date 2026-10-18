@@ -8,6 +8,7 @@
 | 002 | 채팅 시스템 D1 폴링 → Durable Objects WebSocket | 2026-07-16 | 채택 | [ADR-002](ADR-002-chat-websocket.md) |
 | 003 | 리뉴얼 기능 공개: 기능 플래그 + 스테이징 점진 공개 | 2026-09-27 | 채택 | [ADR-003](ADR-003-feature-flags-staging.md) |
 | 004 | 업적 서버 저장형 전환 + 캐릭터 진화 | 2026-09-27 | 채택 | [ADR-004](ADR-004-server-achievements.md) |
+| 005 | rate limit·AI 한도·생성 잠금: KV → D1 원자적 카운터 | 2026-10-19 | 승인됨 | [ADR-005](ADR-005-d1-atomic-counters.md) |
 
 ---
 

@@ -19,6 +19,8 @@ function makeEnv() {
 
   const exec = (sql: string, a: unknown[], mode: 'first' | 'run') => {
     stmts.push(sql);
+    // rate limit 카운터(D1 UPSERT): 이 테스트는 한도와 무관하므로 항상 첫 소모로 응답
+    if (sql.includes('INSERT INTO counters')) return { count: 1 };
     if (sql.includes('SELECT role FROM users WHERE id')) return users.get(a[0] as string) ? { role: users.get(a[0] as string)!.role } : null;
     if (sql.includes('SELECT id, email, role, status FROM users WHERE id')) return users.get(a[0] as string) ?? null;
     if (sql.includes('SELECT * FROM users WHERE email')) return [...users.values()].find((u) => u.email === a[0]) ?? null;

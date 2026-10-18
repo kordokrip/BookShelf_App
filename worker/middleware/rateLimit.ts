@@ -1,5 +1,6 @@
 import type { MiddlewareHandler } from 'hono';
 import type { Bindings } from '../types';
+import { consumeCounter, type CounterDb } from '../lib/counters';
 
 interface RateLimitOptions {
   limit: number;
@@ -12,19 +13,15 @@ interface RateLimitOptions {
   keyBy?: 'ip' | 'user';
 }
 
-/** KV expirationTtl 최소값(초) */
-const KV_MIN_TTL_SEC = 60;
-
 /**
- * 현재 시각이 속한 고정 창의 번호와, 그 창이 끝날 때까지 남은 TTL(초).
+ * 현재 시각이 속한 고정 창의 번호와, 그 창이 끝나는 시각(epoch 초).
  * 창 번호를 키에 넣으므로 창이 바뀌면 카운터가 새 키에서 0부터 시작한다.
- * (이전 구현은 증가할 때마다 TTL을 다시 설정해 요청이 이어지는 동안 창이 계속 연장됐음)
+ * (예전 KV 구현은 증가할 때마다 TTL을 다시 설정해 요청이 이어지는 동안 창이 계속 연장됐음)
  */
 export function computeRateLimitWindow(nowMs: number, windowMs: number) {
   const windowId = Math.floor(nowMs / windowMs);
-  const remainingMs = (windowId + 1) * windowMs - nowMs;
-  const ttlSec = Math.max(KV_MIN_TTL_SEC, Math.ceil(remainingMs / 1000));
-  return { windowId, ttlSec };
+  const expiresAtSec = Math.ceil(((windowId + 1) * windowMs) / 1000);
+  return { windowId, expiresAtSec };
 }
 
 export const RATE_LIMIT_MESSAGE = '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.';
@@ -32,22 +29,26 @@ export const RATE_LIMIT_MESSAGE = '요청이 너무 많습니다. 잠시 후 다
 /**
  * 한도 확인 + 1 소모. 허용이면 true, 한도 초과면 false(소모하지 않음).
  * 미들웨어와 "실제로 생성할 때만 세는" 핸들러 내부 검사가 같은 키 체계(`rl:{prefix}:{path}:{subject}:{window}`)를 공유한다.
+ * D1 원자적 카운터(worker/lib/counters.ts) — KV get→put은 최종 일관성 때문에 한도가 걸리지 않았다(ADR-005).
+ * 카운터 저장소 오류 시에는 요청을 막지 않는다(가용성 우선, 오류는 로그로 남김).
  */
 export async function consumeRateLimit(
-  kv: Pick<KVNamespace, 'get' | 'put'>,
+  db: CounterDb,
   opts: { limit: number; windowMs: number; keyPrefix: string; path: string; subject: string; nowMs?: number },
 ): Promise<boolean> {
-  const { windowId, ttlSec } = computeRateLimitWindow(opts.nowMs ?? Date.now(), opts.windowMs);
+  const nowMs = opts.nowMs ?? Date.now();
+  const { windowId, expiresAtSec } = computeRateLimitWindow(nowMs, opts.windowMs);
   const key = `rl:${opts.keyPrefix}:${opts.path}:${opts.subject}:${windowId}`;
-  const current = await kv.get(key);
-  const count = current ? parseInt(current, 10) : 0;
-  if (count >= opts.limit) return false;
-  await kv.put(key, String(count + 1), { expirationTtl: ttlSec });
-  return true;
+  try {
+    return (await consumeCounter(db, key, opts.limit, expiresAtSec, nowMs)) !== null;
+  } catch (err) {
+    console.error('[rateLimit] 카운터 오류 — 요청 허용:', key, err);
+    return true;
+  }
 }
 
 /**
- * KV 기반 Rate Limiting 미들웨어 (고정 창 방식)
+ * Rate Limiting 미들웨어 (고정 창 방식, D1 원자적 카운터)
  *
  * 사용 예시:
  *   router.post('/login', rateLimit({ limit: 5, windowMs: 60_000, keyPrefix: 'login' }), handler)
@@ -65,7 +66,7 @@ export function rateLimit(
     const userId = keyBy === 'user' ? (c as unknown as { get(k: string): unknown }).get('userId') : undefined;
     const subject = typeof userId === 'string' && userId ? `u:${userId}` : ip;
     const path = new URL(c.req.url).pathname;
-    const allowed = await consumeRateLimit(c.env.KV, { limit, windowMs, keyPrefix, path, subject });
+    const allowed = await consumeRateLimit(c.env.DB, { limit, windowMs, keyPrefix, path, subject });
     if (!allowed) {
       return c.json(
         { error: RATE_LIMIT_MESSAGE },

@@ -5,6 +5,7 @@ import {
 } from '../lib/ai/aiCollections';
 import { OPENROUTER_FREE_MODELS, supportsJsonMode } from '../lib/ai/openrouter';
 import { hashString } from '../lib/ai/aiRecommend';
+import { makeSqliteD1, counterSum } from './helpers/sqliteD1';
 
 afterEach(() => { vi.unstubAllGlobals(); });
 
@@ -87,13 +88,14 @@ function setup(modelText: string | (() => Response) = JSON.stringify({ collectio
     return new Response(JSON.stringify({ choices: [{ message: { content: modelText } }] }), { status: 200 });
   });
   vi.stubGlobal('fetch', fetchMock);
-  const env = { OPENROUTER_API_KEY: 'sk', KV, AI: { run: vi.fn() } } as unknown as CollectionsEnv;
+  const DB = makeSqliteD1();
+  const env = { OPENROUTER_API_KEY: 'sk', KV, DB, AI: { run: vi.fn() } } as unknown as CollectionsEnv;
   const pending: Promise<unknown>[] = [];
   const deps = (over: Record<string, unknown> = {}) => ({
     env, userId: 'u1', books, forceRefresh: false, path: '/api/ai/collections', subject: 'u:u1',
     waitUntil: (p: Promise<unknown>) => { pending.push(p); }, nowMs: Date.UTC(2026, 9, 5), ...over,
   });
-  const rl = () => [...store.keys()].filter((k) => k.startsWith('rl:ai_col:')).reduce((n, k) => n + parseInt(store.get(k)!, 10), 0);
+  const rl = () => counterSum(DB, 'rl:ai_col:');
   return { store, fetchMock, bodies, deps, pending, rl };
 }
 

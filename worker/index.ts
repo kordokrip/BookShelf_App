@@ -25,6 +25,7 @@ import { flagsRouter } from './routes/flags';
 import { achievementsRouter } from './routes/achievements';
 import { shouldServeSpaFallback } from './lib/spaFallback';
 import { isPregenerateWindow, pregenerateDailyCards } from './lib/dailyCardService';
+import { pruneExpiredCounters } from './lib/counters';
 export { ChatRoom } from './durable/ChatRoom';
 export { GeminiProxy } from './durable/GeminiProxy';
 
@@ -261,6 +262,12 @@ export default {
       sendDailyReminders(env, Date.now()).then((result) => {
         console.log(`[Cron] Push reminders sent: ${result.sent}, failed: ${result.failed}`);
       }),
+    );
+    // 만료된 rate limit·하루 한도·잠금 카운터 정리 (worker/lib/counters.ts)
+    ctx.waitUntil(
+      pruneExpiredCounters(env.DB)
+        .then((n) => { if (n > 0) console.log(`[Cron] 만료 카운터 정리: ${n}건`); })
+        .catch((err) => console.error('[Cron] 만료 카운터 정리 실패:', err)),
     );
     // KST 04시 첫 실행에만: 최근 활동 사용자의 오늘의 회고 카드를 미리 만들어 첫 화면이 기다리지 않게 한다
     if (isPregenerateWindow(Date.now())) {

@@ -83,7 +83,7 @@ OWASP 권장 반복 횟수는 600,000+ 이지만, Cloudflare Workers의 CPU 시�
 | POST /api/presence/heartbeat | 10회 | 60초 |
 | POST /api/vitals | 60회 | 60초 |
 
-> 전수 확인 기준: `worker/routes/*.ts` 전체에서 `rateLimit(` 사용처 grep (`worker/middleware/rateLimit.ts` 기반, KV 고정 창 방식)
+> 전수 확인 기준: `worker/routes/*.ts` 전체에서 `rateLimit(` 사용처 grep (`worker/middleware/rateLimit.ts` 기반, 고정 창 — D1 `counters` 테이블 원자적 카운터, ADR-005. 예전 KV 카운터는 최종 일관성 때문에 한도가 걸리지 않았다. 카운터 저장소 오류 시에는 요청을 막지 않는다. 실동작은 e2e TEST 81이 확인)
 
 ---
 

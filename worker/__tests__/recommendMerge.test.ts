@@ -9,6 +9,7 @@ import {
   stripRatingEcho, titleLookup, validateBasedOn, verifyCandidates, loadSeen, seenKey, SEEN_MAX, SEEN_TTL_SEC,
 } from '../lib/ai/recommendShared';
 import { searchByAuthor } from '../lib/bookLookup';
+import { makeSqliteD1, counterRows } from './helpers/sqliteD1';
 
 afterEach(() => { vi.unstubAllGlobals(); });
 
@@ -55,7 +56,7 @@ function stubWorld(w: World) {
 function env(): RecommendEnv & { store: Map<string, string> } {
   const store = new Map<string, string>();
   return {
-    store, OPENROUTER_API_KEY: 'sk', KAKAO_REST_API_KEY: 'k',
+    store, OPENROUTER_API_KEY: 'sk', KAKAO_REST_API_KEY: 'k', DB: makeSqliteD1(),
     KV: {
       get: (async (k: string) => store.get(k) ?? null) as unknown as KVNamespace['get'],
       put: (async (k: string, v: string) => { store.set(k, v); }) as unknown as KVNamespace['put'],
@@ -285,9 +286,10 @@ describe('합쳐진 추천 — resolveRecommendations (seen·SWR)', () => {
     const s = setup();
     await resolveRecommendations(s.deps());
     await resolveRecommendations(s.deps()); // 캐시 적중
-    const keys = [...s.e.store.keys()].filter((k) => k.startsWith('rl:'));
-    expect(keys).toHaveLength(1);
-    expect(keys[0]).toMatch(/^rl:ai_rec:/);
+    const rows = counterRows(s.e.DB as D1Database, 'rl:');
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.key).toMatch(/^rl:ai_rec:/);
+    expect(rows[0]!.count).toBe(1);
   });
 });
 

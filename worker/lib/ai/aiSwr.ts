@@ -5,6 +5,7 @@
  * 맨 처음(latest 없음)·refresh=true만 동기 생성. 한도는 "실제로 생성하는 요청"만 센다(캐시·stale 응답은 소모 없음).
  */
 import { consumeRateLimit, RATE_LIMIT_MESSAGE } from '../../middleware/rateLimit';
+import type { CounterDb } from '../counters';
 import type { RecommendationSource } from './aiRecommend';
 import type { Provider } from './llm';
 
@@ -32,6 +33,8 @@ export interface SwrGenerated<T> {
 
 export interface SwrOptions<T> {
   kv: SwrKv;
+  /** 한도 카운터용 D1 (KV는 원자적 증가가 없어 한도가 걸리지 않는다 — ADR-005) */
+  db: CounterDb;
   cacheKey: string;
   latestKey: string;
   lockKey: string;
@@ -84,7 +87,7 @@ async function generateAndStore<T>(o: SwrOptions<T>, background: boolean): Promi
 
 export async function resolveSwr<T>(o: SwrOptions<T>): Promise<SwrResponse<T>> {
   const { kv } = o;
-  const rate = () => consumeRateLimit(kv, { ...o.rate, path: o.path, subject: o.subject, nowMs: o.nowMs });
+  const rate = () => consumeRateLimit(o.db, { ...o.rate, path: o.path, subject: o.subject, nowMs: o.nowMs });
 
   if (o.forceRefresh) {
     await kv.delete(o.cacheKey);
