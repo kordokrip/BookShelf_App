@@ -320,7 +320,13 @@ export async function sendPushNotification(
       body: fetchBody ? (fetchBody.buffer as ArrayBuffer) : undefined,
     });
 
-    // 410 Gone / 404 → 구독 만료: 삭제 가능 (호출자가 처리)
+    // 404·410 → 브라우저가 구독을 없앴다(앱 재설치·권한 해제 등). 다시 쓸 수 없으므로 지운다.
+    // (지우지 않으면 PWA를 다시 설치할 때마다 죽은 구독이 쌓여 발송마다 헛된 요청이 늘었다 — 2026-10-19 운영: 1명에 8개)
+    if (response.status === 404 || response.status === 410) {
+      await env.DB.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').bind(subscription.endpoint).run()
+        .catch((err) => console.error('[push] 만료 구독 삭제 실패:', err));
+      return false;
+    }
     return response.status === 201 || response.status === 200 || response.status === 202;
   } catch {
     return false;
@@ -378,6 +384,9 @@ function buildPersonalizedPayload(
   };
 }
 
+/** 주간 리포트 동시 발송 묶음 크기(요청당 외부 fetch 수를 한 번에 몰지 않도록) */
+const PUSH_SEND_CONCURRENCY = 10;
+
 /** 일요일 20:00 KST 슬롯에서 이번 주 통계 리포트 발송 */
 async function sendWeeklyReports(db: D1Database, env: Bindings): Promise<{ sent: number; failed: number }> {
   let sent = 0;
@@ -397,8 +406,9 @@ async function sendWeeklyReports(db: D1Database, env: Bindings): Promise<{ sent:
     GROUP BY ps.endpoint, ps.p256dh, ps.auth, ps.user_id
   `).all<{ endpoint: string; p256dh: string; auth: string; user_id: string; pages: number; minutes: number }>();
 
-  for (const row of results ?? []) {
-    const ok = await sendPushNotification(
+  const rows = results ?? [];
+  for (let i = 0; i < rows.length; i += PUSH_SEND_CONCURRENCY) {
+    const oks = await Promise.all(rows.slice(i, i + PUSH_SEND_CONCURRENCY).map((row) => sendPushNotification(
       { endpoint: row.endpoint, p256dh: row.p256dh, auth: row.auth },
       env,
       {
@@ -407,9 +417,8 @@ async function sendWeeklyReports(db: D1Database, env: Bindings): Promise<{ sent:
         url:   '/stats',
         tag:   'weekly-report',
       },
-    );
-    if (ok) sent++;
-    else failed++;
+    )));
+    for (const ok of oks) { if (ok) sent++; else failed++; }
   }
 
   return { sent, failed };
@@ -470,11 +479,9 @@ export async function sendDailyReminders(env: Bindings, nowUtcMs: number = Date.
     for (const [userId, { subs, book }] of userMap.entries()) {
       const streak = calcStreak(sessionsByUser.get(userId) ?? [], nowUtcMs);
       const payload = buildPersonalizedPayload(book, streak);
-      for (const sub of subs) {
-        const ok = await sendPushNotification(sub, env, payload);
-        if (ok) sent++;
-        else failed++;
-      }
+      // 한 사용자의 여러 기기(구독)는 동시에 보낸다
+      const oks = await Promise.all(subs.map((sub) => sendPushNotification(sub, env, payload)));
+      for (const ok of oks) { if (ok) sent++; else failed++; }
     }
   }
 

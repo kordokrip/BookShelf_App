@@ -707,10 +707,10 @@ totals:       { totalPages: number; totalMinutes: number }
 | POST | `/api/push/subscribe` | **authMiddleware** | `{endpoint, keys:{p256dh, auth}}` (zod) | `{success: true}` | rate limit 5회/300s |
 | DELETE | `/api/push/unsubscribe` | **authMiddleware** | — | `{success: true}` | |
 | GET | `/api/push/status` | **authMiddleware** | — | `{subscribed: boolean}` | |
-| POST | `/api/push/test` | **authMiddleware** | — | `{sent: boolean}` | 테스트 알림 발송, rate limit 3회/3600s |
+| POST | `/api/push/test` | **authMiddleware** | — | `{success: boolean, sent: number, total: number}` | 테스트 알림 발송, rate limit 3회/3600s |
 | GET | `/api/push/debug` | **authMiddleware** | — | 디버그 정보 | |
 
-**Cron**: `*/15 * * * *` (15분마다) 트리거 → `sendDailyReminders()`가 현재 시각과 사용자별 `reminder_time` 슬롯이 일치하는 사용자에게 독서 리마인더 발송 (`worker/index.ts` scheduled)
+**Cron**: `*/15 * * * *` (15분마다) 트리거 → `sendDailyReminders()`가 현재 시각과 사용자별 `reminder_time` 슬롯이 일치하는 사용자에게 독서 리마인더 발송 (`worker/index.ts` scheduled). 같은 실행에서 만료된 `counters` 행(rate limit·하루 한도·잠금) 정리. 모든 푸시 발송(`sendPushNotification`)은 푸시 서비스가 404·410을 주면 그 구독을 `push_subscriptions`에서 지운다(2026-10-19~)
 
 ### 공유 리포트 (`/api/share`) — 44차 삭제
 
