@@ -39,15 +39,17 @@ describe('비밀번호 해시', () => {
     expect(needsRehash('abcd:ef01')).toBe(true);
   });
 
-  it('반복 횟수는 OWASP 2023 권장치(600,000) 이상', () => {
-    expect(PBKDF2_ITERATIONS).toBeGreaterThanOrEqual(600_000);
+  it('반복 횟수는 Workers 런타임 상한(100,000)을 넘지 않는다 — 넘으면 운영에서 가입·로그인이 500 (2026-10-19 스테이징 확인)', () => {
+    // 로컬 workerd·Node는 상한이 없어 다른 테스트로는 잡히지 않는다. 이 단언이 유일한 안전장치다.
+    expect(PBKDF2_ITERATIONS).toBeLessThanOrEqual(100_000);
+    expect(PBKDF2_ITERATIONS).toBeGreaterThan(10_000);
   });
 
-  it('예전 100,000회 4칸 형식도 검증되고 다시 해시 대상이다', async () => {
+  it('형식에 적힌 횟수로 검증한다 — 현재 상수와 다른 4칸 해시도 검증되고, 더 약하면 다시 해시 대상', async () => {
     const salt = crypto.getRandomValues(new Uint8Array(16));
     const km = await crypto.subtle.importKey('raw', new TextEncoder().encode('pw'), 'PBKDF2', false, ['deriveBits']);
-    const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 100_000, hash: 'SHA-256' }, km, 256);
-    const stored = `pbkdf2:100000:${hex(salt)}:${hex(bits)}`;
+    const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 50_000, hash: 'SHA-256' }, km, 256);
+    const stored = `pbkdf2:50000:${hex(salt)}:${hex(bits)}`;
     expect(await verifyPassword('pw', stored)).toBe(true);
     expect(needsRehash(stored)).toBe(true);
   });
