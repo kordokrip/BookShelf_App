@@ -23,7 +23,7 @@ migrations_dir = "worker/db/migrations"
 
 # ─── KV Namespaces ───────────────────────────────────────────
 # (예전 SESSIONS 바인딩은 2026-10-19 제거 — refresh token은 2026-04-08부터 KV에 저장, 남은 SESSIONS 토큰은 30일 TTL로 모두 만료.
-#  네임스페이스 3cb76beb…는 계정에 남아 있으며 필요하면 대시보드에서 지운다)
+#  빈 네임스페이스 SESSIONS·SESSIONS_preview도 2026-10-19 삭제)
 # AI 캐시 + 범용 KV
 [[kv_namespaces]]
 binding = "KV"

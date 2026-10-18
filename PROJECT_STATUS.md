@@ -1,9 +1,9 @@
 # BookShelf App — 현재 상태 스냅샷
 
-> **최종 업데이트:** 2026-10-12 (48차: DB·인터페이스·오류 경로 교차 검증 — 남의 통계 노출 API 삭제·검색 로그인 필수·없는 API JSON 404 / 47차: 반응형 점검). 이전 차수는 `docs/CHANGELOG.md`
+> **최종 업데이트:** 2026-10-19 (49차: 운영·DB 전수 점검 — rate limit·AI 한도 D1 원자적 카운터(ADR-005), PBKDF2 100,000회, 푸시 구독 정리, 중복 인덱스 정리, 채팅 WebSocket 기본 켜짐). 이전 차수는 `docs/CHANGELOG.md`
 > **Git 브랜치:** `main` (kordokrip/BookShelf_App)
-> **E2E 테스트:** `bash scripts/e2e-api-test.sh --url <대상>` → **전체 PASS** ✅ (2026-10-03 스테이징·프로덕션 확인, 테스트 개수는 `grep -n '^  TOTAL=' scripts/e2e-api-test.sh`로 확인)
-> **상세 세션 리포트:** `docs/sessions/2026-10-05-refactoring-requests.md` (직전: `2026-10-03-ipad-ai-theme.md`)
+> **E2E 테스트:** `bash scripts/e2e-api-test.sh --url <대상>` → **전체 PASS** ✅ (2026-10-19 스테이징 전체·프로덕션 `--readonly` 확인, 테스트 개수는 `grep -n '^  TOTAL=' scripts/e2e-api-test.sh`로 확인)
+> **상세 세션 리포트:** `docs/sessions/2026-10-19-ops-db-optimization.md` (직전: `2026-10-10-verification-cleanup.md`)
 > **기능 플래그:** 등록 목록은 `worker/lib/featureFlags.ts`의 `ALL_FEATURE_FLAGS`(현재 비어 있음), 공개 상태는 `GET /api/flags/public`으로 확인 (ADR-003)
 
 ---
@@ -114,9 +114,9 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 ### 인증 방식
 - `authMiddleware`: Bearer JWT 필수 (없으면 401)
 - `optionalAuth`: 토큰 없으면 `demo-user` 폴백
-- JWT: HS256, PBKDF2 비밀번호 해싱
+- JWT: HS256, PBKDF2-SHA256 비밀번호 해싱(반복 횟수는 `worker/auth.ts`의 `PBKDF2_ITERATIONS`, 형식 `pbkdf2:{n}:{salt}:{hash}` — 예전 형식은 로그인 시 자동 재해시)
 
-### Rate Limiting (KV 기반 고정 창) — 표는 대표 예시, 전체 최신값은 `SECURITY.md` 참고
+### Rate Limiting (고정 창, D1 `counters` 원자적 카운터 — ADR-005) — 표는 대표 예시, 전체 최신값은 `SECURITY.md` 참고
 | 경로 | 한도 | 창 |
 |------|------|-----|
 | POST /api/users/login | 5회 | 60s |
@@ -150,6 +150,8 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 | `0017_user_appearance.sql` | users `theme_accent`(강조색 프리셋 id), `theme_mode`(auto/light/dark) 추가 — 둘 다 NULL 허용 |
 | `0018_user_status.sql` | users `status`(active/dormant, 기본 active), `dormant_at` 추가 + `idx_users_status` — 관리자 휴면 처리 |
 | `0019_sort_indexes.sql` | `idx_books_user_created`·`idx_notes_user_created`(user_id, created_at DESC) — 서재·노트 목록 정렬을 인덱스로(임시 정렬 제거) |
+| `0020_counters.sql` | `counters(key, count, expires_at)` + `idx_counters_expires` — rate limit·AI 하루 한도·생성 잠금 원자적 카운터(ADR-005), 15분 Cron이 만료 행 정리 |
+| `0021_index_cleanup.sql` | 중복 인덱스 10개 DROP + `idx_notif_user_created`(알림 목록)·`idx_notes_user_book`(노트 목록·책별 노트) 추가 |
 
 마이그레이션 적용 절차·로컬 검증 원칙은 `docs/CI_CD.md` 참고. **로컬에서 `--remote` 마이그레이션을 직접 실행하지 말 것** — `git push origin main` 시 CI가 자동 적용한다.
 
@@ -167,7 +169,7 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 | `useStats.ts` | useStats (staleTime 5분) |
 | `useAI.ts` | useBookSummary, useAIRecommendations, useRefreshAIRecommendations, useLifeBooks, useRefreshLifeBooks |
 | `useGroups.ts` | 다수 hooks (useGroups, useGroupDetail, useGroupMessages, useNotificationUnreadCount 등) |
-| `useGroupChat.ts` | Durable Object WebSocket 채팅 |
+| `useGroupChat.ts` | Durable Object WebSocket 채팅 (기본 켜짐, `chat_ws='0'`이면 끔 — ADR-002) |
 | `useCollections.ts` | useCollections, useAddCollection, useDeleteCollection |
 | `useDiscover.ts` | useDiscover (탐색/발견 기능) |
 | `useOfflineQueue.ts` | @deprecated — TanStack Query `PersistQueryClientProvider`(`src/lib/queryClient.ts`)로 대체됨. 하위 호환용 dedup 가드만 남음 |
@@ -179,8 +181,8 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 ### KV 캐시 키 패턴
 - AI 요약: `ai:summary:{isbn}` / `ai:summary:nod:{title}:{author}` (24h)
 - AI 추천: `ai_recommend:{userId}:{topGenres}` (1h)
-- AI 노트 태그: `ai_tag:{규칙버전}:{내용 해시}` (7일), 일일 한도 `ai_tag_quota:{userId}:{KST 날짜}`
-- Rate Limit: `rl:{prefix}:{path}:{ip}:{창 번호}` (고정 창 — 창 번호 = `floor(now / windowMs)`)
+- AI 노트 태그: `ai_tag:{규칙버전}:{내용 해시}` (7일). 일일 한도 `ai_tag_quota:{userId}:{KST 날짜}`는 D1 `counters`
+- (KV 아님) Rate Limit: D1 `counters`의 `rl:{prefix}:{path}:{ip 또는 u:userId}:{창 번호}` (고정 창 — 창 번호 = `floor(now / windowMs)`). AI 예산·잠금 키도 같은 테이블(ADR-005)
 - AI 한도: 추천 `ai_rec`(rate limit)와 AI 요약 하루 카운터(`ai_book_summary_count`, 하루 3번)는 별도 — 공유 금지
 
 ---
@@ -190,8 +192,7 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 | 바인딩 | 타입 | 리소스 | 비고 |
 |--------|------|--------|------|
 | `DB` | D1Database | bookshelf-db (`013db269-dc7a-4a60-9920-ed40c12ab623`) | D1은 기본적으로 FK 제약을 강제함(SQLite의 `PRAGMA foreign_keys=on` 상당) — `ON DELETE CASCADE` 정의만으로 연쇄 삭제 동작함 |
-| `SESSIONS` | KVNamespace | JWT Refresh Token 저장 | `worker/routes/auth.ts`에서 지금도 사용 중(과거 "미사용" 주석은 오기였음, 2026-08-15 정정) |
-| `KV` | KVNamespace | AI 캐시 + Rate Limit 카운터 | |
+| `KV` | KVNamespace | AI 캐시, refresh token(`refresh:{token}`, 30일), 휴면 키 | 카운터는 D1 `counters`(ADR-005). 예전 `SESSIONS` 바인딩·네임스페이스는 2026-10-19 삭제 |
 | `R2` | R2Bucket | bookshelf-covers (책 표지) | |
 | `AI` | Workers AI | llama 계열 모델(요약/추천/OCR) | |
 | `CHAT_ROOM` | Durable Object | `ChatRoom` 클래스, WebSocket Hibernation | 그룹 채팅 실시간 처리(ADR-002) |
