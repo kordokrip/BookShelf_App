@@ -1,6 +1,6 @@
 # BookShelf App — 현재 상태 스냅샷
 
-> **최종 업데이트:** 2026-10-19 (49차: 운영·DB 전수 점검 — rate limit·AI 한도 D1 원자적 카운터(ADR-005), PBKDF2 100,000회, 푸시 구독 정리, 중복 인덱스 정리, 채팅 WebSocket 기본 켜짐). 이전 차수는 `docs/CHANGELOG.md`
+> **최종 업데이트:** 2026-10-19 (49차: 운영·DB 전수 점검 — rate limit·AI 한도 D1 원자적 카운터(ADR-005), PBKDF2 100,000회(Workers 상한), 계정 단위 로그인 한도, 푸시 구독 정리, 중복 인덱스 정리, 채팅 WebSocket 기본 켜짐). 이전 차수는 `docs/CHANGELOG.md`
 > **Git 브랜치:** `main` (kordokrip/BookShelf_App)
 > **E2E 테스트:** `bash scripts/e2e-api-test.sh --url <대상>` → **전체 PASS** ✅ (2026-10-19 스테이징 전체·프로덕션 `--readonly` 확인, 테스트 개수는 `grep -n '^  TOTAL=' scripts/e2e-api-test.sh`로 확인)
 > **상세 세션 리포트:** `docs/sessions/2026-10-19-ops-db-optimization.md` (직전: `2026-10-10-verification-cleanup.md`)

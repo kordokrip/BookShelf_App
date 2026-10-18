@@ -39,7 +39,11 @@
 - **저장 형식**: `pbkdf2:{반복 횟수}:{salt hex}:{hash hex}`. 예전 형식 `pbkdf2:{salt}:{hash}`는 10,000회로 만든 해시이며, 검증은 그대로 되고 **로그인에 성공하면 그 자리에서 현재 횟수로 다시 해시**한다(`needsRehash`).
 
 #### 반복 횟수에 대한 설명
-OWASP 권장치는 600,000+다. 유료 플랜이라 CPU 시간 여유는 있다(로컬 workerd 측정: 100,000회 약 5ms, 600,000회 약 32ms). 그러나 Workers 런타임은 과거 PBKDF2 반복 횟수를 100,000으로 제한했다. 운영에서 확인하지 않고 그 이상으로 올리면 가입과 로그인 전체가 실패할 수 있어서 100,000에 둔다. 올리려면 스테이징에서 가입·로그인 e2e로 먼저 확인할 것.
+OWASP 권장치는 600,000+지만 **Cloudflare Workers 런타임의 PBKDF2 상한이 100,000이다(확인됨).** 2026-10-19 스테이징에 600,000을 배포하자 가입이 500 `NotSupportedError: Pbkdf2 failed: iteration counts above 100000 are not supported`로 실패했다. 로컬 workerd(`wrangler dev`)와 Node에는 이 상한이 없어 로컬 테스트로는 드러나지 않는다. `worker/__tests__/password.test.ts`의 "100,000 이하" 단언이 유일한 안전장치이니 지우지 말 것.
+
+edge 실측(`wrangler tail`, 스테이징): 로그인 CPU 34~45ms(계정 단위 한도 포함, 기준 health 1~17ms).
+
+더 강하게 하려면 반복 횟수 대신 **pepper**(Worker secret으로 HMAC을 한 번 더 거는 방식)를 검토한다. DB만 유출됐을 때 오프라인 대입을 막는 효과가 크다. 다만 secret을 잃으면 모든 비밀번호를 검증할 수 없게 된다.
 
 **위험 완화 조치**:
 - Rate Limiting 적용 (로그인 5회/분, 회원가입 3회/분) — D1 원자적 카운터로 실제로 걸린다(ADR-005, e2e TEST 81)
