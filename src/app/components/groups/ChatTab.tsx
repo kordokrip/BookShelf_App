@@ -27,7 +27,7 @@ export function ChatTab({
   const user = useAuthStore((s) => s.user);
   const { onlineUsers: wsOnlineUsers, isWsConnected } = useGroupChat(groupId);
   const displayOnlineCount = isWsConnected ? wsOnlineUsers.length : onlineCount;
-  const { data: messages = [], isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useGroupMessages(groupId);
+  const { data: messages = [], isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useGroupMessages(groupId, { wsConnected: isWsConnected });
   const sendMessage = useSendMessage(groupId);
   const deleteMessage = useDeleteMessage(groupId);
   const markRead = useMarkGroupRead(groupId);

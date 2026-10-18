@@ -24,8 +24,12 @@ export function useGroupDetail(groupId: string | undefined) {
   });
 }
 
+/** WS 미연결: 3초 폴링이 주 수신 경로 / WS 연결 중: 폴링은 안전망이라 30초로 늦춘다(ADR-002) */
+export const MESSAGE_POLL_MS = 3_000;
+export const MESSAGE_POLL_WITH_WS_MS = 30_000;
+
 /** 그룹 메시지 */
-export function useGroupMessages(groupId: string | undefined) {
+export function useGroupMessages(groupId: string | undefined, opts: { wsConnected?: boolean } = {}) {
   return useInfiniteQuery({
     queryKey: queryKeys.groups.messages(groupId ?? ''),
     queryFn: ({ pageParam }: { pageParam: string | undefined }) =>
@@ -38,7 +42,7 @@ export function useGroupMessages(groupId: string | undefined) {
     },
     select: (data) => data.pages.flatMap((p) => p.data).reverse(),
     enabled: !!groupId,
-    refetchInterval: 3_000,            // 채팅 활성 탭 기준 3초 폴링 (기존 10초 → 지연 단축)
+    refetchInterval: opts.wsConnected ? MESSAGE_POLL_WITH_WS_MS : MESSAGE_POLL_MS, // WS가 실시간 수신 중이면 폴링은 안전망만
     refetchIntervalInBackground: false, // 탭 비활성 시 폴링 자동 중단
     refetchOnWindowFocus: true,         // 탭 복귀 즉시 1회 refetch → 누락 메시지 보완
   });

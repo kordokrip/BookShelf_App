@@ -26,8 +26,9 @@ export interface UseGroupChatResult {
  *
  * localStorage에 chat_ws=1 이 있을 때만 WS 연결을 시도한다.
  * 연결 실패 시 지수 백오프(1s → 2s → 4s … 30s)로 재연결.
- * WS 메시지 수신 시 TanStack Query 무한 쿼리 캐시를 직접 패치하여
- * 기존 3초 폴링과 병행 동작한다 (폴링은 폴백 역할 유지).
+ * WS 메시지 수신 시 TanStack Query 무한 쿼리 캐시를 직접 패치한다.
+ * 연결 중에는 useGroupMessages가 폴링을 30초 안전망으로 늦추므로, (재)연결 직후 한 번 다시 불러와
+ * 끊겨 있던 동안의 메시지를 메운다.
  */
 export function useGroupChat(groupId: string): UseGroupChatResult {
   const qc = useQueryClient();
@@ -51,6 +52,7 @@ export function useGroupChat(groupId: string): UseGroupChatResult {
       if (destroyedRef.current) { ws.close(); return; }
       backoffRef.current = INITIAL_BACKOFF_MS;
       setIsWsConnected(true);
+      void qc.invalidateQueries({ queryKey: queryKeys.groups.messages(groupId) });
     };
 
     ws.onmessage = ({ data }) => {
