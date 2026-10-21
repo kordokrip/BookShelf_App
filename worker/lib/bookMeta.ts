@@ -150,21 +150,28 @@ export async function resolveBookMeta(env: BookMetaEnv, q: BookMetaQuery, deps: 
     if (raw) { try { return JSON.parse(raw) as BookMeta; } catch { /* 손상 → 다시 조회 */ } }
   }
 
-  const [seoji, olPages, match] = await Promise.all([
+  // Open Library는 느리고(제한 5초) 장르 판단에 필요 없으므로 LLM 분류와 동시에 기다린다
+  // (스테이징 실측: 순서대로 기다리면 최대 8.5초)
+  const olPagesP = deps.openLibrary(isbn).catch(() => null);
+  const [seoji, match] = await Promise.all([
     deps.seoji(env, isbn).catch(() => null),
-    deps.openLibrary(isbn).catch(() => null),
     withGenre && (title || isbn) ? deps.lookup(env, { title, author: q.author, isbn: isbn || undefined }).catch(() => null) : Promise.resolve(null),
   ]);
 
   const meta: BookMeta = { pageCount: null, pageSource: null, genre: null, genreSource: null, kdc: seoji?.kdc ?? null };
-  if (seoji?.pages) { meta.pageCount = seoji.pages; meta.pageSource = 'nl'; }
-  else if (olPages) { meta.pageCount = olPages; meta.pageSource = 'openlibrary'; }
+  const fillPages = async () => {
+    if (seoji?.pages) { meta.pageCount = seoji.pages; meta.pageSource = 'nl'; return; }
+    const olPages = await olPagesP;
+    if (olPages) { meta.pageCount = olPages; meta.pageSource = 'openlibrary'; }
+  };
 
   const kdc = genreFromKdc(meta.kdc);
   if (!withGenre) {
     // 페이지 수만 — 장르 없는 결과는 캐시하지 않는다(나중에 등록 화면이 장르까지 채워 캐시하도록)
+    await fillPages();
     return meta;
   }
+  const pagesDone = fillPages();
   if (kdc?.sure) {
     meta.genre = kdc.genre; meta.genreSource = 'kdc';
   } else if (title || match?.title) {
@@ -179,6 +186,8 @@ export async function resolveBookMeta(env: BookMetaEnv, q: BookMetaQuery, deps: 
     if (llm) { meta.genre = llm; meta.genreSource = 'llm'; }
     else if (kdc) { meta.genre = kdc.genre; meta.genreSource = 'kdc-approx'; }
   }
+
+  await pagesDone;
 
   // 장르까지 정해졌을 때만 캐시 — 쪽수만 있는 결과를 캐시하면 일시적인 분류 실패(null)가 30일 굳는다(로컬 실측으로 발견)
   if (isbn && meta.genre) {

@@ -163,3 +163,21 @@ describe('parseSuggestions — 모델 출력 형식 변형 (2026-10-21 로컬 �
     expect(extractSuggestionArray('{"genre":"x"}')).toBeNull();
   });
 });
+
+describe('resolveBookMeta — 동시 진행', () => {
+  it('Open Library를 기다리는 동안 LLM 분류가 시작된다(직렬 대기 없음)', async () => {
+    const order: string[] = [];
+    let releaseOl!: (n: number) => void;
+    const kv = new Map<string, string>();
+    const env = { KV: { get: async (k: string) => kv.get(k) ?? null, put: async (k: string, v: string) => { kv.set(k, v); } } } as unknown as BookMetaEnv;
+    const deps: BookMetaDeps = {
+      seoji: vi.fn(async () => null),
+      openLibrary: vi.fn(() => new Promise<number | null>((r) => { releaseOl = (n) => { order.push('ol-done'); r(n); }; })),
+      lookup: vi.fn(async () => MATCH),
+      classify: vi.fn(async () => { order.push('classify'); setTimeout(() => releaseOl(239), 0); return '해외문학' as const; }),
+    };
+    const meta = await resolveBookMeta(env, { isbn: '9788937460449', title: '데미안' }, deps);
+    expect(order).toEqual(['classify', 'ol-done']);
+    expect(meta).toMatchObject({ pageCount: 239, genre: '해외문학' });
+  });
+});
