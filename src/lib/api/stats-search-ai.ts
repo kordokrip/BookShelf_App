@@ -1,6 +1,16 @@
 import type { StatsResponse } from './types';
 import { ApiError, apiFetch, BASE_URL } from './client';
 
+/** GET /api/search/pagecount 응답 */
+export interface BookMetaResponse {
+  pageCount: number | null;
+  pageSource: 'nl' | 'openlibrary' | null;
+  genre: string | null;
+  genreSource: 'kdc' | 'llm' | 'kdc-approx' | null;
+  /** 예전 응답 호환 필드(항상 빈 배열) */
+  categories: string[];
+}
+
 // ─── Search API ───────────────────────────────────────────────
 
 export interface SearchBook {
@@ -35,15 +45,17 @@ export const searchApi = {
     ),
 
   /**
-   * Google Books → Open Library 순서로 책 페이지 수 + 카테고리 조회.
-   * categories는 장르 자동 감지에 활용됩니다.
+   * 책 등록용 페이지 수 + 장르(서버가 국립중앙도서관 서지정보·Open Library·KDC·AI 분류로 정함 — worker/lib/bookMeta.ts).
+   * genre가 null이면 클라이언트가 제목 키워드로 추정한다.
    */
-  getPageCount: (params: { isbn?: string; title?: string; author?: string }) => {
+  getPageCount: (params: { isbn?: string; title?: string; author?: string; publisher?: string; pagesOnly?: boolean }) => {
     const q = new URLSearchParams();
+    if (params.pagesOnly) q.set('need', 'pages');
     if (params.isbn) q.set('isbn', params.isbn);
     if (params.title) q.set('title', params.title);
     if (params.author) q.set('author', params.author);
-    return apiFetch<{ pageCount: number | null; categories: string[] }>(`/api/search/pagecount?${q.toString()}`);
+    if (params.publisher) q.set('publisher', params.publisher);
+    return apiFetch<BookMetaResponse>(`/api/search/pagecount?${q.toString()}`);
   },
 };
 

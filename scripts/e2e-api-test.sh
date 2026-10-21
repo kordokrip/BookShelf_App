@@ -47,7 +47,7 @@ FAILED_TESTS=()
 if [[ "$READONLY" == true ]]; then
   TOTAL=3
 else
-  TOTAL=79
+  TOTAL=80
 fi
 
 # ── 시작 시각 ────────────────────────────────────────────────────
@@ -685,6 +685,21 @@ if [[ -n "$ISBN_VAL" ]]; then
   pass_test $T "$NAME" $ELAPSED
 else
   fail_test $T "$NAME" $ELAPSED "$BODY" "isbn 필드 없음"
+fi
+
+T=83; NAME="GET /api/search/pagecount?need=pages (쪽수만 — 응답 형식, AI 호출 없음)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" --get --data-urlencode "isbn=9788937460449" --data-urlencode "title=데미안" --data-urlencode "need=pages" \
+  "${BASE_URL}/api/search/pagecount" -H "Authorization: Bearer ${TOKEN}")
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+# 쪽수는 외부 출처에 따라 null일 수 있다 — 형식만 본다. need=pages는 AI 분류를 하지 않지만, 이미 캐시된 장르는 함께 올 수 있다(lib/bookMeta.ts)
+OK83=$(json_val "$BODY" "all(k in d for k in ('pageCount','pageSource','genre','genreSource','categories')) and d['categories'] == [] and (d['pageCount'] is None or d['pageCount'] > 10) and d['pageSource'] in (None,'nl','openlibrary')")
+if [[ "$HTTP_CODE" == "200" && "$OK83" == "True" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+  printf "         ${CYAN}↳ pageCount=%s (%s)${NC}\n" "$(json_val "$BODY" "d['pageCount']")" "$(json_val "$BODY" "d['pageSource']")"
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE}, 형식 검사 ${OK83} (기대: 200 + 5개 필드)"
 fi
 
 # ================================================================

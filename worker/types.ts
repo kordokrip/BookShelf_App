@@ -158,7 +158,9 @@ export interface Bindings {
   VAPID_PUBLIC_KEY?: string;   // base64url 인코딩된 공개키
   VAPID_PRIVATE_KEY?: string;  // JWK JSON 문자열
   VAPID_SUBJECT?: string;      // 'mailto:admin@example.com'
-  // 알라딘 오픈API (선택 - wrangler secret put ALADIN_TTB_KEY)
+  // 국립중앙도서관 ISBN 서지정보 API 인증키 (선택 - 책 등록 시 쪽수·KDC 분류, worker/lib/bookMeta.ts)
+  NL_CERT_KEY?: string;
+  // 알라딘 오픈API (선택 - wrangler secret put ALADIN_TTB_KEY) — 알라딘 공지: 2026-10-30 서비스 종료
   ALADIN_TTB_KEY?: string;     // 알라딘 TTB API 키 (실제 베스트셀러 순위 조회용)
   // OpenRouter 유료 모델(lib/openrouter.ts OPENROUTER_MODEL) (wrangler secret put OPENROUTER_API_KEY) — AI 요약·인생책·오늘의 문장
   OPENROUTER_API_KEY?: string;

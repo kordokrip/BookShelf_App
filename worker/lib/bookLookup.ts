@@ -47,6 +47,8 @@ export interface BookMatch {
   publisher: string;
   url: string;
   source: 'kakao' | 'naver';
+  /** 번역자(카카오만 제공, 없으면 빈 문자열) */
+  translators?: string;
 }
 
 interface KakaoDoc {
@@ -57,6 +59,7 @@ interface KakaoDoc {
   authors?: string[];
   publisher?: string;
   thumbnail?: string;
+  translators?: string[];
 }
 
 interface NaverItem {
@@ -176,6 +179,7 @@ async function searchKakao(env: LookupEnv, q: BookQuery): Promise<BookMatch | nu
       publisher: d.publisher ?? '',
       url: d.url ?? '',
       source: 'kakao',
+      translators: (d.translators ?? []).join(', '),
     },
   }));
   // ISBN 조회는 ISBN이 곧 신원이므로 제목 비교 없이 첫 결과를 신뢰한다

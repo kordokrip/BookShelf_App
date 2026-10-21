@@ -18,6 +18,7 @@ import { Hono } from 'hono';
 import type { Bindings } from '../types';
 import { rateLimit } from '../middleware/rateLimit';
 import { authMiddleware } from '../auth';
+import { resolveBookMeta } from '../lib/bookMeta';
 
 // ─── 카카오 API 응답 타입 ────────────────────────────────────
 interface KakaoDocument {
@@ -331,154 +332,22 @@ searchRouter.get('/books/isbn', authMiddleware, rateLimit({ limit: 10, windowMs:
 });
 
 /**
- * GET /api/search/pagecount?isbn=&title=&author=
- * 책 페이지 수 + 카테고리를 Google Books → Open Library 순서로 조회.
- * categories 필드는 장르 자동 감지에 활용됩니다.
+ * GET /api/search/pagecount?isbn=&title=&author=&publisher=&need=pages
+ * need=pages면 장르를 정하지 않는다(AI 호출 없음).
+ * 책 등록용 페이지 수 + 장르. 출처·순서·근거 실측은 worker/lib/bookMeta.ts 참고.
+ * 응답: { pageCount, pageSource, genre, genreSource, categories(예전 클라이언트 호환 — 항상 []) }
  */
 searchRouter.get('/pagecount', authMiddleware, rateLimit({ limit: 15, windowMs: 60_000, keyPrefix: 'pagecount', keyBy: 'user' }), async (c) => {
   const isbn = c.req.query('isbn')?.trim();
   const title = c.req.query('title')?.trim();
   const author = c.req.query('author')?.trim();
+  const publisher = c.req.query('publisher')?.trim();
+  const withGenre = c.req.query('need') !== 'pages';
 
   if (!isbn && !title) {
     return c.json({ error: 'isbn 또는 title 파라미터가 필요합니다' }, 400);
   }
 
-  // ISBN 정규화: 공백·하이픈 제거 후 13자리 우선, 없으면 10자리
-  const rawIsbn = isbn ?? '';
-  const isbnParts = rawIsbn.trim().split(/\s+/).map(s => s.replace(/[^0-9X]/gi, ''));
-  const cleanIsbn = (isbnParts.find(p => p.length === 13) ?? isbnParts.find(p => p.length === 10) ?? isbnParts[0] ?? '').trim();
-
-  interface BookMeta { pageCount: number | null; categories: string[] }
-
-  /** Google Books API — ISBN 또는 키워드 검색. maxResults=10으로 최대한 많은 후보에서 추출 */
-  async function fetchGoogleBooks(query: string): Promise<BookMeta> {
-    try {
-      const url = new URL('https://www.googleapis.com/books/v1/volumes');
-      url.searchParams.set('q', query);
-      url.searchParams.set('maxResults', '10');
-      url.searchParams.set('printType', 'books');
-      const res = await fetch(url.toString(), { signal: AbortSignal.timeout(7000) });
-      if (!res.ok) return { pageCount: null, categories: [] };
-
-      const data = await res.json<{
-        items?: Array<{ volumeInfo?: { pageCount?: number; categories?: string[]; language?: string } }>;
-      }>();
-
-      let pageCount: number | null = null;
-      let categories: string[] = [];
-
-      for (const item of (data.items ?? [])) {
-        const vi = item.volumeInfo ?? {};
-        // 10페이지 이하는 잘못된 데이터로 간주
-        if (!pageCount && vi.pageCount && vi.pageCount > 10) pageCount = vi.pageCount;
-        if (!categories.length && vi.categories?.length) categories = vi.categories;
-        if (pageCount && categories.length) break;
-      }
-      return { pageCount, categories };
-    } catch {
-      return { pageCount: null, categories: [] };
-    }
-  }
-
-  /** Open Library API — ISBN 전용, pageCount 보충용 */
-  async function fetchOpenLibrary(isbnVal: string): Promise<number | null> {
-    try {
-      const url = `https://openlibrary.org/api/books?bibkeys=ISBN:${encodeURIComponent(isbnVal)}&format=json&jscmd=data`;
-      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
-      if (!res.ok) return null;
-      const data = await res.json<Record<string, { number_of_pages?: number }>>();
-      const count = data[`ISBN:${isbnVal}`]?.number_of_pages;
-      return count && count > 10 ? count : null;
-    } catch {
-      return null;
-    }
-  }
-
-  /** Naver Book API — 카테고리 정보 크로스 검증용 */
-  async function fetchNaverBookInfo(query: string): Promise<string[]> {
-    const naverId = c.env.NAVER_CLIENT_ID;
-    const naverSecret = c.env.NAVER_CLIENT_SECRET;
-    if (!naverId || !naverSecret) return [];
-
-    try {
-      const url = new URL('https://openapi.naver.com/v1/search/book.json');
-      url.searchParams.set('query', query);
-      url.searchParams.set('display', '5');
-      
-      const res = await fetch(url.toString(), {
-        headers: {
-          'X-Naver-Client-Id': naverId,
-          'X-Naver-Client-Secret': naverSecret,
-        },
-        signal: AbortSignal.timeout(5000),
-      });
-
-      if (!res.ok) return [];
-
-      const data = await res.json<{
-        items?: Array<{ category?: string; title?: string }>;
-      }>();
-
-      const categories: Set<string> = new Set();
-      for (const item of (data.items ?? [])) {
-        if (item.category) {
-          // 네이버 카테고리는 "소설>한국소설>한국현대소설" 형태
-          // 첫 번째 레벨 카테고리만 추출
-          const categoryParts = item.category.split('>');
-          if (categoryParts[0]) categories.add(categoryParts[0].trim());
-        }
-      }
-
-      return Array.from(categories);
-    } catch {
-      return [];
-    }
-  }
-
-  let result: BookMeta = { pageCount: null, categories: [] };
-
-  // ── 1순위: Google Books ISBN 검색 (가장 정확) ──────────────
-  if (cleanIsbn) {
-    result = await fetchGoogleBooks(`isbn:${cleanIsbn}`);
-  }
-
-  // ── 2순위: Open Library ISBN (pageCount 보충) ──────────────
-  if (!result.pageCount && cleanIsbn) {
-    const olPages = await fetchOpenLibrary(cleanIsbn);
-    if (olPages) result = { ...result, pageCount: olPages };
-  }
-
-  // ── 3순위: Google Books 제목+저자 통합 검색 ────────────────
-  if ((!result.pageCount || !result.categories.length) && title) {
-    const q = author ? `${title} ${author}` : title;
-    const titleResult = await fetchGoogleBooks(q);
-    if (!result.pageCount && titleResult.pageCount) result.pageCount = titleResult.pageCount;
-    if (!result.categories.length && titleResult.categories.length) result.categories = titleResult.categories;
-  }
-
-  // ── 4순위: 네이버 책 정보로 카테고리 크로스 검증 ─────────
-  if (cleanIsbn || title) {
-    const naverQuery = cleanIsbn || title || '';
-    const naverCategories = await fetchNaverBookInfo(naverQuery);
-    
-    // 네이버에서 카테고리를 찾았지만 Google에서 없으면 추가
-    if (!result.categories.length && naverCategories.length) {
-      result.categories = naverCategories;
-    }
-    // Google 카테고리가 있으면 크로스 검증 (두 소스 모두에서 일치하는 카테고리 우선 표시)
-    else if (result.categories.length && naverCategories.length) {
-      // 일단 Google 결과 유지 (이미 정확함)
-      // 필요하면 여기서 추가 가중치 적용 가능
-    }
-  }
-
-  // ── 5순위: 제목 단독 검색 (카테고리만 없을 때) ────────────
-  if (!result.categories.length && title && author) {
-    const titleOnly = await fetchGoogleBooks(title);
-    if (!result.pageCount && titleOnly.pageCount) result.pageCount = titleOnly.pageCount;
-    if (!result.categories.length && titleOnly.categories.length) result.categories = titleOnly.categories;
-  }
-
-  return c.json(result);
+  const meta = await resolveBookMeta(c.env, { isbn, title, author, publisher, withGenre });
+  return c.json({ ...meta, categories: [] as string[] });
 });

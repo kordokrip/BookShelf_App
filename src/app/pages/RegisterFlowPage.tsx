@@ -265,7 +265,7 @@ function StepBookInfo({
   const [isFetchingPages, setIsFetchingPages] = useState(false);
   const autoFetchedRef = useRef(false);
 
-  /** Google Books / Open Library에서 페이지 수 + 카테고리 조회 */
+  /** 서버에서 페이지 수 + 장르 조회 (국립중앙도서관·Open Library·KDC·AI 분류) */
   async function handleFetchPageCount() {
     if (isFetchingPages || (!form.isbn && !form.title)) return;
     setIsFetchingPages(true);
@@ -274,6 +274,7 @@ function StepBookInfo({
         isbn: form.isbn || undefined,
         title: form.title || undefined,
         author: form.author || undefined,
+        publisher: form.publisher || undefined,
       });
 
       const patch: Partial<FormState> = {};
@@ -282,14 +283,12 @@ function StepBookInfo({
         patch.totalPages = String(result.pageCount);
       }
 
-      // Google Books 카테고리로 장르 + 이모지 자동 감지
-      if (result.categories && result.categories.length > 0) {
-        const googleCategory = result.categories.join(' / ');
-        const detectedGenre = detectGenre(googleCategory, form.title, null);
-        if (detectedGenre !== '기타') {
-          patch.genre = detectedGenre;
-          patch.coverEmoji = GENRE_CONFIG[detectedGenre]?.emoji ?? form.coverEmoji;
-        }
+      // 서버가 정한 장르(KDC·AI 분류) 우선, 없으면 제목 키워드로 추정 — '기타'면 바꾸지 않는다
+      const serverGenre = result.genre && result.genre in GENRE_CONFIG ? (result.genre as GenreKey) : null;
+      const detectedGenre = serverGenre ?? detectGenre(null, form.title, null);
+      if (detectedGenre !== '기타') {
+        patch.genre = detectedGenre;
+        patch.coverEmoji = GENRE_CONFIG[detectedGenre]?.emoji ?? form.coverEmoji;
       }
 
       if (Object.keys(patch).length > 0) {

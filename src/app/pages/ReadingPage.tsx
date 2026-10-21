@@ -70,7 +70,7 @@ function PageUpdateModal({
   const todayLocalStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   const dateStr = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일 (${dayNames[today.getDay()]})`;
 
-  /** Google Books → Open Library 순서로 총 페이지 수 조회 */
+  /** 서버에서 총 페이지 수 조회 (국립중앙도서관 → Open Library, 장르·AI 분류는 생략) */
   async function fetchTotalPagesFromWeb() {
     setIsFetchingPages(true);
     try {
@@ -78,6 +78,7 @@ function PageUpdateModal({
         isbn: book.isbn || undefined,
         title: book.title,
         author: book.author,
+        pagesOnly: true,
       });
 
       const pageCount = result.pageCount;

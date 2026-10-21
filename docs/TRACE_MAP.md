@@ -610,6 +610,7 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 |---|---|---|---|---|
 | GET | `/api/search/books` | `?q=&page=1&size=10` | `{books, total, isEnd}` | 카카오 → 네이버 폴백 |
 | GET | `/api/search/books/isbn` | `?isbn=` | `{book}` | 카카오(isbn) → 네이버(book_adv) 폴백 |
+| GET | `/api/search/pagecount` | `?isbn=&title=&author=&publisher=&need=pages` | `{pageCount, pageSource('nl'\|'openlibrary'\|null), genre, genreSource('kdc'\|'llm'\|'kdc-approx'\|null), kdc, categories:[]}` | 책 등록·읽기 화면의 쪽수·장르(`lib/bookMeta.ts`). 쪽수: 국립중앙도서관 ISBN 서지정보 `PAGE`(`NL_CERT_KEY` 있을 때) → Open Library(ISBN 일치)만 — 제목 추측·LLM 쪽수 없음. 장르: KDC 부가기호 확실 매핑 → AI 분류(`gemini-lite`→Workers AI→OpenRouter, 카카오 소개·번역자·KDC 힌트) → KDC 대략값. `need=pages`면 장르·AI 생략. 장르까지 정한 결과만 KV `book_meta:v2:{isbn}` 30일. 사용자별 15회/60s. `categories`는 예전 클라이언트 호환(항상 빈 배열) |
 
 ### AI (`/api/ai`)
 
@@ -1338,7 +1339,8 @@ maxAge: 86400 (24h)
 | `ALLOWED_EMAILS` | secret | 세미콜론 구분 가입 허용 이메일 목록 (선택) |
 | `VAPID_PUBLIC_KEY` | secret | Web Push 공개키 (base64url) |
 | `VAPID_PRIVATE_KEY` | secret | Web Push 비밀키 (JWK JSON) |
-| `ALADIN_TTB_KEY` | secret | 알라딘 베스트셀러 조회 (선택) |
+| `ALADIN_TTB_KEY` | secret | 알라딘 베스트셀러 조회 (선택) — 알라딘 공지: 신규 키 2026-09-04 마감, **2026-10-30 서비스 종료** |
+| `NL_CERT_KEY` | secret | 국립중앙도서관 ISBN 서지정보 API 인증키 (선택) — 책 등록 쪽수(`PAGE`)·KDC 장르(`EA_ADD_CODE`). 없으면 Open Library 쪽수와 AI 장르만 |
 
 ---
 

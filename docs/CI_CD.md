@@ -68,6 +68,8 @@ PWA 정적 자산(아이콘, iOS startup 이미지, `sw.js`/workbox 프리캐시
 
 **AI 공급자 시크릿**: `GEMINI_API_KEY`(Google AI Studio 무료 등급), `OPENROUTER_API_KEY`. production·staging 각각 `npx wrangler secret put <이름> [--env staging]`로 등록하고 `npx wrangler secret list`로 이름만 확인한다. 로컬은 `.dev.vars`에 같은 이름으로 둔다(커밋 금지). 공급자 체인·한도·Gemini 중계(`GeminiProxy` DO, 마이그레이션 `v2`)·모델 교체 방법은 `docs/AI_PROVIDERS.md`.
 
+**선택 시크릿 `NL_CERT_KEY`**(국립중앙도서관 ISBN 서지정보 API 인증키): 책 등록 쪽수와 KDC 장르에 쓴다. 없어도 동작한다(쪽수는 Open Library, 장르는 AI 분류). 등록은 `npx wrangler secret put NL_CERT_KEY [--env staging]`, 로컬은 `.dev.vars`에 둔다.
+
 > 최초 부트스트랩 예외: 2026-09-27 스테이징 D1을 만든 직후 0001~0014 마이그레이션을 로컬에서 `--remote --env staging`으로 1회 직접 적용했다(빈 DB 초기화). 이후 스테이징 D1 변경도 CI 경로로만 한다.
 >
 > **`users.role` 스키마 드리프트 — 44차에 해소**: 예전 `0004_user_role.sql`은 빈 마이그레이션이라 마이그레이션만으로 만든 새 DB에는 `users.role`이 없었다(운영 컬럼은 과거 수동 추가). 새 마이그레이션으로 ALTER를 넣으면 운영에서 `duplicate column`으로 실패하므로(`1592da8`), **이미 적용됨으로 기록된 0004 파일 자체**에 `ALTER TABLE users ADD COLUMN role …`을 넣었다. 운영·스테이징·기존 로컬은 `d1_migrations`에 0004가 있어 다시 실행되지 않고, 새 DB에서만 실행된다. 확인: 임시 로컬 DB에 `npx wrangler d1 migrations apply bookshelf-db --local --persist-to <임시 폴더>` 후 열 목록이 운영(`--remote`)과 같은지 비교한다.

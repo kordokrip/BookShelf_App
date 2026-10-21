@@ -20,6 +20,10 @@ export interface GenreBookRow {
   author: string | null;
   publisher: string | null;
   genre: string | null;
+  /** 번역자(있으면 외국 작품이라는 근거) */
+  translator?: string | null;
+  /** 국립중앙도서관 KDC 분류 힌트(예: "KDC 853 외국문학") */
+  kdc?: string | null;
 }
 
 export interface GenreSuggestion {
@@ -85,6 +89,8 @@ export function buildGenreMessages(books: GenreBookRow[], descriptions: Map<stri
     title: sanitizeForPrompt(b.title),
     author: sanitizeForPrompt(b.author ?? ''),
     publisher: sanitizeForPrompt(b.publisher ?? ''),
+    ...(b.translator ? { translator: sanitizeForPrompt(b.translator) } : {}),
+    ...(b.kdc ? { kdc: sanitizeForPrompt(b.kdc) } : {}),
     description: sanitizeForPrompt(descriptions.get(b.id) ?? ''),
   })).join('\n');
   return [
@@ -95,6 +101,12 @@ export function buildGenreMessages(books: GenreBookRow[], descriptions: Map<stri
         `장르 목록: ${GENRES.join(', ')}\n` +
         '규칙:\n' +
         `- 목록에 없는 장르를 만들지 마세요. 확실하지 않으면 "${FALLBACK_GENRE}"로 답하세요.\n` +
+        '- 소설·시·희곡: 번역자(translator)가 있거나 외국 작가의 작품이면 "해외문학", 한국 작가의 근현대 작품이면 "현대문학", ' +
+        '오래전 정전으로 읽히는 작품(대략 20세기 초 이전)이면 "고전문학".\n' +
+        '- 과거의 사건·문명·시대의 흐름을 서술하는 책은 사회 분석보다 역사로 봅니다: 한국 역사면 "한국사", 그 밖이면 "해외사".\n' +
+        '- kdc가 있으면 도서관 분류이므로 강한 근거로 쓰되, 위 목록의 더 알맞은 장르를 고르세요.\n' +
+        '- 비슷한 장르 구분: "컴퓨터·프로그래밍"은 코딩·프로그래밍 언어·소프트웨어 설계와 개발 방법(클린 코드, 리팩터링 등), ' +
+        '"시스템개발"은 인프라·운영체제·네트워크·클라우드·데브옵스, "AI/데이터"는 인공지능·머신러닝·데이터 분석입니다.\n' +
         '- confidence는 근거가 분명하면 "high", 추측이면 "low"입니다.\n' +
         '- id는 입력의 값을 그대로 쓰세요. 입력의 모든 책에 대해 답하세요.\n' +
         '- 다른 텍스트 없이 JSON으로만 응답하세요.\n' +
@@ -104,17 +116,38 @@ export function buildGenreMessages(books: GenreBookRow[], descriptions: Map<stri
   ];
 }
 
+/**
+ * 모델 출력에서 제안 배열을 꺼낸다 — {"suggestions":[...]}와 맨 배열 [...] 둘 다 받는다.
+ * (gemini-lite는 JSON 모드에서 가끔 맨 배열로 답한다 — 2026-10-21 로컬 실측, 내용은 정답이었는데 형식 때문에 버려졌다)
+ */
+export function extractSuggestionArray(text: string): unknown[] | null {
+  const arr = extractJsonObject(text)?.suggestions;
+  if (Array.isArray(arr)) return arr;
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1] ?? text;
+  const m = fenced.match(/\[[\s\S]*\]/);
+  if (!m) return null;
+  try {
+    const parsed: unknown = JSON.parse(m[0]);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/** "컴퓨터· 프로그래밍", " 경제 / 경영 " 같은 공백 변형을 목록 표기로 맞춘다 */
+export const normalizeGenreText = (v: unknown): unknown => (typeof v === 'string' ? v.replace(/\s*([·/])\s*/g, '$1').trim() : v);
+
 /** 모델 출력 검증 — 입력에 없는 id·목록에 없는 장르·'기타'는 제외 */
 export function parseSuggestions(text: string, books: GenreBookRow[]): GenreSuggestion[] {
-  const obj = extractJsonObject(text);
-  const arr = obj?.suggestions;
-  if (!Array.isArray(arr)) return [];
+  const arr = extractSuggestionArray(text);
+  if (!arr) return [];
   const byId = new Map(books.map((b) => [b.id, b]));
   const seen = new Set<string>();
   const out: GenreSuggestion[] = [];
   for (const item of arr) {
     if (!item || typeof item !== 'object') continue;
-    const { id, genre, confidence } = item as Record<string, unknown>;
+    const { id, confidence } = item as Record<string, unknown>;
+    const genre = normalizeGenreText((item as Record<string, unknown>).genre);
     if (typeof id !== 'string' || seen.has(id)) continue;
     const book = byId.get(id);
     if (!book || !isGenre(genre) || genre === FALLBACK_GENRE) continue;
