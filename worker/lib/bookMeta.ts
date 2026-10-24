@@ -7,22 +7,25 @@
  * - Open Library: 페이지 수 3/15
  * - Google 제목 검색은 결과가 같은 책인지 확인하지 않고 첫 pageCount를 써서 다른 판·다른 책 값이 들어올 수 있었다
  *
- * 지금 순서
- * - 페이지 수: 국립중앙도서관 ISBN 서지정보 PAGE(NL_CERT_KEY 있을 때) → Open Library(ISBN 일치). 제목 추측은 하지 않는다.
- *   LLM은 페이지 수에 쓰지 않는다(검색 근거 없이 숫자를 지어낼 수 있고, Gemini 검색 grounding은 무료 등급에서 429).
- * - 장르: KDC(부가기호) 확실 매핑 → LLM 분류(카카오 소개·번역자·KDC 힌트, 실측 14/15) → KDC 대략 매핑 → null(클라이언트 키워드 추정)
+ * 지금 순서 (51차, 국립중앙도서관 Open API 키 적용 — worker/lib/nlApi.ts)
+ * - 쪽수: 국립중앙도서관 ISBN 서지정보 PAGE(실측 14/19) → Open Library(ISBN 일치). 제목 추측은 하지 않는다.
+ *   LLM은 쪽수에 쓰지 않는다(검색 근거 없이 숫자를 지어낼 수 있고, Gemini 검색 grounding은 무료 등급에서 429).
+ * - 장르 근거 KDC: 소장자료 classNo(세 자리 이상, 실측 19/20) → 서지정보 KDC → 부가기호 내용분류(십 단위)
+ * - 장르: KDC 확실 매핑(lib/kdcGenre.ts) → LLM 분류(카카오 소개·번역자·KDC 힌트) → KDC 대략값 → null(클라이언트 키워드 추정)
  * - 장르까지 정해진 결과만 ISBN 단위로 KV 30일 캐시(캐시라 최종 일관성이어도 됨)
  */
 import { searchBook, type LookupEnv } from './bookLookup';
-import { genreFromKdc, kdcFromSeoji } from './kdcGenre';
+import { genreFromKdc } from './kdcGenre';
 import { FALLBACK_GENRE, type Genre } from './genres';
 import { buildGenreMessages, extractSuggestionArray, parseSuggestions } from './ai/genreSuggestions';
 import { generateText, type GenerateEnv, type LlmProvider } from './ai/llm';
+import { fetchCollectionKdc, fetchSeoji, parsePageText } from './nlApi';
 
-export const BOOK_META_CACHE_VERSION = 'v2'; // v2: 장르 규칙(번역서·역사·컴퓨터 계열) 추가, 장르 없는 결과 미캐시
+export { parsePageText };
+
+export const BOOK_META_CACHE_VERSION = 'v3'; // v3: 소장자료 KDC classNo 근거 추가(51차). v2: 장르 규칙 추가, 장르 없는 결과 미캐시
 export const BOOK_META_TTL_SEC = 30 * 24 * 60 * 60;
-const SEOJI_URL = 'https://www.nl.go.kr/seoji/SearchApi.do';
-const MIN_PAGES = 10;
+export const BOOK_META_MISSING_PAGES_TTL_SEC = 24 * 60 * 60;
 const DESCRIPTION_MAX_CHARS = 200;
 export const CLASSIFY_PROVIDERS: readonly LlmProvider[] = ['gemini-lite', 'workers-ai', 'openrouter'];
 
@@ -34,7 +37,7 @@ export interface BookMeta {
   pageSource: PageSource | null;
   genre: Genre | null;
   genreSource: GenreSource | null;
-  /** 근거 KDC 앞 세 자리(있을 때) */
+  /** 장르 근거 KDC(예: "813.62", 부가기호만 있으면 "810") */
   kdc: string | null;
 }
 
@@ -46,59 +49,22 @@ export interface BookMetaQuery {
   withGenre?: boolean;
 }
 
-interface SeojiInfo { pages: number | null; kdc: string | null }
-
 /** ISBN 정규화: 공백으로 여러 개면 13자리 우선, 하이픈 제거 */
 export function normalizeIsbn(raw?: string): string {
   const parts = (raw ?? '').trim().split(/\s+/).map((s) => s.replace(/[^0-9X]/gi, '')).filter(Boolean);
   return parts.find((p) => p.length === 13) ?? parts.find((p) => p.length === 10) ?? parts[0] ?? '';
 }
 
-/** "239 p." · "xii, 239p" · "239" → 239. 범위를 벗어나면 null */
-export function parsePageText(text: unknown): number | null {
-  if (typeof text === 'number') return text > MIN_PAGES && text < 10_000 ? Math.round(text) : null;
-  if (typeof text !== 'string') return null;
-  const nums = [...text.replace(/(\d),(\d{3})/g, '$1$2').matchAll(/(\d{2,5})/g)].map((m) => Number(m[1]));
-  const n = nums.length ? Math.max(...nums) : NaN;
-  return n > MIN_PAGES && n < 10_000 ? n : null;
-}
-
-/** 국립중앙도서관 ISBN 서지정보 응답에서 첫 문서 — 응답 형태가 docs/result 어느 쪽이어도 받는다 */
-export function parseSeoji(json: unknown): SeojiInfo | null {
-  const o = json as { docs?: unknown[]; result?: unknown[] } | null;
-  const doc = (o?.docs ?? o?.result ?? [])[0] as Record<string, unknown> | undefined;
-  if (!doc) return null;
-  return {
-    pages: parsePageText(doc['PAGE']),
-    kdc: kdcFromSeoji(String(doc['EA_ADD_CODE'] ?? ''), String(doc['KDC'] ?? '')),
-  };
-}
-
-async function fetchJson(url: string, timeoutMs: number): Promise<unknown> {
+async function fetchOpenLibraryPages(isbn: string): Promise<number | null> {
+  if (!isbn) return null;
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
-    return res.ok ? await res.json() : null;
+    const res = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${encodeURIComponent(isbn)}&format=json&jscmd=data`, { signal: AbortSignal.timeout(3000) }); // 보조 출처 — 국립중앙도서관이 주 출처라 짧게
+    if (!res.ok) return null;
+    const json = (await res.json()) as Record<string, { number_of_pages?: number }>;
+    return parsePageText(json[`ISBN:${isbn}`]?.number_of_pages);
   } catch {
     return null;
   }
-}
-
-async function fetchSeoji(env: BookMetaEnv, isbn: string): Promise<SeojiInfo | null> {
-  if (!env.NL_CERT_KEY || !isbn) return null;
-  const url = new URL(SEOJI_URL);
-  url.searchParams.set('cert_key', env.NL_CERT_KEY);
-  url.searchParams.set('result_style', 'json');
-  url.searchParams.set('page_no', '1');
-  url.searchParams.set('page_size', '1');
-  url.searchParams.set('isbn', isbn);
-  return parseSeoji(await fetchJson(url.toString(), 5000));
-}
-
-async function fetchOpenLibraryPages(isbn: string): Promise<number | null> {
-  if (!isbn) return null;
-  const json = await fetchJson(`https://openlibrary.org/api/books?bibkeys=ISBN:${encodeURIComponent(isbn)}&format=json&jscmd=data`, 5000);
-  const entry = (json as Record<string, { number_of_pages?: number }> | null)?.[`ISBN:${isbn}`];
-  return parsePageText(entry?.number_of_pages);
 }
 
 /** 한 권 장르 분류(LLM) — 기존 장르 제안과 같은 프롬프트·검증. 확신 없거나 실패면 null */
@@ -131,12 +97,13 @@ export async function classifyGenreWithLlm(
 
 export interface BookMetaDeps {
   seoji: typeof fetchSeoji;
+  collection: typeof fetchCollectionKdc;
   openLibrary: typeof fetchOpenLibraryPages;
   lookup: typeof searchBook;
   classify: typeof classifyGenreWithLlm;
 }
 
-const DEFAULT_DEPS: BookMetaDeps = { seoji: fetchSeoji, openLibrary: fetchOpenLibraryPages, lookup: searchBook, classify: classifyGenreWithLlm };
+const DEFAULT_DEPS: BookMetaDeps = { seoji: fetchSeoji, collection: fetchCollectionKdc, openLibrary: fetchOpenLibraryPages, lookup: searchBook, classify: classifyGenreWithLlm };
 
 export const bookMetaCacheKey = (isbn: string) => `book_meta:${BOOK_META_CACHE_VERSION}:${isbn}`;
 
@@ -153,12 +120,14 @@ export async function resolveBookMeta(env: BookMetaEnv, q: BookMetaQuery, deps: 
   // Open Library는 느리고(제한 5초) 장르 판단에 필요 없으므로 LLM 분류와 동시에 기다린다
   // (스테이징 실측: 순서대로 기다리면 최대 8.5초)
   const olPagesP = deps.openLibrary(isbn).catch(() => null);
-  const [seoji, match] = await Promise.all([
+  const [seoji, collectionKdc, match] = await Promise.all([
     deps.seoji(env, isbn).catch(() => null),
+    withGenre ? deps.collection(env, isbn).catch(() => null) : Promise.resolve(null),
     withGenre && (title || isbn) ? deps.lookup(env, { title, author: q.author, isbn: isbn || undefined }).catch(() => null) : Promise.resolve(null),
   ]);
 
-  const meta: BookMeta = { pageCount: null, pageSource: null, genre: null, genreSource: null, kdc: seoji?.kdc ?? null };
+  const kdcCode = collectionKdc ?? seoji?.kdc ?? seoji?.addCodeKdc ?? null;
+  const meta: BookMeta = { pageCount: null, pageSource: null, genre: null, genreSource: null, kdc: kdcCode };
   const fillPages = async () => {
     if (seoji?.pages) { meta.pageCount = seoji.pages; meta.pageSource = 'nl'; return; }
     const olPages = await olPagesP;
@@ -172,7 +141,7 @@ export async function resolveBookMeta(env: BookMetaEnv, q: BookMetaQuery, deps: 
     return meta;
   }
   const pagesDone = fillPages();
-  if (kdc?.sure) {
+  if (kdc?.sure && kdc.genre) {
     meta.genre = kdc.genre; meta.genreSource = 'kdc';
   } else if (title || match?.title) {
     const llm = await deps.classify(env, {
@@ -184,14 +153,57 @@ export async function resolveBookMeta(env: BookMetaEnv, q: BookMetaQuery, deps: 
       description: match?.contents,
     });
     if (llm) { meta.genre = llm; meta.genreSource = 'llm'; }
-    else if (kdc) { meta.genre = kdc.genre; meta.genreSource = 'kdc-approx'; }
+    else if (kdc?.genre) { meta.genre = kdc.genre; meta.genreSource = 'kdc-approx'; }
   }
 
   await pagesDone;
 
   // 장르까지 정해졌을 때만 캐시 — 쪽수만 있는 결과를 캐시하면 일시적인 분류 실패(null)가 30일 굳는다(로컬 실측으로 발견)
+  // 쪽수가 빠졌으면 1일만 — Open Library가 잠깐 응답하지 않은 결과가 30일 굳지 않게(51차 로컬 e2e에서 발견)
   if (isbn && meta.genre) {
-    await env.KV.put(bookMetaCacheKey(isbn), JSON.stringify(meta), { expirationTtl: BOOK_META_TTL_SEC }).catch(() => undefined);
+    const ttl = meta.pageCount ? BOOK_META_TTL_SEC : BOOK_META_MISSING_PAGES_TTL_SEC;
+    await env.KV.put(bookMetaCacheKey(isbn), JSON.stringify(meta), { expirationTtl: ttl }).catch(() => undefined);
   }
   return meta;
+}
+
+export interface FillTarget {
+  id: string; userId: string; isbn?: string | null; title: string; author?: string | null; publisher?: string | null;
+  /** 장르가 비었거나 '기타'로 저장됨 */
+  needGenre: boolean;
+  /** 쪽수가 비었음 */
+  needPages: boolean;
+}
+
+/**
+ * 책 저장 직후(POST /api/books의 waitUntil) 비어 있는 쪽수·'기타' 장르만 채운다.
+ * 둘러보기·AI 추천 '담기'는 장르 '기타'·쪽수 없이 저장되던 경로라 여기서 한 번에 보정한다(51차).
+ * SQL 조건으로 그사이 사용자가 바꾼 값은 덮어쓰지 않는다. 바꾼 칸 수(0~2)를 돌려준다.
+ */
+export async function fillMissingBookMeta(
+  env: BookMetaEnv & { DB: Pick<D1Database, 'prepare'> },
+  t: FillTarget,
+  resolve: typeof resolveBookMeta = resolveBookMeta,
+): Promise<number> {
+  if (!t.needGenre && !t.needPages) return 0;
+  if (!t.isbn && !t.title) return 0;
+  try {
+    const meta = await resolve(env, {
+      isbn: t.isbn ?? undefined, title: t.title, author: t.author ?? undefined, publisher: t.publisher ?? undefined,
+      withGenre: t.needGenre,
+    });
+    const genre = t.needGenre ? meta.genre : null;
+    const pages = t.needPages ? meta.pageCount : null;
+    if (!genre && !pages) return 0;
+    const { meta: m } = await env.DB.prepare(
+      `UPDATE books SET
+         genre = CASE WHEN ?1 IS NOT NULL AND (genre IS NULL OR genre = '' OR genre = '${FALLBACK_GENRE}') THEN ?1 ELSE genre END,
+         total_pages = CASE WHEN ?2 IS NOT NULL AND (total_pages IS NULL OR total_pages = 0) THEN ?2 ELSE total_pages END
+       WHERE id = ?3 AND user_id = ?4`,
+    ).bind(genre, pages, t.id, t.userId).run();
+    return (m?.changes ?? 0) > 0 ? Number(Boolean(genre)) + Number(Boolean(pages)) : 0;
+  } catch (err) {
+    console.error('[bookMeta] 저장 후 보정 실패(책 저장은 정상):', t.id, err);
+    return 0;
+  }
 }

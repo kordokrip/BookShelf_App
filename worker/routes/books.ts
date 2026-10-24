@@ -26,6 +26,8 @@ import { achievementEventFor } from '../lib/achievementsDb';
 import { createBookSchema, updateBookSchema } from '../lib/bookSchemas';
 import { rateLimit } from '../middleware/rateLimit';
 import { parseBookIds, selectTargetBooks, suggestGenres } from '../lib/ai/genreSuggestions';
+import { fillMissingBookMeta } from '../lib/bookMeta';
+import { FALLBACK_GENRE } from '../lib/genres';
 
 export const booksRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -297,6 +299,15 @@ booksRouter.post('/', authMiddleware, zValidator('json', createBookSchema), asyn
 
   const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? 'unknown';
   await logActivity(c.env.DB, userId, 'book:add', { bookId: id, title: body.title, status: body.status }, ip);
+
+  // 51차: 쪽수가 비었거나 장르가 '기타'면 국립중앙도서관·AI로 백그라운드 보정(응답은 기다리지 않음 — lib/bookMeta.ts)
+  const needGenre = !body.genre || body.genre === FALLBACK_GENRE;
+  const needPages = !body.total_pages;
+  if (needGenre || needPages) {
+    c.executionCtx.waitUntil(fillMissingBookMeta(c.env, {
+      id, userId, isbn: body.isbn, title: body.title, author: body.author, publisher: body.publisher, needGenre, needPages,
+    }));
+  }
 
   // Phase 3: 완독으로 바로 등록하면 업적 평가 (새로 달성한 것이 있을 때만 응답에 포함)
   const achievements = body.status === 'done'
