@@ -68,6 +68,8 @@ export interface BookSummary {
   generated_at: string;
   provider: AIProvider;
   note_count: number;
+  /** 국립중앙도서관 목차를 근거로 썼는지(51차) */
+  toc_used?: boolean;
 }
 export interface BookSummaryResponse {
   data: BookSummary | null;

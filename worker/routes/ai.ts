@@ -13,6 +13,8 @@ import { searchBook } from '../lib/bookLookup';
 import { kstDateString } from '../lib/noteHelpers';
 import { resolveCollections, COLLECTIONS_MAX_BOOKS, type CollectionBook } from '../lib/ai/aiCollections';
 import { acquireLock, consumeCounter, dailyExpiresAtSec, readCounter, refundCounter, releaseLock } from '../lib/counters';
+import { fetchSeoji, fetchToc } from '../lib/nlApi';
+import { normalizeIsbn } from '../lib/bookMeta';
 
 const aiRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -70,14 +72,17 @@ aiRouter.post('/book-summary/:bookId', authMiddleware, async (c) => {
       return c.json({ error: `AI 요약은 하루 ${BOOK_SUMMARY_DAILY_LIMIT}번까지 만들 수 있어요. 내일 다시 시도해 주세요.`, reason: 'daily_limit', remaining_today: 0 }, 429);
     }
     const remainingBefore = BOOK_SUMMARY_DAILY_LIMIT - (reserved - 1);
-    const [match, notesRes] = await Promise.all([
+    // 51차: 국립중앙도서관 서지정보에 목차 파일이 있으면 근거로 넣는다(보유율은 낮다 — 2021년 2월 이전 데이터만, lib/nlApi.ts)
+    const isbn = normalizeIsbn(book.isbn ?? undefined);
+    const [match, notesRes, toc] = await Promise.all([
       searchBook(c.env, { title: book.title, author: book.author ?? undefined, isbn: book.isbn ?? undefined }).catch(() => null),
       c.env.DB.prepare(
         `SELECT type, content, page_number, end_page FROM notes WHERE user_id = ? AND book_id = ?
          ORDER BY created_at ASC LIMIT 200`,
       ).bind(userId, book.id).all<SummaryNote>(),
+      isbn ? fetchSeoji(c.env, isbn).then((s) => fetchToc(s?.tocUrl ?? null)).catch(() => null) : Promise.resolve(null),
     ]);
-    const result = await generateBookSummary(c.env, book, match?.contents ?? '', notesRes.results ?? []);
+    const result = await generateBookSummary(c.env, book, match?.contents ?? '', notesRes.results ?? [], Date.now(), toc);
     if (!result.ok) {
       return result.reason === 'unknown_book'
         ? c.json({ error: 'AI가 이 책을 잘 알지 못해 요약하지 않았어요(지어낸 내용 방지). 남은 횟수는 줄지 않았어요.', reason: 'unknown_book', remaining_today: remainingBefore }, 422)

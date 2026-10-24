@@ -146,7 +146,7 @@ export function AISummarySection({ bookId, isDone }: { bookId: string; isDone: b
               </div>
             ))}
             <p className="text-[color:var(--brand2-700)] dark:text-[color:var(--brand-200)]" style={{ fontSize: 11, lineHeight: 1.6 }}>
-              AI가 아는 책 내용과 책 소개{summary.note_count > 0 ? `, 내 노트 ${summary.note_count}개` : ""}를 바탕으로 정리했어요 · 원문과 다를 수 있어요 · {relativeTimeKo(summary.generated_at)}
+              AI가 아는 책 내용과 책 소개{summary.toc_used ? ", 국립중앙도서관 목차" : ""}{summary.note_count > 0 ? `, 내 노트 ${summary.note_count}개` : ""}를 바탕으로 정리했어요 · 원문과 다를 수 있어요 · {relativeTimeKo(summary.generated_at)}
             </p>
             <div className="flex items-center gap-2">
               <button

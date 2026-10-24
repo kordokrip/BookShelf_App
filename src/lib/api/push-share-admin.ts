@@ -85,6 +85,8 @@ export interface AdminUser {
   updated_at: string;
   book_count: number;
   note_count: number;
+  /** 국립중앙도서관 목차를 근거로 썼는지(51차) */
+  toc_used?: boolean;
   session_count: number;
   last_active: string | null;
   status: AdminUserStatus;

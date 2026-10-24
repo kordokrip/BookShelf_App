@@ -57,6 +57,13 @@ describe('buildBookSummaryMessages', () => {
     expect(sys!.content).toContain('"known": false');
     expect(user!.content).toContain('책 소개: 알을 깨고');
     expect(user!.content).toContain('[문구 p.120]');
+    expect(user!.content).not.toContain('목차');
+  });
+
+  it('국립중앙도서관 목차가 있으면 넣고, 목차 흐름을 따르라고 지시한다(51차)', () => {
+    const [sys, user] = buildBookSummaryMessages(book, '', [], '제1부 인지혁명\n1. 별로 중요치 않은 동물');
+    expect(sys!.content).toContain('목차가 주어지면 실제 책의 장 구성입니다');
+    expect(user!.content).toContain('목차(국립중앙도서관):\n제1부 인지혁명\n1. 별로 중요치 않은 동물');
   });
 });
 
@@ -73,6 +80,13 @@ describe('generateBookSummary — Gemini만, 긴 출력용 시도 시간', () =>
     expect(opts.providers).toEqual(['gemini']);
     expect(opts.attemptMaxMs).toBe(BOOK_SUMMARY_ATTEMPT_MS);
     expect(opts.json).toBe(true);
+  });
+  it('목차를 근거로 쓰면 요약에 toc_used, 없으면 필드 자체가 없다', async () => {
+    gen.mockResolvedValue({ text: valid(), provider: 'gemini' });
+    const withToc = await generateBookSummary(env, book, '소개', [], Date.UTC(2026, 9, 11), '1장\n2장');
+    expect(withToc.ok && withToc.summary.toc_used).toBe(true);
+    const without = await generateBookSummary(env, book, '소개', [], Date.UTC(2026, 9, 11));
+    expect(without.ok && 'toc_used' in without.summary).toBe(false);
   });
   it('모델이 모른다고 하면 unknown_book, 체인이 모두 실패하면 failed', async () => {
     gen.mockResolvedValueOnce({ text: '{"known": false}', provider: 'gemini' });

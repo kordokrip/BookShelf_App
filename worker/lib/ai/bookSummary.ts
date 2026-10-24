@@ -53,6 +53,8 @@ export interface BookSummary {
   provider: Provider;
   /** 근거에 들어간 내 노트 수(화면 안내용) */
   note_count: number;
+  /** 국립중앙도서관 목차를 근거로 썼는지(51차, 화면 안내용 — 예전 요약에는 없음) */
+  toc_used?: boolean;
 }
 
 export const bookSummaryKey = (userId: string, bookId: string) =>
@@ -79,7 +81,7 @@ export function noteLines(notes: SummaryNote[]): string[] {
     .filter((l) => l.length > 6);
 }
 
-export function buildBookSummaryMessages(book: SummaryBook, description: string, notes: SummaryNote[]): ChatMessage[] {
+export function buildBookSummaryMessages(book: SummaryBook, description: string, notes: SummaryNote[], toc: string | null = null): ChatMessage[] {
   const lines = noteLines(notes);
   const desc = Array.from(sanitizeForPrompt(description).replace(/\s+/g, ' ').trim()).slice(0, DESCRIPTION_MAX_CHARS).join('');
   return [
@@ -91,6 +93,7 @@ export function buildBookSummaryMessages(book: SummaryBook, description: string,
         '- 소설·이야기는 사건이 일어나는 순서대로, 비문학은 책의 목차·논지가 전개되는 순서대로 쓰세요. 결말까지 포함하세요.\n' +
         '- 분량은 A4 한 장, 한국어 1,800~2,200자입니다. 4~8개 단락으로 나누고 각 단락에 짧은 소제목을 붙이세요(예: "1. 시작 — 소년의 두 세계").\n' +
         '- 이 책을 확실히 알지 못하면 지어내지 말고 {"known": false}만 응답하세요. 책 소개만 보고 줄거리를 만들어 내지 마세요.\n' +
+        '- 목차가 주어지면 실제 책의 장 구성입니다. 단락의 순서와 소제목을 목차의 흐름에 맞추세요(목차에 없는 장을 지어내지 마세요).\n' +
         '- 사용자의 노트는 이 사람이 인상 깊게 본 대목입니다. 그 부분이 요약에서 빠지지 않게 자연스럽게 반영하되, 노트를 길게 그대로 옮기지 마세요.\n' +
         '- 등장인물·개념 이름은 한국어 번역본 표기를 따르고, 평가나 감상 대신 내용을 정리하세요.\n' +
         '- 다른 텍스트 없이 JSON으로만 응답하세요: {"known": true, "sections": [{"heading": "소제목", "body": "본문"}]}',
@@ -100,6 +103,8 @@ export function buildBookSummaryMessages(book: SummaryBook, description: string,
       content:
         `책: "${sanitizeForPrompt(book.title)}"\n저자: ${sanitizeForPrompt(book.author ?? '저자 미상')}\n` +
         (desc ? `책 소개: ${desc}\n` : '') +
+        // 줄마다 정리해 장 구조(줄바꿈)를 살린다 — sanitizeForPrompt는 줄바꿈을 지운다
+        (toc ? `\n목차(국립중앙도서관):\n${toc.split('\n').map((l) => sanitizeForPrompt(l)).filter(Boolean).join('\n')}\n` : '') +
         (lines.length ? `\n내 노트(페이지 순):\n${lines.join('\n')}\n` : ''),
     },
   ];
@@ -133,14 +138,14 @@ export type GenerateSummaryResult =
 
 /** 실제 생성(Gemini만). 저장·횟수 차감은 호출 측(라우트)이 한다 */
 export async function generateBookSummary(
-  env: GenerateEnv, book: SummaryBook, description: string, notes: SummaryNote[], nowMs = Date.now(),
+  env: GenerateEnv, book: SummaryBook, description: string, notes: SummaryNote[], nowMs = Date.now(), toc: string | null = null,
 ): Promise<GenerateSummaryResult> {
   let unknown = false;
   try {
     const res = await generateText(
       env,
       {
-        messages: buildBookSummaryMessages(book, description, notes),
+        messages: buildBookSummaryMessages(book, description, notes, toc),
         maxTokens: BOOK_SUMMARY_MAX_TOKENS, temperature: 0.3, json: true,
         timeoutMs: BOOK_SUMMARY_TIMEOUT_MS, attemptMaxMs: BOOK_SUMMARY_ATTEMPT_MS,
         geminiEffort: BOOK_SUMMARY_EFFORT, geminiReasoningHeadroom: BOOK_SUMMARY_REASONING_HEADROOM,
@@ -164,6 +169,7 @@ export async function generateBookSummary(
       summary: {
         sections: parsed.sections, char_count: parsed.charCount, generated_at: new Date(nowMs).toISOString(),
         provider: res.provider, note_count: Math.min(notes.length, NOTE_MAX_ITEMS),
+        ...(toc ? { toc_used: true } : {}),
       },
     };
   } catch (err) {
