@@ -111,9 +111,22 @@ export async function fetchToc(url: string | null): Promise<string | null> {
     const buf = await res.arrayBuffer();
     if (buf.byteLength === 0 || buf.byteLength > 200_000) return null;
     let text: string;
-    try { text = new TextDecoder('euc-kr').decode(buf); } catch { return null; }
+    try {
+      const decoder = new TextDecoder('euc-kr');
+      // 런타임이 라벨을 무시하고 UTF-8로 읽으면 오류 없이 깨진 글자가 나온다 — Cloudflare 문서는 "UTF-8 디코더"라고만 적혀 있다.
+      // 실제로 EUC-KR 디코더가 만들어졌을 때만 쓴다(로컬 workerd는 지원, 2026-10-25 확인)
+      if (decoder.encoding !== 'euc-kr') {
+        console.warn('[nlApi] EUC-KR 디코더 없음 — 목차 생략:', decoder.encoding);
+        return null;
+      }
+      text = decoder.decode(buf);
+    } catch { return null; }
+    // 깨진 문자(U+FFFD)가 섞이면 인코딩이 다른 파일 — 프롬프트에 넣지 않는다
+    if (text.includes('\uFFFD')) return null;
     const toc = cleanToc(text);
-    return toc.length >= 10 ? toc : null;
+    if (toc.length < 10) return null;
+    console.log('[nlApi] 목차 사용:', toc.length, '자'); // 운영 런타임 디코딩 확인용(요약 때만 찍힘)
+    return toc;
   } catch {
     return null;
   }

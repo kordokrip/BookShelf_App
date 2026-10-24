@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { parseSeoji, parseCollectionKdc, cleanToc, fetchToc, fetchSeoji, fetchCollectionKdc, TOC_MAX_CHARS } from '../lib/nlApi';
 
-afterEach(() => vi.unstubAllGlobals());
+beforeEach(() => { vi.spyOn(console, 'log').mockImplementation(() => undefined); vi.spyOn(console, 'warn').mockImplementation(() => undefined); });
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 // 2026-10-25 실제 응답에서 필드만 추린 픽스처
 const SEOJI_SAPIENS = {
@@ -58,6 +59,17 @@ describe('목차 파일', () => {
       0x31, 0x2e, 0x20, 0xba, 0xb0, 0xb7, 0xce, 0x20, 0xc1, 0xdf, 0xbf, 0xe4, 0xc4, 0xa1, 0x20, 0xbe, 0xca, 0xc0, 0xba, 0x20, 0xb5, 0xbf, 0xb9, 0xb0]);
     vi.stubGlobal('fetch', vi.fn(async () => new Response(bytes, { status: 200, headers: { 'Content-Type': 'text/plain' } })));
     expect(await fetchToc('https://www.nl.go.kr/x.txt')).toBe('제1부 인지혁명\n1. 별로 중요치 않은 동물');
+  });
+
+  it('fetchToc: 인코딩이 다른 파일(깨진 문자)·EUC-KR 디코더가 없는 런타임은 목차 없이(null) — 깨진 글자를 프롬프트에 넣지 않는다', async () => {
+    // UTF-8 바이트를 EUC-KR로 읽으면 U+FFFD가 섞인다
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(new TextEncoder().encode('제1부 인지혁명 그리고 농업혁명'), { status: 200 })));
+    expect(await fetchToc('https://www.nl.go.kr/x.txt')).toBeNull();
+    // 라벨을 무시하고 UTF-8 디코더를 주는 런타임 흉내
+    const Orig = globalThis.TextDecoder;
+    vi.stubGlobal('TextDecoder', class extends Orig { constructor() { super('utf-8'); } });
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(new Uint8Array([0xc1, 0xa6, 0x31, 0xba, 0xce, 0x20, 0xc0, 0xce, 0xc1, 0xf6, 0xc7, 0xf5, 0xb8, 0xed]), { status: 200 })));
+    expect(await fetchToc('https://www.nl.go.kr/x.txt')).toBeNull();
   });
 
   it('fetchToc: URL 없음·실패·너무 짧은 내용은 null', async () => {
