@@ -74,6 +74,7 @@ edge 실측(`wrangler tail`, 스테이징): 로그인 CPU 34~45ms(계정 단위 
 | GET /api/search/pagecount | 15회(사용자별, 로그인 필수) | 60초 |
 | GET /api/discover | 30회 | 60초 |
 | GET /api/discover/external | 20회 | 60초 |
+| GET /api/discover/librarian | 20회 | 60초 |
 | POST /api/groups/:id/messages | 30회 | 60초 |
 | POST /api/groups/:id/meetings/:meetingId/feedbacks | 10회 | 60초 |
 | POST /api/admin/seed-admins | 5회 | 60초 |

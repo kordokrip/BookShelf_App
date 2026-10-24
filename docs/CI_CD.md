@@ -68,7 +68,7 @@ PWA 정적 자산(아이콘, iOS startup 이미지, `sw.js`/workbox 프리캐시
 
 **AI 공급자 시크릿**: `GEMINI_API_KEY`(Google AI Studio 무료 등급), `OPENROUTER_API_KEY`. production·staging 각각 `npx wrangler secret put <이름> [--env staging]`로 등록하고 `npx wrangler secret list`로 이름만 확인한다. 로컬은 `.dev.vars`에 같은 이름으로 둔다(커밋 금지). 공급자 체인·한도·Gemini 중계(`GeminiProxy` DO, 마이그레이션 `v2`)·모델 교체 방법은 `docs/AI_PROVIDERS.md`.
 
-**선택 시크릿 `NL_CERT_KEY`**(국립중앙도서관 ISBN 서지정보 API 인증키): 책 등록 쪽수와 KDC 장르에 쓴다. 없어도 동작한다(쪽수는 Open Library, 장르는 AI 분류). 등록은 `npx wrangler secret put NL_CERT_KEY [--env staging]`, 로컬은 `.dev.vars`에 둔다.
+**시크릿 `NL_CERT_KEY`**(국립중앙도서관 Open API 인증키, 2026-10-25 운영·스테이징 등록): 책 등록 쪽수·KDC 장르, 사서 추천, AI 요약 목차에 쓴다. 없어도 동작한다(쪽수는 Open Library, 장르는 AI 분류, 사서 추천은 빈 목록). 등록은 `npx wrangler secret put NL_CERT_KEY [--env staging]`, 로컬은 `.dev.vars`의 `NL_CERT_KEY=`(국립중앙도서관이 발급 화면에서 쓰는 이름 `cert_key`가 아니다).
 
 > 최초 부트스트랩 예외: 2026-09-27 스테이징 D1을 만든 직후 0001~0014 마이그레이션을 로컬에서 `--remote --env staging`으로 1회 직접 적용했다(빈 DB 초기화). 이후 스테이징 D1 변경도 CI 경로로만 한다.
 >
