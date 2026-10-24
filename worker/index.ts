@@ -119,7 +119,11 @@ const COVER_PROXY_ALLOWED_DOMAINS = [
   'shopping.phinf.naver.net',
   'books.google.com',
   'covers.openlibrary.org',
+  'nl.go.kr', // 국립중앙도서관 사서추천도서 표지(www.nl.go.kr 포함)
 ];
+
+/** 원본 표지 요청 헤더 — 국립중앙도서관 표지는 User-Agent 없는 요청을 403으로 막는다(2026-10-25 실측) */
+const COVER_FETCH_HEADERS = { 'User-Agent': 'Mozilla/5.0 (compatible; BookShelf/1.0)' };
 
 async function sha256Hex(text: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
@@ -168,7 +172,7 @@ app.get('/api/cover-proxy', async (c) => {
   }
 
   try {
-    const upstream = await fetch(decoded, { redirect: 'follow' });
+    const upstream = await fetch(decoded, { redirect: 'follow', headers: COVER_FETCH_HEADERS });
     if (!upstream.ok) return c.json({ error: '이미지를 가져오는데 실패했습니다.' }, 502);
 
     const contentType = upstream.headers.get('content-type') ?? '';

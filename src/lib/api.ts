@@ -93,5 +93,6 @@ export const queryKeys = {
     all: ['discover'] as const,
     list: (tab: string, genre: string) => ['discover', 'list', tab, genre] as const,
     external: (tab: string) => ['discover', 'external', tab] as const,
+    librarian: () => ['discover', 'librarian'] as const,
   },
 };

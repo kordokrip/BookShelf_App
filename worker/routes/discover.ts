@@ -19,6 +19,7 @@ import type { Bindings } from '../types';
 import { authMiddleware } from '../auth';
 import { rateLimit } from '../middleware/rateLimit';
 import { isPlausiblePubDate, isTradeBook } from '../lib/discoverFilter';
+import { fetchLibrarianPicks, type LibrarianPick } from '../lib/nlLibrarianPicks';
 
 /** 탐색 결과 단건 타입 */
 export interface DiscoverBook {
@@ -404,5 +405,32 @@ discoverRouter.get(
     }
 
     return c.json({ books: [], fetchedAt: new Date().toISOString() });
+  },
+);
+
+// ─── GET /api/discover/librarian — 국립중앙도서관 사서추천도서 (51차) ─────────────
+// 최근 12개월 추천(매달 문학·인문·사회·자연 1권씩). 출처·파싱 근거는 worker/lib/nlLibrarianPicks.ts.
+// 추천은 매달 한 번 바뀌므로 12시간 캐시. 키가 없거나 실패면 빈 목록(캐시하지 않음).
+export const LIBRARIAN_PICKS_CACHE_KEY = 'nl_picks:v1';
+
+discoverRouter.get(
+  '/librarian',
+  rateLimit({ limit: 20, windowMs: 60_000, keyPrefix: 'discover_lib' }),
+  authMiddleware,
+  async (c) => {
+    const origin = new URL(c.req.url).origin;
+    const withProxy = (picks: LibrarianPick[]) => picks.map(({ coverUrl, ...p }) => ({
+      ...p,
+      coverImage: coverUrl ? `${origin}/api/cover-proxy?url=${encodeURIComponent(coverUrl)}` : null,
+    }));
+    const cached = await c.env.KV.get(LIBRARIAN_PICKS_CACHE_KEY, 'json').catch(() => null) as { picks: LibrarianPick[]; fetchedAt: string } | null;
+    if (cached) return c.json({ picks: withProxy(cached.picks), fetchedAt: cached.fetchedAt });
+
+    const picks = await fetchLibrarianPicks(c.env);
+    const fetchedAt = new Date().toISOString();
+    if (picks.length > 0) {
+      await c.env.KV.put(LIBRARIAN_PICKS_CACHE_KEY, JSON.stringify({ picks, fetchedAt }), { expirationTtl: 12 * 3_600 }).catch(() => undefined);
+    }
+    return c.json({ picks: withProxy(picks), fetchedAt });
   },
 );

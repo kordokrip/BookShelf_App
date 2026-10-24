@@ -7,19 +7,21 @@ import { SearchSheet } from "../components/wishlist/SearchSheet";
 import { WishGrid } from "../components/wishlist/WishGrid";
 import { AddBookFab } from "../components/ui/Buttons";
 import { DiscoverTab } from "../components/wishlist/DiscoverTab";
+import { LibrarianPicksTab } from "../components/wishlist/LibrarianPicksTab";
 import { RecommendedBooksTab } from "../components/wishlist/RecommendedBooksTab";
 import { FeatureHint } from "../components/onboarding/FeatureHint";
 
-type TabKey = 'new' | 'recommend' | 'mine';
+type TabKey = 'new' | 'recommend' | 'mine' | 'librarian';
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'mine',    label: '내 목록' },
   { key: 'new',     label: '새로 나온 책' },
+  { key: 'librarian', label: '사서 추천' },
   { key: 'recommend', label: '당신을 위한 AI추천 도서' },
 ];
 
 function parseTab(v: string | null): TabKey {
-  return v === 'recommend' || v === 'new' ? v : 'mine';
+  return v === 'recommend' || v === 'new' || v === 'librarian' ? v : 'mine';
 }
 
 export function WishlistPage() {
@@ -125,6 +127,7 @@ export function WishlistPage() {
       {/* 탭 콘텐츠 */}
       <div className="mt-4">
         {activeTab === 'new'     && <DiscoverTab wishTitleSet={wishTitleSet} />}
+        {activeTab === 'librarian' && <LibrarianPicksTab wishTitleSet={wishTitleSet} />}
         {activeTab === 'recommend' && <RecommendedBooksTab />}
         {activeTab === 'mine'    && (
           <WishGrid

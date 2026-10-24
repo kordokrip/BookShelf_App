@@ -47,7 +47,7 @@ FAILED_TESTS=()
 if [[ "$READONLY" == true ]]; then
   TOTAL=3
 else
-  TOTAL=80
+  TOTAL=82
 fi
 
 # ── 시작 시각 ────────────────────────────────────────────────────
@@ -700,6 +700,47 @@ if [[ "$HTTP_CODE" == "200" && "$OK83" == "True" ]]; then
   printf "         ${CYAN}↳ pageCount=%s (%s)${NC}\n" "$(json_val "$BODY" "d['pageCount']")" "$(json_val "$BODY" "d['pageSource']")"
 else
   fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE}, 형식 검사 ${OK83} (기대: 200 + 5개 필드)"
+fi
+
+T=84; NAME="GET /api/discover/librarian (국립중앙도서관 사서추천 — 응답 형식)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" "${BASE_URL}/api/discover/librarian" -H "Authorization: Bearer ${TOKEN}")
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+# 키(NL_CERT_KEY)가 없는 환경은 빈 목록이 정상 — 형식과, 항목이 있으면 필수 필드만 본다(lib/nlLibrarianPicks.ts)
+OK84=$(json_val "$BODY" "isinstance(d.get('picks'), list) and all(p.get('title') and p.get('category') and 'genre' in p and 'coverImage' in p for p in d['picks'])")
+if [[ "$HTTP_CODE" == "200" && "$OK84" == "True" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+  printf "         ${CYAN}↳ picks=%s${NC}\n" "$(json_val "$BODY" "len(d['picks'])")"
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE}, 형식 검사 ${OK84} (기대: 200 + picks 배열)"
+fi
+
+T=85; NAME="POST /api/books 장르 '기타'·쪽수 없이 담기 → 서버가 백그라운드로 보정"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+curl -s -o "$TMPF" -X POST "${BASE_URL}/api/books" -H "Authorization: Bearer ${TOKEN}" -H "Content-Type: application/json" \
+  -d '{"title":"핸즈온 머신러닝","author":"오렐리앙 제롱","isbn":"9791169211475","status":"wish","genre":"기타"}'
+FILL_ID=$(json_val "$(cat "$TMPF")" "d['data']['id']"); rm -f "$TMPF"
+FILLED=""
+for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do
+  sleep 1
+  FILLED=$(curl -s "${BASE_URL}/api/books/${FILL_ID}" -H "Authorization: Bearer ${TOKEN}" | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)['data']
+    print('%s/%s' % (d.get('genre'), d.get('total_pages')) if (d.get('genre') != '기타' or d.get('total_pages')) else '')
+except Exception:
+    print('')
+" 2>/dev/null)
+  [[ -n "$FILLED" ]] && break
+done
+curl -s -o /dev/null -X DELETE "${BASE_URL}/api/books/${FILL_ID}" -H "Authorization: Bearer ${TOKEN}"
+ELAPSED=$(( $(now_ms) - START ))
+if [[ -n "$FILL_ID" && -n "$FILLED" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+  printf "         ${CYAN}↳ 장르/쪽수: %s${NC}\n" "$FILLED"
+else
+  fail_test $T "$NAME" $ELAPSED "" "12초 안에 장르·쪽수가 채워지지 않음 (id=${FILL_ID})"
 fi
 
 # ================================================================

@@ -128,6 +128,8 @@ export interface DiscoverBook {
   wish_count: number;
   done_count: number;
   note_count: number;
+  /** 국립중앙도서관 목차를 근거로 썼는지(51차) */
+  toc_used?: boolean;
   avg_rating: number | null;
 }
 
@@ -170,6 +172,32 @@ export interface ExternalBooksResponse {
   books: ExternalBook[];
   fetchedAt: string;
 }
+
+/** 국립중앙도서관 사서추천도서 (GET /api/discover/librarian, 51차) */
+export interface LibrarianPick {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  author: string;
+  publisher: string | null;
+  isbn: string;
+  /** 표지 프록시 URL */
+  coverImage: string | null;
+  description: string;
+  /** 사서 추천 분야: 문학·인문·사회·자연 */
+  category: string;
+  callNo: string | null;
+  kdc: string | null;
+  /** 청구기호 KDC로 정한 앱 장르(정할 수 없으면 null — 담을 때 서버가 보정) */
+  genre: string | null;
+  /** 추천 연월 YYYY-MM */
+  recommendedAt: string;
+  publishYear: number | null;
+}
+
+export const librarianPicksApi = {
+  list: () => apiFetch<{ picks: LibrarianPick[]; fetchedAt: string }>('/api/discover/librarian'),
+};
 
 export const externalBooksApi = {
   /** 신간(최근 2주) 또는 베스트셀러 목록 조회 */

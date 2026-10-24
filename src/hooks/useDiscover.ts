@@ -2,9 +2,10 @@
  * 도서 탐색 (새로 나온 책·인기 책·인생책) React Query 훅
  * - useDiscover: 탭·장르 필터별 커뮤니티 도서 목록 조회
  * - useExternalBooks: 외부 API(카카오/네이버) 신간·베스트셀러 조회
+ * - useLibrarianPicks: 국립중앙도서관 사서추천도서(매달 분야별 1권)
  */
 import { useQuery } from '@tanstack/react-query';
-import { discoverApi, externalBooksApi, queryKeys } from '../lib/api';
+import { discoverApi, externalBooksApi, librarianPicksApi, queryKeys } from '../lib/api';
 
 export type DiscoverTab = 'popular' | 'new' | 'life';
 
@@ -35,6 +36,16 @@ export function useExternalBooks(tab: 'new' | 'bestseller') {
     queryFn:  () => externalBooksApi.list(tab),
     staleTime: tab === 'bestseller' ? 6 * 60 * 60 * 1000 : 60 * 60 * 1000,
     placeholderData: (prev) => prev,
+    retry: 1,
+  });
+}
+
+/** useLibrarianPicks — 국립중앙도서관 사서추천도서. 추천은 매달 바뀌어 서버 캐시(12시간)에 맞춰 길게 둔다 */
+export function useLibrarianPicks() {
+  return useQuery({
+    queryKey: queryKeys.discover.librarian(),
+    queryFn:  () => librarianPicksApi.list(),
+    staleTime: 6 * 60 * 60 * 1000,
     retry: 1,
   });
 }

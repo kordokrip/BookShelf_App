@@ -5,7 +5,7 @@ import { ApiError } from "../../../lib/api";
 import type { GenreKey } from "../../../types/book";
 import type { ExternalBook } from "../../../lib/api";
 
-function BookCoverImg({ src, alt }: { src: string | null; alt: string }) {
+export function BookCoverImg({ src, alt }: { src: string | null; alt: string }) {
   return (
     <div className="w-12 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-[#F1F5F9] dark:bg-[#334155] flex items-center justify-center shadow-sm">
       {src ? (
@@ -81,7 +81,7 @@ function NewBooksTab({ wishTitleSet }: { wishTitleSet: Set<string> }) {
   );
 }
 
-function SkeletonList() {
+export function SkeletonList() {
   return (
     <div className="px-4 flex flex-col gap-3">
       {Array.from({ length: 5 }).map((_, i) => (
@@ -97,7 +97,7 @@ function SkeletonList() {
   );
 }
 
-function ErrorEmpty({ label }: { label: string }) {
+export function ErrorEmpty({ label }: { label: string }) {
   return (
     <div className="px-4 py-16 text-center">
       <p className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 14 }}>{label}</p>
