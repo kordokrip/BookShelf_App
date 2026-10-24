@@ -40,6 +40,7 @@ bash scripts/e2e-api-test.sh
 - `docs/CI_CD.md`: 배포 파이프라인·버전 정책·로컬 개발 절차 문서. 관련 설정(wrangler 버전, CI 워크플로 등) 변경 시 함께 갱신
 - 문서에 특정 버전 번호·수치(패키지 버전, 테스트 개수 등)를 하드코딩하지 말 것 — 금방 낡는다. 부득이하게 적어야 하면 "확인 방법"도 같이 적어라(예: "현재 wrangler 버전은 `npx wrangler --version`으로 확인")
 - 세션 단위 상세 리포트가 필요하면 `docs/sessions/YYYY-MM-DD-주제.md`로 별도 작성하고 `docs/CHANGELOG.md`에 링크만 추가 (PROJECT_STATUS.md/CHANGELOG.md 본문에 통째로 중복 기술하지 말 것 — 과거 `docs/WORK_SUMMARY_*.md` 패턴이 이 문제로 삭제됨)
+- **작업 상태는 대화가 아니라 파일에 둔다(컨텍스트 유실 대비)**: 작업을 시작하면 그 작업의 세션 리포트(`docs/sessions/YYYY-MM-DD-주제.md`)를 만들고 맨 위에 `## 진행 상태` 표(코드·스테이징·운영·사용자 대기·미결)를 둔다. 커밋·배포·대기 상태가 바뀔 때마다 그 표를 갱신하고 같은 커밋에 넣는다. 세션 시작·재개·compact 때 `.claude/settings.json`의 SessionStart hook(`scripts/session-context.sh`)이 git 상태와 최신 리포트의 진행 상태 표를 자동으로 보여 준다 — 표가 낡으면 복구도 낡는다
 
 ## 코드 품질 제약
 - **신규 파일 400줄 초과 금지** (기존 파일 리팩토링 시는 예외)
