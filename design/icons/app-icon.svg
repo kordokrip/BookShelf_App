@@ -1,17 +1,81 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <!-- BookShelf 앱 아이콘 마스터 (풀블리드 정사각형, 모서리는 각 플랫폼이 깎음). 책 세 권 + 기울어진 책 + 선반, 호박색 책갈피 -->
-  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4F46E5"/><stop offset="1" stop-color="#7C3AED"/></linearGradient></defs>
-  <rect width="1024" height="1024" fill="url(#bg)"/>
-  <g fill="#FFFFFF">
-    <rect x="190" y="306" width="130" height="420" rx="24"/>
-    <rect x="350" y="226" width="150" height="500" rx="24"/>
-    <rect x="530" y="346" width="120" height="380" rx="24"/>
-    <rect x="680" y="348" width="100" height="380" rx="24" transform="rotate(15 680 728)"/>
-    <rect x="150" y="744" width="724" height="54" rx="27"/>
+  <!-- BookShelf 앱 아이콘 마스터 (풀블리드 정사각형, 모서리는 각 플랫폼이 깎음).
+       '가을에서 겨울로'(54차, 원칙은 season-philosophy.md): 하늘은 왼쪽 위 잉걸불 → 오른쪽 아래 겨울 남색으로 식고,
+       책·선반의 종이색도 같은 축을 따라 따뜻한 색 → 서리색으로 바뀐다. 왼쪽 하늘엔 은행잎, 오른쪽 책 위엔 눈.
+       책 세 권 + 기울어진 책 + 선반 + 금빛 책갈피의 형태는 앱 안 로고(AppLogo)·글리프와 같다.
+       id="art" 그룹은 maskable 아이콘에서 안전 영역으로 축소된다(generate-icons.mjs) — 배경은 그룹 밖에 둔다. -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#D2703A"/>
+      <stop offset="0.3" stop-color="#B14A30"/>
+      <stop offset="0.64" stop-color="#5A3367"/>
+      <stop offset="1" stop-color="#1B2456"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="150" cy="140" r="560" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFC27A" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#FFD08A" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="night" cx="930" cy="940" r="520" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0D1233" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#0D1233" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="paper" x1="190" y1="0" x2="860" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FDE6CB"/>
+      <stop offset="0.5" stop-color="#F6EFE8"/>
+      <stop offset="1" stop-color="#DFE8F7"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FAC955"/>
+      <stop offset="1" stop-color="#EC9A2E"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#sky)"/>
+  <rect width="1024" height="1024" fill="url(#sun)"/>
+  <rect width="1024" height="1024" fill="url(#night)"/>
+
+  <g id="art">
+    <!-- 가을: 떨어지는 은행잎(부채꼴 + 가운데 갈림) -->
+    <g transform="translate(244 222) rotate(-22) scale(1.18)">
+      <path d="M0 0 C-24 -16 -70 -36 -88 -60 C-92 -70 -82 -86 -60 -92 C-38 -98 -14 -92 -4 -80 L0 -70 L4 -80 C14 -92 38 -98 60 -92 C82 -86 92 -70 88 -60 C70 -36 24 -16 0 0 Z" fill="url(#gold)"/>
+      <path d="M0 -3 L-76 -70 M0 -3 L-50 -88 M0 -3 L-24 -88 M0 -3 L24 -88 M0 -3 L50 -88 M0 -3 L76 -70" stroke="#C7741E" stroke-width="2.5" stroke-linecap="round" opacity="0.32" fill="none"/>
+      <path d="M0 -2 C2 12 6 24 12 36" stroke="#D3832A" stroke-width="7" stroke-linecap="round" fill="none"/>
+    </g>
+
+    <!-- 겨울: 내리는 눈(가지 달린 결정 하나 + 눈송이 둘) -->
+    <defs><path id="arm" d="M0 0 V-44 M0 -27 l-11 -11 M0 -27 l11 -11"/></defs>
+    <g transform="translate(808 212)" stroke="#F4F7FD" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.95">
+      <use href="#arm"/><use href="#arm" transform="rotate(60)"/><use href="#arm" transform="rotate(120)"/>
+      <use href="#arm" transform="rotate(180)"/><use href="#arm" transform="rotate(240)"/><use href="#arm" transform="rotate(300)"/>
+    </g>
+    <circle cx="890" cy="300" r="11" fill="#F4F7FD" opacity="0.9"/>
+    <circle cx="726" cy="132" r="8" fill="#F4F7FD" opacity="0.75"/>
+
+    <!-- 책과 선반: 종이색이 따뜻한 색 → 서리색으로 -->
+    <g fill="url(#paper)">
+      <rect x="190" y="306" width="130" height="420" rx="24"/>
+      <rect x="350" y="226" width="150" height="500" rx="24"/>
+      <rect x="530" y="346" width="120" height="380" rx="24"/>
+      <rect x="680" y="348" width="100" height="380" rx="24" transform="rotate(15 680 728)"/>
+      <rect x="150" y="744" width="724" height="54" rx="27"/>
+    </g>
+    <!-- 책등 띠: 왼쪽은 녹슨 주홍, 오른쪽은 서리 남색 -->
+    <g opacity="0.5">
+      <rect x="190" y="376" width="130" height="22" fill="#D2693E"/><rect x="190" y="638" width="130" height="22" fill="#D2693E"/>
+      <rect x="530" y="430" width="120" height="22" fill="#7F93C4"/><rect x="530" y="644" width="120" height="22" fill="#7F93C4"/>
+    </g>
+
+    <!-- 책 위에 쌓인 눈: 아래 그림자 띠로 종이와 구분 -->
+    <path d="M524 368 C523 350 534 338 552 334 C572 322 606 320 626 328 C646 332 658 346 656 368 Z" fill="#AFC0DE" transform="translate(0 10)"/>
+    <path d="M524 368 C523 350 534 338 552 334 C572 322 606 320 626 328 C646 332 658 346 656 368 Z" fill="#FFFFFF"/>
+    <g transform="rotate(15 680 728)">
+      <path d="M675 370 C674 352 684 340 702 336 C722 324 752 324 766 332 C782 336 792 350 786 370 Z" fill="#AFC0DE" transform="translate(0 10)"/>
+      <path d="M675 370 C674 352 684 340 702 336 C722 324 752 324 766 332 C782 336 792 350 786 370 Z" fill="#FFFFFF"/>
+    </g>
+    <path d="M790 752 C798 734 824 724 848 728 C866 731 882 742 880 756 Z" fill="#AFC0DE" transform="translate(0 8)"/>
+    <path d="M790 752 C798 734 824 724 848 728 C866 731 882 742 880 756 Z" fill="#FFFFFF"/>
+
+    <!-- 금빛 책갈피: 책 속에 끼워 둔 가을 -->
+    <path d="M398 226 h54 v170 l-27 -24 l-27 24z" fill="url(#gold)"/>
   </g>
-  <g fill="#6366F1" opacity="0.45">
-    <rect x="190" y="376" width="130" height="24"/><rect x="190" y="636" width="130" height="24"/>
-    <rect x="530" y="416" width="120" height="24"/><rect x="530" y="644" width="120" height="24"/>
-  </g>
-  <path d="M398 226 h54 v170 l-27 -24 l-27 24z" fill="#FBBF24"/>
 </svg>

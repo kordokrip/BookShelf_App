@@ -8,7 +8,7 @@
  * - favicon.ico(16·32·48, PNG 내장) · favicon.svg · favicon-16/32.png  ← 작은 크기 전용 단순화 마스터
  * - apple-touch-icon.png 180 — 불투명 풀블리드(iOS가 투명 모서리를 검정으로 채우고 자체 마스크를 씌움)
  * - icon-192/512.png (purpose any) — 둥근 모서리, 투명 배경(데스크톱 설치 아이콘)
- * - icon-192/512-maskable.png — 풀블리드, 글리프를 안전 영역(중앙 80% 원) 안으로 축소
+ * - icon-192/512-maskable.png — 풀블리드 하늘 + 마스터의 id="art" 그룹을 안전 영역(중앙 80% 원) 안으로 축소
  * - icon-monochrome-512.png — 흰색 + 알파(안드로이드 테마 아이콘)
  * - badge-72/96.png — 알림 배지(안드로이드는 알파만 사용)
  * - shortcut-{record,register,stats,library}-96.png — manifest 바로가기
@@ -24,9 +24,9 @@ const SRC = join(ROOT, 'design/icons');
 const OUT = join(ROOT, 'public/icons');
 const svg = (name) => readFileSync(join(SRC, name));
 
-const BRAND_START = '#4F46E5';
-const BRAND_END = '#7C3AED';
-const GRADIENT = `<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${BRAND_START}"/><stop offset="1" stop-color="${BRAND_END}"/></linearGradient></defs>`;
+// 앱 아이콘(design/icons/app-icon.svg)과 같은 '가을→겨울' 하늘 — 바로가기 아이콘·링크 미리보기 배경 (54차, 원칙은 design/icons/season-philosophy.md)
+const SKY_STOPS = [[0, '#D2703A'], [0.3, '#B14A30'], [0.64, '#5A3367'], [1, '#1B2456']];
+const GRADIENT = `<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">${SKY_STOPS.map(([o, c]) => `<stop offset="${o}" stop-color="${c}"/>`).join('')}</linearGradient></defs>`;
 
 mkdirSync(OUT, { recursive: true });
 const png = (input, size, file) => sharp(input, { density: 300 }).resize(size, size).png({ compressionLevel: 9 }).toFile(join(OUT, file));
@@ -42,12 +42,12 @@ async function rounded(input, size, radiusRatio) {
     .toBuffer();
 }
 
-/** 그라디언트 배경 위에 글리프를 scale 비율로 가운데 배치 (maskable 안전 영역용) */
-async function onGradient(glyph, size, scale) {
-  const bg = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">${GRADIENT}<rect width="${size}" height="${size}" fill="url(#g)"/></svg>`);
-  const inner = Math.round(size * scale);
-  const g = await sharp(glyph, { density: 300 }).resize(inner, inner).png().toBuffer();
-  return sharp(bg).composite([{ input: g, gravity: 'center' }]).png({ compressionLevel: 9 }).toBuffer();
+/** maskable: 배경은 풀블리드로 두고 id="art" 그룹만 scale 비율로 가운데 축소 (안전 영역용) */
+function maskable(masterSvg, scale) {
+  const t = (1024 * (1 - scale)) / 2;
+  const out = masterSvg.toString().replace('<g id="art">', `<g id="art" transform="translate(${t} ${t}) scale(${scale})">`);
+  if (out === masterSvg.toString()) throw new Error('app-icon.svg에 <g id="art"> 그룹이 없습니다');
+  return Buffer.from(out);
 }
 
 /** PNG 여러 장을 담은 .ico (Vista 이후 모든 브라우저·OS가 PNG 내장 ICO를 지원) */
@@ -81,8 +81,8 @@ const glyph = svg('app-glyph.svg');
 await png(master, 180, 'apple-touch-icon.png'); log('apple-touch-icon.png', 180);
 for (const size of [192, 512]) {
   writeFileSync(join(OUT, `icon-${size}.png`), await rounded(master, size, 0.225)); log(`icon-${size}.png`, size);
-  // 글리프의 가장 먼 점(선반 끝)이 중앙 80% 원 안에 들도록 72%로 축소
-  writeFileSync(join(OUT, `icon-${size}-maskable.png`), await onGradient(glyph, size, 0.72)); log(`icon-${size}-maskable.png`, size);
+  // 그림의 가장 먼 점(선반 끝·은행잎)이 중앙 80% 원 안에 들도록 72%로 축소
+  await png(maskable(master, 0.72), size, `icon-${size}-maskable.png`); log(`icon-${size}-maskable.png`, size);
 }
 await png(glyph, 512, 'icon-monochrome-512.png'); log('icon-monochrome-512.png', 512);
 

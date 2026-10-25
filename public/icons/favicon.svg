@@ -1,12 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <!-- 16~48px 전용 단순화 버전: 책 3권 + 선반, 넓은 간격(작은 크기에서 책이 뭉치지 않도록) -->
-  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4F46E5"/><stop offset="1" stop-color="#7C3AED"/></linearGradient></defs>
-  <rect width="1024" height="1024" rx="224" fill="url(#bg)"/>
-  <g fill="#FFFFFF">
-    <rect x="196" y="300" width="170" height="460" rx="36"/>
-    <rect x="430" y="210" width="190" height="550" rx="36"/>
-    <rect x="684" y="340" width="150" height="420" rx="36"/>
-    <rect x="150" y="800" width="724" height="84" rx="42"/>
-  </g>
-  <path d="M490 210 h70 v190 l-35 -30 l-35 30z" fill="#FBBF24"/>
+  <!-- 16~48px 전용 단순화 버전: 책 3권 + 선반, 넓은 간격(작은 크기에서 책이 뭉치지 않도록).
+       큰 아이콘과 같은 '가을→겨울' 하늘·종이색을 쓰되 은행잎·눈송이는 덜어 내고(작으면 얼룩이 됨),
+       오른쪽 책 위 눈과 금빛 책갈피만 남긴다. 오른쪽 책은 눈이 보이도록 서리색을 진하게 했다. -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#D2703A"/>
+      <stop offset="0.3" stop-color="#B14A30"/>
+      <stop offset="0.64" stop-color="#5A3367"/>
+      <stop offset="1" stop-color="#1B2456"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="224" fill="url(#sky)"/>
+  <rect x="196" y="300" width="170" height="460" rx="36" fill="#FDE3C4"/>
+  <rect x="430" y="210" width="190" height="550" rx="36" fill="#F8EEE4"/>
+  <rect x="684" y="340" width="150" height="420" rx="36" fill="#9DB4E0"/>
+  <rect x="150" y="800" width="724" height="84" rx="42" fill="#F1EDEA"/>
+  <path d="M672 372 C670 338 690 318 716 314 C742 296 790 296 812 310 C838 314 852 338 846 372 Z" fill="#FFFFFF"/>
+  <path d="M490 210 h70 v190 l-35 -30 l-35 30z" fill="#F6B13E"/>
 </svg>

@@ -218,6 +218,7 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 - **조작 요소·내비게이션·섹션 제목·상태 안내 = lucide 아이콘**(선 두께 기본, 옆에 글자가 있으면 `aria-hidden`). 노트 종류는 `components/notes/noteTypes.tsx`의 `NOTE_TYPE_META`(메모 `NotebookPen`, 문구 `Quote`, 독후감 `PenLine`, 하이라이트 `Highlighter`) 한 곳에서 정의 — 화면마다 "인용/리뷰"처럼 이름이 달라지던 문제도 함께 해결
 - **이모지 = 감정·보상 순간과 콘텐츠 분류에만**: 캐릭터·업적·축하, 인사말, 토스트 문구, 장르(`GENRE_CONFIG.emoji`), 사용자가 고른 프로필·컬렉션 이모지. 이모지는 OS마다 모양이 달라 조작 요소에 쓰면 톤이 흔들리고 스크린리더가 이모지 이름까지 읽는다
 - **브랜드 마크**: `components/brand/AppLogo.tsx`(`tile`·`glyph`) — 앱 아이콘과 같은 도형. tile 그라데이션은 강조색 변수(`style={{stopColor:'var(--brand-600)'}}` — SVG 속성이 아니라 style로 써야 CSS 변수가 적용됨)라 앱 디자인을 바꾸면 로고 색도 바뀐다(39차). 아이콘·파비콘·스플래시·og 이미지는 `design/icons/*.svg` 벡터 마스터에서 `npm run pwa:assets`로 생성
+- **OS 앱 아이콘 '가을→겨울'(54차, `design/icons/app-icon.svg`, 원칙 `design/icons/season-philosophy.md`)**: 브랜드 마크와 같은 도형(책 세 권 + 기울어진 책 + 선반 + 금빛 책갈피)에 하늘이 왼쪽 위 잉걸불(`#D2703A`) → 녹슨 주홍 → 자두빛 → 오른쪽 아래 겨울 남색(`#1B2456`)으로 식고, 책·선반 종이색도 같은 축으로 따뜻한 색 → 서리색. 왼쪽 하늘에 은행잎 하나, 오른쪽 책·선반 끝에 쌓인 눈과 눈 결정 하나. 16~48px(`app-icon-small.svg`)은 잎·눈송이를 덜고 오른쪽 책(진한 서리색) 위 눈과 책갈피만 남긴다. maskable은 마스터의 `id="art"` 그룹을 72%로 줄여 안전 영역(중앙 80% 원)에 넣는다. 바로가기 아이콘·링크 미리보기 배경도 같은 하늘색. 앱 안 로고(`AppLogo`)는 계속 강조색을 따른다
 
 ### 2.2 타이포그래피 스케일
 
