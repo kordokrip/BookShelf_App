@@ -1,10 +1,26 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
-export default defineConfig({
+/**
+ * VITE_ 변수는 번들에 그대로 들어가는 공개 값이다. 비밀처럼 보이는 이름이면 빌드를 멈춘다.
+ * (53차 발견: zustand devtools가 import.meta.env를 객체째 검사해 .env.local의 VITE_* 값 전부가 로컬 dist에 실렸다 —
+ *  운영은 CI에 .env.local이 없어 안전했다. 비밀은 VITE_ 없이 .dev.vars·wrangler secret에 둔다)
+ */
+const PUBLIC_VITE_VARS = new Set(['VITE_API_BASE_URL', 'VITE_APP_ENV', 'VITE_GOOGLE_CLIENT_ID'])
+function assertNoSecretViteVars(mode: string) {
+  const env = loadEnv(mode, process.cwd(), 'VITE_')
+  const bad = Object.keys(env).filter((k) => !PUBLIC_VITE_VARS.has(k) && /(TOKEN|SECRET|PASSWORD|PRIVATE|API_KEY|_KEY$)/.test(k))
+  if (bad.length) {
+    throw new Error(`[vite] 비밀처럼 보이는 VITE_ 변수는 번들에 노출됩니다: ${bad.join(', ')} — VITE_ 접두사를 빼고 .dev.vars 또는 wrangler secret으로 옮기세요`)
+  }
+}
+
+export default defineConfig(({ mode }) => {
+  assertNoSecretViteVars(mode)
+  return {
   plugins: [
     // The React and Tailwind plugins are both required for Make, even if
     // Tailwind is not being actively used – do not remove them
@@ -132,4 +148,5 @@ export default defineConfig({
       },
     },
   },
+}
 })
