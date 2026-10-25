@@ -91,12 +91,41 @@ export async function fetchCollectionKdc(env: NlEnv, isbn: string): Promise<stri
   return parseCollectionKdc(await fetchJson(url.toString()));
 }
 
-export const TOC_MAX_CHARS = 1500;
+export const TOC_MAX_CHARS = 1800;
 
-/** 목차 텍스트를 줄 단위로 정리(빈 줄·과한 공백 제거, 길이 제한) */
-export function cleanToc(text: string): string {
+const len = (s: string) => Array.from(s).length;
+const clip = (s: string, n: number) => Array.from(s).slice(0, n).join('');
+
+/** 장·부 단위 제목 줄 — "1장 …", "제2부 …", "3. …", "Part 1", "Chapter 4", "부록·에필로그·프롤로그" */
+const HEADING_RE = /^(제\s*\d+\s*[부편장권]|\d+\s*[부편장권](\s|$|[.:])|\d+[.)]\s|part\s*\d|chapter\s*\d|부록|에필로그|프롤로그|들어가며|나가며|맺음말|머리말)/i;
+/** 하위 절 표시(줄 앞 "__", "-", "·", "•", "○") */
+const SUBLEVEL_RE = /^(__|[-·•○◦▪]\s?)/;
+
+/**
+ * 목차 정리 + 길이 맞춤. 길면 앞에서 자르지 않고 장 제목을 모두 남긴 뒤 하위 절을 장마다 고르게 채운다.
+ * (2026-10-25 실측: 클린 코드 목차 11,371자·17장을 앞 1,500자로 자르면 1~3장만 남아 요약이 앞부분에 치우쳤다)
+ */
+export function cleanToc(text: string, maxChars = TOC_MAX_CHARS): string {
   const lines = text.replace(/\r/g, '').split('\n').map((l) => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
-  return Array.from(lines.join('\n')).slice(0, TOC_MAX_CHARS).join('');
+  const all = lines.join('\n');
+  if (len(all) <= maxChars) return all;
+
+  const headIdx = lines.map((l, i) => (HEADING_RE.test(l) ? i : -1)).filter((i) => i >= 0);
+  if (headIdx.length < 3) {
+    // 장 구조를 못 찾으면 하위 절 표시가 붙은 줄을 빼고 자른다
+    return clip(lines.filter((l) => !SUBLEVEL_RE.test(l)).join('\n'), maxChars);
+  }
+  // 장마다 [제목, 하위 줄들] — 하위 표시가 붙은 깊은 줄은 뒤로 미룬다
+  const groups = headIdx.map((start, k) => {
+    const body = lines.slice(start + 1, headIdx[k + 1] ?? lines.length);
+    return { head: lines[start]!, subs: [...body.filter((l) => !SUBLEVEL_RE.test(l)), ...body.filter((l) => SUBLEVEL_RE.test(l))] };
+  });
+  const render = (perChapter: number) => groups.map((g) => [g.head, ...g.subs.slice(0, perChapter).map((l) => `  ${l}`)].join('\n')).join('\n');
+  for (let n = 6; n >= 1; n--) {
+    const out = render(n);
+    if (len(out) <= maxChars) return out;
+  }
+  return clip(render(0), maxChars);
 }
 
 /**

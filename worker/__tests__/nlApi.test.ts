@@ -80,3 +80,33 @@ describe('목차 파일', () => {
     expect(await fetchToc('https://www.nl.go.kr/x.txt')).toBeNull();
   });
 });
+
+describe('cleanToc — 길이 맞춤(52차)', () => {
+  // 클린 코드 목차 모양(2026-10-25 실측: 11,371자·17장, 하위 절에 "__" 표시)
+  const big = Array.from({ length: 17 }, (_, i) => [
+    `${i + 1}장 장 제목 ${i + 1}`,
+    ...Array.from({ length: 20 }, (_, j) => `소절 ${i + 1}-${j + 1} 설명이 조금 긴 하위 항목`),
+    '__ 깊은 하위 항목',
+  ].join('\n')).join('\n') + '\n부록A 동시성 II\n에필로그';
+
+  it('짧은 목차는 그대로(줄 정리만)', () => {
+    expect(cleanToc('제1부 인지혁명\r\n\r\n1.  별로 중요치 않은 동물\n')).toBe('제1부 인지혁명\n1. 별로 중요치 않은 동물');
+  });
+
+  it('길면 앞에서 자르지 않고 모든 장 제목을 남기고 하위 절을 장마다 고르게 넣는다', () => {
+    const out = cleanToc(big);
+    expect(Array.from(out).length).toBeLessThanOrEqual(TOC_MAX_CHARS);
+    expect(out.match(/^\d+장/gm)).toHaveLength(17);
+    expect(out).toContain('17장 장 제목 17');
+    expect(out).toContain('부록A 동시성 II');
+    expect(out).toContain('  소절 17-1');
+    expect(out).not.toContain('__ 깊은');
+  });
+
+  it('장 구조를 못 찾으면 하위 표시 줄을 빼고 자른다', () => {
+    const flat = Array.from({ length: 300 }, (_, i) => (i % 3 ? `__ 하위 ${i}` : `항목 ${i}`)).join('\n');
+    const out = cleanToc(flat, 100);
+    expect(Array.from(out).length).toBeLessThanOrEqual(100);
+    expect(out).not.toContain('__');
+  });
+});
