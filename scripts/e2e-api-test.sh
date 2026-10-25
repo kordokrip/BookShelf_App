@@ -47,7 +47,7 @@ FAILED_TESTS=()
 if [[ "$READONLY" == true ]]; then
   TOTAL=3
 else
-  TOTAL=82
+  TOTAL=83
 fi
 
 # ── 시작 시각 ────────────────────────────────────────────────────
@@ -652,7 +652,7 @@ fi
 # ================================================================
 # GROUP 6 — 도서 검색 (카카오 / 네이버 폴백)
 # ================================================================
-group "GROUP 6 — 도서 검색 카카오/네이버 폴백 (2개)"
+group "GROUP 6 — 도서 검색 카카오 → 국립중앙도서관 폴백 (2개)"
 
 T=20; NAME="GET /api/search/books?q=리액트"; START=$(now_ms)
 TMPF=$(mktemp /tmp/e2e_XXXXXX)
@@ -662,7 +662,7 @@ ELAPSED=$(( $(now_ms) - START ))
 SEARCH_BOOKS=$(json_val "$BODY" "len(d.get('books', []))")
 if [[ -n "$SEARCH_BOOKS" && "$SEARCH_BOOKS" -ge 1 ]]; then
   pass_test $T "$NAME" $ELAPSED
-  printf "         ${CYAN}↳ 검색 결과 %s건 (카카오/네이버 정상)${NC}\n" "$SEARCH_BOOKS"
+  printf "         ${CYAN}↳ 검색 결과 %s건${NC}\n" "$SEARCH_BOOKS"
 else
   fail_test $T "$NAME" $ELAPSED "$BODY" "검색 결과 없음 (got: ${SEARCH_BOOKS:-0})"
 fi
@@ -741,6 +741,20 @@ if [[ -n "$FILL_ID" && -n "$FILLED" ]]; then
   printf "         ${CYAN}↳ 장르/쪽수: %s${NC}\n" "$FILLED"
 else
   fail_test $T "$NAME" $ELAPSED "" "12초 안에 장르·쪽수가 채워지지 않음 (id=${FILL_ID})"
+fi
+
+T=86; NAME="GET /api/search/books 카카오 0건 → 국립중앙도서관 폴백 (네이버 책 API 대체)"; START=$(now_ms)
+TMPF=$(mktemp /tmp/e2e_XXXXXX)
+HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" --get --data-urlencode "q=상록수 심훈 한성도서" "${BASE_URL}/api/search/books" -H "Authorization: Bearer ${TOKEN}")
+BODY=$(cat "$TMPF"); rm -f "$TMPF"
+ELAPSED=$(( $(now_ms) - START ))
+# 2026-10-25 기준 카카오 0건·국립중앙도서관 4건인 옛 판본 검색(키가 없는 환경은 0건이라 FAIL — 운영·스테이징·로컬 모두 키 있음)
+OK86=$(json_val "$BODY" "len(d.get('books', [])) >= 1 and all(b.get('title') for b in d['books'])")
+if [[ "$HTTP_CODE" == "200" && "$OK86" == "True" ]]; then
+  pass_test $T "$NAME" $ELAPSED
+  printf "         ${CYAN}↳ %s${NC}\n" "$(json_val "$BODY" "d['books'][0]['title'][:30]")"
+else
+  fail_test $T "$NAME" $ELAPSED "$BODY" "HTTP ${HTTP_CODE}, 결과 검사 ${OK86} (기대: 200 + 1건 이상)"
 fi
 
 # ================================================================
