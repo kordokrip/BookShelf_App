@@ -1,7 +1,7 @@
 /**
  * 도서 탐색 (새로 나온 책·인기 책·인생책) React Query 훅
  * - useDiscover: 탭·장르 필터별 커뮤니티 도서 목록 조회
- * - useExternalBooks: 외부 API(카카오/네이버) 신간·베스트셀러 조회
+ * - useExternalBooks: 카카오 신간(최근 2주) 조회
  * - useLibrarianPicks: 국립중앙도서관 사서추천도서(매달 분야별 1권)
  */
 import { useQuery } from '@tanstack/react-query';
@@ -24,17 +24,17 @@ export function useDiscover(tab: DiscoverTab, genre: string) {
 }
 
 /**
- * useExternalBooks — 외부 API 신간/베스트셀러
- * @param tab  'new'(최근 2주 신간) | 'bestseller'(1-10위)
+ * useExternalBooks — 카카오 신간(최근 2주)
+ * @param tab  'new'
  *
- * - staleTime: new=1시간, bestseller=6시간 (KV 캐시와 동기화)
+ * - staleTime: 1시간 (KV 캐시와 동기화)
  * - retry: false (외부 API 오류 시 빠른 실패)
  */
-export function useExternalBooks(tab: 'new' | 'bestseller') {
+export function useExternalBooks(tab: 'new') {
   return useQuery({
     queryKey: queryKeys.discover.external(tab),
     queryFn:  () => externalBooksApi.list(tab),
-    staleTime: tab === 'bestseller' ? 6 * 60 * 60 * 1000 : 60 * 60 * 1000,
+    staleTime: 60 * 60 * 1000,
     placeholderData: (prev) => prev,
     retry: 1,
   });

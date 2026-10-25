@@ -57,7 +57,7 @@ export function parseSeoji(json: unknown): SeojiInfo | null {
   };
 }
 
-export async function fetchSeoji(env: NlEnv, isbn: string): Promise<SeojiInfo | null> {
+async function fetchSeojiJson(env: NlEnv, isbn: string): Promise<unknown> {
   if (!env.NL_CERT_KEY || !isbn) return null;
   const url = new URL('https://www.nl.go.kr/seoji/SearchApi.do');
   url.searchParams.set('cert_key', env.NL_CERT_KEY);
@@ -65,7 +65,17 @@ export async function fetchSeoji(env: NlEnv, isbn: string): Promise<SeojiInfo | 
   url.searchParams.set('page_no', '1');
   url.searchParams.set('page_size', '1');
   url.searchParams.set('isbn', isbn);
-  return parseSeoji(await fetchJson(url.toString()));
+  return fetchJson(url.toString());
+}
+
+export async function fetchSeoji(env: NlEnv, isbn: string): Promise<SeojiInfo | null> {
+  return parseSeoji(await fetchSeojiJson(env, isbn));
+}
+
+/** 서지정보 첫 문서 원본(제목·저자·출판사·쪽수 등 그대로) — 도서 조회 대체 출처용(lib/nlBooks.ts) */
+export async function fetchSeojiDoc(env: NlEnv, isbn: string): Promise<Record<string, unknown> | null> {
+  const o = (await fetchSeojiJson(env, isbn)) as { docs?: unknown[] } | null;
+  return (o?.docs?.[0] as Record<string, unknown> | undefined) ?? null;
 }
 
 /** 소장자료 응답에서 KDC classNo(예: "813.62", "004.73")가 있는 첫 결과 */

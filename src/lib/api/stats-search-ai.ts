@@ -157,7 +157,6 @@ export const discoverApi = {
 
 /** 외부 API(카카오/네이버)에서 가져온 단일 도서 */
 export interface ExternalBook {
-  rank?: number;            // 베스트셀러 순위 (1-10)
   isbn: string;
   title: string;
   author: string;
@@ -165,7 +164,7 @@ export interface ExternalBook {
   publishedDate: string | null;   // YYYY-MM-DD
   coverImage: string | null;
   description: string | null;
-  source: 'kakao' | 'naver';
+  source: 'kakao';
 }
 
 export interface ExternalBooksResponse {
@@ -200,7 +199,7 @@ export const librarianPicksApi = {
 };
 
 export const externalBooksApi = {
-  /** 신간(최근 2주) 또는 베스트셀러 목록 조회 */
-  list: (tab: 'new' | 'bestseller') =>
+  /** 신간(최근 2주) 목록 조회 */
+  list: (tab: 'new') =>
     apiFetch<ExternalBooksResponse>(`/api/discover/external?tab=${tab}`),
 };

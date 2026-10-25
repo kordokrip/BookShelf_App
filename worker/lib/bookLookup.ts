@@ -1,16 +1,18 @@
 /**
- * 도서 메타데이터 조회 — 카카오 책 검색(1순위) + 네이버 책 검색(폴백).
+ * 도서 메타데이터 조회 — 카카오 책 검색(1순위) + 국립중앙도서관 소장자료(폴백, 52차).
+ * (네이버 책 검색 API는 2026-07-31 종료 — 같은 키로 book·shop·doc만 404 SE05. 이전엔 매번 헛호출로 조회 예산까지 썼다)
  *
  * AI 요약(책 소개를 근거로 삼음)과 인생책 추천(실존 검증 + 표지 보강)이 공유한다.
  * 첫 검색 결과를 무조건 믿지 않고 제목 유사도(+저자 겹침)를 확인해 엉뚱한 책이 붙는 것을 막는다.
  * 네트워크·키 문제는 모두 null로 삼킨다(호출 측이 "근거 없음"으로 처리).
  */
 import { normalizeTitle } from './ai/aiRecommend';
+import { nlBookByIsbn, searchNlBooks, type NlBook } from './nlBooks';
 
 export interface LookupEnv {
   KAKAO_REST_API_KEY?: string;
-  NAVER_CLIENT_ID?: string;
-  NAVER_CLIENT_SECRET?: string;
+  /** 국립중앙도서관 Open API(폴백) */
+  NL_CERT_KEY?: string;
   /**
    * 한 요청에서 쓸 수 있는 외부 조회 횟수(선택). Workers 무료 플랜은 요청당 외부 fetch가 50회라
    * 후보를 여러 권 검증하는 추천처럼 조회가 많은 흐름은 이 상한을 넘으면 더 조회하지 않는다(null 처리).
@@ -46,7 +48,7 @@ export interface BookMatch {
   thumbnail: string;
   publisher: string;
   url: string;
-  source: 'kakao' | 'naver';
+  source: 'kakao' | 'nl';
   /** 번역자(카카오만 제공, 없으면 빈 문자열) */
   translators?: string;
 }
@@ -62,24 +64,12 @@ interface KakaoDoc {
   translators?: string[];
 }
 
-interface NaverItem {
-  title?: string;
-  link?: string;
-  image?: string;
-  author?: string;
-  publisher?: string;
-  isbn?: string;
-  description?: string;
-}
-
 /** 개별 조회 상한 — 인생책은 후보 수만큼 병렬 조회하므로 가장 느린 한 건이 전체 지연을 정한다 */
 export const LOOKUP_TIMEOUT_MS = 4000;
 /** 이 이상이면 제목만으로 같은 책으로 인정 */
 const TITLE_STRONG = 0.85;
 /** 이 이상이면 저자까지 겹칠 때 같은 책으로 인정 */
 const TITLE_WEAK = 0.6;
-
-const stripTags = (s: string) => s.replace(/<[^>]*>/g, '').trim();
 
 /** "ISBN10 ISBN13" 형태에서 13자리 우선 */
 export function pickIsbn(raw: string | undefined | null): string {
@@ -187,34 +177,20 @@ async function searchKakao(env: LookupEnv, q: BookQuery): Promise<BookMatch | nu
   return pickBest(q, candidates);
 }
 
-async function searchNaver(env: LookupEnv, q: BookQuery): Promise<BookMatch | null> {
-  if (!env.NAVER_CLIENT_ID || !env.NAVER_CLIENT_SECRET) return null;
-  const url = new URL('https://openapi.naver.com/v1/search/book.json');
-  url.searchParams.set('query', q.isbn ? pickIsbn(q.isbn) : q.author ? `${q.title} ${q.author}` : q.title);
-  url.searchParams.set('display', q.isbn ? '1' : '10');
-  const json = await fetchJson<{ items?: NaverItem[] }>(env, url.toString(), {
-    'X-Naver-Client-Id': env.NAVER_CLIENT_ID,
-    'X-Naver-Client-Secret': env.NAVER_CLIENT_SECRET,
-  });
-  const candidates: Candidate[] = (json?.items ?? []).map((it) => {
-    const author = stripTags(it.author ?? '').replace(/\^/g, ', ');
-    return {
-      title: stripTags(it.title ?? ''),
-      authors: [author],
-      match: {
-        title: stripTags(it.title ?? ''),
-        author,
-        contents: stripTags(it.description ?? ''),
-        isbn: pickIsbn(it.isbn),
-        thumbnail: it.image ?? '',
-        publisher: it.publisher ?? '',
-        url: it.link ?? '',
-        source: 'naver',
-      },
-    };
-  });
-  if (q.isbn) return candidates[0]?.match ?? null;
-  return pickBest(q, candidates);
+const nlToMatch = (b: NlBook): BookMatch => ({
+  title: b.title, author: b.author, contents: '', isbn: b.isbn, thumbnail: b.thumbnail, publisher: b.publisher, url: '', source: 'nl',
+});
+
+/** 국립중앙도서관 — ISBN이면 그 책, 아니면 정확도순 10권 중 제목·저자가 맞는 책(조회 예산 1 소모) */
+async function searchNl(env: LookupEnv, q: BookQuery): Promise<BookMatch | null> {
+  if (!env.NL_CERT_KEY || !takeLookup(env)) return null;
+  const isbn = q.isbn ? pickIsbn(q.isbn) : '';
+  if (isbn) {
+    const b = await nlBookByIsbn(env, isbn).catch(() => null);
+    return b?.title ? nlToMatch(b) : null;
+  }
+  const { books } = await searchNlBooks(env, q.author ? `${q.title} ${q.author}` : q.title, 10).catch(() => ({ books: [] as NlBook[] }));
+  return pickBest(q, books.map((b) => ({ title: b.title, authors: [b.author], match: nlToMatch(b) })));
 }
 
 /**
@@ -227,12 +203,12 @@ export async function searchBook(env: LookupEnv, query: BookQuery): Promise<Book
   const q: BookQuery = { ...query, title };
 
   if (q.isbn) {
-    const byIsbn = (await searchKakao(env, q)) ?? (await searchNaver(env, q));
+    const byIsbn = (await searchKakao(env, q)) ?? (await searchNl(env, q));
     if (byIsbn) return byIsbn;
     if (!title) return null;
   }
   const byTitle: BookQuery = { title, author: q.author };
-  const found = (await searchKakao(env, byTitle)) ?? (await searchNaver(env, byTitle));
+  const found = (await searchKakao(env, byTitle)) ?? (await searchNl(env, byTitle));
   if (found || !q.allowAuthorMismatch || !q.author) return found;
   // 저자 없이 제목만으로 재검색 — pickBest가 제목 유사도 0.85 이상(일치·접두 일치)만 저자 없이 인정한다
   return searchKakao(env, { title });

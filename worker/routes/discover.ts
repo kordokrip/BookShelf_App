@@ -163,21 +163,16 @@ discoverRouter.get(
 );
 
 /* ═══════════════════════════════════════════════════════════════
- * GET /api/discover/external?tab=new|bestseller
+ * GET /api/discover/external?tab=new
  * ─────────────────────────────────────────────────────────────
- * new        : 카카오 Books API로 최근 2주 이내 출간된 신간
- * bestseller : 실제 베스트셀러 순위 제공
- *              - 1차: 알라딘 오픈API (ALADIN_TTB_KEY 설정 시, 정확한 순위)
- *              - 2차: 네이버 Books 인기 장르별 최신 도서 조합 (fallback)
- *              - 3차: 카카오 Books 장르별 최신 도서 보완 (fallback)
- *              ※ "베스트셀러" 키워드 검색 방식은 제목에 단어가 있는 책을 반환하므로 폐기
+ * new : 카카오 Books API로 최근 2주 이내 출간된 신간 (KV 1시간)
  *
- * KV 캐싱: new → 1시간, bestseller → 6시간
+ * 52차: bestseller 탭 제거 — 화면에서 쓰지 않았고 출처가 모두 사라졌다(알라딘 TTB 2026-10-30 종료 공지,
+ * 네이버 책 API 2026-07-31 종료, 남은 카카오 "소설 2024" 키워드 검색은 베스트셀러가 아니었다). 그 밖의 tab은 빈 목록.
  * ═══════════════════════════════════════════════════════════════ */
 
 /** 외부 API에서 가져온 단일 도서 */
 export interface ExternalBook {
-  rank?: number;
   isbn: string;
   title: string;
   author: string;
@@ -185,7 +180,7 @@ export interface ExternalBook {
   publishedDate: string | null;   // YYYY-MM-DD
   coverImage: string | null;
   description: string | null;
-  source: 'kakao' | 'naver' | 'aladin';
+  source: 'kakao';
 }
 
 export interface ExternalBooksResponse {
@@ -198,7 +193,8 @@ discoverRouter.get(
   rateLimit({ limit: 20, windowMs: 60_000, keyPrefix: 'discover_ext' }),
   authMiddleware,
   async (c) => {
-    const tab    = (c.req.query('tab') ?? 'bestseller') as 'new' | 'bestseller';
+    const tab    = c.req.query('tab') ?? 'new';
+    if (tab !== 'new') return c.json({ books: [], fetchedAt: new Date().toISOString() } satisfies ExternalBooksResponse);
 
     // KV 캐시 (tab별로 구분)
     const cacheKey = `ext_books:${tab}:v6`;
@@ -206,11 +202,6 @@ discoverRouter.get(
     if (cached) return c.json(cached);
 
     const kakaoKey      = c.env.KAKAO_REST_API_KEY;
-    const naverClientId = c.env.NAVER_CLIENT_ID;
-    const naverSecret   = c.env.NAVER_CLIENT_SECRET;
-
-    // HTML 태그 제거 (네이버 API는 <b> 태그 포함)
-    const cleanHtml = (s: string) => s.replace(/<[^>]+>/g, '').trim();
 
     // ── 신간 (최근 2주 이내 출간) ───────────────────────────────
     if (tab === 'new') {
@@ -265,142 +256,6 @@ discoverRouter.get(
         fetchedAt: new Date().toISOString(),
       };
       await c.env.KV.put(cacheKey, JSON.stringify(result), { expirationTtl: 3_600 });
-      return c.json(result);
-    }
-
-    // ── 베스트셀러 1-10위 ──────────────────────────────────────
-    if (tab === 'bestseller') {
-      const seen:  Set<string>     = new Set();
-      const books: ExternalBook[]  = [];
-
-      // 1차: 알라딘 베스트셀러 API (ALADIN_TTB_KEY 가 있을 때)
-      const aladinKey = c.env.ALADIN_TTB_KEY;
-      if (aladinKey) {
-        try {
-          const url = `https://www.aladin.co.kr/ttb/api/ItemList.aspx?ttbkey=${encodeURIComponent(aladinKey)}&QueryType=Bestseller&MaxResults=10&Cover=Big&output=js&Version=20131101`;
-          const res = await fetch(url);
-          if (res.ok) {
-            const data = await res.json() as {
-              item?: {
-                title: string; author: string; publisher: string;
-                pubDate: string; isbn13: string; cover: string; description: string;
-                bestRank?: number;
-              }[];
-            };
-            for (const item of (data.item ?? [])) {
-              const isbn = item.isbn13?.trim() ?? '';
-              const key  = isbn || item.title;
-              if (seen.has(key)) continue;
-              seen.add(key);
-              books.push({
-                isbn,
-                title:         item.title,
-                author:        item.author,
-                publisher:     item.publisher || null,
-                publishedDate: item.pubDate?.slice(0, 10) ?? null,
-                coverImage:    item.cover || null,
-                description:   item.description?.slice(0, 120) ?? null,
-                source:        'aladin',
-                rank:          item.bestRank ?? (books.length + 1),
-              });
-            }
-          }
-        } catch { /* 알라딘 API 실패 시 fallback으로 진행 */ }
-      }
-
-      // 2차: 알라딘 키 없거나 실패한 경우 — 네이버 Books 다중 장르 쿼리
-      // "베스트셀러" 키워드 검색 대신 인기 장르별 최신 도서를 조합
-      if (books.length < 5) {
-        const popularQueries = ['소설', '에세이', '자기계발', '경제경영', '역사'];
-        await Promise.allSettled(
-          popularQueries.map(async (q) => {
-            try {
-              const url = `https://openapi.naver.com/v1/search/book.json?query=${encodeURIComponent(q)}&sort=date&display=4&start=1`;
-              const res = await fetch(url, {
-                headers: {
-                  'X-Naver-Client-Id':     naverClientId,
-                  'X-Naver-Client-Secret': naverSecret,
-                },
-              });
-              if (!res.ok) return;
-              const data = await res.json() as {
-                items: {
-                  title: string; author: string; publisher: string;
-                  pubdate: string; isbn: string; image: string; description: string;
-                }[];
-              };
-              for (const item of data.items) {
-                const isbn = item.isbn?.split(' ').pop()?.trim() ?? '';
-                const key  = isbn || item.title;
-                if (seen.has(key)) continue;
-                seen.add(key);
-                const pd = item.pubdate ?? '';
-                const publishedDate = pd.length === 8
-                  ? `${pd.slice(0, 4)}-${pd.slice(4, 6)}-${pd.slice(6, 8)}`
-                  : null;
-                books.push({
-                  isbn,
-                  title:         cleanHtml(item.title),
-                  author:        cleanHtml(item.author),
-                  publisher:     item.publisher || null,
-                  publishedDate,
-                  coverImage:    item.image || null,
-                  description:   cleanHtml(item.description).slice(0, 120) || null,
-                  source:        'naver',
-                });
-              }
-            } catch { /* 개별 쿼리 실패 무시 */ }
-          }),
-        );
-      }
-
-      // 3차: 카카오 Books 장르별 최신 도서로 보완 (부족한 경우)
-      if (books.length < 10) {
-        const kakaoQueries = ['소설 2024', '에세이 2024', '자기계발 2025'];
-        await Promise.allSettled(
-          kakaoQueries.map(async (q) => {
-            if (books.length >= 15) return;
-            try {
-              const url = `https://dapi.kakao.com/v3/search/book?query=${encodeURIComponent(q)}&sort=latest&page=1&size=4`;
-              const res = await fetch(url, {
-                headers: { 'Authorization': `KakaoAK ${kakaoKey}` },
-              });
-              if (!res.ok) return;
-              const data = await res.json() as {
-                documents: {
-                  title: string; authors: string[]; publisher: string;
-                  datetime: string; isbn: string; thumbnail: string; contents: string;
-                }[];
-              };
-              for (const doc of data.documents) {
-                const parts = doc.isbn.trim().split(/\s+/);
-                const isbn  = (parts.length >= 2 ? parts[1] : parts[0]) ?? '';
-                const key   = isbn || doc.title;
-                if (seen.has(key)) continue;
-                seen.add(key);
-                books.push({
-                  isbn,
-                  title:         doc.title,
-                  author:        doc.authors.join(', '),
-                  publisher:     doc.publisher || null,
-                  publishedDate: doc.datetime?.slice(0, 10) ?? null,
-                  coverImage:    doc.thumbnail || null,
-                  description:   doc.contents?.slice(0, 120) ?? null,
-                  source:        'kakao',
-                });
-              }
-            } catch { /* 카카오 API 실패 무시 */ }
-          }),
-        );
-      }
-
-      // 순위 부여 후 상위 10권
-      const ranked = books.slice(0, 10).map((b, i) => ({ ...b, rank: b.rank ?? (i + 1) }));
-      const result: ExternalBooksResponse = {
-        books:     ranked,
-        fetchedAt: new Date().toISOString(),
-      };
-      await c.env.KV.put(cacheKey, JSON.stringify(result), { expirationTtl: 6 * 3_600 });
       return c.json(result);
     }
 

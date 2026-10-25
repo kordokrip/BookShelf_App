@@ -70,21 +70,28 @@ describe('searchBook', () => {
     expect(await searchBook(ENV, { title: '데미안' })).toBeNull();
   });
 
-  it('카카오 실패 시 네이버로 폴백(HTML 태그 제거, ^ 저자 구분)', async () => {
+  it('카카오 실패 시 국립중앙도서관 소장자료로 폴백(강조 태그·앞 괄호 수식어 제거, 표지 절대 주소) — 52차', async () => {
     const f = vi.fn(async (u: string) => u.includes('kakao')
       ? new Response('x', { status: 500 })
-      : new Response(JSON.stringify({ items: [{ title: '<b>데미안</b>', author: '헤르만 헤세^전영애', description: '<b>성장</b> 소설 소개 문장입니다 충분히 길게.', isbn: '8937460777 9788937460777', publisher: '민음사', image: 'i', link: 'l' }] }), { status: 200 }));
+      : new Response(JSON.stringify({ total: 2, result: [
+        { titleInfo: '<span class="searching_txt">데미안</span>', authorInfo: '지은이: 헤르만 헤세 ;옮긴이: 전영애', pubInfo: '민음사', isbn: '8937460777 9788937460777', pubYearInfo: '2009', typeName: '도서', imageUrl: 'kolis/2010/KMO1_thumbnail.jpg' },
+        { titleInfo: '(그림으로 읽는) 데미안 이야기', authorInfo: '홍길동 지음', pubInfo: '서울 : 어딘가, 2001', isbn: '', typeName: '도서' },
+      ] }), { status: 200 }));
     vi.stubGlobal('fetch', f);
-    const m = await searchBook({ ...ENV, NAVER_CLIENT_ID: 'a', NAVER_CLIENT_SECRET: 'b' }, { title: '데미안', author: '헤르만 헤세' });
-    expect(m).toMatchObject({ title: '데미안', author: '헤르만 헤세, 전영애', source: 'naver' });
-    expect(m?.contents).toBe('성장 소설 소개 문장입니다 충분히 길게.');
+    const m = await searchBook({ ...ENV, NL_CERT_KEY: 'k' }, { title: '데미안', author: '헤르만 헤세' });
+    expect(m).toMatchObject({ title: '데미안', author: '헤르만 헤세, 전영애', isbn: '9788937460777', source: 'nl', contents: '', thumbnail: 'https://cover.nl.go.kr/kolis/2010/KMO1_thumbnail.jpg' });
+    expect(String(f.mock.calls[1]![0])).toContain('nl.go.kr/NL/search/openApi/search.do');
   });
 
-  it('카카오가 맞으면 네이버는 호출하지 않는다', async () => {
+  it('카카오가 맞으면 국립중앙도서관은 호출하지 않고, 키가 없으면 폴백도 없다', async () => {
     const f = kakao([doc()]);
     vi.stubGlobal('fetch', f);
-    await searchBook({ ...ENV, NAVER_CLIENT_ID: 'a', NAVER_CLIENT_SECRET: 'b' }, { title: '데미안', author: '헤르만 헤세' });
+    await searchBook({ ...ENV, NL_CERT_KEY: 'k' }, { title: '데미안', author: '헤르만 헤세' });
     expect(f).toHaveBeenCalledTimes(1);
+    const g = vi.fn(async () => new Response('x', { status: 500 }));
+    vi.stubGlobal('fetch', g);
+    expect(await searchBook(ENV, { title: '데미안' })).toBeNull();
+    expect(g).toHaveBeenCalledTimes(1);
   });
 
   it('응답 없는 조회는 타임아웃(AbortController)으로 끊고 null', async () => {

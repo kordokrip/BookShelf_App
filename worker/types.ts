@@ -149,8 +149,6 @@ export interface Bindings {
   // Secrets (wrangler secret put 으로 설정)
   JWT_SECRET: string;
   KAKAO_REST_API_KEY: string;
-  NAVER_CLIENT_ID: string;
-  NAVER_CLIENT_SECRET: string;
   GOOGLE_CLIENT_ID: string;
   GOOGLE_CLIENT_SECRET: string;
   ALLOWED_EMAILS: string;  // 세미콜론 구분 허용 이메일 목록
@@ -158,10 +156,8 @@ export interface Bindings {
   VAPID_PUBLIC_KEY?: string;   // base64url 인코딩된 공개키
   VAPID_PRIVATE_KEY?: string;  // JWK JSON 문자열
   VAPID_SUBJECT?: string;      // 'mailto:admin@example.com'
-  // 국립중앙도서관 ISBN 서지정보 API 인증키 (선택 - 책 등록 시 쪽수·KDC 분류, worker/lib/bookMeta.ts)
+  // 국립중앙도서관 Open API 인증키 — 쪽수·KDC 장르(lib/bookMeta.ts), 사서 추천, 목차, 도서 검색 폴백(lib/nlBooks.ts)
   NL_CERT_KEY?: string;
-  // 알라딘 오픈API (선택 - wrangler secret put ALADIN_TTB_KEY) — 알라딘 공지: 2026-10-30 서비스 종료
-  ALADIN_TTB_KEY?: string;     // 알라딘 TTB API 키 (실제 베스트셀러 순위 조회용)
   // OpenRouter 유료 모델(lib/openrouter.ts OPENROUTER_MODEL) (wrangler secret put OPENROUTER_API_KEY) — AI 요약·인생책·오늘의 문장
   OPENROUTER_API_KEY?: string;
   // Google AI Studio 무료 티어(lib/llm.ts 공급자 체인 1·2순위) (wrangler secret put GEMINI_API_KEY) — 없으면 건너뛴다
