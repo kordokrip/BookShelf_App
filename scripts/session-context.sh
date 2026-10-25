@@ -30,7 +30,11 @@ fi
 echo "- 최근 커밋:"
 git log --oneline -5 2>/dev/null | sed 's/^/  - /'
 
-latest=$(ls docs/sessions/*.md 2>/dev/null | sort | tail -1)
+# 최신 리포트: 커밋 안 된(새로 만들었거나 고친) 리포트 → 가장 최근 커밋에서 바뀐 리포트 → 파일 이름순 마지막.
+# 이름순만 쓰면 같은 날짜 리포트가 여럿일 때 엉뚱한 것을 고른다(2026-10-25에 summary-naver가 54차 리포트보다 뒤로 정렬됨)
+latest=$(git status --porcelain -- docs/sessions 2>/dev/null | awk '{print $NF}' | grep '\.md$' | sort | tail -1)
+[ -z "$latest" ] && latest=$(git log -1 --format= --name-only --diff-filter=AM -- 'docs/sessions/*.md' 2>/dev/null | grep '\.md$' | head -1)
+[ -z "$latest" ] && latest=$(ls docs/sessions/*.md 2>/dev/null | sort | tail -1)
 if [ -n "$latest" ]; then
   echo
   echo "### 최신 세션 리포트: \`$latest\`"
