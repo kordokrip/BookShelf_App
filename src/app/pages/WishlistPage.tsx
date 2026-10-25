@@ -25,7 +25,7 @@ function parseTab(v: string | null): TabKey {
 }
 
 export function WishlistPage() {
-  // 탭은 ?tab=recommend|new 로 열 수 있고(기본 mine), 바꿀 때 URL도 replace로 맞춘다
+  // 탭은 ?tab=new|librarian|recommend 로 열 수 있고(기본 mine), 바꿀 때 URL도 replace로 맞춘다
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = parseTab(searchParams.get('tab'));
   const tabRefs = useRef<Partial<Record<TabKey, HTMLButtonElement | null>>>({});

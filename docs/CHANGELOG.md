@@ -4,6 +4,17 @@
 
 ---
 
+## 53차 (2026-10-25) — 정리: 시크릿·죽은 코드·폴더·문서
+
+상세 경위: `docs/sessions/2026-10-25-cleanup.md`
+
+- 쓰지 않는 시크릿 `NAVER_CLIENT_ID`·`NAVER_CLIENT_SECRET`을 운영·스테이징에서 삭제했다(`ALADIN_TTB_KEY`는 원래 없었음).
+- 호출처 없는 `GET /api/discover`와 관련 프론트 코드, 금지된 로컬 배포 스크립트·npm 스크립트를 지웠다. 국립중앙도서관 연동은 `worker/lib/nl/`, 스크립트는 `scripts/assets`·`scripts/qa`로 정리했다.
+- 비밀처럼 보이는 `VITE_` 변수가 있으면 빌드를 멈춘다(로컬 빌드에 토큰이 실리던 문제).
+- 문서를 코드 기준으로 최신화하고 문서 목록 `docs/README.md`를 만들었다.
+
+---
+
 ## 52차 (2026-10-25) — Gemini 일시 과부하 대응·목차 요약 검증, 네이버 책 API 종료 대응
 
 상세 경위: `docs/sessions/2026-10-25-summary-naver.md`

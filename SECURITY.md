@@ -64,15 +64,15 @@ edge 실측(`wrangler tail`, 스테이징): 로그인 CPU 34~45ms(계정 단위 
 | POST /api/users/login (**계정 단위**, 실패만 셈) | 10회 실패 | 900초(15분) 고정 창 — 닿으면 맞는 비밀번호도 429 `login_locked`, 성공 시 기록 삭제. 키는 이메일 해시(`worker/lib/loginGuard.ts`) |
 | DELETE /api/users/me | 5회 | 60초 |
 | POST /api/auth/refresh | 10회 | 60초 |
-| POST /api/ai/book-summary/:bookId (AI 요약) | 3회 | KST 하루(실제 생성 시에만 차감) |
-| GET /api/ai/recommend | 10회 | 60초 |
-| GET /api/ai/lifebooks | 3회 | 600초(10분) |
+| POST /api/ai/book-summary/:bookId (AI 요약) | 사용자별 3회 | KST 하루(실제 생성 시에만 차감 — `ai_book_summary_count`) |
+| GET /api/ai/recommend | 사용자별 3회(`ai_rec`) | 600초(10분) — 실제 생성할 때만 소모(캐시·stale 응답은 무료) |
+| GET /api/ai/collections | 사용자별 3회(`ai_col`) | 600초(10분) — 실제 생성할 때만 소모 |
+| POST /api/books/genre-suggestions | 사용자별 3회(`ai_genre`) | 600초(10분) |
 | POST /api/ai/ocr | 3회 | 60초 |
-| (노트 AI 태깅, 내부 비동기) | 사용자별 50회 | 하루(KST) — `ai_tag_quota` D1 카운터(ADR-005), 플래그 `ai_tags` 사용자만 |
+| (노트 AI 태깅, 내부 비동기) | 사용자별 50회 | 하루(KST) — `ai_tag_quota` D1 카운터(ADR-005) |
 | GET /api/search/books | 20회(사용자별, 로그인 필수) | 60초 |
 | GET /api/search/books/isbn | 10회(사용자별, 로그인 필수) | 60초 |
 | GET /api/search/pagecount | 15회(사용자별, 로그인 필수) | 60초 |
-| GET /api/discover | 30회 | 60초 |
 | GET /api/discover/external | 20회 | 60초 |
 | GET /api/discover/librarian | 20회 | 60초 |
 | POST /api/groups/:id/messages | 30회 | 60초 |
@@ -84,7 +84,7 @@ edge 실측(`wrangler tail`, 스테이징): 로그인 CPU 34~45ms(계정 단위 
 | POST /api/presence/heartbeat | 10회 | 60초 |
 | POST /api/vitals | 60회 | 60초 |
 
-> 전수 확인 기준: `worker/routes/*.ts` 전체에서 `rateLimit(` 사용처 grep (`worker/middleware/rateLimit.ts` 기반, 고정 창 — D1 `counters` 테이블 원자적 카운터, ADR-005. 예전 KV 카운터는 최종 일관성 때문에 한도가 걸리지 않았다. 카운터 저장소 오류 시에는 요청을 막지 않는다. 실동작은 e2e TEST 81이 확인)
+> 전수 확인 기준(53차에 코드에서 뽑아 대조): `worker/routes/*.ts` 전체의 `rateLimit(` 사용처 + 핸들러 안 한도(`RECOMMEND_RATE`·`COLLECTIONS_RATE`, `lib/ai/*.ts`) (`worker/middleware/rateLimit.ts` 기반, 고정 창 — D1 `counters` 테이블 원자적 카운터, ADR-005. 예전 KV 카운터는 최종 일관성 때문에 한도가 걸리지 않았다. 카운터 저장소 오류 시에는 요청을 막지 않는다. 실동작은 e2e TEST 81이 확인)
 
 ---
 
@@ -113,9 +113,15 @@ edge 실측(`wrangler tail`, 스테이징): 로그인 CPU 34~45ms(계정 단위 
 | KAKAO_REST_API_KEY | 카카오 도서 검색 | 필요 시 |
 | NL_CERT_KEY | 국립중앙도서관 Open API(쪽수·장르·사서 추천·목차·도서 검색 폴백) | 필요 시 |
 | ALLOWED_EMAILS | 가입 허용 이메일 | 필요 시 |
-| OPENROUTER_API_KEY | AI 요약·인생책·오늘의 문장(OpenRouter 유료 모델 — 키 노출 시 크레딧 도용 위험). 등록 여부는 `npx wrangler secret list`(스테이징은 `--env staging`)로 확인. 로컬은 `.dev.vars` | 노출 시 즉시 |
+| GEMINI_API_KEY | AI 공급자 체인 1·2순위(Gemini Flash·Lite — `docs/AI_PROVIDERS.md`) | 노출 시 즉시 |
+| OPENROUTER_API_KEY | AI 공급자 체인 폴백(OpenRouter — 키 노출 시 크레딧 도용 위험) | 노출 시 즉시 |
 | VAPID_PUBLIC_KEY | Web Push 공개키 | 변경 불필요 |
 | VAPID_PRIVATE_KEY | Web Push 비밀키 | 변경 불필요 |
+| VAPID_SUBJECT | Web Push 연락처(mailto:) | 변경 불필요 |
+
+> 실제 등록 목록은 `npx wrangler secret list`(스테이징은 `--env staging`)로 확인한다. 로컬은 `.dev.vars`(값은 문서·저장소에 적지 않는다). 53차에 쓰지 않는 `NAVER_CLIENT_ID`·`NAVER_CLIENT_SECRET`을 운영·스테이징에서 삭제했다.
+>
+> **`VITE_`로 시작하는 변수는 비밀이 아니다** — 빌드 결과(브라우저 번들)에 그대로 들어간다. 토큰·키는 `VITE_` 없이 두고, `vite.config.ts`가 비밀처럼 보이는 `VITE_` 변수(이름에 TOKEN·SECRET·PASSWORD·PRIVATE·API_KEY·_KEY)를 발견하면 빌드를 멈춘다(53차).
 
 ### 로테이션 절차
 
@@ -123,11 +129,10 @@ edge 실측(`wrangler tail`, 스테이징): 로그인 CPU 34~45ms(계정 단위 
 # 1. 새 시크릿 생성
 openssl rand -base64 32
 
-# 2. Cloudflare에 업데이트
-wrangler secret put JWT_SECRET
+# 2. Cloudflare에 업데이트 (스테이징은 --env staging) — 저장하면 새 버전으로 바로 반영된다
+npx wrangler secret put JWT_SECRET
 
-# 3. 배포
-npx wrangler deploy
+# 3. 로컬 `wrangler deploy`는 금지 — 코드 변경이 함께 필요하면 git push origin main (CI 배포)
 
 # 4. 기존 JWT는 만료될 때까지 유효 (최대 2시간)
 # 사용자는 Refresh Token으로 새 JWT를 발급받으므로 영향 최소화

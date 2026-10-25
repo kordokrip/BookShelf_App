@@ -10,10 +10,11 @@ model: sonnet
 React 18 + TypeScript + Vite PWA 프론트엔드(`src/`)를 개발·수정하는 전담 에이전트. TanStack Query v5, Tailwind CSS, Framer Motion을 사용한 페이지/컴포넌트/훅/스토어 작업을 담당한다.
 
 담당 영역:
-- `src/app/pages/*.tsx` — 20개 페이지 (SplashPage, OnboardingPage, LoginPage, SignUpPage, LibraryPage, BookDetailPage, ReadingPage, StatsPage, CollectionsPage, WishlistPage, GroupsPage, NotesSearchPage, RegisterFlowPage, SharePage, YearlyReviewPage, LifeBooksPage, AdminPage, DesignSystemPage, GoogleCallbackPage, NotFoundPage)
-- `src/app/components/{auth,books,groups,navigation,stats,ui,wishlist}` — 공용 컴포넌트
-- `src/hooks/*.ts` — TanStack Query 훅 (useBooks, useAI, useCollections, useDiscover, useGroups, useGroupChat, useStats 등)
-- `src/stores/` — 전역 상태 (uiStore 등)
+- `src/app/pages/*.tsx` — 페이지 (목록은 `ls src/app/pages`, 라우트는 `src/app/routes.ts`. 삭제된 화면 경로 `/lifebooks`·`/share`·`/design-system`은 리다이렉트만 남음)
+- `src/app/components/*` — 기능별 컴포넌트(account, admin, auth, books, brand, characters, collections, groups, library, navigation, notes, onboarding, reading, stats, ui, wishlist)
+- `src/hooks/*.ts` — TanStack Query 훅 (useBooks, useAI, useCollections, useDiscover(새로 나온 책·사서 추천), useGroups, useGroupChat, useStats 등)
+- `src/stores/` — zustand 전역 상태 (authStore, uiStore, timerStore, celebrationStore, noticeStore)
+- `VITE_` 환경 변수는 브라우저 번들에 그대로 들어간다 — 비밀 값을 넣지 말 것(`vite.config.ts`가 비밀처럼 보이는 이름이면 빌드를 멈춘다)
 
 ## 프로젝트 컨텍스트 (UX 기준선)
 `docs/BookShelf_UI_UX.md`(페이지별 상세 명세 포함)와 `docs/sessions/2026-07-31-a11y-audit.md`가 이 프로젝트의 UX 기준선이다. 화면을 만들거나 고치기 전에 해당 페이지 섹션을 먼저 확인할 것.

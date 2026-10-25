@@ -232,7 +232,7 @@ Playwright·DevTools 에뮬레이션은 아래를 재현하지 못한다. 릴리
 |------|------|------|
 | OCR `POST /api/ai/ocr` → confidence 반환 | ✅ PASS | llama-3.2-11b-vision (폴백 모델 없음) |
 | ISBN 바코드 스캔 | 🔍 MANUAL | ZXing 라이브러리 |
-| pageCount 자동 조회 `GET /api/search/pagecount` | ✅ PASS | Google Books + Open Library |
+| 쪽수·장르 자동 조회 `GET /api/search/pagecount` | ✅ PASS | 국립중앙도서관 서지정보(쪽수)·소장자료 KDC(장르) + Open Library(쪽수 보조), 장르가 불확실하면 AI 분류 — `worker/lib/bookMeta.ts` |
 
 ---
 

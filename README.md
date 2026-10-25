@@ -18,15 +18,16 @@ PC · iPad · iPhone · Android에서 쓰는 설치형 웹앱(PWA)
 |---|---|
 | **완독(서재)** | 리스트·그리드·책장·타임라인 보기, 정렬, 검색·장르 필터(보기 줄 아이콘), 오늘의 회고(AI 명문장 / 성찰 질문 + 노트로 답하기) |
 | **읽는 중** | 독서 대시보드(연간 목표·한 줄 타이머·기록), 쪽수 진행, 독서 기록(세션) |
-| **읽을 책** | 책 검색·바코드·사진(OCR) 등록, 우선순위, 새로 나온 책, **당신을 위한 AI추천 도서**(근거 책·다시 고르기) |
+| **읽을 책** | 책 검색·바코드·사진(OCR) 등록, 우선순위, 새로 나온 책, 사서 추천(국립중앙도서관), **당신을 위한 AI추천 도서**(근거 책·다시 고르기) |
 | **컬렉션** | 직접 만든 컬렉션 + AI가 서재를 주제별로 묶어 보여 주는 정리(저장 가능) |
-| **책 상세** | 책 소개 근거 AI 요약, 노트(메모·하이라이트·인용·리뷰, 페이지 범위, 서식, AI 태그) |
+| **책 등록** | 쪽수·장르 자동 채움(국립중앙도서관 서지정보·KDC 분류 → 부족하면 AI 분류), 검색은 카카오 → 국립중앙도서관 |
+| **책 상세** | AI 요약(국립중앙도서관 목차가 있으면 목차 근거, 하루 3번), 노트(메모·하이라이트·인용·리뷰, 페이지 범위, 서식, AI 태그) |
 | **통계** | 연간·월간 통계, 책 쌓기, 캐릭터·업적, 통계 이미지 공유, 연간 결산 |
 | **독서 모임** | 모임·멤버 승인, 실시간 채팅(Durable Object), 모임 일정·후기 |
 | **개인화** | 앱 디자인(강조색 6종 × 자동·라이트·다크), 리마인더·주간 리포트·푸시 알림, 처음 사용자 기능 말풍선 |
 | **관리자** | 대시보드, 회원 관리(휴면·삭제), 활동 로그, 공지, AI 공급자 상태 |
 
-AI는 무료 공급자를 순서대로 쓰는 체인으로 동작한다(Gemini → Gemini Lite → Workers AI → OpenRouter 무료 모델). 하나가 막혀도 다음 공급자가 답하고, 모두 실패하면 엄선 목록·내 노트로 대체한다. 자세한 내용은 `docs/AI_PROVIDERS.md`.
+AI는 공급자를 순서대로 쓰는 체인으로 동작한다(Gemini Flash 여러 모델 → Gemini Lite → Workers AI → OpenRouter 무료 모델). 하나가 막혀도 다음 공급자가 답하고, 모두 실패하면 엄선 목록·내 노트로 대체한다. 자세한 내용은 `docs/AI_PROVIDERS.md`.
 
 ## 🛠️ 기술 스택
 
@@ -54,11 +55,18 @@ BookShelf_App/
 │   ├── index.ts              # Hono 앱, 라우터 연결, cron
 │   ├── routes/               # API 라우터(/api/books, /api/ai, /api/admin …)
 │   ├── lib/                  # 도메인 로직
-│   │   └── ai/               # AI: 공급자 체인(llm.ts), 추천·컬렉션·요약·오늘의 카드·장르·태그
+│   │   ├── ai/               # AI: 공급자 체인(llm.ts), 추천·컬렉션·요약·오늘의 카드·장르·태그
+│   │   ├── nl/               # 국립중앙도서관 Open API(서지·소장자료 검색·목차·사서 추천·KDC 장르)
+│   │   └── bookMeta.ts · counters.ts …  # 쪽수·장르 조합, D1 원자적 카운터(ADR-005)
 │   ├── middleware/ · durable/ · auth.ts · types.ts
 │   ├── db/schema.sql         # 현재 스키마 전체(새 DB를 한 번에 만들 때)
 │   └── db/migrations/        # D1 마이그레이션(배포 시 CI가 적용)
-├── scripts/                  # e2e·관리자 API 테스트, 아이콘·테마 생성, AI 모델 비교(ai-bench)
+├── scripts/
+│   ├── e2e-api-test.sh       # API e2e (기본 대상 운영, --url·--readonly)
+│   ├── qa/                   # 관리자 API 테스트, iOS 푸시 점검표
+│   ├── assets/               # 아이콘·iOS 시작 화면·강조색 CSS 생성(npm run pwa:assets · theme:accent)
+│   ├── ai-bench/             # AI 모델 비교
+│   └── session-context.sh    # Claude Code SessionStart hook(작업 상태 자동 표시)
 ├── docs/                     # 명세·이력(아래 '문서 안내')
 ├── public/ · design/         # 정적 파일, 아이콘 원본
 └── wrangler.toml             # Workers 설정(production · staging)
@@ -68,14 +76,15 @@ BookShelf_App/
 
 ```bash
 npm ci
-cp .env.example .env.local          # 프론트 환경 변수(VITE_API_BASE_URL, VITE_GOOGLE_CLIENT_ID)
+cp .env.example .env.local          # 프론트 환경 변수(VITE_API_BASE_URL, VITE_GOOGLE_CLIENT_ID) — VITE_ 값은 번들에 공개되므로 비밀 금지
 # .dev.vars에 Worker 시크릿을 넣는다(커밋 금지). 이름 목록은 docs/CI_CD.md 참고
 npm run db:migrate:local            # 로컬 D1에 마이그레이션 적용
 npm run dev:full                    # 프론트(5173) + Worker(8787)
 ```
 
 - 마이그레이션만으로 만든 새 DB와 `worker/db/schema.sql`, 운영 D1의 열·인덱스는 같다(2026-10-10 확인).
-- Workers AI 바인딩은 로컬에서도 원격으로 호출된다(무료 할당량 사용).
+- Workers AI 바인딩은 로컬에서도 원격으로 호출된다(계정 할당량 사용).
+- 비밀처럼 보이는 `VITE_` 변수(이름에 TOKEN·SECRET·PASSWORD·PRIVATE·API_KEY·_KEY)가 있으면 `npm run build`가 멈춘다 — 토큰은 `VITE_` 없이 둔다.
 
 ## ✅ 검증
 
@@ -96,6 +105,7 @@ bash scripts/e2e-api-test.sh --url http://localhost:8787   # 로컬 API e2e (기
 
 | 문서 | 내용 |
 |---|---|
+| `docs/README.md` | 문서 목록과 '무엇을 바꾸면 어느 문서를 고치나' |
 | `CLAUDE.md` | 작업 규칙(검증·커밋·배포·문서 관리) |
 | `PROJECT_STATUS.md` | 현재 상태 스냅샷, D1 마이그레이션 표 |
 | `docs/TRACE_MAP.md` | 화면 → 훅 → API → DB 추적, API 명세 |

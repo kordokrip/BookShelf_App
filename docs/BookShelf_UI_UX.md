@@ -87,7 +87,7 @@
   - [9.18 CollectionsPage (컬렉션)](#918-collectionspage-컬렉션)
   - [9.19 (제거됨) SharePage](#919-제거됨-sharepage--34차)
   - [9.20 AdminPage (관리자 대시보드)](#920-adminpage-관리자-대시보드)
-  - [9.21 LifeBooksPage (인생책)](#921-lifebookspage-인생책)
+  - [9.21 (삭제됨) LifeBooksPage](#921-lifebookspage-인생책--43차에-삭제)
 - [10. 공유 컴포넌트 라이브러리](#10-공유-컴포넌트-라이브러리)
 - [11. API 엔드포인트 ↔ UI 매핑](#11-api-엔드포인트--ui-매핑)
 - [12. 상태 관리 데이터 흐름](#12-상태-관리-데이터-흐름)
@@ -914,71 +914,21 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 
 ### 9.8 WishlistPage (읽을 책)
 
-- **파일**: `src/app/pages/WishlistPage.tsx` (~800줄)
-- **경로**: `/wishlist` (화면 이름 "읽을 책")
+- **파일**: `src/app/pages/WishlistPage.tsx`(탭·검색 껍데기) + `src/app/components/wishlist/*`(탭별 화면)
+- **경로**: `/wishlist` (화면 이름 "읽을 책"), 탭은 `?tab=new|librarian|recommend`(기본 '내 목록'은 쿼리 없음, 바꿀 때 `replace`)
 - **보호**: ProtectedRoute
-- **탭(38차)**: 내 목록(기본) · 새로 나온 책 · 추천 도서(독서 기록 기반·이미 서재에 있는 책 제외·"새로 추천" 버튼). 인생책은 탭이 아니라 상단 링크 카드("✦ 인생책 추천 받기 →", `/lifebooks`) — 이 화면 방문으로는 AI를 부르지 않는다
+- **탭(53차 기준)**: 내 목록 · 새로 나온 책 · 사서 추천 · 당신을 위한 AI추천 도서. 좁은 화면에서는 탭 줄이 가로로 스크롤되고 선택한 탭이 보이게 맞춘다. 화면 방문만으로는 AI를 부르지 않는다('AI추천' 탭을 열 때만)
 
-#### State (10개)
+| 탭 | 컴포넌트 | 훅 → API |
+|---|---|---|
+| 내 목록 | `WishGrid` — 정렬(우선순위·추가순·제목), `GenreFilterBar`, 카드 → `WishBookDetailSheet`(우선순위 P1~10, 읽기 시작, 삭제) | `useBooks({status:'wish'})`, `useUpdateBook`, `useDeleteBook` |
+| 새로 나온 책 | `DiscoverTab` — 카카오 신간(최근 2주), [담기] | `useExternalBooks('new')` → `GET /api/discover/external?tab=new` |
+| 사서 추천 | `LibrarianPicksTab` — 국립중앙도서관 사서추천도서(51차), [담기] | `useLibrarianPicks()` → `GET /api/discover/librarian` |
+| 당신을 위한 AI추천 도서 | `RecommendedBooksTab` — 인생책 통합(43차), 근거 책·[다시 고르기]·지난 추천 안내 | `useAIRecommendations()`·`useRefreshAIRecommendations()` → `GET /api/ai/recommend` |
 
-| State | 타입 | 설명 |
-|-------|------|------|
-| `sortBy` | "priority" \| "added" \| "title" | 정렬 기준 |
-| `showAll` | boolean | 전체 표시 |
-| `selectedGenre` | GenreKey \| null | 장르 필터 |
-| `showSearch` | boolean | 검색 오버레이 표시 |
-| `searchQuery` | string | 검색어 |
-| `recentSearches` | string[] | 최근 검색어 |
-| `showScanner` | boolean | ISBN 스캐너 표시 |
-| `selectedBook` | UIBook \| null | 상세 시트 대상 |
-| `open` (SortDropdown) | boolean | 정렬 드롭다운 |
-| `priority` (Sheet) | number | 우선순위 값 |
-
-#### Hooks / API
-
-- `useBooks({ status: 'wish' })` → **GET** `/api/books?status=wish`
-- `useDeleteBook()` → **DELETE** `/api/books/:id`
-- `useUpdateBook()` → **PUT** `/api/books/:id`
-- `useAddBook()` → **POST** `/api/books`
-- `useBookSearch()` → **GET** `/api/search/books?q=`
-- `useAIRecommendations()` → **GET** `/api/ai/recommend?limit=`
-- `useRefreshAIRecommendations()` → **GET** `/api/ai/recommend?refresh=true`
-
-#### UI 구조
-
-**상단**:
-- "읽을 책" + 카운트 배지
-- 검색 토글 (`Search`), 정렬 드롭다운 (`ChevronDown`)
-
-**10권 한도 경고**: `books.length >= 10` → 앰버 경고 배너 ("읽을 책은 최대 10권까지...")
-
-**GenreFilterBar**: 장르 필터
-
-**WishBookCard 목록**: 카드 클릭 → WishBookDetailSheet 열림
-
-**AI 추천 섹션**:
-- "AI 추천 도서" 제목 + `RefreshCw` "새로운 추천" 버튼
-- `useAIRecommendations()` → 중복 title 필터링 → 카드 나열
-- 클릭 → 위시리스트에 추가
-
-#### 모달/시트 3개
-
-**1. WishBookDetailSheet** (카드 클릭):
-- `BookCover` (lg) + 제목/저자/출판사
-- 우선순위 Star×5 + range slider (1~10)
-- "📖 읽기 시작" → `useUpdateBook({ status: 'reading' })`
-- "🗑 삭제" → `useDeleteBook()`
-
-**2. 검색 풀스크린 오버레이**:
-- `showSearch = true` → fullscreen
-- 검색 input + 최근 검색어 태그
-- 카카오 API 검색 결과 → `searchApi.searchBooks`
-- ISBN 바코드 버튼 (`ScanLine`) → showScanner 토글
-- 결과 클릭 → `useAddBook()` (위시리스트에 추가)
-
-**3. ISBNScanner 오버레이** (`showScanner = true`):
-- 전체 화면 카메라 뷰
-- EAN-13 바코드 인식 → `searchApi.searchByIsbn(isbn)` → 책 정보 → onResult
+- **검색**: 상단 검색 바·FAB → `SearchSheet`(전체 화면). 최근 검색어(localStorage `wishlist_recent_searches`), ISBN 바코드(`LazyISBNScanner`), 결과 [담기] → `useAddBook()`. 검색은 `useBookSearch()` → `GET /api/search/books`(카카오 → 실패·0건이면 국립중앙도서관)
+- 이미 담은 책은 탭마다 제목 기준(`wishTitleSet`)으로 표시한다
+- 기능 말풍선: 검색 바(`wishlist-search`), AI추천 탭(`wishlist-ai-tab`)
 
 ---
 
@@ -1587,32 +1537,7 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 
 ### 9.21 LifeBooksPage (인생책) — 43차에 삭제
 
-> **43차**: 화면 파일을 삭제했다. `/lifebooks`는 `/wishlist?tab=recommend`로 리다이렉트하고, 근거 표시·다시 고르기는 '읽을 책'의 '당신을 위한 AI추천 도서' 탭(`RecommendedBooksTab`)으로 옮겼다. 아래는 당시 기록이다.
-
-- **파일**: `src/app/pages/LifeBooksPage.tsx`
-- **경로**: `/lifebooks` (Lazy loaded, 인증 필수)
-- **근거 표시 (41차)**: 머리 줄 "완독 N권 · 주로 A·B을 바탕으로 골랐어요 · N시간 전"(`basis`, `generated_at`), 카드마다 "이 책들을 바탕으로: 넥서스 · 파친코"(`based_on` — 서버가 내 책 제목과 대조해 검증, 서재에 있으면 책 상세 링크)
-- **다시 고르기**: 직전에 보여 준 책(최근 30권, KV `ai_lifebooks_seen:{userId}`)을 빼고 다시 고른다. 진행 중 "다시 고르는 중…" + 목록 흐림 오버레이, 완료 토스트 "새 인생책 N권을 골랐어요"
-
-#### 역할
-
-- 완독한 책을 바탕으로 AI가 추천하는 "인생책" 목록 표시 (`GET /api/ai/lifebooks`)
-
-#### UI 상태
-
-- **헤더**: Sparkles 아이콘 + "나의 인생책" 타이틀, 부제 안내 문구, 새로고침 버튼(추천 결과 있을 때만 노출)
-- **안내 문구(38차)**: 부제 한 줄("완독한 책을 바탕으로 고른 인생책")만. 캐시 시간·모델명·검증 과정은 표시하지 않는다. 큐레이션 결과면 "많이 사랑받은 책을 골랐어요"
-- **지난 추천(2026-10-03)**: 완독 목록이 바뀌어 캐시가 없으면 서버가 직전 추천을 바로 돌려주고(`stale: true`) 백그라운드에서 새로 만든다. 화면은 "지난 추천이에요 · 새 완독 기록으로 다시 고르는 중"을 보여 주고 30초 간격으로 최대 2번 다시 불러와 새 추천으로 조용히 바꾼다. 처음 한 번만 생성(10~30초)을 기다린다
-- **로딩**: 카드 5개 스켈레톤(표지 16×24 + 텍스트 라인 4줄, `animate-pulse`)
-- **완독 2권 미만(400 에러)**: BookOpen 아이콘 + "완독한 책이 2권 이상 필요해요" 안내 + "서재로 이동" CTA(`Link to="/"`)
-- **일반 오류**: 안내 텍스트 + "다시 시도" 버튼(`refreshMutation.mutate()`)
-- **추천 카드 목록**: 표지 썸네일(없으면 Sparkles 플레이스홀더) + 제목/저자·출판사 + 외부 링크(ExternalLink, 있을 때만) + AI 추천 이유(`book.reason`)
-
-#### 데이터 연결
-
-- **훅**: `useLifeBooks()`, `useRefreshLifeBooks()` (`src/hooks/useAI.ts`)
-- **API**: `GET /api/ai/lifebooks` — rate limit 3회/600초(10분), KV 캐시 24시간
-- **에러 판별**: `error instanceof ApiError && error.status === 400`으로 "완독 2권 미만" 케이스만 별도 분기
+화면 파일을 삭제했다. `/lifebooks`는 `/wishlist?tab=recommend`로 리다이렉트하고, 근거 표시·다시 고르기·지난 추천 안내는 '읽을 책'의 '당신을 위한 AI추천 도서' 탭(`RecommendedBooksTab`, 9.8)으로 옮겼다. `GET /api/ai/lifebooks`와 `ai_life` 한도도 함께 없앴다. 당시 화면 명세는 git 기록(43차 이전 이 문서)에 있다.
 
 ---
 
@@ -1787,14 +1712,16 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 |-----------|--------|----------|-----------|
 | `/api/search/books?q=&page=&size=` | GET | RegisterFlowPage Step1, WishlistPage 검색 | 검색어 입력 (디바운스) |
 | `/api/search/books/isbn?isbn=` | GET | ISBNScanner | 바코드 인식 시 |
+| `/api/discover/external?tab=new` | GET | WishlistPage '새로 나온 책' 탭 | 탭 진입 (KV 1시간 캐시) |
+| `/api/discover/librarian` | GET | WishlistPage '사서 추천' 탭 | 탭 진입 (KV 12시간 캐시) |
 
 ### 11.6 AI API
 
 | 엔드포인트 | 메서드 | UI 사용처 | 호출 트리거 |
 |-----------|--------|----------|-----------|
 | `/api/ai/book-summary/:bookId` | GET·POST | BookDetailPage BookInfoTab(AISummarySection) | AI 요약 — 완독한 책을 A4 한 장·내용 전개 순서로, 하루 3번 |
-| `/api/ai/lifebooks?refresh=` | GET | LifeBooksPage (38차: 읽을 책 화면의 추천 섹션 제거) | 진입 / "새로 추천" 버튼. 완독 전체 기반 → 읽은 책 제외 → 실재 검증. `source`로 "AI 추천"·"추천 목록" 표시. 429 시 "10분쯤 뒤에" 안내 |
-| `/api/ai/recommend?limit=&refresh=` | GET | — | (화면 호출 없음) |
+| `/api/ai/recommend?refresh=` | GET | WishlistPage '당신을 위한 AI추천 도서' 탭(`RecommendedBooksTab`) | 탭 진입 / [다시 고르기]. 서재 전체 기반 → 가진 책 제외 → 실재 검증(카카오 → 국립중앙도서관). 429 시 "10분쯤 뒤에" 안내 |
+| `/api/ai/collections?refresh=` | GET | CollectionsPage 'AI가 정리한 내 서재' | 진입 / [새로 정리] |
 | `/api/ai/ocr` | POST | CameraOCRSheet | 사진 촬영 후 자동 |
 
 ### 11.7 Stats API

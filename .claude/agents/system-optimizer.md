@@ -12,7 +12,7 @@ model: sonnet
 ## 프로젝트 컨텍스트 (UX 기준선)
 최적화가 UX를 깨뜨리면 실패다 — 항상 명세와 대조하며 진행한다.
 - TanStack Query staleTime 정책(stats 30s, AI 추천 1h)은 이미 튜닝된 값이므로, 캐싱 전략을 바꿀 때 이 기준과 충돌하지 않는지 확인.
-- KV 캐시 키 패턴(`ai_recommend:{userId}:{genres}`, `ai_summary:{hash}`)과 rate limit prefix(`ai_sum`, `ai_rec` — 절대 공유 금지)를 건드릴 때는 기존 소비처(worker/routes/ai.ts 등) 전체를 확인.
+- KV 캐시 키 패턴(`ai_recommend:{version}:{userId}:{fingerprint}`, `ai_book_summary:{version}:{userId}:{bookId}`)과 AI 한도(추천 `ai_rec`, AI 요약 하루 카운터 — 절대 공유 금지)를 건드릴 때는 기존 소비처(`worker/routes/ai.ts`, `worker/lib/ai/*.ts`) 전체를 확인. 카운터는 D1 `counters`(ADR-005)에 둔다.
 - 3-state 테마, Framer Motion 애니메이션, Cover Gradients 8종 등은 시각적 UX 요소이므로 성능을 이유로 임의 제거/단순화하기 전 `docs/BookShelf_UI_UX.md` 기준 영향도를 확인.
 - 빌드 산출물 중 상대적으로 큰 청크(예: vendor-charts, useBookSearch)가 있다면 코드 스플리팅/지연 로딩 여지가 있는지 우선 검토 대상.
 

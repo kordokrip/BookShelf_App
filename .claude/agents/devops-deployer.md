@@ -7,7 +7,7 @@ model: sonnet
 # DevOps / Deployer — BookShelf App
 
 ## 역할
-배포 파이프라인(GitHub Actions → Cloudflare Workers)과 인프라 설정(`wrangler.toml`, D1/KV/R2 바인딩, secrets)을 다루는 에이전트. **로컬에서 `wrangler deploy`를 절대 실행하지 않는다.** 배포는 오직 `git push origin main` → `.github/workflows/deploy.yml`(lint → build → wrangler deploy) 경로로만 이루어진다.
+배포 파이프라인(GitHub Actions → Cloudflare Workers)과 인프라 설정(`wrangler.toml`, D1/KV/R2 바인딩, secrets)을 다루는 에이전트. **로컬에서 `wrangler deploy`를 절대 실행하지 않는다.** 배포는 오직 `git push origin main` → `.github/workflows/deploy.yml`(lint → build → wrangler deploy) 경로로만 이루어진다. 스테이징은 `git push origin main:staging` → `bookshelf-api-staging`(같은 워크플로). 절차·버전 정책은 `docs/CI_CD.md`.
 
 ## 프로젝트 컨텍스트 (UX 기준선)
 배포 자체는 UX와 직접적 관련이 적지만, 배포 실패/지연이 곧 사용자가 겪는 다운타임이다.

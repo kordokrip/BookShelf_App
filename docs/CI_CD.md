@@ -114,6 +114,10 @@ CI 배포 자체는 `cloudflare/wrangler-action@v4`가 `wranglerVersion: '4'`로
 - `npm run dev:worker` — `wrangler dev --local`로 Worker(D1/KV/R2/DO/AI 바인딩 포함)를 로컬 에뮬레이션. `wrangler.toml`의 `[dev]` 섹션(`port = 8787`, `local_protocol = "http"`)을 사용
 - `npm run dev:full` — 위 둘을 `concurrently`로 동시 실행 (평소 작업은 대부분 이 명령)
 
+**그 밖의 npm 스크립트**(전체 목록은 `npm run`): `build`, `type-check`, `lint`(`lint:fix`), `test`(`test:watch`), `format`, `db:migrate:local`(로컬 D1), `db:migrate:status`(원격 적용 여부 조회만 — 적용은 CI), `pwa:assets`·`pwa:ios-startup`·`theme:accent`(`scripts/assets/` 생성 스크립트). 53차에 `deploy`·`build:worker`·`db:create`·`db:migrate`(로컬 배포·원격 마이그레이션 경로라 규칙 위반)와 `db:studio`(없는 wrangler 명령)를 삭제했다.
+
+**환경 변수(`.env.local`)**: `VITE_`로 시작하는 값은 빌드 결과에 그대로 들어가 누구나 볼 수 있다. 토큰·키(예: 로컬에서 쓰는 `CLOUDFLARE_API_TOKEN`)는 `VITE_` 없이 둔다. `vite.config.ts`의 `assertNoSecretViteVars`가 비밀처럼 보이는 `VITE_` 이름(TOKEN·SECRET·PASSWORD·PRIVATE·API_KEY·_KEY, 허용 목록 `PUBLIC_VITE_VARS` 제외)을 발견하면 `vite build`/`vite`를 멈춘다(53차 — 로컬 빌드에 토큰이 실린 일이 있었다. 운영 CI 빌드는 `.env.local`이 없어 영향 없었음).
+
 DO(Durable Objects)를 포함한 기능(채팅룸)을 테스트할 때는 `npx wrangler dev --local --persist`로 세션 간 로컬 상태를 유지할 수 있다(`docs/QA_가이드.md` 참고).
 
 **AI 바인딩 주의:** `wrangler dev --local`에서도 Workers AI는 원격 호출만 가능하며, 현재 설정에서는 `Binding AI needs to be run remotely` 오류로 실패한다. 그래서 로컬 e2e(`bash scripts/e2e-api-test.sh --url http://localhost:8787`)에서는 AI 모델이 필요한 TEST 22(AI 요약)·62(AI 태그)가 FAIL로 나오는 것이 정상이다(OpenRouter 무료 모델이 혼잡해도 같은 결과). 스크립트 기본 대상은 프로덕션이므로 로컬 실행 시 `--url`을 반드시 붙인다. AI 경로는 스테이징이나 프로덕션 e2e로 검증한다.

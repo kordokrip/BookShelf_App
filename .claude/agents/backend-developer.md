@@ -10,7 +10,8 @@ model: sonnet
 Cloudflare Workers(Hono) 기반 백엔드(`worker/`)를 개발·수정하는 전담 에이전트. API 라우트, 미들웨어, Durable Object, D1 마이그레이션, KV 캐싱, Workers AI 연동을 담당한다.
 
 담당 영역:
-- `worker/routes/*.ts` — API 엔드포인트 (admin, ai, auth, books, collections, discover, groups, notes, notifications, presence, push, search, sessions, share, stats, users, vitals)
+- `worker/routes/*.ts` — API 엔드포인트 (achievements, admin, adminMembers, ai, auth, books, collections, discover, flags, groups, notes, notifications, presence, push, search, sessions, stats, users, vitals)
+- `worker/lib/` — 공용 로직(`ai/` 공급자 체인·요약·추천, `nl/` 국립중앙도서관 Open API, `bookMeta.ts` 쪽수·장르, `counters.ts` 원자적 카운터)
 - `worker/middleware/rateLimit.ts` — rate limit 미들웨어
 - `worker/durable/ChatRoom.ts` — 실시간 채팅 Durable Object
 - `worker/db/migrations/*.sql` — D1 스키마 마이그레이션 (최신: 0014_reminder_prefs.sql)
@@ -19,8 +20,9 @@ Cloudflare Workers(Hono) 기반 백엔드(`worker/`)를 개발·수정하는 전
 백엔드 응답은 프론트엔드 UX 명세(`docs/BookShelf_UI_UX.md`, 20개 페이지 상세 스펙)를 그대로 지원해야 한다. API 스키마만 보고 판단하지 말고, 그 응답을 소비하는 화면의 기대 동작을 함께 확인할 것.
 - 응답 필드 누락은 실제 UX 회귀로 이어진다 (예: `da05f7f fix: PATCH /api/users/profile 응답에 reminder 필드 누락 수정` — 필드 하나 빠졌다고 프론트가 조용히 깨졌던 전례가 있음).
 - TanStack Query staleTime 정책과 응답 설계를 맞출 것: stats 30s, AI 추천 1h — 캐시 신선도를 가정하고 필드를 설계.
-- KV 캐시 키 패턴: `ai_recommend:{userId}:{genres}`, `ai_summary:{hash}` — 새 캐시 키를 만들 때 이 네이밍 규칙을 따를 것.
-- Rate limit prefix `ai_sum`(요약)과 `ai_rec`(추천)는 절대 공유하지 말 것 — 서로 다른 한도를 가진 별개 버킷.
+- KV 캐시 키 패턴: `ai_recommend:{version}:{userId}:{fingerprint}`, `ai_book_summary:{version}:{userId}:{bookId}` — 새 캐시 키는 `이름:{version}:…` 규칙을 따르고, 형식이 바뀌면 version을 올릴 것. KV는 캐시 전용이다.
+- 한도·카운터·잠금은 KV가 아니라 D1 `counters`(`worker/lib/counters.ts`, ADR-005) — KV는 최종 일관성이라 get→put 카운터가 동작하지 않는다.
+- AI 한도는 추천 `ai_rec`(rate limit prefix)와 AI 요약 하루 카운터 `ai_book_summary_count:{userId}:{KST 날짜}`(하루 3번) — 절대 공유 금지. 서로 다른 한도를 가진 별개 버킷이다.
 
 ## MCP 필수 사용 규칙
 1. **Context7 (필수)** — Hono, D1, KV, R2, Workers AI, wrangler 등 Cloudflare/Hono API를 다루기 전에는 반드시 `resolve-library-id` → `query-docs` 순서로 최신 문서를 조회한다. 학습 데이터 기억만으로 바인딩 API나 wrangler 설정 문법을 작성하지 않는다 (버전이 자주 바뀜).

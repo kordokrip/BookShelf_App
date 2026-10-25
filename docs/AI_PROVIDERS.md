@@ -3,7 +3,7 @@
 > AI 모델·공급자에 관한 결정과 측정을 한 곳에 모은 문서다(예전 세션 리포트 3개를 병합: 37차·42차·43차).
 > 코드의 정확한 값은 `worker/lib/ai/llm.ts`·`worker/lib/ai/openrouter.ts` 상수가 기준이다.
 
-## 현행 구성 (2026-10-11)
+## 현행 구성 (2026-10-25, 52차 반영)
 
 - **공급자 체인**(`worker/lib/ai/llm.ts`의 `generateText`)
   - 순서: Gemini Flash 5종(3.8 → 3.7 → 3.6 → 3.5 → 3-flash-preview, 429면 다음 모델, 503이면 다음 모델 뒤 한 번 더 — 52차) 중 기본 3.8(추론 `low`) → Gemini 3.5 Flash-Lite(`minimal`) → Workers AI `@cf/qwen/qwen3.8-27b`(thinking 끔) → OpenRouter 무료 목록(`models` 배열) → (요약·장르만) Workers AI 8B
@@ -216,7 +216,7 @@ Qwen 무료의 다른 작업(앱 프롬프트 그대로):
 #### 근거 강화
 - **저자 교정**: 제목이 정확히 맞고 저자만 틀린 후보를 실제 저자로 고쳐 쓴다. 전에는 버려서 6권 중 1~2권만 남았다.
 - **보충 순서**: 후보 14권 → 즐겨 읽은 작가의 다른 책 → 엄선 목록
-- **조회 상한**: 추천 1회의 책 조회를 36회로 제한한다(`RECOMMEND_LOOKUP_BUDGET`). Workers 무료 플랜의 요청당 외부 fetch 50회 안에 들게 하기 위함이다.
+- **조회 상한**: 추천 1회의 책 조회를 36회로 제한한다(`RECOMMEND_LOOKUP_BUDGET`). 당시 Workers 무료 플랜의 요청당 외부 fetch 50회 안에 들게 하기 위함이었다. 지금은 유료 플랜이라 이 제한에는 걸리지 않지만, 응답 시간과 외부 API 호출량을 줄이려고 상한을 그대로 둔다.
 
 #### '당신을 위한 AI추천 도서'
 - 인생책을 `GET /api/ai/recommend`로 통합했다.

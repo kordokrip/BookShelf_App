@@ -53,3 +53,7 @@ bash scripts/e2e-api-test.sh
 - AI 한도: 추천 `ai_rec`(rate limit prefix), AI 요약은 하루 카운터 `ai_book_summary_count:{userId}:{KST 날짜}`(하루 3번) — 공유하지 말 것
 - 한도·카운터·잠금은 KV가 아니라 D1 `counters` 테이블(`worker/lib/counters.ts`, ADR-005)에 둔다. KV는 최종 일관성이라 get→put 카운터가 동작하지 않는다(캐시 용도로만 사용)
 - TanStack Query staleTime: stats 30s, ai recommendations 1h
+- 외부 도서 출처: 검색·ISBN은 카카오 → (실패·0건) 국립중앙도서관 소장자료. 네이버 책 API는 2026-07-31 종료돼 52차에 제거됨(다시 넣지 말 것). 국립중앙도서관 연동(서지·소장자료·목차·사서 추천·KDC 장르)은 `worker/lib/nl/`, 쪽수·장르 조합은 `worker/lib/bookMeta.ts`
+- AI 공급자 체인은 `worker/lib/ai/llm.ts`(Gemini → Workers AI → OpenRouter) — 현행 구성·결정 이력은 `docs/AI_PROVIDERS.md`
+- `VITE_` 환경 변수는 브라우저 번들에 그대로 실린다 — 비밀 값은 `VITE_` 없이 둔다. `vite.config.ts`가 비밀처럼 보이는 `VITE_` 이름(TOKEN·SECRET·PASSWORD·PRIVATE·API_KEY·_KEY)이면 빌드를 멈춘다. 공개 허용 목록은 `PUBLIC_VITE_VARS`
+- 문서 목록은 `docs/README.md`

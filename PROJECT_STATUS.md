@@ -1,9 +1,9 @@
 # BookShelf App — 현재 상태 스냅샷
 
-> **최종 업데이트:** 2026-10-25 (52차: Gemini 503 재시도·Flash 모델 추가·목차 압축, 네이버 책 API 종료 → 국립중앙도서관 폴백 / 51차: 국립중앙도서관 Open API). 이전 차수는 `docs/CHANGELOG.md`
+> **최종 업데이트:** 2026-10-25 (53차: 정리 — 안 쓰는 시크릿·코드·스크립트 삭제, `worker/lib/nl/`·`scripts/assets`·`scripts/qa` 폴더 정리, VITE_ 비밀 변수 빌드 차단, 문서 최신화 / 52차: Gemini 503 재시도·목차 압축, 네이버 책 API 종료 → 국립중앙도서관 폴백). 이전 차수는 `docs/CHANGELOG.md`, 문서 목록은 `docs/README.md`
 > **Git 브랜치:** `main` (kordokrip/BookShelf_App)
 > **E2E 테스트:** `bash scripts/e2e-api-test.sh --url <대상>` → **전체 PASS** ✅ (2026-10-19 스테이징 전체·프로덕션 `--readonly` 확인, 테스트 개수는 `grep -n '^  TOTAL=' scripts/e2e-api-test.sh`로 확인)
-> **상세 세션 리포트:** `docs/sessions/2026-10-25-summary-naver.md` (직전: `2026-10-25-nl-openapi.md`) — **진행 중·대기 항목은 최신 세션 리포트 맨 위 '진행 상태' 표**
+> **상세 세션 리포트:** `docs/sessions/2026-10-25-cleanup.md` (직전: `2026-10-25-summary-naver.md`) — **진행 중·대기 항목은 최신 세션 리포트 맨 위 '진행 상태' 표**
 > **기능 플래그:** 등록 목록은 `worker/lib/featureFlags.ts`의 `ALL_FEATURE_FLAGS`(현재 비어 있음), 공개 상태는 `GET /api/flags/public`으로 확인 (ADR-003)
 
 ---
@@ -27,15 +27,15 @@
 
 ## 2. 기술 스택
 
-버전 드리프트가 잦은 영역이라 특정 시점의 스냅샷일 뿐이다 — 정확한 값은 항상 `package.json`을 직접 확인할 것.
+버전 번호는 금방 낡으므로 적지 않는다 — 정확한 값은 `package.json`(또는 `npm ls <패키지>`), wrangler는 `npx wrangler --version`으로 확인한다.
 
-| 영역 | 핵심 패키지 (2026-08-15 기준) |
+| 영역 | 핵심 패키지 |
 |------|------------|
-| UI | react 18.3.1, react-router 7.13.0, tailwindcss 4.1.12, motion(구 framer-motion) 12.23.24, lucide-react 0.487.0 |
-| 상태 관리 | @tanstack/react-query ^5.90.21, zustand ^5.0.11 |
-| 차트 | recharts 2.15.2 |
-| 빌드 | vite 6.3.5, typescript ^5.9.3, vite-plugin-pwa ^1.2.0 |
-| 인프라 | hono ^4.12.4, @hono/zod-validator, zod ^4.3.6, wrangler 4.107.1, @cloudflare/workers-types 4.20260702.1 |
+| UI | react 18, react-router 7, tailwindcss 4, motion(구 framer-motion), lucide-react, Radix UI |
+| 상태 관리 | @tanstack/react-query 5, zustand 5 |
+| 차트 | recharts |
+| 빌드 | vite, typescript, vite-plugin-pwa |
+| 인프라 | hono, @hono/zod-validator, zod, wrangler, @cloudflare/workers-types |
 
 `wrangler`/`@cloudflare/workers-types`는 caret(`^`) 없이 정확한 버전으로 고정되어 있다 — 이유와 CI/CD 전반은 `docs/CI_CD.md` 참고.
 
@@ -65,7 +65,7 @@
 | `/groups` | GroupsPage (그룹 목록 + 상세는 내부 상태 전환) |
 | `/share` | `/stats`로 리다이렉트 (34차 화면 제거 — 통계 공유는 StatsPage 안) |
 | `/admin` | AdminPage (role=admin 전용) |
-| `/lifebooks` | LifeBooksPage (AI 인생책 추천) |
+| `/lifebooks` | `/wishlist?tab=recommend`로 리다이렉트 (43차 화면 삭제 — 인생책은 '당신을 위한 AI추천 도서' 탭으로 통합) |
 | `*` | NotFoundPage |
 
 > `/register-flow`, `/notes-search`: Root 레이아웃 외부 — TopBar 없음, safe-area-top spacer 직접 추가 필요.
@@ -88,23 +88,26 @@
 /api/push          → 웹 푸시 구독 관리
 /api/groups        → 독서 모임 CRUD + 채팅(Durable Object WebSocket) + 일정
 /api/notifications → 알림 목록/읽음 처리
-/api/discover      → 책 탐색/발견 기능
-/api/admin         → 관리자 대시보드 (9개 엔드포인트)
+/api/discover      → 새로 나온 책(카카오, /external)·사서 추천(국립중앙도서관, /librarian)
+/api/admin         → 관리자 대시보드 (admin.ts + adminMembers.ts)
 /api/presence      → 온라인 상태(heartbeat)
 /api/vitals        → Web Vitals 수집
-/api/ai            → 요약·추천·OCR·인생책 (Workers AI)
+/api/ai            → 책 요약·추천(인생책 통합)·AI 컬렉션·오늘의 카드·OCR (공급자 체인 `worker/lib/ai/llm.ts`)
 /api/flags         → 기능 플래그 (GET /, 무인증 GET /public) — ADR-003
 /api/achievements  → 업적·캐릭터 진화 (서버 저장) — ADR-004
 GET *              → ASSETS.fetch() SPA 폴백
 ```
 
-### 관리자 엔드포인트 (`worker/routes/admin.ts`, 9개)
+### 관리자 엔드포인트 (`worker/routes/admin.ts` + `adminMembers.ts`, 전체 목록은 `grep -nE "Router\.(get|post|patch|delete)\(" -A1 worker/routes/admin*.ts`)
 ```
 POST   /api/admin/seed-admins        → 관리자 이메일 시딩
+GET    /api/admin/ai-status          → AI 공급자 상태
 GET    /api/admin/stats              → 대시보드 통계
 GET    /api/admin/users              → 사용자 목록
 GET    /api/admin/users/:id          → 사용자 상세
 PATCH  /api/admin/users/:id/role     → 역할 변경
+PATCH  /api/admin/users/:id/status   → 휴면·복구 (adminMembers.ts)
+DELETE /api/admin/users/:id          → 회원 삭제 — 대상 이메일 재입력 (adminMembers.ts)
 GET    /api/admin/activity           → 활동 로그
 GET    /api/admin/messages           → 관리자 메시지 목록
 POST   /api/admin/messages           → 관리자 메시지 발송
@@ -113,7 +116,6 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 
 ### 인증 방식
 - `authMiddleware`: Bearer JWT 필수 (없으면 401)
-- `optionalAuth`: 토큰 없으면 `demo-user` 폴백
 - JWT: HS256, PBKDF2-SHA256 비밀번호 해싱(반복 횟수는 `worker/auth.ts`의 `PBKDF2_ITERATIONS`, 형식 `pbkdf2:{n}:{salt}:{hash}` — 예전 형식은 로그인 시 자동 재해시)
 
 ### Rate Limiting (고정 창, D1 `counters` 원자적 카운터 — ADR-005) — 표는 대표 예시, 전체 최신값은 `SECURITY.md` 참고
@@ -121,7 +123,8 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 |------|------|-----|
 | POST /api/users/login | 5회 | 60s |
 | GET /api/search/books | 20회(사용자별, 로그인 필수) | 60s |
-| POST /api/ai/* | 10회 | 60s |
+| GET /api/ai/recommend · GET /api/ai/collections | 사용자별 3회(실제 생성 시에만) | 600s |
+| POST /api/ai/book-summary/:bookId | 사용자별 3회 | KST 하루 |
 | POST /api/groups/:id/messages | 30회 | 60s |
 | POST /api/groups/:id/meetings/:meetingId/feedbacks | 10회 | 60s |
 
@@ -161,29 +164,37 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 
 | 훅 파일 | 주요 훅 |
 |---------|--------|
-| `useBooks.ts` | useBooks, useBookDetail, useAddBook, useUpdateBook, useDeleteBook, useBookCount |
-| `useBookSearch.ts` | useBookSearch (카카오→국립중앙도서관, staleTime 5분) |
-| `useNotes.ts` | useNotes, useBookNotes, useAddNote, useUpdateNote, useDeleteNote |
-| `useSessions.ts` | useSessions, useAddSession (staleTime 30s) |
+| `useBooks.ts` | useBooks, useBookDetail, useAddBook, useUpdateBook, useDeleteBook, useBookCount, useRefreshBookCovers, useDailyCoverBackfill(표지 하루 1회 보충) |
+| `useBookSearch.ts` | useBookSearch (카카오→국립중앙도서관, staleTime 5분) · `useRecentSearches.ts` 최근 검색어 |
+| `useNotes.ts` | useNotes, useBookNotes, useAddNote, useUpdateNote, useDeleteNote, useDailyQuote(오늘의 카드) |
+| `useSessions.ts` | useSessions, useAddSession, useDeleteSession (staleTime 30s) |
 | `useReadingTimer.ts` | elapsed, isRunning, displayTime, start/pause/reset (timerStore 기반, 페이지 이동 후에도 유지) |
-| `useStats.ts` | useStats (staleTime 5분) |
-| `useAI.ts` | useBookSummary, useAIRecommendations, useRefreshAIRecommendations, useLifeBooks, useRefreshLifeBooks |
+| `useStats.ts` | useStats (staleTime 30s) |
+| `useAI.ts` | useBookAISummary, useCreateBookAISummary, useAIRecommendations, useRefreshAIRecommendations(staleTime 1h), useAICollections, useRefreshAICollections, useCreateCollectionFromBooks |
+| `useGenreSuggestions.ts` | useGenreSuggestions, useApplyGenres — '기타' 장르 복구 배너 |
 | `useGroups.ts` | 다수 hooks (useGroups, useGroupDetail, useGroupMessages, useNotificationUnreadCount 등) |
 | `useGroupChat.ts` | Durable Object WebSocket 채팅 (기본 켜짐, `chat_ws='0'`이면 끔 — ADR-002) |
-| `useCollections.ts` | useCollections, useAddCollection, useDeleteCollection |
-| `useDiscover.ts` | useDiscover (탐색/발견 기능) |
-| `useOfflineQueue.ts` | @deprecated — TanStack Query `PersistQueryClientProvider`(`src/lib/queryClient.ts`)로 대체됨. 하위 호환용 dedup 가드만 남음 |
+| `useCollections.ts` | useCollections, useCollectionDetail, useCreateCollection, useUpdateCollection, useDeleteCollection, useAdd/RemoveBookToCollection |
+| `useDiscover.ts` | useExternalBooks(새로 나온 책), useLibrarianPicks(사서 추천) |
+| `usePresence.ts` | usePresenceHeartbeat, usePresenceStatus |
+| `useOfflineQueue.ts` | @deprecated — TanStack Query `PersistQueryClientProvider`(`src/lib/queryClient.ts`)로 대체됨. 하위 호환용 dedup 가드만 남음(Root에서 호출) |
 | `usePushNotification.ts` | usePushNotification (웹 푸시 구독/해제), `detectPlatform`은 `src/lib/platform.ts`로 분리됨 |
 | `useViewport.ts` | useViewport (CSS 변수 --vp-h/w 동기화) |
 | `useFeatureFlags.ts` | useFeatureFlags, useFlag(name), usePublicFlags — 단계 공개용 장치(현재 등록된 플래그 없음) |
 | `useAchievements.ts` | useAchievements + 변경 응답의 `achievements` 이벤트를 축하 모달로 연결 |
+| UI 보조 | `useBack`·`useBackToClose`(뒤로 가기로 오버레이 닫기), `useDialogA11y`, `useFeatureHints` |
 
-### KV 캐시 키 패턴
-- AI 요약: `ai:summary:{isbn}` / `ai:summary:nod:{title}:{author}` (24h)
-- AI 추천: `ai_recommend:{userId}:{topGenres}` (1h)
-- AI 노트 태그: `ai_tag:{규칙버전}:{내용 해시}` (7일). 일일 한도 `ai_tag_quota:{userId}:{KST 날짜}`는 D1 `counters`
-- (KV 아님) Rate Limit: D1 `counters`의 `rl:{prefix}:{path}:{ip 또는 u:userId}:{창 번호}` (고정 창 — 창 번호 = `floor(now / windowMs)`). AI 예산·잠금 키도 같은 테이블(ADR-005)
-- AI 한도: 추천 `ai_rec`(rate limit)와 AI 요약 하루 카운터(`ai_book_summary_count`, 하루 3번)는 별도 — 공유 금지
+### KV 캐시 키 패턴 (KV는 캐시 전용 — 키 정의는 `grep -rn "KV\.\(get\|put\)" worker`)
+- AI 추천: `ai_recommend:{version}:{userId}:{fingerprint}`(24h) + 지난 추천 `…:latest`(30일), 보여 준 책 `ai_rec_seen:{userId}`
+- AI 책 요약: `ai_book_summary:{version}:{userId}:{bookId}`(180일)
+- AI 컬렉션: `ai_collections:{version}:{userId}:…`
+- 오늘의 카드: `daily_quote:{version}:{userId}:{KST 날짜}`
+- AI 노트 태그: `ai_tag:{규칙버전}:{내용 해시}`(7일)
+- 책 정보(쪽수·장르): `book_meta:{version}:{isbn}`(30일, 쪽수 없으면 하루)
+- 사서 추천 `nl_picks:v1`(12h), 새로 나온 책 `ext_books:new:v6`(1h)
+- 그 밖: `refresh:{token}`(30일), `user_dormant:{userId}`, `presence:{userId}`, `llm_status:{provider}`(7일)
+- (KV 아님) 한도·카운터·잠금은 D1 `counters`(ADR-005): rate limit `rl:{prefix}:{path}:{ip 또는 u:userId}:{창 번호}`, AI 요약 하루 카운터 `ai_book_summary_count:{userId}:{KST 날짜}`, 노트 태그 `ai_tag_quota:{userId}:{KST 날짜}`, 생성 잠금 `*_lock:*`
+- AI 한도: 추천 `ai_rec`(rate limit)와 AI 요약 하루 카운터(하루 3번)는 별도 — 공유 금지
 
 ---
 
@@ -194,11 +205,11 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 | `DB` | D1Database | bookshelf-db (`013db269-dc7a-4a60-9920-ed40c12ab623`) | D1은 기본적으로 FK 제약을 강제함(SQLite의 `PRAGMA foreign_keys=on` 상당) — `ON DELETE CASCADE` 정의만으로 연쇄 삭제 동작함 |
 | `KV` | KVNamespace | AI 캐시, refresh token(`refresh:{token}`, 30일), 휴면 키 | 카운터는 D1 `counters`(ADR-005). 예전 `SESSIONS` 바인딩·네임스페이스는 2026-10-19 삭제 |
 | `R2` | R2Bucket | bookshelf-covers (책 표지) | |
-| `AI` | Workers AI | llama 계열 모델(요약/추천/OCR) | |
+| `AI` | Workers AI | `@cf/qwen/qwen3.8-27b`(체인 3순위), llama 3.1 8B(요약·장르 최종 폴백), llama 3.2 11B vision(OCR) | 모델 목록은 `grep -rhoE "'@cf/[^']+'" worker` |
 | `CHAT_ROOM` | Durable Object | `ChatRoom` 클래스, WebSocket Hibernation | 그룹 채팅 실시간 처리(ADR-002) |
 | `ASSETS` | Fetcher | dist/ SPA 서빙 | |
 
-**Secrets:** `NL_CERT_KEY`(국립중앙도서관 Open API, 51차), `JWT_SECRET`, `KAKAO_REST_API_KEY`(도서 검색용, 로그인과 무관), `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`
+**Secrets:** `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `KAKAO_REST_API_KEY`(도서 검색용, 로그인과 무관), `NL_CERT_KEY`(국립중앙도서관 Open API), `GEMINI_API_KEY`, `OPENROUTER_API_KEY`, `ALLOWED_EMAILS`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`. 실제 목록은 `npx wrangler secret list`(스테이징 `--env staging`). 53차에 `NAVER_CLIENT_ID`·`NAVER_CLIENT_SECRET` 삭제
 
 ---
 
@@ -219,12 +230,12 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 | 독서 세션 + 타이머 | ✅ 완료 |
 | 노트 CRUD + FTS5 검색 | ✅ 완료 |
 | 통계 + 연간결산 + 성취배지 | ✅ 완료 |
-| AI 요약·추천(인생책 통합)·AI 컬렉션·오늘의 회고·장르 추천 | ✅ 2026-10-10 공급자 체인(`worker/lib/ai/llm.ts`): Gemini(`GEMINI_API_KEY`, 무료 등급) → Gemini Lite → Workers AI `@cf/qwen/qwen3.8-27b` → OpenRouter 무료 목록 → (요약·장르만) Workers AI 8B. 키 없음·상한·404/429/5xx·타임아웃이면 다음 공급자. 상태는 관리자 대시보드 'AI 공급자 상태'. 명문장은 Gemini만(다른 모델은 문장을 지어냄). 42차 무료 Qwen은 무료 중단으로 404였음(`docs/AI_PROVIDERS.md`). 2026-10-10 Gemini 키 등록(운영·스테이징) — 3.8 Flash(추론 `low`, 무료 분당 5회) → 3.5 Flash-Lite(`minimal`) |
+| AI 요약·추천(인생책 통합)·AI 컬렉션·오늘의 회고·장르 추천 | ✅ 공급자 체인(`worker/lib/ai/llm.ts`): Gemini Flash 여러 모델(429·503이면 다음 모델) → Gemini Lite → Workers AI Qwen → OpenRouter 무료 → (요약·장르만) Workers AI 8B. 키 없음·상한·오류·타임아웃이면 다음 공급자. 상태는 관리자 대시보드 'AI 공급자 상태'. 모델·한도·결정 이력은 `docs/AI_PROVIDERS.md` |
 | 독서 모임 + 실시간 채팅(DO WebSocket) + 일정 | ✅ 완료 |
 | 통계 공유 | ✅ 2026-10-03 보고서 화면 → 독서 통계 '내 통계 공유'(이미지 Web Share/PNG)·'요약 복사'. `/api/share`는 44차에 삭제(`shared_reports` 테이블·데이터는 보존) |
 | 관리자 대시보드 | ✅ 완료 |
 | 계정 삭제(본인) | ✅ 2026-10-10 프로필 팝업 [계정 삭제] — 비밀번호 계정은 비밀번호, 소셜 로그인 계정은 가입 이메일 재입력(`DELETE /api/users/me`, 관리자 계정은 불가) |
-| 컬렉션 / 책 탐색(discover) / 웹 푸시 | ✅ 완료 |
+| 컬렉션 / 새로 나온 책·사서 추천 / 웹 푸시 | ✅ 완료 (커뮤니티 둘러보기 `GET /api/discover`는 호출처가 없어 53차에 삭제) |
 | PWA + 오프라인 지원 | ✅ 완료 |
 | **접근성 (WCAG 2.1 AA)** | 1차 감사 완료(`docs/sessions/2026-07-31-a11y-audit.md`, 2026-07) + **다크모드 대비 위반 16곳 후속 발견·수정 완료**(2026-08-14) — 감사 문서 자체의 "미해결" 섹션은 계속 정직하게 유지할 것, 상위 문서에서 "100% 완료"로 과장 인용하지 말 것 |
 | "책 등록" 진입점 통일 | ✅ 완료(9개 진입점 → FAB 중심 단일화, 2026-08-15) |
@@ -239,7 +250,8 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 | 전체 화면 기능·이벤트 점검 | ✅ 2026-10-03 QA 서브에이전트(Playwright·DevTools MCP) 3영역 + 재검증 2회. 책 일부 수정 데이터 초기화 버그(출시 때부터) 수정 — 이미 '기타'로 바뀐 장르는 자동 복구 불가 → 36차에 서재 배너 + AI 장르 추천(사용자 확인 후 적용) 추가. 실기기 전용 항목은 `docs/QA_가이드.md` C-2 |
 
 > 상세 변경 이력: `docs/CHANGELOG.md`
-> 마지막 세션 상세 리포트: `docs/sessions/2026-10-05-refactoring-requests.md`
+> 마지막 세션 상세 리포트: `docs/sessions/2026-10-25-cleanup.md`
+> 문서 목록: `docs/README.md`
 > 아키텍처 결정 기록: `docs/adr/README.md`
 > API 스펙: `docs/TRACE_MAP.md`
 > QA 절차: `docs/QA_가이드.md`
