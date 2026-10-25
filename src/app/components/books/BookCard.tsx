@@ -17,13 +17,14 @@ import {
  * 모든 호출부에서 제목·저자가 표지 옆에 텍스트로 이미 노출되므로, 생성 표지 안의
  * 제목/이니셜은 스크린리더에 중복 정보라 aria-hidden 처리한다.
  */
-export function BookCover({ book, size = "md" }: { book: Book; size?: "sm" | "md" | "lg" }) {
+export function BookCover({ book, size = "md" }: { book: Book; size?: "sm" | "md" | "lg" | "fill" }) {
   const [imgError, setImgError] = useState(false);
 
   const dims: Record<string, string> = {
     sm:  "w-12 sm:w-14 aspect-[2/3]",
     md:  "w-14 sm:w-16 aspect-[2/3]",
     lg:  "w-24 sm:w-28 lg:w-32 aspect-[2/3]",
+    fill: "w-full aspect-[2/3]", // 카드 너비를 채우는 표지(휴대폰 서재 그리드)
   };
 
   // sm/md → rounded-lg (8px), lg → rounded-xl (12px)
@@ -58,7 +59,7 @@ export function BookCover({ book, size = "md" }: { book: Book; size?: "sm" | "md
 
   // md(그리드/리스트)·lg(상세 히어로): 세리프 제목(3~4줄 클램프) + 저자를 하단 라벨
   // 밴드에 얹고, 위쪽 얇은 룰 + 왼쪽 책등 하이라이트로 "인쇄된 책"의 질감을 낸다.
-  const isLg = size === "lg";
+  const isLg = size === "lg" || size === "fill";
   const titleClamp = isLg ? "line-clamp-4" : "line-clamp-3";
 
   return (
@@ -179,10 +180,43 @@ export function DDayBadge({ goalDate, isOverdue }: { goalDate: string; isOverdue
 export function DoneBookCard({
   book,
   onClick,
+  layout = "row",
 }: {
   book: Book;
   onClick?: () => void;
+  /** stack: 표지 위·글 아래 — 휴대폰 2~4열 그리드용. 가로형(row)을 2열에 넣으면 제목 칸이 32~87px로 좁아져
+   *  두세 글자씩 끊겼다(54차 반응형 점검). 제목은 두 줄 높이를 늘 확보해 같은 줄 카드의 저자·별점 줄을 맞춘다 */
+  layout?: "row" | "stack";
 }) {
+  if (layout === "stack") {
+    return (
+      <div
+        onClick={onClick}
+        className="bg-white dark:bg-[#1E293B] rounded-xl p-2.5 flex flex-col gap-2 cursor-pointer hover:shadow-md transition-all active:scale-[0.99] border border-[#F1F5F9] dark:border-[#334155]"
+        style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
+      >
+        <BookCover book={book} size="fill" />
+        <div className="min-w-0 flex flex-col gap-1">
+          <h3
+            className="text-[#1E293B] dark:text-[#F8FAFC] line-clamp-2"
+            style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.35, minHeight: "2.7em" }}
+          >
+            {book.title}
+          </h3>
+          <p className="text-[#64748B] dark:text-[#94A3B8] truncate" style={{ fontSize: 12 }}>
+            {book.author}
+          </p>
+          {book.rating != null && <StarDisplay value={book.rating} />}
+          {book.finishedDate && (
+            <span className="text-[#64748B] dark:text-[#CBD5E1]" style={{ fontSize: 11 }}>
+              {book.finishedDate.replace(/-/g, ".")}
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       onClick={onClick}

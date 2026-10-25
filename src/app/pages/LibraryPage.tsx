@@ -364,7 +364,7 @@ export function LibraryPage() {
                 )}
               </div>
 
-              {/* Mobile: single column */}
+              {/* Mobile: 리스트는 한 줄, 그리드는 표지가 위인 카드 2~4열 */}
               {/* pb-24: FAB가 리스트 마지막 카드와 겹치지 않도록 확실한 여유 공간 확보 */}
               <div className={getMobileBlockClassName(viewMode)}>
                 {sortBy === "date" ? (
@@ -372,12 +372,13 @@ export function LibraryPage() {
                     {visibleKeys.map((key) => (
                       <div key={key}>
                         <MonthGroupHeader label={key} count={grouped.get(key)!.length} />
-                        <div className={`px-4 py-3 ${viewMode === "grid" ? "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3" : "flex flex-col gap-3"}` }>
+                        <div className={`px-4 py-3 ${viewMode === "grid" ? "grid grid-cols-2 min-[480px]:grid-cols-3 sm:grid-cols-4 gap-3" : "flex flex-col gap-3"}` }>
                           {grouped.get(key)!.map((book) => (
                             <DoneBookCard
                               key={book.id}
                               book={book}
                               onClick={() => navigate(`/book/${book.id}`)}
+                              layout={viewMode === "grid" ? "stack" : "row"}
                             />
                           ))}
                         </div>
@@ -397,13 +398,14 @@ export function LibraryPage() {
                     )}
                   </>
                 ) : (
-                  <div className={`px-4 py-2 ${viewMode === "grid" ? "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3" : "flex flex-col gap-3"}`}>
+                  <div className={`px-4 py-2 ${viewMode === "grid" ? "grid grid-cols-2 min-[480px]:grid-cols-3 sm:grid-cols-4 gap-3" : "flex flex-col gap-3"}`}>
                     <h2 className="sr-only">완독한 책 목록</h2>
                     {filtered.map((book) => (
                       <DoneBookCard
                         key={book.id}
                         book={book}
                         onClick={() => navigate(`/book/${book.id}`)}
+                        layout={viewMode === "grid" ? "stack" : "row"}
                       />
                     ))}
                   </div>
