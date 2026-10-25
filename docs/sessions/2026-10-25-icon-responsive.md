@@ -8,7 +8,7 @@
 | 시크릿 | 완료 — 운영 `OPENAI_API_KEY` 삭제(스테이징에는 원래 없음) |
 | 코드 | 9666a2e(반응형 수정 3건), 92308d2(앱 아이콘), ffcf664(휴대폰 서재 그리드), 17533f9(통계 숫자 줄바꿈) + 문서 |
 | 스테이징 | 완료 — 재점검 136/136(새 컨텍스트), e2e 83/83 PASS. 테스트 책 10권 삭제(QA 사용자1 책 0권) |
-| **운영** | 배포 중 — `git push origin main` |
+| **운영** | **배포 완료**(4354375, CI run 40164004212) — health ok, e2e `--readonly` 3/3, 아이콘·파비콘·링크 미리보기 파일이 로컬과 같음(해시), CSS `keep-all` 반영, 번들 `VITE_`는 공개용 3개뿐 |
 | **미결(사용자 결정)** | 서비스 워커 precache가 비면(브라우저 저장소 정리 등) 모든 화면이 `ERR_FAILED` — 아래 '4. 발견한 문제'. 기존부터 있던 문제, 수정 여부 확인 필요 |
 | 사용자 안내 | iOS 홈 화면에 이미 설치한 앱 아이콘은 홈 화면에서 지우고 다시 추가해야 바뀐다(iOS가 설치 시점 아이콘을 보관) |
 
@@ -48,3 +48,8 @@
 - **서비스 워커 precache가 비면 앱이 열리지 않는다.** 서비스 워커는 등록된 채 Cache Storage만 지워진 상태(브라우저 저장소 정리·확장 프로그램 등)에서 모든 화면 이동이 `net::ERR_FAILED`. 새 컨텍스트에서 재현했다(캐시 1개 삭제 → `/login`·`/wishlist`·`/` 모두 실패).
 - 원인 추정: Workbox `navigateFallback`이 precache의 `index.html`을 찾지 못하면 네트워크로 `/index.html`을 받는데, Workers Assets가 `/index.html` → `/`로 307 리다이렉트한다(`curl -sI …/index.html`). 리다이렉트된 응답은 화면 이동 응답으로 쓸 수 없어 실패한다.
 - 고칠 방향(ADR-001 서비스 워커 갱신 전략과 함께 검토): 화면 이동 폴백을 precache 실패 시 네트워크 `/`로 받도록(NetworkFirst 또는 `navigateFallback`을 리다이렉트 없는 URL로), 또는 Workers Assets의 `/index.html` 리다이렉트를 끈다. 운영 영향 범위가 서비스 워커 전체라 사용자 확인 후 진행한다.
+
+## 5. 운영 배포
+
+- `git push origin main` → CI run 40164004212 성공(4354375). `/api/health` ok(db·kv), `bash scripts/e2e-api-test.sh --readonly` 3/3 PASS.
+- 운영의 `icons/icon-512.png`·`apple-touch-icon.png`·`favicon.svg`·`favicon.ico`·`og-image.png`가 저장소 파일과 해시가 같다. 운영 CSS에 `word-break: keep-all`이 있고, 번들의 `VITE_` 이름은 공개용 3개뿐이다.
