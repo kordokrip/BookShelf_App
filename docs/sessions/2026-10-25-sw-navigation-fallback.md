@@ -8,7 +8,8 @@
 | 원인 확인 | 완료 — Workbox `createHandlerBoundToURL('index.html')`이 캐시를 못 찾으면 네트워크로 `/index.html`을 받는데 307(`/`)을 따라간 응답이라 화면 이동 응답으로 못 쓰임. `/index.html`만 200으로 고정하면 같은 상황에서 정상(단일 변수 검증) |
 | 코드 | 1006e2e — precache·탐색 폴백을 `index.html` 대신 `/`로(`src/lib/swPrecache.ts`, 테스트 3개). ADR-001 보완·CHANGELOG |
 | 스테이징 | 완료(CI run 40174850495) — 아래 '확인' 4가지 모두 정상 |
-| **운영** | 배포 중 — `git push origin main` |
+| **운영** | **배포 완료**(3117cc2, CI run 40175506389) — health ok, e2e `--readonly` 3/3, 운영 `sw.js`가 `createHandlerBoundToURL("/")`, 새 사용자 오프라인·캐시 삭제 뒤 화면 이동 200(수정 전 운영은 `ERR_FAILED`) |
+| 사용자 영향 | 기존 사용자는 다음 [업데이트] 배너를 누르거나 앱을 완전히 닫았다 열면 새 서비스 워커로 바뀐다. 이미 고장 난 브라우저도 배포 뒤 다시 열린다(스테이징 확인) |
 
 ## 원인
 
@@ -36,3 +37,8 @@
 
 - 참고: 운영(수정 전)에서 같은 조건을 만들면 `ERR_FAILED` — 운영에도 같은 문제가 있었다.
 - 점검 방법 메모: Playwright `context.route`는 서비스 워커 스크립트 업데이트 요청(`reg.update()`)을 가로채지 못한다. 기존 사용자 경로는 배포 전에 만든 브라우저 컨텍스트로 확인했다(`browser.contexts()`로 다시 찾음).
+
+## 운영 배포
+
+- `git push origin main` → CI run 40175506389 성공(3117cc2). `/api/health` ok, `bash scripts/e2e-api-test.sh --readonly` 3/3, 스테이징 e2e 83/83.
+- 운영 새 컨텍스트: precache HTML이 `/`, 오프라인 `/stats` 200(서비스 워커), 캐시 삭제 뒤 `/wishlist`·`/` 200 — 수정 전 운영에서는 같은 조건이 `ERR_FAILED`였다.
