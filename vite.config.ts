@@ -19,7 +19,7 @@ function assertNoSecretViteVars(mode: string) {
   }
 }
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
   assertNoSecretViteVars(mode)
   return {
   plugins: [
@@ -49,7 +49,8 @@ export default defineConfig(({ mode }) => {
         // 화면 이동 폴백은 precache의 '/'(index.html 대신) — /index.html은 Workers Assets가 307로 리다이렉트해
         // precache가 비었을 때 모든 화면이 ERR_FAILED가 됐다(55차, src/lib/swPrecache.ts)
         navigateFallback: SW_NAVIGATE_FALLBACK,
-        manifestTransforms: [precacheIndexAsRoot],
+        // 배포 빌드에서만 index.html 누락을 오류로(개발 서버 매니페스트에는 index.html이 없다)
+        manifestTransforms: [precacheIndexAsRoot({ strict: command === 'build' })],
         // OAuth 콜백은 303 리다이렉트 응답이므로 SW가 절대 인터셉트하면 안 됨
         navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [

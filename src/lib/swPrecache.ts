@@ -12,15 +12,21 @@ export const SW_NAVIGATE_FALLBACK = '/';
 
 interface PrecacheEntry { url: string; revision: string | null; size: number }
 
-/** Workbox manifestTransforms — precache의 index.html 항목을 '/'로 바꾼다(revision 유지) */
-export async function precacheIndexAsRoot<T extends PrecacheEntry>(
-  entries: T[],
-): Promise<{ manifest: T[]; warnings: string[] }> {
-  if (!entries.some((e) => e.url === 'index.html')) {
-    throw new Error('[pwa] precache에 index.html이 없습니다 — 서비스 워커 탐색 폴백(/)을 만들 수 없습니다');
-  }
-  return {
-    manifest: entries.map((e) => (e.url === 'index.html' ? { ...e, url: SW_NAVIGATE_FALLBACK } : e)),
-    warnings: [],
+/**
+ * Workbox manifestTransforms — precache의 index.html 항목을 '/'로 바꾼다(revision 유지).
+ * strict(배포 빌드)면 index.html이 없을 때 빌드를 멈춘다. 개발 서버(vite dev)의 매니페스트에는
+ * index.html이 없으므로 경고만 남긴다 — 멈추면 `npm run dev`가 오류 화면으로 막힌다(56차에 발견).
+ */
+export function precacheIndexAsRoot({ strict }: { strict: boolean }) {
+  return async <T extends PrecacheEntry>(entries: T[]): Promise<{ manifest: T[]; warnings: string[] }> => {
+    if (!entries.some((e) => e.url === 'index.html')) {
+      const message = '[pwa] precache에 index.html이 없습니다 — 서비스 워커 탐색 폴백(/)을 만들 수 없습니다';
+      if (strict) throw new Error(message);
+      return { manifest: entries, warnings: [message] };
+    }
+    return {
+      manifest: entries.map((e) => (e.url === 'index.html' ? { ...e, url: SW_NAVIGATE_FALLBACK } : e)),
+      warnings: [],
+    };
   };
 }
