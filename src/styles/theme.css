@@ -17,6 +17,7 @@
   --bg-warn-soft: #FEF3C7;
   --text-warn: #92400E;
   --text-sun: #DC2626; /* 달력 일요일 */
+  --text-danger: #DC2626; /* 입력 오류 글자·테두리 (로그인·가입, 56차) */
   --text-sat: #2563EB; /* 달력 토요일 */
   --text-accent: var(--brand-600);
   --bg-success-soft: #ECFDF5;
@@ -44,6 +45,7 @@
   --bg-warn-soft: #451A03;
   --text-warn: #FCD34D;
   --text-sun: #F87171;
+  --text-danger: #F87171;
   --text-sat: #60A5FA;
   --text-accent: var(--brand-300);
   --bg-success-soft: #064E3B;

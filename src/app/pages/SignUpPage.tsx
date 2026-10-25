@@ -1,62 +1,60 @@
 /**
- * 회원가입 페이지
- * - 이메일·비밀번호·닉네임 입력 유효성 검사
- * - Google OAuth 링크 제공
+ * 회원가입 페이지 — 4단계: 계정 → 좋아하는 장르 → 올해 목표 → 준비 완료(이때 가입 API 호출)
+ * 화면 틀은 AuthShell(56차 개편). 단계 흐름은 한 번만 렌더링한다 — 예전에는 모바일·데스크톱용으로
+ * 두 벌을 그려 화면 폭을 바꾸면 입력과 단계가 따로 놀았다.
  */
 import { useState } from "react";
 import { useNavigate, Link } from "react-router";
+import { BookMarked, Quote, BarChart3, Lock, Check } from "lucide-react";
 import { useAuthStore } from "../../stores/authStore";
 import { usersApi } from "../../lib/api";
 import { GENRE_CONFIG } from "../../types/book";
-import { AuthPreviewNav } from "../components/auth/AuthPreviewNav";
 import { NumberStepper } from "../components/ui/NumberStepper";
-import { AppLogo } from "../components/brand/AppLogo";
-import { AlertCircle, Lock } from "lucide-react";
+import { AuthShell } from "../components/auth/AuthShell";
+import {
+  AUTH_INPUT_CLASS, authInputStyle, AuthLabel, FieldMessage, PasswordToggle,
+  PrimaryButton, AuthHeading,
+} from "../components/auth/authUi";
 
 type GenreKey = keyof typeof GENRE_CONFIG;
 const ALL_GENRES = Object.keys(GENRE_CONFIG) as GenreKey[];
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const STEP_LABELS = ["계정 만들기", "좋아하는 장르", "올해 목표", "준비 완료"] as const;
 
-function FloatingBookIcons() {
-  const books = [
-    { x: "8%", y: "12%", rotate: -15, opacity: 0.18, size: 28 },
-    { x: "78%", y: "8%", rotate: 20, opacity: 0.14, size: 22 },
-    { x: "18%", y: "55%", rotate: -8, opacity: 0.12, size: 20 },
-    { x: "85%", y: "50%", rotate: 12, opacity: 0.16, size: 26 },
-    { x: "50%", y: "20%", rotate: 5, opacity: 0.1, size: 18 },
-    { x: "65%", y: "68%", rotate: -20, opacity: 0.13, size: 24 },
-  ];
+const textStyle = (color: string) => ({ color, fontFamily: "var(--font-pretendard)" });
+
+/* ─── 단계 표시 — 실제 순서가 있는 흐름이라 번호를 쓴다 ─────────── */
+function StepIndicator({ step }: { step: number }) {
+  const total = STEP_LABELS.length;
   return (
-    <>
-      {books.map((b, i) => (
-        <div
-          key={i}
-          className="absolute"
-          style={{ left: b.x, top: b.y, transform: `rotate(${b.rotate}deg)`, opacity: b.opacity }}
-        >
-          <svg width={b.size} height={b.size} viewBox="0 0 24 24" fill="white">
-            <path d="M2 4.5A2.5 2.5 0 014.5 2H20v20H4.5A2.5 2.5 0 012 19.5v-15z" />
-          </svg>
-        </div>
-      ))}
-    </>
+    <div
+      className="mb-6"
+      role="progressbar"
+      aria-label="가입 단계"
+      aria-valuemin={1}
+      aria-valuemax={total}
+      aria-valuenow={step}
+      aria-valuetext={`${total}단계 중 ${step}단계: ${STEP_LABELS[step - 1]}`}
+    >
+      <div className="flex items-baseline justify-between mb-2">
+        <span className="text-[13px]" style={{ ...textStyle("var(--text-accent)"), fontWeight: 600 }}>{STEP_LABELS[step - 1]}</span>
+        <span className="text-[12px] tabular-nums" style={textStyle("var(--text-secondary)")}>{step} / {total}</span>
+      </div>
+      <div className="grid grid-cols-4 gap-1.5" aria-hidden>
+        {STEP_LABELS.map((label, i) => (
+          <div
+            key={label}
+            className="h-1 rounded-full transition-colors"
+            style={{ backgroundColor: i < step ? "var(--brand-600)" : "var(--border-color)" }}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 
-function EyeIcon({ show }: { show: boolean }) {
-  return show ? (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" />
-      <line x1="1" y1="1" x2="23" y2="23" />
-    </svg>
-  ) : (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-
-function FormContent({ onSubmit }: { onSubmit: (name: string, email: string, password: string) => void }) {
+/* ─── 1단계: 계정 ─────────────────────────────────────────────── */
+function AccountStep({ onSubmit, error }: { onSubmit: (name: string, email: string, password: string) => void; error: string | null }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -66,305 +64,127 @@ function FormContent({ onSubmit }: { onSubmit: (name: string, email: string, pas
   const [showCf, setShowCf] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  const emailError = submitted && email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-    ? "올바른 이메일 형식이 아닙니다" : "";
-  const pwError = submitted && password && password.length < 8
-    ? "비밀번호는 8자 이상이어야 합니다" : "";
-  const cfError = submitted && confirm && confirm !== password
-    ? "비밀번호가 일치하지 않습니다" : "";
-
-  // Button is disabled when required fields are empty or terms not checked
+  const nameError = submitted && !name ? "이름을 입력해주세요" : "";
+  const emailError = submitted && email && !EMAIL_RE.test(email) ? "올바른 이메일 형식이 아닙니다" : "";
+  const pwError = submitted && password && password.length < 8 ? "비밀번호는 8자 이상이어야 합니다" : "";
+  const cfError = submitted && confirm && confirm !== password ? "비밀번호가 일치하지 않습니다" : "";
+  const confirmOk = !cfError && !!confirm && confirm === password;
   const isDisabled = !name || !email || !password || !confirm || !terms;
 
-  const handleSubmit = () => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
     setSubmitted(true);
-    const valid = name && email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-      && password.length >= 8 && confirm === password && terms;
-    if (valid) onSubmit(name, email, password);
+    if (name && EMAIL_RE.test(email) && password.length >= 8 && confirm === password && terms) onSubmit(name, email, password);
   };
 
   // <form>으로 감싸야 Enter 제출·비밀번호 관리자 저장 제안이 동작한다
   return (
-    <form
-      className="flex flex-col gap-4"
-      noValidate
-      onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}
-    >
-      {/* Name */}
+    <form className="flex flex-col gap-4" noValidate onSubmit={handleSubmit}>
+      {error && <FieldMessage>{error}</FieldMessage>}
+
       <div>
-        <label htmlFor="signup-name" className="block text-[13px] mb-1.5" style={{ color: "#374151", fontFamily: "var(--font-pretendard)", fontWeight: 600 }}>
-          이름
-        </label>
+        <AuthLabel htmlFor="signup-name">이름</AuthLabel>
         <input
-          id="signup-name"
-          name="name"
-          autoComplete="name"
-          type="text"
-          placeholder="이름을 입력해주세요"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full px-4 py-3.5 rounded-xl text-[15px] outline-none"
-          style={{
-            border: submitted && !name ? "1.5px solid #EF4444" : "1.5px solid #E5E7EB",
-            backgroundColor: submitted && !name ? "#FEF2F2" : "#F9FAFB",
-            fontFamily: "var(--font-pretendard)",
-            color: "#1F2937",
-          }}
+          id="signup-name" name="name" autoComplete="name" type="text" placeholder="서재에 표시할 이름"
+          value={name} onChange={(e) => setName(e.target.value)} aria-invalid={!!nameError}
+          className={AUTH_INPUT_CLASS} style={authInputStyle(nameError ? "error" : "default")}
         />
-        {submitted && !name && (
-          <p className="text-[12px] mt-1.5" style={{ color: "#EF4444", fontFamily: "var(--font-pretendard)" }}><AlertCircle size={13} aria-hidden className="inline -mt-0.5 mr-1" />이름을 입력해주세요</p>
-        )}
+        {nameError && <FieldMessage>{nameError}</FieldMessage>}
       </div>
 
-      {/* Email */}
       <div>
-        <label htmlFor="signup-email" className="block text-[13px] mb-1.5" style={{ color: "#374151", fontFamily: "var(--font-pretendard)", fontWeight: 600 }}>
-          이메일
-        </label>
+        <AuthLabel htmlFor="signup-email">이메일</AuthLabel>
         <input
-          id="signup-email"
-          name="email"
-          autoComplete="email"
-          autoCapitalize="none"
-          spellCheck={false}
-          type="email"
-          placeholder="이메일 주소를 입력해주세요"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full px-4 py-3.5 rounded-xl text-[15px] outline-none"
-          style={{
-            border: emailError ? "1.5px solid #EF4444" : "1.5px solid #E5E7EB",
-            backgroundColor: emailError ? "#FEF2F2" : "#F9FAFB",
-            fontFamily: "var(--font-pretendard)",
-            color: "#1F2937",
-          }}
+          id="signup-email" name="email" autoComplete="email" autoCapitalize="none" spellCheck={false} type="email"
+          placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-invalid={!!emailError}
+          className={AUTH_INPUT_CLASS} style={authInputStyle(emailError ? "error" : "default")}
         />
-        {emailError && (
-          <p className="text-[12px] mt-1.5" style={{ color: "#EF4444", fontFamily: "var(--font-pretendard)" }}><AlertCircle size={13} aria-hidden className="inline -mt-0.5 mr-1" />{emailError}</p>
-        )}
+        {emailError && <FieldMessage>{emailError}</FieldMessage>}
       </div>
 
-      {/* Password */}
       <div>
-        <label htmlFor="signup-password" className="block text-[13px] mb-1.5" style={{ color: "#374151", fontFamily: "var(--font-pretendard)", fontWeight: 600 }}>
-          비밀번호
-        </label>
+        <AuthLabel htmlFor="signup-password">비밀번호</AuthLabel>
         <div className="relative">
           {/* new-password: 브라우저·키체인이 강력한 비밀번호를 제안하고 가입 후 저장을 묻는다 */}
           <input
-            id="signup-password"
-            name="new-password"
-            autoComplete="new-password"
-            type={showPw ? "text" : "password"}
-            placeholder="비밀번호 (8자 이상)"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-3.5 rounded-xl text-[15px] outline-none"
-            style={{
-              border: pwError ? "1.5px solid #EF4444" : "1.5px solid #E5E7EB",
-              backgroundColor: pwError ? "#FEF2F2" : "#F9FAFB",
-              fontFamily: "var(--font-pretendard)",
-              color: "#1F2937",
-            }}
+            id="signup-password" name="new-password" autoComplete="new-password" type={showPw ? "text" : "password"}
+            placeholder="8자 이상" value={password} onChange={(e) => setPassword(e.target.value)} aria-invalid={!!pwError}
+            className={`${AUTH_INPUT_CLASS} pr-12`} style={authInputStyle(pwError ? "error" : "default")}
           />
-          <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-full" style={{ color: "#64748B" }} aria-label={showPw ? "비밀번호 숨기기" : "비밀번호 보기"} aria-pressed={showPw}>
-            <EyeIcon show={showPw} />
-          </button>
+          <PasswordToggle show={showPw} onToggle={() => setShowPw(!showPw)} />
         </div>
-        {pwError && (
-          <p className="text-[12px] mt-1.5" style={{ color: "#EF4444", fontFamily: "var(--font-pretendard)" }}><AlertCircle size={13} aria-hidden className="inline -mt-0.5 mr-1" />{pwError}</p>
-        )}
+        {pwError && <FieldMessage>{pwError}</FieldMessage>}
       </div>
 
-      {/* Confirm Password */}
       <div>
-        <label htmlFor="signup-confirm" className="block text-[13px] mb-1.5" style={{ color: "#374151", fontFamily: "var(--font-pretendard)", fontWeight: 600 }}>
-          비밀번호 확인
-        </label>
+        <AuthLabel htmlFor="signup-confirm">비밀번호 확인</AuthLabel>
         <div className="relative">
           <input
-            id="signup-confirm"
-            name="confirm-password"
-            autoComplete="new-password"
-            type={showCf ? "text" : "password"}
-            placeholder="비밀번호를 다시 입력해주세요"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            className="w-full px-4 py-3.5 rounded-xl text-[15px] outline-none"
-            style={{
-              border: cfError ? "1.5px solid #EF4444" : confirm && confirm === password ? "1.5px solid #10B981" : "1.5px solid #E5E7EB",
-              backgroundColor: cfError ? "#FEF2F2" : confirm && confirm === password ? "#F0FDF4" : "#F9FAFB",
-              fontFamily: "var(--font-pretendard)",
-              color: "#1F2937",
-            }}
+            id="signup-confirm" name="confirm-password" autoComplete="new-password" type={showCf ? "text" : "password"}
+            placeholder="한 번 더 입력" value={confirm} onChange={(e) => setConfirm(e.target.value)} aria-invalid={!!cfError}
+            className={`${AUTH_INPUT_CLASS} pr-12`} style={authInputStyle(cfError ? "error" : confirmOk ? "ok" : "default")}
           />
-          <button type="button" onClick={() => setShowCf(!showCf)} className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-full" style={{ color: "#64748B" }} aria-label={showCf ? "비밀번호 확인 숨기기" : "비밀번호 확인 보기"} aria-pressed={showCf}>
-            <EyeIcon show={showCf} />
-          </button>
+          <PasswordToggle show={showCf} onToggle={() => setShowCf(!showCf)} />
         </div>
-        {cfError && (
-          <p className="text-[12px] mt-1.5" style={{ color: "#EF4444", fontFamily: "var(--font-pretendard)" }}><AlertCircle size={13} aria-hidden className="inline -mt-0.5 mr-1" />{cfError}</p>
-        )}
-        {!cfError && confirm && confirm === password && (
-          <p className="text-[12px] mt-1.5" style={{ color: "#10B981", fontFamily: "var(--font-pretendard)" }}>✓ 비밀번호가 일치합니다</p>
-        )}
+        {cfError && <FieldMessage>{cfError}</FieldMessage>}
+        {confirmOk && <FieldMessage tone="ok">비밀번호가 일치합니다</FieldMessage>}
       </div>
 
-      {/* Privacy notice */}
-      <div
-        className="rounded-xl px-4 py-3"
-        style={{ background: "#F0F9FF", border: "1px solid #BAE6FD" }}
-      >
-        <p
-          className="text-[12px] leading-relaxed"
-          style={{ color: "#0369A1", fontFamily: "var(--font-pretendard)" }}
-        >
-          <Lock size={12} aria-hidden className="inline -mt-0.5 mr-1" /><strong>개인정보 안내</strong>
+      {/* 저장하는 정보 안내 */}
+      <div className="rounded-xl px-4 py-3.5" style={{ backgroundColor: "var(--bg-muted)" }}>
+        <p className="flex items-center gap-1.5 text-[13px]" style={{ ...textStyle("var(--text-primary)"), fontWeight: 600 }}>
+          <Lock size={14} aria-hidden /> 저장하는 정보
         </p>
-        <ul
-          className="text-[11px] mt-1.5 flex flex-col gap-1"
-          style={{ color: "#0C4A6E", fontFamily: "var(--font-pretendard)", lineHeight: 1.5 }}
-        >
-          <li>• 저장되는 정보: <strong>이메일 주소</strong>, 이름</li>
-          <li>• Google 로그인 시: 이름, 이메일, 프로필 사진 URL</li>
-          <li>• 비밀번호는 암호화되어 저장되며, 원본은 보관하지 않습니다</li>
-          <li>• 수집된 정보는 서비스 제공 목적으로만 사용됩니다</li>
+        <ul className="mt-2 pl-4 list-disc flex flex-col gap-1 text-[12px] leading-relaxed" style={textStyle("var(--text-body)")}>
+          <li>이메일 주소와 이름 (Google로 가입하면 프로필 사진 주소도)</li>
+          <li>비밀번호는 암호화해 저장하고 원문은 보관하지 않아요</li>
+          <li>서비스 제공에만 써요</li>
         </ul>
       </div>
 
-      {/* Terms checkbox */}
-      <div className="flex items-start gap-3 py-1">
-        {/* 체크 상태를 스크린리더에 전달 (일반 버튼이면 체크 여부를 알 수 없음) */}
+      {/* 약관 동의 — 체크 상태를 스크린리더에 전달(role=checkbox), 줄 전체를 눌러도 바뀐다.
+          버튼 자체가 44px 터치 영역이고 20px 상자는 안쪽에 그린다 — 전역 터치 규칙(버튼 min-height 44px)이
+          20px 버튼을 세로로 늘려 길쭉한 막대로 보이던 문제(56차) */}
+      <div className="flex items-center gap-1">
         <button
-          type="button"
-          role="checkbox"
-          aria-checked={terms}
-          aria-labelledby="signup-terms-label"
+          type="button" role="checkbox" aria-checked={terms} aria-labelledby="signup-terms-label"
           onClick={() => setTerms(!terms)}
-          className="mt-0.5 flex-shrink-0 w-5 h-5 rounded flex items-center justify-center transition-colors"
-          style={{
-            border: submitted && !terms ? "2px solid #EF4444" : terms ? "2px solid var(--brand-600)" : "2px solid #D1D5DB",
-            backgroundColor: terms ? "var(--brand-600)" : "white",
-          }}
+          className="-ml-3 flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-lg focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-[var(--brand-600)]"
         >
-          {terms && (
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          )}
+          <span
+            aria-hidden
+            className="w-5 h-5 rounded-md flex items-center justify-center transition-colors"
+            style={{
+              border: `1.5px solid ${submitted && !terms ? "var(--text-danger)" : terms ? "var(--brand-600)" : "var(--text-secondary)"}`,
+              backgroundColor: terms ? "var(--brand-600)" : "var(--bg-card)",
+            }}
+          >
+            {terms && <Check size={13} strokeWidth={3} color="#FFFFFF" />}
+          </span>
         </button>
-        <label
-          id="signup-terms-label"
-          className="text-[13px] leading-relaxed cursor-pointer"
-          style={{ color: "#374151", fontFamily: "var(--font-pretendard)" }}
-          onClick={() => setTerms(!terms)}
-        >
-          <span style={{ color: "var(--brand-600)", fontWeight: 600 }}>이용약관</span> 및{" "}
-          <span style={{ color: "var(--brand-600)", fontWeight: 600 }}>개인정보처리방침</span>에 동의합니다
+        <label id="signup-terms-label" className="text-[13px] leading-relaxed cursor-pointer break-keep" style={textStyle("var(--text-body)")} onClick={() => setTerms(!terms)}>
+          <span style={{ color: "var(--text-accent)", fontWeight: 600 }}>이용약관</span>과{" "}
+          <span style={{ color: "var(--text-accent)", fontWeight: 600 }}>개인정보처리방침</span>에 동의합니다
         </label>
       </div>
-      {submitted && !terms && (
-        <p className="text-[12px] -mt-2" style={{ color: "#EF4444", fontFamily: "var(--font-pretendard)" }}><AlertCircle size={13} aria-hidden className="inline -mt-0.5 mr-1" />약관에 동의해주세요</p>
-      )}
+      {submitted && !terms && <FieldMessage>약관에 동의해주세요</FieldMessage>}
 
-      <button
-        type="submit"
-        disabled={isDisabled}
-        className="w-full rounded-2xl text-white text-[15px] mt-1 transition-opacity active:opacity-80 disabled:cursor-not-allowed"
-        style={{
-          height: 48,
-          background: isDisabled
-            ? "linear-gradient(135deg, #94A3B8 0%, #CBD5E1 100%)"
-            : "linear-gradient(135deg, var(--brand-600) 0%, var(--brand2-600) 100%)",
-          fontFamily: "var(--font-pretendard)",
-          fontWeight: 700,
-          opacity: isDisabled ? 0.6 : 1,
-        }}
-      >
-        회원가입
-      </button>
+      <PrimaryButton type="submit" disabled={isDisabled} className="mt-1">다음</PrimaryButton>
 
-      <p className="text-center text-[13px]" style={{ color: "#6B7280", fontFamily: "var(--font-pretendard)" }}>
-        이미 계정이 있으신가요?{" "}
-        <Link to="/login" className="font-semibold" style={{ color: "var(--brand-600)" }}>
-          로그인
-        </Link>
+      <p className="text-center mt-2 text-[14px]" style={textStyle("var(--text-secondary)")}>
+        이미 계정이 있나요?{" "}
+        <Link to="/login" className="underline underline-offset-4" style={{ color: "var(--text-accent)", fontWeight: 600 }}>로그인</Link>
       </p>
     </form>
   );
 }
 
-/* ─── Step indicator ─────────────────────────────────────────── */
-function StepIndicator({ step }: { step: number }) {
-  const TOTAL = 4;
-  return (
-    <div className="flex items-center justify-center gap-0 py-4">
-      {Array.from({ length: TOTAL }, (_, idx) => {
-        const n = idx + 1;
-        const isCompleted = n < step;
-        const isActive = n === step;
-        return (
-          <div key={n} className="flex items-center">
-            <div className="relative flex items-center justify-center" style={{ width: 26, height: 26 }}>
-              {isActive && (
-                <div className="absolute inset-0 rounded-full" style={{ backgroundColor: "var(--brand-200)" }} />
-              )}
-              <div
-                className="relative z-10 flex items-center justify-center rounded-full"
-                style={{
-                  width: 18,
-                  height: 18,
-                  backgroundColor: isCompleted ? "#10B981" : isActive ? "var(--brand-600)" : "white",
-                  border: isCompleted || isActive ? "none" : "1.5px solid #E2E8F0",
-                }}
-              >
-                {isCompleted && (
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                    <path d="M2 5l2.5 2.5L8 2.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
-              </div>
-            </div>
-            {n < TOTAL && (
-              <div style={{ width: 28, height: 2, backgroundColor: isCompleted ? "#10B981" : "#E2E8F0" }} />
-            )}
-          </div>
-        );
-      })}
-      <p className="ml-3 text-[12px]" style={{ color: "#64748B", fontFamily: "var(--font-pretendard)" }}>
-        Step {step}/{TOTAL}
-      </p>
-    </div>
-  );
-}
-
-/* ─── Screen 2: 장르 선택 ────────────────────────────────────── */
-function GenreScreen({
-  selected,
-  onToggle,
-  onNext,
-}: {
-  selected: GenreKey[];
-  onToggle: (g: GenreKey) => void;
-  onNext: () => void;
-}) {
-  const canProceed = selected.length > 0;
+/* ─── 2단계: 좋아하는 장르 ────────────────────────────────────── */
+function GenreStep({ selected, onToggle, onNext }: { selected: GenreKey[]; onToggle: (g: GenreKey) => void; onNext: () => void }) {
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h2
-          className="text-[20px] mb-1"
-          style={{ fontFamily: "var(--font-pretendard)", fontWeight: 700, color: "var(--brand-950)" }}
-        >
-          좋아하는 장르를 선택해주세요
-        </h2>
-        <p className="text-[14px]" style={{ color: "#64748B", fontFamily: "var(--font-pretendard)" }}>
-          1개 이상 선택하면 시작할 수 있어요
-        </p>
-      </div>
-
-      {/* Genre grid */}
-      <div className="flex flex-wrap gap-2">
+      <AuthHeading title="어떤 책을 좋아하세요?" sub="고른 장르로 첫 추천을 시작해요. 하나 이상 골라 주세요." />
+      <div className="flex flex-wrap gap-2" role="group" aria-label="좋아하는 장르">
         {ALL_GENRES.map((genre) => {
           const cfg = GENRE_CONFIG[genre];
           const isSelected = selected.includes(genre);
@@ -372,251 +192,98 @@ function GenreScreen({
             <button
               key={genre}
               type="button"
+              aria-pressed={isSelected}
               onClick={() => onToggle(genre)}
-              className="flex items-center gap-1.5 rounded-full px-3 py-2 text-[13px] transition-all active:scale-95"
+              className="flex items-center gap-1.5 rounded-full px-3.5 min-h-11 text-[14px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-600)]"
               style={{
                 fontFamily: "var(--font-pretendard)",
                 fontWeight: isSelected ? 700 : 500,
-                backgroundColor: isSelected ? cfg.bg : "#F8FAFC",
-                color: isSelected ? cfg.text : "#64748B",
-                border: isSelected ? `1.5px solid ${cfg.text}66` : "1.5px solid #E2E8F0",
-                boxShadow: isSelected ? `0 2px 8px ${cfg.text}22` : "none",
+                backgroundColor: isSelected ? cfg.bg : "var(--bg-card)",
+                color: isSelected ? cfg.text : "var(--text-body)",
+                border: `1px solid ${isSelected ? cfg.text : "var(--border-color)"}`,
               }}
             >
-              <span>{cfg.emoji}</span>
-              <span>{genre}</span>
+              <span aria-hidden>{cfg.emoji}</span>
+              {genre}
             </button>
           );
         })}
       </div>
-
-      {/* Selected count */}
-      <p className="text-[13px]" style={{ color: "#64748B", fontFamily: "var(--font-pretendard)" }}>
-        {selected.length > 0
-          ? `${selected.length}개 선택됨`
-          : "장르를 선택해주세요"}
+      <p className="text-[13px]" style={textStyle("var(--text-secondary)")} aria-live="polite">
+        {selected.length > 0 ? `${selected.length}개 골랐어요` : "아직 고른 장르가 없어요"}
       </p>
-
-      <button
-        type="button"
-        onClick={onNext}
-        disabled={!canProceed}
-        className="w-full rounded-2xl text-white text-[15px] transition-opacity active:opacity-80 disabled:cursor-not-allowed"
-        style={{
-          height: 48,
-          background: canProceed
-            ? "linear-gradient(135deg, var(--brand-600) 0%, var(--brand2-600) 100%)"
-            : "linear-gradient(135deg, #94A3B8 0%, #CBD5E1 100%)",
-          fontFamily: "var(--font-pretendard)",
-          fontWeight: 700,
-          opacity: canProceed ? 1 : 0.6,
-        }}
-      >
-        다음 →
-      </button>
+      <PrimaryButton type="button" onClick={onNext} disabled={selected.length === 0}>다음</PrimaryButton>
     </div>
   );
 }
 
-/* ─── Screen 3: 독서 목표 ────────────────────────────────────── */
-function GoalScreen({
-  goal,
-  onChange,
-  onNext,
-}: {
-  goal: number;
-  onChange: (v: number) => void;
-  onNext: () => void;
-}) {
+/* ─── 3단계: 올해 목표 ────────────────────────────────────────── */
+function goalPace(goal: number): string {
+  if (goal <= 6) return "두 달에 한 권꼴이에요. 부담 없이 시작해요.";
+  if (goal <= 15) return "한 달에 한 권꼴이에요. 꾸준히 읽기 좋은 목표예요.";
+  if (goal <= 30) return "2주에 한 권꼴이에요. 읽는 습관이 이미 있으시네요.";
+  return "일주일에 한 권에 가까워요. 멋진 도전이에요.";
+}
+
+function GoalStep({ goal, onChange, onNext }: { goal: number; onChange: (v: number) => void; onNext: () => void }) {
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h2
-          className="text-[20px] mb-1"
-          style={{ fontFamily: "var(--font-pretendard)", fontWeight: 700, color: "var(--brand-950)" }}
-        >
-          연간 독서 목표를 설정해주세요
-        </h2>
-        <p className="text-[14px]" style={{ color: "#64748B", fontFamily: "var(--font-pretendard)" }}>
-          나중에 언제든지 변경할 수 있어요
-        </p>
-      </div>
-
-      <NumberStepper
-        value={goal}
-        min={1}
-        max={100}
-        onChange={onChange}
-        unit="권"
-        label="연간 목표"
-      />
-
-      {/* Guide messages */}
-      <div
-        className="rounded-2xl px-4 py-3 flex items-center gap-3"
-        style={{ background: "linear-gradient(135deg, var(--brand-50), var(--brand2-100))" }}
-      >
-        <span style={{ fontSize: 24 }}>
-          {goal <= 6 ? "🌱" : goal <= 15 ? "📚" : goal <= 30 ? "🚀" : "🌟"}
-        </span>
-        <p className="text-[13px]" style={{ color: "var(--brand-600)", fontFamily: "var(--font-pretendard)", fontWeight: 500 }}>
-          {goal <= 6
-            ? "한 달에 한 권씩이에요. 천천히 시작해봐요!"
-            : goal <= 15
-            ? "한 달에 한 권 이상! 좋은 목표예요 😊"
-            : goal <= 30
-            ? "거의 격주로 한 권! 독서 고수네요 🔥"
-            : "하루 한 권에 도전! 대단한 목표예요 ⚡"}
-        </p>
-      </div>
-
-      <button
-        type="button"
-        onClick={onNext}
-        className="w-full rounded-2xl text-white text-[15px] transition-opacity active:opacity-80"
-        style={{
-          height: 48,
-          background: "linear-gradient(135deg, var(--brand-600) 0%, var(--brand2-600) 100%)",
-          fontFamily: "var(--font-pretendard)",
-          fontWeight: 700,
-        }}
-      >
-        다음 →
-      </button>
+      <AuthHeading title="올해 몇 권 읽어 볼까요?" sub="언제든 바꿀 수 있어요." />
+      <NumberStepper value={goal} min={1} max={100} onChange={onChange} unit="권" label="연간 목표" />
+      <p className="rounded-xl px-4 py-3 text-[14px] break-keep" style={{ backgroundColor: "var(--bg-accent-soft)", ...textStyle("var(--text-accent)"), fontWeight: 500 }} aria-live="polite">
+        {goalPace(goal)}
+      </p>
+      <PrimaryButton type="button" onClick={onNext}>다음</PrimaryButton>
     </div>
   );
 }
 
-/* ─── Screen 4: 완료 화면 ────────────────────────────────────── */
-function CompleteScreen({
-  name,
-  selectedGenres,
-  goal,
-  onStart,
-  isLoading,
-  error,
-}: {
-  name: string;
-  selectedGenres: GenreKey[];
-  goal: number;
-  onStart: () => void;
-  isLoading: boolean;
-  error: string | null;
+/* ─── 4단계: 준비 완료 — 여기서 가입한다 ──────────────────────── */
+function ReadyStep({ name, selectedGenres, goal, onStart, isLoading }: {
+  name: string; selectedGenres: GenreKey[]; goal: number; onStart: () => void; isLoading: boolean;
 }) {
   return (
     <div className="flex flex-col gap-5">
-      {/* Welcome */}
-      <div className="text-center">
-        <div className="text-5xl mb-3">📚</div>
-        <h2
-          className="text-[22px] mb-2"
-          style={{ fontFamily: "var(--font-pretendard)", fontWeight: 800, color: "var(--brand-950)" }}
-        >
-          {name}님, 반가워요!
-        </h2>
-        <p className="text-[15px]" style={{ color: "#64748B", fontFamily: "var(--font-pretendard)" }}>
-          독서 여정을 시작해보세요! 📚
-        </p>
-      </div>
-
-      {/* Summary card */}
-      <div
-        className="rounded-2xl p-4 flex flex-col gap-3"
-        style={{ background: "#F8FAFC", border: "1.5px solid #E2E8F0" }}
-      >
+      <img src="/icons/apple-touch-icon.png" alt="" width={64} height={64} className="rounded-[16px]" style={{ boxShadow: "0 8px 20px rgba(29,33,66,0.25)" }} />
+      <AuthHeading title={`${name}님의 서재가 준비됐어요`} sub="첫 책을 등록하면 기록이 시작돼요." />
+      <dl className="rounded-xl px-4 py-4 flex flex-col gap-3" style={{ backgroundColor: "var(--bg-card)", border: "1px solid var(--border-color)" }}>
         <div className="flex items-center justify-between">
-          <span className="text-[13px]" style={{ color: "#64748B", fontFamily: "var(--font-pretendard)" }}>
-            연간 목표
-          </span>
-          <span
-            className="text-[15px]"
-            style={{ color: "var(--brand-600)", fontFamily: "var(--font-pretendard)", fontWeight: 700 }}
-          >
-            📖 {goal}권
-          </span>
+          <dt className="text-[13px]" style={textStyle("var(--text-secondary)")}>올해 목표</dt>
+          <dd className="text-[15px]" style={{ ...textStyle("var(--text-primary)"), fontWeight: 700 }}>{goal}권</dd>
         </div>
-        <div className="flex flex-col gap-1.5">
-          <span className="text-[13px]" style={{ color: "#64748B", fontFamily: "var(--font-pretendard)" }}>
-            선택한 장르 ({selectedGenres.length}개)
-          </span>
-          <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-col gap-2">
+          <dt className="text-[13px]" style={textStyle("var(--text-secondary)")}>좋아하는 장르</dt>
+          <dd className="flex flex-wrap gap-1.5">
             {selectedGenres.map((genre) => {
               const cfg = GENRE_CONFIG[genre];
               return (
-                <span
-                  key={genre}
-                  className="rounded-full px-2.5 py-1 text-[12px]"
-                  style={{
-                    backgroundColor: cfg.bg,
-                    color: cfg.text,
-                    fontFamily: "var(--font-pretendard)",
-                    fontWeight: 600,
-                  }}
-                >
-                  {cfg.emoji} {genre}
+                <span key={genre} className="rounded-full px-2.5 py-1 text-[12px]" style={{ backgroundColor: cfg.bg, color: cfg.text, fontFamily: "var(--font-pretendard)", fontWeight: 600 }}>
+                  <span aria-hidden>{cfg.emoji}</span> {genre}
                 </span>
               );
             })}
-          </div>
+          </dd>
         </div>
-      </div>
-
-      {error && (
-        <p className="text-[13px] text-center" style={{ color: "#EF4444", fontFamily: "var(--font-pretendard)" }}>
-          <AlertCircle size={13} aria-hidden className="inline -mt-0.5 mr-1" />{error}
-        </p>
-      )}
-
-      <button
-        type="button"
-        onClick={onStart}
-        disabled={isLoading}
-        className="w-full rounded-2xl text-white text-[15px] transition-opacity active:opacity-80 disabled:cursor-not-allowed"
-        style={{
-          height: 52,
-          background: isLoading
-            ? "linear-gradient(135deg, #94A3B8 0%, #CBD5E1 100%)"
-            : "linear-gradient(135deg, var(--brand-600) 0%, var(--brand2-600) 100%)",
-          fontFamily: "var(--font-pretendard)",
-          fontWeight: 700,
-          opacity: isLoading ? 0.7 : 1,
-        }}
-      >
-        {isLoading ? "계정 생성 중..." : "🚀 시작하기"}
-      </button>
+      </dl>
+      <PrimaryButton type="button" onClick={onStart} loading={isLoading} loadingText="서재를 만드는 중...">시작하기</PrimaryButton>
     </div>
   );
 }
 
-/* ─── 공통 흐름 컴포넌트 ──────────────────────────────────────── */
+/* ─── 단계 흐름 ───────────────────────────────────────────────── */
 function MultiStepForm() {
   const navigate = useNavigate();
   const register = useAuthStore((s) => s.register);
   const isLoading = useAuthStore((s) => s.isLoading);
 
   const [step, setStep] = useState(1);
-
-  // Screen 1 data
   const [creds, setCreds] = useState<{ name: string; email: string; password: string } | null>(null);
-
-  // Screen 2 data
   const [selectedGenres, setSelectedGenres] = useState<GenreKey[]>([]);
-
-  // Screen 3 data
   const [goal, setGoal] = useState(12);
-
-  // Screen 4 error (register call)
   const [regError, setRegError] = useState<string | null>(null);
 
-  const handleScreen1 = (name: string, email: string, password: string) => {
-    setCreds({ name, email, password });
-    setStep(2);
-  };
-
   const toggleGenre = (g: GenreKey) => {
-    setSelectedGenres((prev) =>
-      prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g],
-    );
+    setSelectedGenres((prev) => (prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]));
   };
 
   const handleStart = async () => {
@@ -626,15 +293,11 @@ function MultiStepForm() {
       await register(creds.name, creds.email, creds.password);
       // 장르/목표를 프로필에 저장
       if (selectedGenres.length > 0 || goal !== 12) {
-        await usersApi.updateProfile({
-          favorite_genres: selectedGenres,
-          reading_goal: goal,
-        });
+        await usersApi.updateProfile({ favorite_genres: selectedGenres, reading_goal: goal });
       }
       navigate("/");
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : "회원가입에 실패했습니다.";
-      setRegError(message);
+      setRegError(e instanceof Error ? e.message : "회원가입에 실패했습니다.");
       setStep(1);
     }
   };
@@ -642,140 +305,33 @@ function MultiStepForm() {
   return (
     <div className="flex flex-col">
       <StepIndicator step={step} />
-
       {step === 1 && (
-        <div className="flex flex-col gap-4">
-          <div className="mb-2">
-            <h2
-              className="text-[20px] mb-1"
-              style={{ fontFamily: "var(--font-pretendard)", fontWeight: 700, color: "var(--brand-950)" }}
-            >
-              회원가입
-            </h2>
-            {regError && (
-              <p className="text-[13px] mt-1" style={{ color: "#EF4444", fontFamily: "var(--font-pretendard)" }}>
-                <AlertCircle size={13} aria-hidden className="inline -mt-0.5 mr-1" />{regError}
-              </p>
-            )}
-          </div>
-          <FormContent onSubmit={handleScreen1} />
-        </div>
+        <>
+          <AuthHeading title="계정 만들기" sub="1분이면 서재가 준비돼요." />
+          <AccountStep error={regError} onSubmit={(name, email, password) => { setCreds({ name, email, password }); setStep(2); }} />
+        </>
       )}
-
-      {step === 2 && (
-        <GenreScreen
-          selected={selectedGenres}
-          onToggle={toggleGenre}
-          onNext={() => setStep(3)}
-        />
-      )}
-
-      {step === 3 && (
-        <GoalScreen goal={goal} onChange={setGoal} onNext={() => setStep(4)} />
-      )}
-
+      {step === 2 && <GenreStep selected={selectedGenres} onToggle={toggleGenre} onNext={() => setStep(3)} />}
+      {step === 3 && <GoalStep goal={goal} onChange={setGoal} onNext={() => setStep(4)} />}
       {step === 4 && creds && (
-        <CompleteScreen
-          name={creds.name}
-          selectedGenres={selectedGenres}
-          goal={goal}
-          onStart={handleStart}
-          isLoading={isLoading}
-          error={null}
-        />
+        <ReadyStep name={creds.name} selectedGenres={selectedGenres} goal={goal} onStart={handleStart} isLoading={isLoading} />
       )}
     </div>
   );
 }
 
 export function SignUpPage() {
-
   return (
-    <main className="min-h-svh flex">
-      {/* ── MOBILE ── */}
-      <div className="flex flex-col w-full lg:hidden relative">
-        {/* Gradient top */}
-        <div
-          className="relative overflow-hidden flex-shrink-0"
-          style={{
-            height: "28vh",
-            background: "linear-gradient(135deg, var(--brand2-600) 0%, var(--brand-600) 100%)",
-          }}
-        >
-          <FloatingBookIcons />
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-            <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-xl"
-              style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(8px)" }}
-            >
-              <AppLogo variant="glyph" size={40} className="text-white" />
-            </div>
-            <p className="text-white text-[17px]" style={{ fontFamily: "var(--font-pretendard)", fontWeight: 700 }}>BookShelf</p>
-          </div>
-        </div>
-
-        {/* Card */}
-        <div
-          className="flex-1 bg-white px-6 pt-6 pb-16 -mt-6 rounded-t-[28px]"
-          style={{ boxShadow: "0 -4px 24px color-mix(in srgb, var(--brand2-600) 8%, transparent)" }}
-        >
-          <MultiStepForm />
-        </div>
-      </div>
-
-      {/* ── DESKTOP ── */}
-      <div className="hidden lg:flex w-full">
-        {/* Left */}
-        <div
-          className="w-1/2 relative flex flex-col items-center justify-center overflow-hidden"
-          style={{ background: "linear-gradient(135deg, var(--brand2-600) 0%, var(--brand-600) 100%)" }}
-        >
-          <FloatingBookIcons />
-          <div className="relative z-10 flex flex-col items-center gap-8 px-12 text-center">
-            <div className="flex items-center gap-3">
-              <div
-                className="w-14 h-14 rounded-2xl flex items-center justify-center"
-                style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(8px)" }}
-              >
-                <AppLogo variant="glyph" size={36} className="text-white" />
-              </div>
-              <span className="text-white text-3xl" style={{ fontFamily: "var(--font-pretendard)", fontWeight: 800 }}>BookShelf</span>
-            </div>
-
-            {/* Benefits */}
-            {[
-              { icon: "📚", title: "서재 관리", desc: "읽은 책, 읽는 중인 책, 읽고 싶은 책을 체계적으로" },
-              { icon: "📊", title: "독서 통계", desc: "월별, 연도별 독서 통계와 목표 달성 현황을 한눈에" },
-              { icon: "🎯", title: "목표 설정", desc: "연간 독서 목표를 설정하고 매일 진도를 확인하세요" },
-            ].map((item, i) => (
-              <div
-                key={i}
-                className="flex items-start gap-4 text-left w-full max-w-xs"
-              >
-                <div
-                  className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 text-xl"
-                  style={{ background: "rgba(255,255,255,0.15)" }}
-                >
-                  {item.icon}
-                </div>
-                <div>
-                  <p className="text-white text-[15px]" style={{ fontFamily: "var(--font-pretendard)", fontWeight: 700 }}>{item.title}</p>
-                  <p className="text-[13px] mt-0.5" style={{ color: "rgba(255,255,255,0.7)", fontFamily: "var(--font-pretendard)" }}>{item.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Right */}
-        <div className="w-1/2 flex items-center justify-center bg-white px-8 py-12 overflow-y-auto">
-          <div className="w-full" style={{ maxWidth: 440 }}>
-            <MultiStepForm />
-          </div>
-        </div>
-      </div>
-
-      <AuthPreviewNav />
-    </main>
+    <AuthShell
+      headline={"오늘부터 한 권씩,\n차곡차곡 쌓아 가요"}
+      subline="읽은 책과 마음에 남은 문장, 한 해의 독서가 한곳에 남아요."
+      features={[
+        { icon: BookMarked, text: "읽은 책, 읽는 중인 책, 읽고 싶은 책을 한 서재에" },
+        { icon: Quote, text: "마음에 남은 문장은 노트로" },
+        { icon: BarChart3, text: "한 해의 독서를 통계와 결산으로" },
+      ]}
+    >
+      <MultiStepForm />
+    </AuthShell>
   );
 }

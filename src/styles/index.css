@@ -198,6 +198,16 @@ html[data-ios-standalone="true"] body {
   opacity: 0.85;
 }
 
+/* 로그인·가입 히어로의 금빛 책갈피 — 첫 로딩에 한 번 위에서 내려와 문장 위에 멈춘다(56차).
+   동작 줄이기 설정이면 아래 규칙이 길이를 0.01ms로 줄여 처음부터 멈춘 자리에 있다(fill-mode both) */
+@keyframes auth-ribbon-drop {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}
+.auth-ribbon {
+  animation: auth-ribbon-drop 900ms cubic-bezier(0.22, 1, 0.36, 1) 150ms both;
+}
+
 /* prefers-reduced-motion: 애니메이션 민감 사용자 대응 */
 @media (prefers-reduced-motion: reduce) {
   *,

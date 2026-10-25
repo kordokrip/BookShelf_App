@@ -3,92 +3,18 @@
  * - 이메일/비밀번호 처리
  * - Google OAuth 링크 제공
  * - 로그인 실패 시 에러 메시지 표시
+ * - 화면 틀은 AuthShell(56차 개편) — 폼은 한 번만 렌더링한다
  */
 import { useEffect, useState } from "react";
 import { peekDormantFlag, clearDormantFlag, DORMANT_LOGIN_MESSAGE } from "../../lib/api/client";
 import { useNavigate, Link } from "react-router";
 import { useAuthStore } from "../../stores/authStore";
-import { AuthPreviewNav } from "../components/auth/AuthPreviewNav";
-import { AppLogo } from "../components/brand/AppLogo";
-import { AlertCircle } from "lucide-react";
+import { AuthShell } from "../components/auth/AuthShell";
+import {
+  AUTH_INPUT_CLASS, authInputStyle, AuthLabel, FieldMessage, PasswordToggle,
+  PrimaryButton, GoogleButton, AuthDivider, AuthHeading,
+} from "../components/auth/authUi";
 
-/* ─── Floating book decorations ──────────────────────────────── */
-function FloatingBookIcons() {
-  const books = [
-    { x: "8%",  y: "12%", rotate: -15, opacity: 0.18, size: 28 },
-    { x: "78%", y: "8%",  rotate: 20,  opacity: 0.14, size: 22 },
-    { x: "18%", y: "55%", rotate: -8,  opacity: 0.12, size: 20 },
-    { x: "85%", y: "50%", rotate: 12,  opacity: 0.16, size: 26 },
-    { x: "50%", y: "20%", rotate: 5,   opacity: 0.10, size: 18 },
-    { x: "65%", y: "68%", rotate: -20, opacity: 0.13, size: 24 },
-    { x: "32%", y: "75%", rotate: 15,  opacity: 0.09, size: 16 },
-  ];
-  return (
-    <>
-      {books.map((b, i) => (
-        <div
-          key={i}
-          className="absolute pointer-events-none"
-          style={{ left: b.x, top: b.y, transform: `rotate(${b.rotate}deg)`, opacity: b.opacity }}
-        >
-          <svg width={b.size} height={b.size} viewBox="0 0 24 24" fill="white">
-            <path d="M2 4.5A2.5 2.5 0 014.5 2H20v20H4.5A2.5 2.5 0 012 19.5v-15z" />
-          </svg>
-        </div>
-      ))}
-    </>
-  );
-}
-
-/* ─── SVG Logos ───────────────────────────────────────────────── */
-function GoogleLogo() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-      <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
-      <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
-      <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
-      <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
-    </svg>
-  );
-}
-
-function EyeToggle({ show, onToggle }: { show: boolean; onToggle: () => void }) {
-  return (
-    // 44px 터치 영역 + 이름·상태 전달 (아이콘만 있으면 스크린리더가 "버튼"으로만 읽음)
-    <button
-      type="button"
-      onClick={onToggle}
-      className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-full"
-      style={{ color: "#64748B" }}
-      aria-label={show ? "비밀번호 숨기기" : "비밀번호 보기"}
-      aria-pressed={show}
-    >
-      {show ? (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" />
-          <line x1="1" y1="1" x2="23" y2="23" />
-        </svg>
-      ) : (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-          <circle cx="12" cy="12" r="3" />
-        </svg>
-      )}
-    </button>
-  );
-}
-
-/* ─── Spinner ─────────────────────────────────────────────────── */
-function Spinner() {
-  return (
-    <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-    </svg>
-  );
-}
-
-/* ─── Shared form fields component ───────────────────────────── */
 function LoginForm({ onSuccess }: { onSuccess: () => void }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -106,7 +32,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
       peekDormantFlag() ||
       (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("error") === "account_dormant"),
   );
-  // 두 벌의 폼이 모두 읽은 뒤(마운트 후)에 지운다 — 렌더 중에 지우면 먼저 그려진 숨은 폼만 안내를 받았다
+  // 렌더 중이 아니라 마운트 뒤에 지운다(StrictMode 이중 렌더에서도 안내가 남도록)
   useEffect(() => { clearDormantFlag(); }, []);
 
   const validateEmail = (val: string) => {
@@ -132,7 +58,8 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
     window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
   };
 
-  const handleLogin = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setSubmitted(true);
     const err = validateEmail(email);
     setEmailError(err);
@@ -146,49 +73,16 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleLogin();
-  };
+  const passwordMissing = submitted && !password.trim();
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
       {/* Google — UX-107: 이메일 폼보다 먼저 표시 */}
-      <button
-        type="button"
-        onClick={handleGoogleLogin}
-        disabled={isLoading}
-        className="w-full rounded-2xl flex items-center justify-center gap-2.5 transition-opacity hover:opacity-90 disabled:opacity-50"
-        style={{
-          height: 48,
-          border: "1.5px solid #E2E8F0",
-          backgroundColor: "white",
-          fontFamily: "var(--font-pretendard)",
-          fontWeight: 600,
-          color: "#374151",
-          fontSize: 14,
-        }}
-      >
-        <GoogleLogo />
-        Google로 계속하기
-      </button>
+      <GoogleButton onClick={handleGoogleLogin} disabled={isLoading} />
+      <AuthDivider>또는 이메일로</AuthDivider>
 
-      {/* Divider */}
-      <div className="flex items-center gap-3">
-        <div className="flex-1 h-px bg-[#E2E8F0]" />
-        <span style={{ fontSize: 13, color: "#64748B", fontFamily: "var(--font-pretendard)" }}>이메일로 로그인</span>
-        <div className="flex-1 h-px bg-[#E2E8F0]" />
-      </div>
-
-      {/* Email */}
       <div>
-        <label
-          htmlFor="login-email"
-          className="block mb-1.5"
-          style={{ fontSize: 13, color: "#374151", fontFamily: "var(--font-pretendard)", fontWeight: 600 }}
-        >
-          이메일
-        </label>
+        <AuthLabel htmlFor="login-email">이메일</AuthLabel>
         {/* autocomplete: iOS 키체인·안드로이드 비밀번호 관리자 자동 채움 (username + current-password 쌍) */}
         <input
           id="login-email"
@@ -197,110 +91,52 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
           autoComplete="username"
           autoCapitalize="none"
           spellCheck={false}
-          placeholder="이메일 주소를 입력해주세요"
+          placeholder="name@example.com"
           value={email}
           disabled={isLoading}
+          aria-invalid={!!emailError}
+          aria-describedby={emailError ? "login-email-error" : undefined}
           onChange={(e) => {
             setEmail(e.target.value);
             if (submitted) setEmailError(validateEmail(e.target.value));
           }}
-          className="w-full px-4 rounded-xl outline-none transition-all disabled:opacity-60"
-          style={{
-            height: 48,
-            fontSize: 15,
-            border: emailError ? "1.5px solid #EF4444" : "1.5px solid #E2E8F0",
-            backgroundColor: emailError ? "#FEF2F2" : "#F9FAFB",
-            fontFamily: "var(--font-pretendard)",
-            color: "#1F2937",
-          }}
+          className={AUTH_INPUT_CLASS}
+          style={authInputStyle(emailError ? "error" : "default")}
         />
-        {emailError && (
-          <p role="alert" className="mt-1.5 flex items-center gap-1" style={{ fontSize: 12, color: "#EF4444", fontFamily: "var(--font-pretendard)" }}>
-            <AlertCircle size={13} aria-hidden className="inline -mt-0.5 mr-1" />{emailError}
-          </p>
-        )}
+        {emailError && <FieldMessage id="login-email-error">{emailError}</FieldMessage>}
       </div>
 
-      {/* Password */}
       <div>
-        <label
-          htmlFor="login-password"
-          className="block mb-1.5"
-          style={{ fontSize: 13, color: "#374151", fontFamily: "var(--font-pretendard)", fontWeight: 600 }}
-        >
-          비밀번호
-        </label>
+        <AuthLabel htmlFor="login-password">비밀번호</AuthLabel>
         <div className="relative">
           <input
             id="login-password"
             name="password"
             autoComplete="current-password"
             type={showPassword ? "text" : "password"}
-            placeholder="비밀번호를 입력해주세요"
+            placeholder="비밀번호"
             value={password}
             disabled={isLoading}
+            aria-invalid={passwordMissing}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 pr-12 rounded-xl outline-none disabled:opacity-60"
-            style={{
-              height: 48,
-              fontSize: 15,
-              border: "1.5px solid #E2E8F0",
-              backgroundColor: "#F9FAFB",
-              fontFamily: "var(--font-pretendard)",
-              color: "#1F2937",
-            }}
+            className={`${AUTH_INPUT_CLASS} pr-12`}
+            style={authInputStyle(passwordMissing ? "error" : "default")}
           />
-          <EyeToggle show={showPassword} onToggle={() => setShowPassword(!showPassword)} />
+          <PasswordToggle show={showPassword} onToggle={() => setShowPassword(!showPassword)} />
         </div>
+        {passwordMissing && <FieldMessage>비밀번호를 입력해주세요</FieldMessage>}
       </div>
 
-      {dormantNotice && !authError && (
-        <p role="alert" className="flex items-center gap-1" style={{ fontSize: 13, color: "#EF4444", fontFamily: "var(--font-pretendard)" }}>
-          <AlertCircle size={13} aria-hidden className="inline -mt-0.5 mr-1" />{DORMANT_LOGIN_MESSAGE}
-        </p>
-      )}
+      {dormantNotice && !authError && <FieldMessage>{DORMANT_LOGIN_MESSAGE}</FieldMessage>}
+      {authError && <FieldMessage>{authError}</FieldMessage>}
 
-      {/* Auth error message */}
-      {authError && (
-        <p role="alert" className="flex items-center gap-1" style={{ fontSize: 13, color: "#EF4444", fontFamily: "var(--font-pretendard)" }}>
-          <AlertCircle size={13} aria-hidden className="inline -mt-0.5 mr-1" />{authError}
-        </p>
-      )}
+      <PrimaryButton type="submit" loading={isLoading} loadingText="로그인 중..." className="mt-2">
+        로그인
+      </PrimaryButton>
 
-      {submitted && !password.trim() && (
-        <p className="flex items-center gap-1" style={{ fontSize: 12, color: "#EF4444", fontFamily: "var(--font-pretendard)" }}>
-          <AlertCircle size={13} aria-hidden className="inline -mt-0.5 mr-1" />비밀번호를 입력해주세요
-        </p>
-      )}
-
-      {/* Login button */}
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="w-full rounded-2xl text-white mt-2 flex items-center justify-center gap-2 transition-opacity active:opacity-80 disabled:opacity-80"
-        style={{
-          height: 48,
-          background: "linear-gradient(135deg, var(--brand-600) 0%, var(--brand2-600) 100%)",
-          fontFamily: "var(--font-pretendard)",
-          fontSize: 15,
-          fontWeight: 700,
-          cursor: isLoading ? "not-allowed" : "pointer",
-        }}
-      >
-        {isLoading ? (
-          <>
-            <Spinner />
-            로그인 중...
-          </>
-        ) : (
-          "로그인"
-        )}
-      </button>
-
-      {/* Sign up link */}
-      <p className="text-center mt-2" style={{ fontSize: 13, color: "#64748B", fontFamily: "var(--font-pretendard)" }}>
-        계정이 없으신가요?{" "}
-        <Link to="/signup" style={{ color: "var(--brand-600)", fontWeight: 600, textDecoration: "underline" }}>
+      <p className="text-center mt-3 text-[14px]" style={{ color: "var(--text-secondary)", fontFamily: "var(--font-pretendard)" }}>
+        처음 오셨나요?{" "}
+        <Link to="/signup" className="underline underline-offset-4" style={{ color: "var(--text-accent)", fontWeight: 600 }}>
           회원가입
         </Link>
       </p>
@@ -308,181 +144,15 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
   );
 }
 
-/* ─── Page ────────────────────────────────────────────────────── */
 export function LoginPage() {
   const navigate = useNavigate();
-
   return (
-    <main className="min-h-svh flex">
-      {/* ── MOBILE (< lg) ── */}
-      <div className="flex flex-col w-full lg:hidden relative">
-        {/* Gradient header — top 35% */}
-        <div
-          className="relative overflow-hidden flex-shrink-0"
-          style={{
-            height: "38vh",
-            background: "linear-gradient(135deg, var(--brand-600) 0%, var(--brand2-600) 100%)",
-          }}
-        >
-          <FloatingBookIcons />
-          {/* Centered logo */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-            <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-xl"
-              style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(8px)" }}
-            >
-              <AppLogo variant="glyph" size={40} className="text-white" />
-            </div>
-            <p
-              className="text-white"
-              style={{ fontFamily: "var(--font-pretendard)", fontSize: 18, fontWeight: 700 }}
-            >
-              BookShelf
-            </p>
-          </div>
-        </div>
-
-        {/* White bottom sheet — rounded-t-3xl = 24px per spec */}
-        <div
-          className="flex-1 bg-white px-6 pt-8 pb-10 -mt-6 rounded-t-3xl relative z-10"
-          style={{ boxShadow: "0 -4px 24px color-mix(in srgb, var(--brand-600) 8%, transparent)" }}
-        >
-          <h2
-            className="mb-6"
-            style={{
-              fontFamily: "var(--font-pretendard)",
-              fontSize: 20,
-              fontWeight: 700,
-              color: "#1E293B",
-            }}
-          >
-            로그인
-          </h2>
-          <LoginForm onSuccess={() => navigate("/")} />
-        </div>
-      </div>
-
-      {/* ── DESKTOP (≥ lg) ── */}
-      <div className="hidden lg:flex w-full">
-        {/* Left panel — indigo gradient */}
-        <div
-          className="w-1/2 relative flex flex-col items-center justify-center overflow-hidden"
-          style={{ background: "linear-gradient(135deg, var(--brand-600) 0%, var(--brand2-600) 100%)" }}
-        >
-          <FloatingBookIcons />
-          <div className="relative z-10 flex flex-col items-center gap-8">
-            {/* Logo + wordmark */}
-            <div className="flex items-center gap-3">
-              <div
-                className="w-14 h-14 rounded-2xl flex items-center justify-center"
-                style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(8px)" }}
-              >
-                <AppLogo variant="glyph" size={36} className="text-white" />
-              </div>
-              <span
-                className="text-white"
-                style={{ fontFamily: "var(--font-pretendard)", fontSize: 30, fontWeight: 800 }}
-              >
-                BookShelf
-              </span>
-            </div>
-
-            {/* App mockup floating card */}
-            <div
-              className="rounded-3xl overflow-hidden"
-              style={{
-                width: 340,
-                background: "rgba(255,255,255,0.12)",
-                backdropFilter: "blur(16px)",
-                border: "1px solid rgba(255,255,255,0.2)",
-                padding: "24px",
-              }}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <span
-                  className="text-white"
-                  style={{ fontFamily: "var(--font-pretendard)", fontSize: 13, fontWeight: 700 }}
-                >
-                  내 서재
-                </span>
-                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", fontFamily: "var(--font-pretendard)" }}>
-                  23권
-                </span>
-              </div>
-              {[
-                { title: "파친코", author: "이민진", progress: 72, color: "#F59E0B" },
-                { title: "채식주의자", author: "한강", progress: 100, color: "#10B981" },
-                { title: "아몬드", author: "손원평", progress: 35, color: "var(--brand-600)" },
-              ].map((book, i) => (
-                <div key={i} className="flex items-center gap-3 mb-3 last:mb-0">
-                  <div
-                    className="w-10 h-12 rounded-lg flex-shrink-0"
-                    style={{ background: book.color, opacity: 0.9 }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className="text-white truncate"
-                      style={{ fontFamily: "var(--font-pretendard)", fontSize: 12, fontWeight: 600 }}
-                    >
-                      {book.title}
-                    </p>
-                    <p
-                      className="truncate"
-                      style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", fontFamily: "var(--font-pretendard)" }}
-                    >
-                      {book.author}
-                    </p>
-                    <div className="mt-1 h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.2)" }}>
-                      <div
-                        className="h-1.5 rounded-full"
-                        style={{ width: `${book.progress}%`, background: "rgba(255,255,255,0.85)" }}
-                      />
-                    </div>
-                  </div>
-                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", fontFamily: "var(--font-pretendard)" }}>
-                    {book.progress}%
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <p
-              className="text-center"
-              style={{ fontSize: 15, color: "rgba(255,255,255,0.75)", fontFamily: "var(--font-pretendard)", maxWidth: 280 }}
-            >
-              나만의 독서 기록 공간을<br />지금 시작해보세요 📚
-            </p>
-          </div>
-        </div>
-
-        {/* Right panel — white with centered form card */}
-        <div className="w-1/2 flex items-center justify-center bg-white px-8">
-          <div
-            className="w-full rounded-3xl bg-white p-10"
-            style={{ maxWidth: 400, boxShadow: "0 8px 40px color-mix(in srgb, var(--brand-600) 10%, transparent)" }}
-          >
-            <div className="mb-8">
-              <h1
-                className="mb-2"
-                style={{
-                  fontFamily: "var(--font-pretendard)",
-                  fontSize: 28,
-                  fontWeight: 800,
-                  color: "#1E293B",
-                }}
-              >
-                다시 오셨군요! 👋
-              </h1>
-              <p style={{ fontSize: 15, color: "#64748B", fontFamily: "var(--font-pretendard)" }}>
-                로그인하여 독서 기록을 이어가세요
-              </p>
-            </div>
-            <LoginForm onSuccess={() => navigate("/")} />
-          </div>
-        </div>
-      </div>
-
-      <AuthPreviewNav />
-    </main>
+    <AuthShell
+      headline={"읽은 페이지가\n흩어지지 않도록"}
+      subline="완독한 책과 마음에 남은 문장을 한곳에 모아 두세요."
+    >
+      <AuthHeading title="다시 오셨군요" sub="읽던 곳부터 이어서 기록해요" />
+      <LoginForm onSuccess={() => navigate("/")} />
+    </AuthShell>
   );
 }
