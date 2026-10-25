@@ -147,7 +147,7 @@ UI(마운트) → useBookAISummary(bookId) → GET /api/ai/book-summary/:bookId 
 UI("AI 요약 만들기"/"다시 요약하기", 완독한 책만) → useCreateBookAISummary(bookId).mutate(refresh)
   → POST /api/ai/book-summary/:bookId {refresh?}
     → D1: 책(소유·status='done' 확인) + 내 노트(type, content, page_number)
-    → 카카오/네이버 책 소개(searchBook contents, 800자)
+    → 카카오 책 소개(searchBook contents, 800자 — 카카오에 없으면 국립중앙도서관 폴백, 소개 없음)
     → 공급자 체인 'gemini'만(Flash 3.8→3.7→3.6→3.5, 추론 high, 429면 다음 모델) — A4 한 장·내용 전개 순서·{"known":false} 거절
     → 생성 전에 하루 횟수 1회 예약(D1 counters `ai_book_summary_count:{userId}:{KST 날짜}`, ADR-005) — 성공 시 KV 저장(180일), 모르는 책·실패면 예약을 되돌림
   → onSuccess: setQueryData → 단락(소제목+본문)·근거 안내·[복사]·[다시 요약하기]
@@ -356,12 +356,12 @@ UI(searchQuery >= 2글자) → useBookSearch(query)
   → searchApi.searchBooks(q)
     → GET /api/search/books?q=...
       → 카카오 도서 검색 API
-      → 실패 시 네이버 도서 검색 API 폴백
+      → 실패·0건이면 국립중앙도서관 소장자료(lib/nlBooks.ts — 네이버 책 검색 API는 2026-07-31 종료돼 52차에 제거)
 
 [ISBN 스캔]
 UI(ISBNScanner) → searchApi.searchByIsbn(isbn)
   → GET /api/search/books/isbn?isbn=...
-    → 카카오(target=isbn) → 네이버(book_adv) 폴백
+    → 카카오(target=isbn) → 국립중앙도서관(소장자료 + 서지정보 쪽수·출간일·표지)
 
 [AI 추천 — 읽을 책 "당신을 위한 AI추천 도서" 탭] (43차: 인생책 통합)
 UI(마운트) → useAIRecommendations()   (/lifebooks → /wishlist?tab=recommend 리다이렉트)
@@ -370,7 +370,7 @@ UI(마운트) → useAIRecommendations()   (/lifebooks → /wishlist?tab=recomme
     → 제외 집합: 제목·저자·ISBN(10/13자리 정규화) — 모든 상태. 서재에 있는 책은 응답에 절대 포함되지 않음
     → KV: ai_recommend:v4:{userId}:{서재 지문} (24h, 큐레이션 결과는 1h) / :latest (stale-while-revalidate)
     → 공급자 체인(lib/llm.ts: Gemini → Gemini Lite → Workers AI Qwen 27B → OpenRouter 무료, 동기 60초·백그라운드 26초)
-      서재 ≤200권(완독·별점 가중) → 후보 14권 + based_on → 제외 → 카카오/네이버 실존 검증(저자 교정) → ≤10권
+      서재 ≤200권(완독·별점 가중) → 후보 14권 + based_on → 제외 → 카카오(→ 국립중앙도서관) 실존 검증(저자 교정) → ≤10권
     → 부족하면 즐겨 읽은 작가의 다른 책 → 큐레이션 보충(책 조회 요청당 36회 상한). 응답 {data[], basis, generated_at, cached, stale?, source, provider}
 
 [AI 다시 고르기]
@@ -597,19 +597,19 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 |---|---|---|---|---|---|
 | GET | `/api/notes` | **authMiddleware** | `?book_id=&type=&search=&tag=&limit=&offset=` — `tag`(Phase 4): AI 태그 정확 일치(`json_each(tags)`) | `{data: Note[], count}` | `routes/notes.ts` |
 | GET | `/api/notes/export` | **authMiddleware** | `?book_id=` | Markdown 파일 (페이지 범위는 `(p.12–15)` 표기) | `routes/notes.ts` |
-| GET | `/api/notes/daily-quote` | **authMiddleware** | — | `{data: … , date, pending?: true}` — **45차: 캐시가 없으면 기다리지 않고 `{data:null, pending:true}`로 즉시 응답하고 `waitUntil`로 만든다(잠금 90초). 화면은 4초 간격 최대 6번 재조회. 매일 KST 04:00~04:14 Cron이 최근 14일 활동 사용자의 카드를 미리 만든다(`lib/dailyCardService.ts`).** data 형식: `{source:'ai', kind:'quote', text, context, why, book:{id,title,author,cover_image,cover_color}, provider, disclaimer:true} \| {source:'ai', kind:'reflection', intro, question, book:{...}, provider} \| {source:'note', note: Note & {book_title, book_author, book_cover_image, book_cover_color}} \| null, date}` — 사용자·KST 날짜별 하루 고정(43차). 날짜 해시로 명문장/성찰 질문을 번갈아 고르고, 책은 완독 중 별점 4~5점·최근 90일 완독 가중. 책 소개(카카오/네이버 `contents`, 400자)를 근거로 넣는다. **명문장은 Gemini 공급자만**(다른 모델은 문장을 지어내서) — 못 쓰면 성찰 질문으로 바꾼다. 성찰 질문은 공급자 체인 전체. 노트 내용은 모델에 보내지 않는다. 둘 다 백그라운드 상한(`LLM_BACKGROUND_CAP`). AI 실패 시 내 노트(짧은 캐시), 노트도 없으면 `data: null` | KV `daily_quote:v2:{userId}:{date}` 26시간, 잠금 `daily_quote_lock:{userId}:{date}`. `lib/ai/dailyQuote.ts`, `lib/ai/dailyCard.ts`. `/:id` 앞에 선언 |
+| GET | `/api/notes/daily-quote` | **authMiddleware** | — | `{data: … , date, pending?: true}` — **45차: 캐시가 없으면 기다리지 않고 `{data:null, pending:true}`로 즉시 응답하고 `waitUntil`로 만든다(잠금 90초). 화면은 4초 간격 최대 6번 재조회. 매일 KST 04:00~04:14 Cron이 최근 14일 활동 사용자의 카드를 미리 만든다(`lib/dailyCardService.ts`).** data 형식: `{source:'ai', kind:'quote', text, context, why, book:{id,title,author,cover_image,cover_color}, provider, disclaimer:true} \| {source:'ai', kind:'reflection', intro, question, book:{...}, provider} \| {source:'note', note: Note & {book_title, book_author, book_cover_image, book_cover_color}} \| null, date}` — 사용자·KST 날짜별 하루 고정(43차). 날짜 해시로 명문장/성찰 질문을 번갈아 고르고, 책은 완독 중 별점 4~5점·최근 90일 완독 가중. 책 소개(카카오 `contents`, 400자)를 근거로 넣는다. **명문장은 Gemini 공급자만**(다른 모델은 문장을 지어내서) — 못 쓰면 성찰 질문으로 바꾼다. 성찰 질문은 공급자 체인 전체. 노트 내용은 모델에 보내지 않는다. 둘 다 백그라운드 상한(`LLM_BACKGROUND_CAP`). AI 실패 시 내 노트(짧은 캐시), 노트도 없으면 `data: null` | KV `daily_quote:v2:{userId}:{date}` 26시간, 잠금 `daily_quote_lock:{userId}:{date}`. `lib/ai/dailyQuote.ts`, `lib/ai/dailyCard.ts`. `/:id` 앞에 선언 |
 | GET | `/api/notes/random` | **authMiddleware** | — | `{data: Note & {book_title, book_author, book_cover_image, book_cover_color} \| null}` — 오늘의 회고. 사용자·KST 날짜별 결정적 선택(`pickDailyIndex`), 노트가 없으면 `null` | `routes/notes.ts` + `lib/noteHelpers.ts` |
 | GET | `/api/notes/:id` | **authMiddleware** | — | `{data: Note}` | `routes/notes.ts` |
 | POST | `/api/notes` | **authMiddleware** ✅ | `{book_id, type?, content, page_number?, end_page?, color?}` | `{data: Note}` 201 · 400 범위 오류 | `routes/notes.ts` |
 | PUT | `/api/notes/:id` | **authMiddleware** ✅ | `{type?, content?, page_number?, end_page?, color?}` | `{data: Note}` · 400 범위 오류(기존 값과 합쳐 검증) | `routes/notes.ts` |
 | DELETE | `/api/notes/:id` | **authMiddleware** ✅ | — | `{success: true}` | `routes/notes.ts` |
 
-### 검색 (`/api/search`) — **authMiddleware**(48차: 로그인 필수, 한도는 사용자별 — 카카오·네이버 API 할당량 보호. 검색을 쓰는 화면은 모두 로그인 화면이다)
+### 검색 (`/api/search`) — **authMiddleware**(48차: 로그인 필수, 한도는 사용자별 — 카카오·국립중앙도서관 API 할당량 보호. 검색을 쓰는 화면은 모두 로그인 화면이다)
 
 | Method | 경로 | 요청 | 응답 | 외부 API |
 |---|---|---|---|---|
-| GET | `/api/search/books` | `?q=&page=1&size=10` | `{books, total, isEnd}` | 카카오 → 네이버 폴백 |
-| GET | `/api/search/books/isbn` | `?isbn=` | `{book}` | 카카오(isbn) → 네이버(book_adv) 폴백 |
+| GET | `/api/search/books` | `?q=&page=1&size=10` | `{books, total, isEnd}` | 카카오 → (실패·0건) 국립중앙도서관 소장자료(정확도순, 소개 없음). 네이버 책 검색 API는 2026-07-31 종료(52차 제거) |
+| GET | `/api/search/books/isbn` | `?isbn=` | `{book}` | 카카오(isbn) → 국립중앙도서관(소장자료 제목·표지 + 서지정보 쪽수·출간일) |
 | GET | `/api/search/pagecount` | `?isbn=&title=&author=&publisher=&need=pages` | `{pageCount, pageSource('nl'\|'openlibrary'\|null), genre, genreSource('kdc'\|'llm'\|'kdc-approx'\|null), kdc, categories:[]}` | 책 등록·읽기 화면의 쪽수·장르(`lib/bookMeta.ts`). 쪽수: 국립중앙도서관 ISBN 서지정보 `PAGE` → Open Library(ISBN 일치, 3초)만 — 제목 추측·LLM 쪽수 없음. 장르 근거 KDC: 국립중앙도서관 소장자료 `classNo`(예: 004.73) → 서지정보 KDC → 부가기호. 장르: KDC 확실 매핑(`lib/kdcGenre.ts`) → AI 분류(`gemini-lite`→Workers AI→OpenRouter, 카카오 소개·번역자·KDC 힌트) → KDC 대략값. `need=pages`면 장르·AI 생략. 장르까지 정한 결과만 KV `book_meta:v3:{isbn}` 30일(쪽수가 없으면 1일). 사용자별 15회/60s. `categories`는 예전 클라이언트 호환(항상 빈 배열) |
 
 ### AI (`/api/ai`)
@@ -618,9 +618,9 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 |---|---|---|---|---|---|
 | GET | `/api/ai/book-summary/:bookId` | **authMiddleware** | — | `{data: BookSummary\|null, remaining_today, daily_limit}` · 404(남의 책·없는 책) — 모델 호출 없음 | `routes/ai.ts` |
 | POST | `/api/ai/book-summary/:bookId` | **authMiddleware** (한도: 사용자당 KST 하루 3번, **요약을 실제로 만들었을 때만** 차감 — 생성 전 D1 `counters`에 1회 예약, 모르는 책·실패면 되돌림. 키 `ai_book_summary_count:{userId}:{date}`, ADR-005) | `{refresh?: true}` | 200 `{data: {sections: [{heading, body}], char_count, generated_at, provider, note_count}, cached, remaining_today, daily_limit}` · 400 `not_done`(완독 전) · 404 · 409 `in_progress`(잠금 90초) · 422 `unknown_book`(모델이 책을 모름 — 지어내지 않음, 횟수 유지) · 429 `daily_limit` · 503 `failed` | 46차: 완독한 책을 A4 한 장(1,800~2,200자)·내용 전개 순서로. 근거 = 모델 지식 + 책 소개(800자) + 내 노트(페이지 순 30개). Gemini Flash 4종만(추론 high, 제한 95초 — 운영 실측 25~76초). 저장 KV `ai_book_summary:v1:{userId}:{bookId}` 180일. `lib/ai/bookSummary.ts` · **51차**: 책에 ISBN이 있고 국립중앙도서관 서지정보에 목차 파일이 있으면 목차를 근거로 넣고 `toc_used: true` |
-| GET | `/api/ai/recommend` | **authMiddleware** (한도 `ai_rec` 사용자별 3회/10분 — 핸들러 안에서 **실제 생성할 때만** 소모, 초과 시 429 `{error}`. `ai_sum`과 공유 금지) | `?refresh=true` | `{data: [{title, author, reason(60자 요청·80자에서 자름), thumbnail, publisher, isbn, url, verified, based_on: string[]}], basis: {done_count, top_genres[]}, generated_at, cached, stale?: true, source: 'gemini'\|'workers-ai'\|'openrouter'\|'curated-fallback', provider: 'gemini'\|'workers-ai'\|'openrouter'\|null}` — **43차: 인생책 통합('당신을 위한 AI추천 도서')**. 서재 전체(완독·별점 가중, ≤200권)로 후보 14권 + `based_on`(내 책 제목 검증) → 서재 제외(제목·저자·ISBN) → 카카오/네이버 실존 검증(제목이 정확히 맞고 저자만 틀리면 실제 저자로 교정) → ≤10권. 제외: 본제목(부제·판본 표기 제거) 일치, 977 ISBN(정기간행물), 어학판·오디오북·원서·'편집부'·'무제', 이유에 한자·긴 영단어가 섞인 후보. 부족하면 즐겨 읽은 작가(별점 4+ 완독 저자 최대 4명)의 다른 책 → 큐레이션. 책 조회는 요청당 36회 상한(`RECOMMEND_LOOKUP_BUDGET`, Workers 무료 플랜 외부 fetch 50회). `?refresh=true`는 KV `ai_rec_seen:{userId}`(최근 40권)를 제외(보강 뒤에도 6권 미만일 때만 맨 뒤에 다시 씀) | SWR(`lib/ai/aiSwr.ts`): 지문 캐시 미스 + `latest` → 즉시 `stale` 반환 + `waitUntil` 재생성(26초 제한). 동기 생성 60초 제한. KV `ai_recommend:v4:{userId}:{hash}` 24시간, `:latest` 30일. 공급자 체인(`lib/ai/llm.ts`). `lib/ai/bookRecommend.ts`, `lib/ai/recommendShared.ts`, `lib/ai/recommendAuthors.ts` |
+| GET | `/api/ai/recommend` | **authMiddleware** (한도 `ai_rec` 사용자별 3회/10분 — 핸들러 안에서 **실제 생성할 때만** 소모, 초과 시 429 `{error}`. `ai_sum`과 공유 금지) | `?refresh=true` | `{data: [{title, author, reason(60자 요청·80자에서 자름), thumbnail, publisher, isbn, url, verified, based_on: string[]}], basis: {done_count, top_genres[]}, generated_at, cached, stale?: true, source: 'gemini'\|'workers-ai'\|'openrouter'\|'curated-fallback', provider: 'gemini'\|'workers-ai'\|'openrouter'\|null}` — **43차: 인생책 통합('당신을 위한 AI추천 도서')**. 서재 전체(완독·별점 가중, ≤200권)로 후보 14권 + `based_on`(내 책 제목 검증) → 서재 제외(제목·저자·ISBN) → 카카오(→ 국립중앙도서관) 실존 검증(제목이 정확히 맞고 저자만 틀리면 실제 저자로 교정) → ≤10권. 제외: 본제목(부제·판본 표기 제거) 일치, 977 ISBN(정기간행물), 어학판·오디오북·원서·'편집부'·'무제', 이유에 한자·긴 영단어가 섞인 후보. 부족하면 즐겨 읽은 작가(별점 4+ 완독 저자 최대 4명)의 다른 책 → 큐레이션. 책 조회는 요청당 36회 상한(`RECOMMEND_LOOKUP_BUDGET`, Workers 무료 플랜 외부 fetch 50회). `?refresh=true`는 KV `ai_rec_seen:{userId}`(최근 40권)를 제외(보강 뒤에도 6권 미만일 때만 맨 뒤에 다시 씀) | SWR(`lib/ai/aiSwr.ts`): 지문 캐시 미스 + `latest` → 즉시 `stale` 반환 + `waitUntil` 재생성(26초 제한). 동기 생성 60초 제한. KV `ai_recommend:v4:{userId}:{hash}` 24시간, `:latest` 30일. 공급자 체인(`lib/ai/llm.ts`). `lib/ai/bookRecommend.ts`, `lib/ai/recommendShared.ts`, `lib/ai/recommendAuthors.ts` |
 | GET | `/api/ai/collections` | **authMiddleware** (한도 `ai_col` 사용자별 3회/10분 — 실제 생성 때만 소모, 초과 시 429. `ai_rec`와 공유 금지) | `?refresh=true` | 200 `{data: {collections: [{key(이름 해시), name(≤12자), emoji, description(≤60자), insight(≤40자), book_ids: string[]}], basis: {total_books, done_count, top_genres[]}}, cached, stale?: true, generated_at, provider: 'gemini'\|'workers-ai'\|'openrouter'\|null}` · 책 6권 미만(모델 미호출): `{data: {collections: [], basis}, reason: 'not_enough_books', cached: false, provider: null}` · 모델 실패 503 `{error}`(가짜 대체 없음) | 서재 전체(≤400권, 제목·저자·장르·별점·상태·노트 수)를 번호로 모델에 전달(DB id 미전송) → 4~7개 테마 묶음. 번호→id 복원, 잘못된·중복 번호·3권 미만 묶음 제거, 최대 7개. SWR(`lib/ai/aiSwr.ts`): KV `ai_collections:v1:{userId}:{hash(전체 책)}` 24시간, `:latest` 30일(stale 시 삭제된 책 제외), 락 `ai_collections_lock:{userId}`. 동기 생성 타임아웃 40초, 공급자 체인(`lib/ai/llm.ts`), json 모드, maxTokens 2500. `lib/ai/aiCollections.ts` |
-| POST | `/api/books/genre-suggestions` | **authMiddleware** → rateLimit(`ai_genre`, 사용자별 3회/10분) | `{book_ids?: string[]}` (최대 40, 문자열 배열이 아니면 400). 없으면 본인 책 중 장르 '기타'/NULL/빈 값 최신순 최대 40권, 있으면 본인 소유 id만 | `{data: [{id, title, author, current_genre, suggested_genre, confidence: 'high'\|'low'}], provider: 'openrouter'\|'workers-ai'\|null}` — 카카오/네이버 책 소개(≤200자)를 근거로 배치 모델 1회(JSON). 입력에 없는 id·목록 밖 장르·'기타'는 제외. 대상이 없으면 모델 호출 없이 `{data: [], provider: null}`. **DB 쓰기 없음**(적용은 클라이언트가 `PUT /api/books/:id {genre}`). 표준 장르 목록 `lib/genres.ts`(프론트 `GenreKey`와 vitest로 동기화), `lib/ai/genreSuggestions.ts` |
+| POST | `/api/books/genre-suggestions` | **authMiddleware** → rateLimit(`ai_genre`, 사용자별 3회/10분) | `{book_ids?: string[]}` (최대 40, 문자열 배열이 아니면 400). 없으면 본인 책 중 장르 '기타'/NULL/빈 값 최신순 최대 40권, 있으면 본인 소유 id만 | `{data: [{id, title, author, current_genre, suggested_genre, confidence: 'high'\|'low'}], provider: 'openrouter'\|'workers-ai'\|null}` — 카카오 책 소개(≤200자)를 근거로 배치 모델 1회(JSON). 입력에 없는 id·목록 밖 장르·'기타'는 제외. 대상이 없으면 모델 호출 없이 `{data: [], provider: null}`. **DB 쓰기 없음**(적용은 클라이언트가 `PUT /api/books/:id {genre}`). 표준 장르 목록 `lib/genres.ts`(프론트 `GenreKey`와 vitest로 동기화), `lib/ai/genreSuggestions.ts` |
 | POST | `/api/ai/ocr` | optionalAuth | FormData(`image` 파일, 최대 5MB) | `{text, confidence}` ★ (FEAT-102) | 없음 |
 
 ### 통계 (`/api/stats`) ★ 신규 (2026-03-28)
@@ -698,7 +698,7 @@ totals:       { totalPages: number; totalMinutes: number }
 | Method | 경로 | 인증 | 요청 | 응답 | 비고 |
 |---|---|---|---|---|---|
 | GET | `/api/discover` | **authMiddleware** | `?tab=popular\|new\|life&genre=&page=&size=` | `{data: DiscoverBook[]}` | 서재 데이터 집계 기반, rate limit 30회/60s |
-| GET | `/api/discover/external` | **authMiddleware** | `?tab=new\|bestseller` | `{books, fetchedAt}` | 카카오/네이버/알라딘 외부 API, KV 캐시(`ext_books:{tab}:v6`), rate limit 20회/60s. `tab=new`는 출간일이 31일 넘게 미래이거나 없는 책, 저자 없는 책, 수험서 키워드(검정고시·기출문제 등) 제목을 거른다(`lib/discoverFilter.ts`) |
+| GET | `/api/discover/external` | **authMiddleware** | `?tab=new` | `{books, fetchedAt}` | 카카오 신간(최근 2주), KV `ext_books:new:v6` 1시간, rate limit 20회/60s. 52차: `bestseller` 탭 제거(화면 미사용·출처 소멸 — 알라딘 10/30 종료, 네이버 종료), 다른 tab은 빈 목록 |
 | GET | `/api/discover/librarian` | **authMiddleware** | — | `{picks: [{id, title, subtitle, author, publisher, isbn, coverImage(프록시), description, category('문학'\|'인문'\|'사회'\|'자연'), callNo, kdc, genre, recommendedAt('YYYY-MM'), publishYear}], fetchedAt}` | 51차. 국립중앙도서관 사서추천도서(최근 12개월, `lib/nlLibrarianPicks.ts`). KV `nl_picks:v1` 12시간. 키가 없으면 빈 목록. rate limit 20회/60s(`discover_lib`) |
 
 ### 푸시 알림 (`/api/push`)
@@ -1063,10 +1063,11 @@ normalizeSession(api: ApiSession): UISession
      - pageCount: null (카카오 미제공)
   → SearchBook
 
-네이버 API (NaverBook)
-  → naverItemToSearchBook():
-     - HTML 태그 제거 (title, author, description)
-     - pubdate: "YYYYMMDD" → "YYYY-MM-DD"
+국립중앙도서관 소장자료 (lib/nlBooks.ts, 52차 — 카카오 실패·0건일 때)
+  → nlToSearchBook():
+     - 제목: 검색어 강조 태그·앞 괄호 수식어·" / 책임표시" 제거
+     - 출판사: "서울 : 출판사, 2002" → "출판사", ISBN: "(세트)" 제거·13자리 우선, 연도 범위 → 첫 해
+     - 표지: 상대 경로 → https://cover.nl.go.kr/… (프록시 경유), 소개 없음
   → SearchBook
 ```
 
@@ -1109,7 +1110,7 @@ favorite_genres: DB TEXT ('["k","s"]') → authStore.login() / checkAuth()
 | `422` | OCR 텍스트 인식 실패 |
 | `429` | Rate Limiting 초과 (login: 5회/60s, search: 20회/60s, ai: 10회/60s) ★ (2026-03-28) |
 | `500` | Workers AI 오류, DB 오류 |
-| `502` | 카카오 + 네이버 검색 동시 실패 |
+| `502` | 카카오 + 국립중앙도서관 검색 동시 실패 |
 | `글로벌 onError` | HTTPException → `{error}`, 그 외 `{error: 'Internal Server Error'}` 500 |
 
 ### 7–C. CORS 설정
@@ -1333,14 +1334,11 @@ maxAge: 86400 (24h)
 | `ENVIRONMENT` | string | 'production' \| 'development' |
 | `JWT_SECRET` | secret | JWT 서명 키 |
 | `KAKAO_REST_API_KEY` | secret | 카카오 도서 검색 API (로그인 아님 — 카카오 로그인은 2026-03-29 `c2dbe1e`로 제거) |
-| `NAVER_CLIENT_ID` | secret | 네이버 도서 검색 |
-| `NAVER_CLIENT_SECRET` | secret | 네이버 도서 검색 |
 | `GOOGLE_CLIENT_ID` | secret | Google OAuth (구현됨, `routes/auth.ts`) ★ (A-1) |
 | `GOOGLE_CLIENT_SECRET` | secret | Google OAuth (구현됨, `routes/auth.ts`) ★ (A-1) |
 | `ALLOWED_EMAILS` | secret | 세미콜론 구분 가입 허용 이메일 목록 (선택) |
 | `VAPID_PUBLIC_KEY` | secret | Web Push 공개키 (base64url) |
 | `VAPID_PRIVATE_KEY` | secret | Web Push 비밀키 (JWK JSON) |
-| `ALADIN_TTB_KEY` | secret | 알라딘 베스트셀러 조회 (선택) — 알라딘 공지: 신규 키 2026-09-04 마감, **2026-10-30 서비스 종료** |
 | `NL_CERT_KEY` | secret | 국립중앙도서관 Open API 인증키 — ISBN 서지정보(쪽수·부가기호·목차), 소장자료(KDC `classNo`), 사서추천도서(`lib/nlApi.ts`, `lib/nlLibrarianPicks.ts`). 2026-10-25 운영·스테이징 등록. 없으면 쪽수는 Open Library, 장르는 AI 분류만, 사서 추천은 빈 목록 |
 
 ---

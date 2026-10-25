@@ -1,9 +1,9 @@
 # BookShelf App — 현재 상태 스냅샷
 
-> **최종 업데이트:** 2026-10-25 (51차: 국립중앙도서관 Open API — 쪽수·KDC 장르·저장 후 보정·사서 추천 탭·AI 요약 목차 / 50차: 책 등록 쪽수·장르 재구성). 이전 차수는 `docs/CHANGELOG.md`
+> **최종 업데이트:** 2026-10-25 (52차: Gemini 503 재시도·Flash 모델 추가·목차 압축, 네이버 책 API 종료 → 국립중앙도서관 폴백 / 51차: 국립중앙도서관 Open API). 이전 차수는 `docs/CHANGELOG.md`
 > **Git 브랜치:** `main` (kordokrip/BookShelf_App)
 > **E2E 테스트:** `bash scripts/e2e-api-test.sh --url <대상>` → **전체 PASS** ✅ (2026-10-19 스테이징 전체·프로덕션 `--readonly` 확인, 테스트 개수는 `grep -n '^  TOTAL=' scripts/e2e-api-test.sh`로 확인)
-> **상세 세션 리포트:** `docs/sessions/2026-10-25-nl-openapi.md` (직전: `2026-10-21-book-meta.md`) — **진행 중·대기 항목은 최신 세션 리포트 맨 위 '진행 상태' 표**
+> **상세 세션 리포트:** `docs/sessions/2026-10-25-summary-naver.md` (직전: `2026-10-25-nl-openapi.md`) — **진행 중·대기 항목은 최신 세션 리포트 맨 위 '진행 상태' 표**
 > **기능 플래그:** 등록 목록은 `worker/lib/featureFlags.ts`의 `ALL_FEATURE_FLAGS`(현재 비어 있음), 공개 상태는 `GET /api/flags/public`으로 확인 (ADR-003)
 
 ---
@@ -21,7 +21,7 @@
 | **배포 URL** | `https://bookshelf-api.kordokrip.workers.dev` |
 | **Compatibility Date** | `2024-12-01` / Flags: `nodejs_compat` |
 
-**인증**: 이메일/비밀번호 + Google OAuth. **카카오 로그인은 2026-03-29 커밋(`c2dbe1e`)으로 완전히 제거됨** — 단, 카카오는 별개로 도서 검색 API(→네이버 폴백)와 책 표지 조회에 지금도 쓰인다. 이 둘을 혼동하지 말 것.
+**인증**: 이메일/비밀번호 + Google OAuth. **카카오 로그인은 2026-03-29 커밋(`c2dbe1e`)으로 완전히 제거됨** — 단, 카카오는 별개로 도서 검색 API(→국립중앙도서관 폴백, 52차 — 네이버 책 API는 2026-07-31 종료)와 책 표지 조회에 지금도 쓰인다. 이 둘을 혼동하지 말 것.
 
 ---
 
@@ -79,10 +79,10 @@
 ```
 /api/auth          → Google OAuth, refresh token
 /api/users         → 회원가입·로그인·프로필
-/api/books         → CRUD + R2 커버 업로드 + 카카오/네이버 커버 백필
+/api/books         → CRUD + R2 커버 업로드 + 카카오 커버 백필
 /api/sessions      → 독서 세션 기록
 /api/notes         → 노트 CRUD + FTS5 검색
-/api/search        → 카카오→네이버 폴백 도서 검색
+/api/search        → 카카오→국립중앙도서관 폴백 도서 검색
 /api/stats         → D1.batch 다중 쿼리 통계
 /api/collections   → 컬렉션 도메인
 /api/push          → 웹 푸시 구독 관리
@@ -162,7 +162,7 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 | 훅 파일 | 주요 훅 |
 |---------|--------|
 | `useBooks.ts` | useBooks, useBookDetail, useAddBook, useUpdateBook, useDeleteBook, useBookCount |
-| `useBookSearch.ts` | useBookSearch (카카오→네이버, staleTime 5분) |
+| `useBookSearch.ts` | useBookSearch (카카오→국립중앙도서관, staleTime 5분) |
 | `useNotes.ts` | useNotes, useBookNotes, useAddNote, useUpdateNote, useDeleteNote |
 | `useSessions.ts` | useSessions, useAddSession (staleTime 30s) |
 | `useReadingTimer.ts` | elapsed, isRunning, displayTime, start/pause/reset (timerStore 기반, 페이지 이동 후에도 유지) |

@@ -111,8 +111,7 @@ edge 실측(`wrangler tail`, 스테이징): 로그인 CPU 34~45ms(계정 단위 
 | GOOGLE_CLIENT_ID | Google OAuth | 필요 시 |
 | GOOGLE_CLIENT_SECRET | Google OAuth | 90일 권장 |
 | KAKAO_REST_API_KEY | 카카오 도서 검색 | 필요 시 |
-| NAVER_CLIENT_ID | 네이버 도서 검색 | 필요 시 |
-| NAVER_CLIENT_SECRET | 네이버 도서 검색 | 90일 권장 |
+| NL_CERT_KEY | 국립중앙도서관 Open API(쪽수·장르·사서 추천·목차·도서 검색 폴백) | 필요 시 |
 | ALLOWED_EMAILS | 가입 허용 이메일 | 필요 시 |
 | OPENROUTER_API_KEY | AI 요약·인생책·오늘의 문장(OpenRouter 유료 모델 — 키 노출 시 크레딧 도용 위험). 등록 여부는 `npx wrangler secret list`(스테이징은 `--env staging`)로 확인. 로컬은 `.dev.vars` | 노출 시 즉시 |
 | VAPID_PUBLIC_KEY | Web Push 공개키 | 변경 불필요 |
