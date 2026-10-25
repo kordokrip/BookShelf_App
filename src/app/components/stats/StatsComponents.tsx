@@ -80,8 +80,8 @@ export function SummaryCard({ icon, iconBg, borderColor, label, value, trend, tr
       <div>
         {/* Label: 12px Regular #64748B */}
         <p style={{ fontSize: 12, fontWeight: 400, color: C.slate5 }}>{label}</p>
-        {/* Large number: 28px Bold #1E293B */}
-        <p style={{ fontSize: 28, fontWeight: 700, color: C.slate1, lineHeight: 1.2, marginTop: 2 }}>
+        {/* Large number: 28px Bold #1E293B — 좁은 폭(320px 2열)에서는 줄여서 '2,020p'의 단위가 다음 줄로 넘어가지 않게 */}
+        <p style={{ fontSize: "clamp(20px, 6.5vw, 28px)", fontWeight: 700, color: C.slate1, lineHeight: 1.2, marginTop: 2, whiteSpace: "nowrap" }}>
           {value}
         </p>
       </div>
