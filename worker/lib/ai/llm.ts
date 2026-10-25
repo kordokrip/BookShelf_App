@@ -51,8 +51,15 @@ export const GEMINI_MODEL = 'gemini-3.8-flash';
  * 무료 등급 할당량은 '프로젝트·모델별 하루 20회'다(2026-10-11 확인: GenerateRequestsPerDayPerProjectPerModel-FreeTier 20).
  * 'gemini' 공급자는 한 모델이 429(할당량 소진·분당 초과)면 같은 계열의 다음 Flash 모델로 넘어가 하루 약 80회를 쓴다.
  * 3.7·3.6 Flash도 AI 요약('high')에서 순서·이름이 정확했다(데미안 실측).
+ * gemini-3-flash-preview(52차 추가): 별도 할당량. 2026-10-25 3.8 503·3.7 429·3.6 503→429일 때도 응답했고,
+ * 클린 코드 요약('high')에서 국립중앙도서관 목차 17개 장을 순서대로 묶었다. low·high·minimal 모두 지원.
  */
-export const GEMINI_FLASH_MODELS = [GEMINI_MODEL, 'gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash'] as const;
+export const GEMINI_FLASH_MODELS = [GEMINI_MODEL, 'gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3-flash-preview'] as const;
+/** 503("high demand")은 몇 초 뒤면 풀리는 일이 많다 — 다른 모델을 다 시도한 뒤 한 번 더, 최소 이만큼 쉬고 */
+export const GEMINI_RETRY_GAP_MS = 1_500;
+const isRotatable = (err: unknown): err is LlmError => err instanceof LlmError && (err.status === 429 || err.status === 503);
+const logModelSkip = (model: string, err: LlmError) =>
+  console.warn(`[llm] gemini ${model} ${err.status === 429 ? '429 할당량' : '503 과부하'} → 다음 모델`);
 export const GEMINI_LITE_MODEL = 'gemini-3.5-flash-lite';
 /**
  * 모델별 추론 정도(2026-10-10 실측, 키 등록 후 서재 78권으로 비교).
@@ -282,20 +289,28 @@ function extractChoiceText(response: unknown): string {
 /**
  * Flash 모델을 차례로 — 429(모델별 할당량)·503(그 모델 과부하 "high demand")면 다음 모델,
  * 다른 오류(400·타임아웃 등)는 그대로 던져 체인이 다음 공급자로 넘어가게 한다.
- * (2026-10-11 운영: 3.8 Flash 503 한 번에 AI 요약 전체가 실패하던 것을 막는다)
+ * 503으로 실패한 모델은 줄 맨 뒤에 한 번 더 넣는다(429는 하루 할당량이라 다시 묻지 않는다).
+ * (2026-10-11 운영: 3.8 Flash 503 한 번에 AI 요약 전체가 실패하던 것을 막는다.
+ *  2026-10-25 스테이징: 3.8 503·3.7 429·3.6/3.5 503이 겹쳐 28초 만에 요약 전체가 실패 → 503 재시도 추가)
  */
 async function callGeminiFlash(env: LlmEnv, opts: LlmOptions, timeoutMs: number): Promise<string> {
   if (opts.geminiHedgeMs) return callGeminiFlashHedged(env, opts, timeoutMs, opts.geminiHedgeMs);
   const deadline = Date.now() + timeoutMs;
+  const queue: string[] = [...GEMINI_FLASH_MODELS];
+  const busyAt = new Map<string, number>();
   let last: unknown = null;
-  for (const model of GEMINI_FLASH_MODELS) {
-    const remaining = deadline - Date.now();
-    if (remaining < MIN_ATTEMPT_MS) break;
+  while (queue.length) {
+    const model = queue.shift()!;
+    const wait = busyAt.has(model) ? Math.max(0, busyAt.get(model)! + GEMINI_RETRY_GAP_MS - Date.now()) : 0;
+    if (deadline - Date.now() - wait < MIN_ATTEMPT_MS) break;
+    if (wait) await new Promise((r) => setTimeout(r, wait));
     try {
-      return await callGemini(env, model, opts.geminiEffort ?? GEMINI_REASONING_EFFORT, opts, remaining, 'gemini');
+      return await callGemini(env, model, opts.geminiEffort ?? GEMINI_REASONING_EFFORT, opts, deadline - Date.now(), 'gemini');
     } catch (err) {
       last = err;
-      if (!(err instanceof LlmError && (err.status === 429 || err.status === 503))) throw err;
+      if (!isRotatable(err)) throw err;
+      logModelSkip(model, err);
+      if (err.status === 503 && !busyAt.has(model)) { busyAt.set(model, Date.now()); queue.push(model); }
     }
   }
   throw last instanceof Error ? last : new LlmError('timeout', '타임아웃', 'gemini');
@@ -304,36 +319,47 @@ async function callGeminiFlash(env: LlmEnv, opts: LlmOptions, timeoutMs: number)
 /**
  * 헤지 요청 — 첫 모델을 시작하고, hedgeMs 안에 답이 없거나 그 모델이 실패하면 다음 모델을 시작한다.
  * 먼저 성공한 응답을 쓰고 나머지는 버린다(각 요청은 자기 제한 시간에 끝난다). 모두 실패하면 마지막 오류를 던진다.
+ * 503으로 실패한 모델은 한 번 더(줄 맨 뒤, 실패 후 GEMINI_RETRY_GAP_MS 이상 지나서) 시도한다.
  */
 function callGeminiFlashHedged(env: LlmEnv, opts: LlmOptions, timeoutMs: number, hedgeMs: number): Promise<string> {
   const deadline = Date.now() + timeoutMs;
   const effort = opts.geminiEffort ?? GEMINI_REASONING_EFFORT;
   return new Promise<string>((resolve, reject) => {
-    let next = 0;
+    const queue: string[] = [...GEMINI_FLASH_MODELS];
+    const busyAt = new Map<string, number>();
     let running = 0;
     let settled = false;
     let lastErr: unknown = null;
     const timers: ReturnType<typeof setTimeout>[] = [];
     const finish = (fn: () => void) => { if (settled) return; settled = true; timers.forEach(clearTimeout); fn(); };
-    const canLaunch = () => next < GEMINI_FLASH_MODELS.length && deadline - Date.now() >= MIN_ATTEMPT_MS;
+    const canLaunch = () => queue.length > 0 && deadline - Date.now() >= MIN_ATTEMPT_MS;
     const maybeFail = () => {
       if (running === 0 && !canLaunch()) finish(() => reject(lastErr instanceof Error ? lastErr : new LlmError('timeout', '타임아웃', 'gemini')));
     };
     const launch = () => {
       if (settled || !canLaunch()) { maybeFail(); return; }
-      const model = GEMINI_FLASH_MODELS[next++]!;
+      const model = queue.shift()!;
+      const wait = busyAt.has(model) ? Math.max(0, busyAt.get(model)! + GEMINI_RETRY_GAP_MS - Date.now()) : 0;
       running++;
-      const hedge = setTimeout(launch, hedgeMs);
+      const hedge = setTimeout(launch, hedgeMs + wait);
       timers.push(hedge);
-      callGemini(env, model, effort, opts, deadline - Date.now(), 'gemini').then(
-        (text) => finish(() => resolve(text)),
-        (err) => {
-          // 실패한 요청의 헤지 예약은 취소하고 바로 다음 모델로(한 실패가 두 요청을 띄우지 않게)
-          clearTimeout(hedge);
-          running--; lastErr = err;
-          if (canLaunch()) launch(); else maybeFail();
-        },
-      );
+      const start = () => {
+        if (settled) return;
+        callGemini(env, model, effort, opts, deadline - Date.now(), 'gemini').then(
+          (text) => finish(() => resolve(text)),
+          (err) => {
+            // 실패한 요청의 헤지 예약은 취소하고 바로 다음 모델로(한 실패가 두 요청을 띄우지 않게)
+            clearTimeout(hedge);
+            running--; lastErr = err;
+            if (isRotatable(err)) {
+              logModelSkip(model, err);
+              if (err.status === 503 && !busyAt.has(model)) { busyAt.set(model, Date.now()); queue.push(model); }
+            }
+            if (canLaunch()) launch(); else maybeFail();
+          },
+        );
+      };
+      if (wait) timers.push(setTimeout(start, wait)); else start();
     };
     launch();
   });

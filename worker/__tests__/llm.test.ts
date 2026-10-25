@@ -316,6 +316,37 @@ describe('Gemini Flash 모델 순환 — 모델별 하루 20회 할당량', () =
     expect(f.mock.calls.map((c) => bodyOf(c).model)).toEqual([GEMINI_MODEL, 'gemini-3.7-flash']);
   });
 
+  it('503 모델은 다른 모델을 다 시도한 뒤 한 번 더(429는 다시 묻지 않음) — 52차', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    let first = true;
+    const f = vi.fn(async (_u: string, init?: RequestInit) => {
+      const model = JSON.parse(String(init?.body)).model;
+      if (model === GEMINI_MODEL) { if (first) { first = false; return new Response('busy', { status: 503 }); } return chat('3.8 재시도 응답'); }
+      return new Response('quota', { status: 429 });
+    });
+    vi.stubGlobal('fetch', f);
+    const { env } = makeEnv();
+    expect(await generateText(env, OPTS, { fallback: 'none' }, NOW)).toEqual({ text: '3.8 재시도 응답', provider: 'gemini' });
+    expect(f.mock.calls.map((c) => bodyOf(c).model)).toEqual([...GEMINI_FLASH_MODELS, GEMINI_MODEL]);
+  });
+
+  it('503 재시도는 모델당 한 번뿐 — 계속 503이면 다음 공급자로', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const f = vi.fn(async (_u: string, init?: RequestInit) =>
+      (JSON.parse(String(init?.body)).model === GEMINI_LITE_MODEL ? chat('lite') : new Response('busy', { status: 503 })));
+    vi.stubGlobal('fetch', f);
+    const { env } = makeEnv();
+    await generateText(env, { ...OPTS, timeoutMs: 60_000 }, { fallback: 'none' }, NOW);
+    const models = f.mock.calls.map((c) => bodyOf(c).model);
+    expect(models.filter((m) => m === GEMINI_MODEL)).toHaveLength(2);
+    expect(models.filter((m) => m !== GEMINI_LITE_MODEL)).toHaveLength(GEMINI_FLASH_MODELS.length * 2);
+    expect(models.at(-1)).toBe(GEMINI_LITE_MODEL);
+  });
+
+  it('gemini-3-flash-preview가 마지막 Flash 모델(별도 할당량)', () => {
+    expect(GEMINI_FLASH_MODELS.at(-1)).toBe('gemini-3-flash-preview');
+  });
+
   it('400 같은 다른 오류는 다른 Flash 모델을 시도하지 않고 다음 공급자(lite)로', async () => {
     const f = vi.fn(async (_u: string, init?: RequestInit) =>
       JSON.parse(String(init?.body)).model === GEMINI_MODEL ? new Response('bad', { status: 400 }) : chat('lite'));
@@ -341,6 +372,21 @@ describe('geminiHedgeMs — 느린 Flash 모델이면 다음 모델을 함께 �
     await expect(p).resolves.toEqual({ text: '3.7 응답', provider: 'gemini' });
     expect(f.mock.calls.map((c) => bodyOf(c).model)).toEqual([GEMINI_MODEL, 'gemini-3.7-flash']);
     vi.useRealTimers();
+  });
+
+  it('헤지 경로도 503 모델을 한 번 더 시도한다', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const seen = new Map<string, number>();
+    const f = vi.fn(async (_u: string, init?: RequestInit) => {
+      const model = JSON.parse(String(init?.body)).model as string;
+      seen.set(model, (seen.get(model) ?? 0) + 1);
+      return model === 'gemini-3.6-flash' && seen.get(model) === 2 ? chat('3.6 재시도') : new Response('busy', { status: 503 });
+    });
+    vi.stubGlobal('fetch', f);
+    const { env } = makeEnv();
+    await expect(generateText(env, { ...OPTS, timeoutMs: 60_000, attemptMaxMs: 60_000, geminiHedgeMs: 30_000, providers: ['gemini'] }, { fallback: 'none' }, NOW))
+      .resolves.toEqual({ text: '3.6 재시도', provider: 'gemini' });
+    expect(seen.get('gemini-3.6-flash')).toBe(2);
   });
 
   it('실패(429)하면 기다리지 않고 바로 다음 모델, 모두 실패하면 오류', async () => {
