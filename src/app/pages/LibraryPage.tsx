@@ -141,10 +141,10 @@ function BookshelfView({ books, onBookClick }: { books: UIBook[]; onBookClick: (
                     {/* 표지 없는 책도 제목·색이 다른 생성 표지로 (공용 BookCover — 모든 책이 보라 + 이모지로 같아 보이던 문제) */}
                     <BookCover book={book} size="md" />
                   </div>
-                  {/* 제목 */}
+                  {/* 제목 — 두 줄 높이를 늘 확보해, 제목이 한 줄인 책과 두 줄인 책의 표지가 같은 선반 높이에 놓이게 한다 */}
                   <p
                     className="text-center text-[#1E293B] dark:text-[#F8FAFC] line-clamp-2 w-full"
-                    style={{ fontSize: 11, fontWeight: 600, lineHeight: 1.3 }}
+                    style={{ fontSize: 11, fontWeight: 600, lineHeight: 1.3, minHeight: "2.6em" }}
                   >
                     {book.title}
                   </p>

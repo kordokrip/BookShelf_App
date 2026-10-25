@@ -25,6 +25,10 @@ html {
   scroll-padding-top: calc(var(--topbar-h, 56px) + 8px);
   /* 박스 크기 계산 통일 (서브픽셀 렌더링 방지) */
   box-sizing: border-box;
+  /* 한국어 줄바꿈: 어절(띄어쓰기) 단위로 넘기고, 한 어절이 한 줄보다 길 때만 아무 데서나 끊는다(넘침 방지).
+     좁은 화면에서 '기/타', '레이아/웃을'처럼 낱말 가운데서 끊기던 문제 — 54차 반응형 점검 */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 *,

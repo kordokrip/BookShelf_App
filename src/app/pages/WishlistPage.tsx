@@ -124,8 +124,8 @@ export function WishlistPage() {
         })}
       </div>
 
-      {/* 탭 콘텐츠 */}
-      <div className="mt-4">
+      {/* 탭 콘텐츠 — pb-24: FAB가 마지막 항목의 [담기]를 가리지 않게(내 목록은 WishGrid가 자체 확보) */}
+      <div className={`mt-4 ${activeTab === 'mine' ? '' : 'pb-24'}`}>
         {activeTab === 'new'     && <DiscoverTab wishTitleSet={wishTitleSet} />}
         {activeTab === 'librarian' && <LibrarianPicksTab wishTitleSet={wishTitleSet} />}
         {activeTab === 'recommend' && <RecommendedBooksTab />}
