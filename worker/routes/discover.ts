@@ -1,18 +1,11 @@
 /**
- * discover 라우터 — 도서 탐색 (새로운책·인기책·인생책)
+ * discover 라우터 — 읽을 책 화면의 둘러보기 데이터
  *
- * GET /api/discover?tab=new|popular|life&genre=&page=&size=
- *   - new:     최근 사용자들이 서재에 담은 책 (최신순)
- *   - popular: 서재에 가장 많이 담긴 책 (library_count 기준)
- *   - life:    완독 후 높은 평점을 받은 책 (avg_rating 기준)
+ * GET /api/discover/external?tab=new — 카카오 신간(최근 2주)
+ * GET /api/discover/librarian        — 국립중앙도서관 사서추천도서
  *
- * 반환 통계 필드:
- *   library_count — 서재에 담긴 총 인원 수 (reading + done + wish)
- *   wish_count    — 위시리스트에 담긴 수
- *   done_count    — 완독한 수
- *   note_count    — 작성된 노트/리뷰 수
- *
- * Rate Limit: 30회/분 (로그인 필요)
+ * 53차: 커뮤니티 둘러보기(GET /api/discover?tab=popular|new|life — 서재 담긴 수·평점 집계)는 화면이 1ad45ec에서
+ * AI 추천 도서로 바뀐 뒤 호출처가 없어 삭제했다.
  */
 import { Hono } from 'hono';
 import type { Bindings } from '../types';
@@ -21,146 +14,7 @@ import { rateLimit } from '../middleware/rateLimit';
 import { isPlausiblePubDate, isTradeBook } from '../lib/discoverFilter';
 import { fetchLibrarianPicks, type LibrarianPick } from '../lib/nl/librarianPicks';
 
-/** 탐색 결과 단건 타입 */
-export interface DiscoverBook {
-  key: string;               // isbn 또는 title|||author (그룹 키)
-  isbn: string;
-  title: string;
-  author: string;
-  publisher: string | null;
-  published_year: string | null;
-  cover_image: string | null;
-  genre: string;
-  library_count: number;     // 서재에 담긴 총 수
-  wish_count: number;        // 위시리스트 수
-  done_count: number;        // 완독 수
-  note_count: number;        // 노트/리뷰 수
-  avg_rating: number | null; // 평균 별점 (1-5)
-}
-
 export const discoverRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
-
-/**
- * GET /api/discover
- * tab, genre, page, size 쿼리 파라미터로 필터링
- */
-discoverRouter.get(
-  '/',
-  rateLimit({ limit: 30, windowMs: 60_000, keyPrefix: 'discover' }),
-  authMiddleware,
-  async (c) => {
-    const tab    = c.req.query('tab')  ?? 'popular'; // 'popular' | 'new' | 'life'
-    const genre  = c.req.query('genre') ?? '';
-    const page   = Math.max(1, parseInt(c.req.query('page') ?? '1', 10));
-    const size   = Math.min(50, Math.max(1, parseInt(c.req.query('size') ?? '20', 10)));
-    const offset = (page - 1) * size;
-
-    const db     = c.env.DB;
-    const origin = new URL(c.req.url).origin;
-
-    // ── cover_image URL 정규화 (books 라우터와 동일 로직) ──────
-    const resolveUrl = (coverImage: string | null, bookId: string): string | null => {
-      if (!coverImage) return null;
-      if (coverImage.startsWith('r2://')) {
-        return `${origin}/api/books/${bookId}/cover`;
-      }
-      // 기존 proxy URL은 그대로 전달 (하위 호환)
-      if (
-        coverImage.startsWith('/api/cover-proxy') ||
-        coverImage.startsWith(`${origin}/api/cover-proxy`)
-      ) {
-        return coverImage;
-      }
-      // CDN URL은 직접 반환 (img 태그에서 crossorigin 없이 CORS 불필요)
-      if (coverImage.startsWith('http')) {
-        return coverImage;
-      }
-      return `${origin}/api/books/${bookId}/cover`;
-    };
-
-    // ── 쿼리 옵션 구성 ─────────────────────────────────────────
-    const genreFilter  = genre && genre !== '전체' ? genre : null;
-    const genreCond    = genreFilter ? 'AND b.genre = ?' : '';
-
-    let orderClause: string;
-    let havingClause = '';
-
-    if (tab === 'new') {
-      // 최근 새로 등록된 책
-      orderClause = 'MAX(b.created_at) DESC';
-    } else if (tab === 'life') {
-      // 완독·고평점 책
-      orderClause  = 'avg_rating DESC, done_count DESC';
-      havingClause = 'HAVING avg_rating IS NOT NULL AND done_count >= 1';
-    } else {
-      // 인기책 (서재에 많이 담긴 순)
-      orderClause = 'library_count DESC';
-    }
-
-    const bindParams: unknown[] = genreFilter ? [genreFilter, size, offset] : [size, offset];
-
-    try {
-      const rows = await db
-        .prepare(
-          `SELECT
-            CASE
-              WHEN b.isbn IS NOT NULL AND b.isbn != ''
-              THEN b.isbn
-              ELSE b.title || '|||' || b.author
-            END                              AS book_key,
-            COALESCE(b.isbn, '')             AS isbn,
-            b.title,
-            b.author,
-            b.publisher,
-            SUBSTR(MAX(b.added_date), 1, 4)  AS published_year,
-            MAX(b.cover_image)               AS cover_image,
-            MAX(b.id)                        AS book_id,
-            b.genre,
-            COUNT(DISTINCT b.user_id)        AS library_count,
-            SUM(CASE WHEN b.status = 'wish'  THEN 1 ELSE 0 END) AS wish_count,
-            SUM(CASE WHEN b.status = 'done'  THEN 1 ELSE 0 END) AS done_count,
-            CAST(
-              AVG(CASE WHEN b.rating IS NOT NULL THEN b.rating END)
-            AS REAL)                         AS avg_rating,
-            SUM((SELECT COUNT(*) FROM notes n WHERE n.book_id = b.id)) AS note_count
-          FROM books b
-          WHERE 1=1 ${genreCond}
-          GROUP BY
-            CASE
-              WHEN b.isbn IS NOT NULL AND b.isbn != ''
-              THEN b.isbn
-              ELSE b.title || '|||' || b.author
-            END
-          ${havingClause}
-          ORDER BY ${orderClause}
-          LIMIT ? OFFSET ?`,
-        )
-        .bind(...bindParams)
-        .all();
-
-      const books: DiscoverBook[] = (rows.results as Record<string, unknown>[]).map((row) => ({
-        key:            row.book_key      as string,
-        isbn:           row.isbn          as string,
-        title:          row.title         as string,
-        author:         row.author        as string,
-        publisher:      (row.publisher    as string | null) ?? null,
-        published_year: (row.published_year as string | null) ?? null,
-        cover_image:    resolveUrl(row.cover_image as string | null, row.book_id as string),
-        genre:          row.genre         as string,
-        library_count:  Number(row.library_count ?? 0),
-        wish_count:     Number(row.wish_count     ?? 0),
-        done_count:     Number(row.done_count     ?? 0),
-        note_count:     Number(row.note_count     ?? 0),
-        avg_rating:     row.avg_rating != null ? Number(row.avg_rating) : null,
-      }));
-
-      return c.json({ books, hasMore: books.length === size });
-    } catch (e) {
-      console.error('[discover] query error:', e);
-      return c.json({ error: '탐색 데이터를 불러오지 못했어요.' }, 500);
-    }
-  },
-);
 
 /* ═══════════════════════════════════════════════════════════════
  * GET /api/discover/external?tab=new

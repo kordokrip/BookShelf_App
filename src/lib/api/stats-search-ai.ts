@@ -112,47 +112,6 @@ export const ocrApi = {
   },
 };
 
-// ─── Discover API ─────────────────────────────────────────────
-
-/** 탐색 도서 단건 타입 (백엔드 DiscoverBook과 동일) */
-export interface DiscoverBook {
-  key: string;
-  isbn: string;
-  title: string;
-  author: string;
-  publisher: string | null;
-  published_year: string | null;
-  cover_image: string | null;
-  genre: string;
-  library_count: number;
-  wish_count: number;
-  done_count: number;
-  note_count: number;
-  /** 국립중앙도서관 목차를 근거로 썼는지(51차) */
-  toc_used?: boolean;
-  avg_rating: number | null;
-}
-
-export interface DiscoverResponse {
-  books: DiscoverBook[];
-  hasMore: boolean;
-}
-
-export const discoverApi = {
-  /**
-   * 탐색 도서 목록 조회
-   * @param tab    'popular' | 'new' | 'life'
-   * @param genre  장르 필터 ('전체' 또는 특정 장르)
-   * @param page   페이지 번호 (기본 1)
-   * @param size   페이지 크기 (기본 20, 최대 50)
-   */
-  list: (tab = 'popular', genre = '', page = 1, size = 20) => {
-    const qs = new URLSearchParams({ tab, page: String(page), size: String(size) });
-    if (genre && genre !== '전체') qs.set('genre', genre);
-    return apiFetch<DiscoverResponse>(`/api/discover?${qs.toString()}`);
-  },
-};
-
 // ─── 외부 도서 API (신간/베스트셀러) ─────────────────────────
 
 /** 외부 API(카카오/네이버)에서 가져온 단일 도서 */
