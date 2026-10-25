@@ -4,6 +4,15 @@
 
 ---
 
+## 55차 (2026-10-25) — 서비스 워커 precache가 비면 앱이 열리지 않던 문제
+
+상세 경위: `docs/sessions/2026-10-25-sw-navigation-fallback.md`, 결정: `docs/adr/ADR-001-sw-update-strategy.md` 2026-10-25 보완
+
+- 브라우저 저장소 정리 등으로 서비스 워커 캐시만 비면 모든 화면이 `ERR_FAILED`였다. 탐색 폴백이 `/index.html`을 네트워크로 받는데 Workers Assets가 `/`로 307 리다이렉트하기 때문이었다. 폴백과 precache를 `/`로 바꿨다.
+- 새 사용자, 기존 사용자(업데이트 배너), 이미 고장 난 브라우저 모두 스테이징에서 정상 동작을 확인했다.
+
+---
+
 ## 54차 (2026-10-25) — 가을→겨울 앱 아이콘, 반응형 재점검
 
 상세 경위: `docs/sessions/2026-10-25-icon-responsive.md`

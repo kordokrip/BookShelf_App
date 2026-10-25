@@ -34,3 +34,12 @@ prompt 전략은 "구 SW가 구 버전 전체를 일관되게 서빙한다"는 �
 결정: `globPatterns`에 `js,css`를 추가해 구 SW가 구 버전의 HTML·JS·CSS를 모두 precache에서 서빙하게 한다(precache 약 5MB → 7MB). 로컬 재현 테스트(빌드 A로 SW 설치 → 진입 JS 해시가 바뀐 빌드 B 배포 → 새로고침)에서 구 버전으로 정상 부팅 → 배너 노출 → [업데이트] 후 B로 전환됨을 확인했다. 함께 worker SPA 폴백이 없는 자산에 `index.html`(200)을 주던 문제도 404로 수정했다(`worker/lib/spaFallback.ts`, `docs/CI_CD.md` 교훈 3).
 
 전환기 주의: 이 변경 **이전의 SW를 가진 기존 사용자**는 새 SW가 waiting 상태로 대기하는 동안 여전히 구 SW 규칙을 따르므로, 해당 기기에서 앱(모든 탭)을 한 번 완전히 닫았다 열어야 새 SW가 활성화된다.
+
+## 보완 (2026-10-25, 55차) — 탐색 폴백을 `index.html` 대신 `/`로
+
+증상: 서비스 워커는 등록된 채 Cache Storage만 비면(브라우저 저장소 정리 등) 모든 화면 이동이 `net::ERR_FAILED`로 열리지 않았다.
+
+- 원인: Workbox 탐색 폴백 `createHandlerBoundToURL('index.html')`은 캐시에 없으면 네트워크로 `/index.html`을 받는다. Workers Assets는 `/index.html`을 `/`로 307 리다이렉트하고, 리다이렉트를 따라간 응답(`redirected`)은 화면 이동 응답으로 쓸 수 없다. `/index.html`만 200으로 고정하면 같은 상황에서 정상이었다(스테이징, 단일 변수 검증).
+- 결정: precache의 HTML 항목을 `/`로 바꾸고(`manifestTransforms`, revision 유지) `navigateFallback`도 `/`로 둔다(`src/lib/swPrecache.ts`). `/`는 리다이렉트 없이 200이다. precache에 `index.html`이 없으면 빌드가 멈춘다.
+- 확인(스테이징): 새 사용자 — 온라인·오프라인·캐시 삭제 뒤 화면 이동 모두 200. 기존 사용자 — 옛 서비스 워커(`/index.html` precache) → 업데이트 확인 → [업데이트] 배너 → precache가 `/`로 바뀜 → 캐시를 지워도 정상. 이미 고장 난 상태(옛 서비스 워커 + 빈 캐시)였던 브라우저도 배포 뒤 다시 열렸다.
+- 업데이트 전략(prompt, `skipWaiting: false`)은 그대로다.
