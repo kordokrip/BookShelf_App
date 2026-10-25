@@ -3,6 +3,7 @@ import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { SW_NAVIGATE_FALLBACK, precacheIndexAsRoot } from './src/lib/swPrecache'
 
 /**
  * VITE_ 변수는 번들에 그대로 들어가는 공개 값이다. 비밀처럼 보이는 이름이면 빌드를 멈춘다.
@@ -45,6 +46,10 @@ export default defineConfig(({ mode }) => {
         globIgnores: ['**/ios-startup/**', '**/pwa-screenshots/**', '**/og-image.png'],
         // Push 알림 핸들러 주입
         importScripts: ['/sw-push.js'],
+        // 화면 이동 폴백은 precache의 '/'(index.html 대신) — /index.html은 Workers Assets가 307로 리다이렉트해
+        // precache가 비었을 때 모든 화면이 ERR_FAILED가 됐다(55차, src/lib/swPrecache.ts)
+        navigateFallback: SW_NAVIGATE_FALLBACK,
+        manifestTransforms: [precacheIndexAsRoot],
         // OAuth 콜백은 303 리다이렉트 응답이므로 SW가 절대 인터셉트하면 안 됨
         navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
