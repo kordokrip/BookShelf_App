@@ -707,7 +707,7 @@ TMPF=$(mktemp /tmp/e2e_XXXXXX)
 HTTP_CODE=$(curl -s -o "$TMPF" -w "%{http_code}" "${BASE_URL}/api/discover/librarian" -H "Authorization: Bearer ${TOKEN}")
 BODY=$(cat "$TMPF"); rm -f "$TMPF"
 ELAPSED=$(( $(now_ms) - START ))
-# 키(NL_CERT_KEY)가 없는 환경은 빈 목록이 정상 — 형식과, 항목이 있으면 필수 필드만 본다(lib/nlLibrarianPicks.ts)
+# 키(NL_CERT_KEY)가 없는 환경은 빈 목록이 정상 — 형식과, 항목이 있으면 필수 필드만 본다(lib/nl/librarianPicks.ts)
 OK84=$(json_val "$BODY" "isinstance(d.get('picks'), list) and all(p.get('title') and p.get('category') and 'genre' in p and 'coverImage' in p for p in d['picks'])")
 if [[ "$HTTP_CODE" == "200" && "$OK84" == "True" ]]; then
   pass_test $T "$NAME" $ELAPSED

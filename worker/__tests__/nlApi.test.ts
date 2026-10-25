@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { parseSeoji, parseCollectionKdc, cleanToc, fetchToc, fetchSeoji, fetchCollectionKdc, TOC_MAX_CHARS } from '../lib/nlApi';
+import { parseSeoji, parseCollectionKdc, cleanToc, fetchToc, fetchSeoji, fetchCollectionKdc, TOC_MAX_CHARS } from '../lib/nl/api';
 
 beforeEach(() => { vi.spyOn(console, 'log').mockImplementation(() => undefined); vi.spyOn(console, 'warn').mockImplementation(() => undefined); });
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });

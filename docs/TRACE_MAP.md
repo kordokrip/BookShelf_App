@@ -356,7 +356,7 @@ UI(searchQuery >= 2글자) → useBookSearch(query)
   → searchApi.searchBooks(q)
     → GET /api/search/books?q=...
       → 카카오 도서 검색 API
-      → 실패·0건이면 국립중앙도서관 소장자료(lib/nlBooks.ts — 네이버 책 검색 API는 2026-07-31 종료돼 52차에 제거)
+      → 실패·0건이면 국립중앙도서관 소장자료(lib/nl/books.ts — 네이버 책 검색 API는 2026-07-31 종료돼 52차에 제거)
 
 [ISBN 스캔]
 UI(ISBNScanner) → searchApi.searchByIsbn(isbn)
@@ -610,7 +610,7 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 |---|---|---|---|---|
 | GET | `/api/search/books` | `?q=&page=1&size=10` | `{books, total, isEnd}` | 카카오 → (실패·0건) 국립중앙도서관 소장자료(정확도순, 소개 없음). 네이버 책 검색 API는 2026-07-31 종료(52차 제거) |
 | GET | `/api/search/books/isbn` | `?isbn=` | `{book}` | 카카오(isbn) → 국립중앙도서관(소장자료 제목·표지 + 서지정보 쪽수·출간일) |
-| GET | `/api/search/pagecount` | `?isbn=&title=&author=&publisher=&need=pages` | `{pageCount, pageSource('nl'\|'openlibrary'\|null), genre, genreSource('kdc'\|'llm'\|'kdc-approx'\|null), kdc, categories:[]}` | 책 등록·읽기 화면의 쪽수·장르(`lib/bookMeta.ts`). 쪽수: 국립중앙도서관 ISBN 서지정보 `PAGE` → Open Library(ISBN 일치, 3초)만 — 제목 추측·LLM 쪽수 없음. 장르 근거 KDC: 국립중앙도서관 소장자료 `classNo`(예: 004.73) → 서지정보 KDC → 부가기호. 장르: KDC 확실 매핑(`lib/kdcGenre.ts`) → AI 분류(`gemini-lite`→Workers AI→OpenRouter, 카카오 소개·번역자·KDC 힌트) → KDC 대략값. `need=pages`면 장르·AI 생략. 장르까지 정한 결과만 KV `book_meta:v3:{isbn}` 30일(쪽수가 없으면 1일). 사용자별 15회/60s. `categories`는 예전 클라이언트 호환(항상 빈 배열) |
+| GET | `/api/search/pagecount` | `?isbn=&title=&author=&publisher=&need=pages` | `{pageCount, pageSource('nl'\|'openlibrary'\|null), genre, genreSource('kdc'\|'llm'\|'kdc-approx'\|null), kdc, categories:[]}` | 책 등록·읽기 화면의 쪽수·장르(`lib/bookMeta.ts`). 쪽수: 국립중앙도서관 ISBN 서지정보 `PAGE` → Open Library(ISBN 일치, 3초)만 — 제목 추측·LLM 쪽수 없음. 장르 근거 KDC: 국립중앙도서관 소장자료 `classNo`(예: 004.73) → 서지정보 KDC → 부가기호. 장르: KDC 확실 매핑(`lib/nl/kdcGenre.ts`) → AI 분류(`gemini-lite`→Workers AI→OpenRouter, 카카오 소개·번역자·KDC 힌트) → KDC 대략값. `need=pages`면 장르·AI 생략. 장르까지 정한 결과만 KV `book_meta:v3:{isbn}` 30일(쪽수가 없으면 1일). 사용자별 15회/60s. `categories`는 예전 클라이언트 호환(항상 빈 배열) |
 
 ### AI (`/api/ai`)
 
@@ -699,7 +699,7 @@ totals:       { totalPages: number; totalMinutes: number }
 |---|---|---|---|---|---|
 | GET | `/api/discover` | **authMiddleware** | `?tab=popular\|new\|life&genre=&page=&size=` | `{data: DiscoverBook[]}` | 서재 데이터 집계 기반, rate limit 30회/60s |
 | GET | `/api/discover/external` | **authMiddleware** | `?tab=new` | `{books, fetchedAt}` | 카카오 신간(최근 2주), KV `ext_books:new:v6` 1시간, rate limit 20회/60s. 52차: `bestseller` 탭 제거(화면 미사용·출처 소멸 — 알라딘 10/30 종료, 네이버 종료), 다른 tab은 빈 목록 |
-| GET | `/api/discover/librarian` | **authMiddleware** | — | `{picks: [{id, title, subtitle, author, publisher, isbn, coverImage(프록시), description, category('문학'\|'인문'\|'사회'\|'자연'), callNo, kdc, genre, recommendedAt('YYYY-MM'), publishYear}], fetchedAt}` | 51차. 국립중앙도서관 사서추천도서(최근 12개월, `lib/nlLibrarianPicks.ts`). KV `nl_picks:v1` 12시간. 키가 없으면 빈 목록. rate limit 20회/60s(`discover_lib`) |
+| GET | `/api/discover/librarian` | **authMiddleware** | — | `{picks: [{id, title, subtitle, author, publisher, isbn, coverImage(프록시), description, category('문학'\|'인문'\|'사회'\|'자연'), callNo, kdc, genre, recommendedAt('YYYY-MM'), publishYear}], fetchedAt}` | 51차. 국립중앙도서관 사서추천도서(최근 12개월, `lib/nl/librarianPicks.ts`). KV `nl_picks:v1` 12시간. 키가 없으면 빈 목록. rate limit 20회/60s(`discover_lib`) |
 
 ### 푸시 알림 (`/api/push`)
 
@@ -1063,7 +1063,7 @@ normalizeSession(api: ApiSession): UISession
      - pageCount: null (카카오 미제공)
   → SearchBook
 
-국립중앙도서관 소장자료 (lib/nlBooks.ts, 52차 — 카카오 실패·0건일 때)
+국립중앙도서관 소장자료 (lib/nl/books.ts, 52차 — 카카오 실패·0건일 때)
   → nlToSearchBook():
      - 제목: 검색어 강조 태그·앞 괄호 수식어·" / 책임표시" 제거
      - 출판사: "서울 : 출판사, 2002" → "출판사", ISBN: "(세트)" 제거·13자리 우선, 연도 범위 → 첫 해
@@ -1339,7 +1339,7 @@ maxAge: 86400 (24h)
 | `ALLOWED_EMAILS` | secret | 세미콜론 구분 가입 허용 이메일 목록 (선택) |
 | `VAPID_PUBLIC_KEY` | secret | Web Push 공개키 (base64url) |
 | `VAPID_PRIVATE_KEY` | secret | Web Push 비밀키 (JWK JSON) |
-| `NL_CERT_KEY` | secret | 국립중앙도서관 Open API 인증키 — ISBN 서지정보(쪽수·부가기호·목차), 소장자료(KDC `classNo`), 사서추천도서(`lib/nlApi.ts`, `lib/nlLibrarianPicks.ts`). 2026-10-25 운영·스테이징 등록. 없으면 쪽수는 Open Library, 장르는 AI 분류만, 사서 추천은 빈 목록 |
+| `NL_CERT_KEY` | secret | 국립중앙도서관 Open API 인증키 — ISBN 서지정보(쪽수·부가기호·목차), 소장자료(KDC `classNo`), 사서추천도서(`lib/nl/api.ts`, `lib/nl/librarianPicks.ts`). 2026-10-25 운영·스테이징 등록. 없으면 쪽수는 Open Library, 장르는 AI 분류만, 사서 추천은 빈 목록 |
 
 ---
 

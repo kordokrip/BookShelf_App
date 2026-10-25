@@ -156,7 +156,7 @@ export interface Bindings {
   VAPID_PUBLIC_KEY?: string;   // base64url 인코딩된 공개키
   VAPID_PRIVATE_KEY?: string;  // JWK JSON 문자열
   VAPID_SUBJECT?: string;      // 'mailto:admin@example.com'
-  // 국립중앙도서관 Open API 인증키 — 쪽수·KDC 장르(lib/bookMeta.ts), 사서 추천, 목차, 도서 검색 폴백(lib/nlBooks.ts)
+  // 국립중앙도서관 Open API 인증키 — 쪽수·KDC 장르(lib/bookMeta.ts), 사서 추천, 목차, 도서 검색 폴백(lib/nl/books.ts)
   NL_CERT_KEY?: string;
   // OpenRouter 유료 모델(lib/openrouter.ts OPENROUTER_MODEL) (wrangler secret put OPENROUTER_API_KEY) — AI 요약·인생책·오늘의 문장
   OPENROUTER_API_KEY?: string;

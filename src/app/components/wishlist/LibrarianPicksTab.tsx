@@ -7,7 +7,7 @@ import type { LibrarianPick } from "../../../lib/api";
 import { GENRE_CONFIG, type GenreKey } from "../../../types/book";
 import { BookCoverImg, ErrorEmpty, SkeletonList } from "./DiscoverTab";
 
-/** 국립중앙도서관 사서추천도서 — 매달 문학·인문·사회·자연 분야별 추천 (51차, worker/lib/nlLibrarianPicks.ts) */
+/** 국립중앙도서관 사서추천도서 — 매달 문학·인문·사회·자연 분야별 추천 (51차, worker/lib/nl/librarianPicks.ts) */
 const CATEGORIES = ["전체", "문학", "인문", "사회", "자연"] as const;
 
 const toGenre = (g: string | null): GenreKey => (g && g in GENRE_CONFIG ? (g as GenreKey) : "기타");

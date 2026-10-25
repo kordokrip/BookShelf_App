@@ -78,7 +78,7 @@ DevTools 설정:
   - 비밀번호는 저장소에 두지 않는다(담당자/Claude 메모리 qa-test-accounts 참조).
   - 새 테스트 계정을 만들지 말 것. 만들었다면 반드시 DELETE /api/users/me로 지운다
     (e2e·admin 스크립트는 자동 삭제). 실사용자 계정으로 테스트하지 말 것.
-  - scripts/admin-api-test.sh는 ADMIN_EMAIL/ADMIN_PASS(또는 ADMIN_TOKEN) 환경 변수가 필요하다.
+  - scripts/qa/admin-api-test.sh는 ADMIN_EMAIL/ADMIN_PASS(또는 ADMIN_TOKEN) 환경 변수가 필요하다.
 ```
 
 ---
@@ -313,10 +313,10 @@ bash scripts/e2e-api-test.sh
 
 ```bash
 # 기본 실행(관리자 계정 필요)
-bash scripts/admin-api-test.sh
+bash scripts/qa/admin-api-test.sh
 
 # 관리자 JWT 보유 시 로그인 단계 생략
-ADMIN_TOKEN="<admin-jwt>" bash scripts/admin-api-test.sh
+ADMIN_TOKEN="<admin-jwt>" bash scripts/qa/admin-api-test.sh
 ```
 
 검증 포인트:

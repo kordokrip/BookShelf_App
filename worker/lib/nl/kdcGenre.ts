@@ -7,7 +7,7 @@
  * sure=true면 그대로 쓴다. false면 앱 장르가 KDC와 다르게 나뉘는 영역이라 LLM에 label을 힌트로 넘기고,
  * LLM이 실패할 때만 genre(있으면)를 쓴다.
  */
-import type { Genre } from './genres';
+import type { Genre } from '../genres';
 
 export interface KdcGenre {
   genre: Genre | null;

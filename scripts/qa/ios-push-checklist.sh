@@ -3,8 +3,8 @@
 # ios-push-checklist.sh — BookShelf PWA 웹 푸시 iOS 디버깅 체크리스트
 # =============================================================================
 # 사용법:
-#   bash scripts/ios-push-checklist.sh
-#   AUTH_TOKEN=<jwt> bash scripts/ios-push-checklist.sh   # 인증 필요 API 포함
+#   bash scripts/qa/ios-push-checklist.sh
+#   AUTH_TOKEN=<jwt> bash scripts/qa/ios-push-checklist.sh   # 인증 필요 API 포함
 #
 # 확인 항목:
 #   [서버]  VAPID 공개키 엔드포인트 응답

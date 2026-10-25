@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { parseLibrarianPicksXml, cleanAuthor, splitTitle, toPlainText, fetchLibrarianPicks } from '../lib/nlLibrarianPicks';
+import { parseLibrarianPicksXml, cleanAuthor, splitTitle, toPlainText, fetchLibrarianPicks } from '../lib/nl/librarianPicks';
 
 afterEach(() => vi.unstubAllGlobals());
 

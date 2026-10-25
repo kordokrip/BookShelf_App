@@ -22,7 +22,7 @@ model: sonnet
 ## 작업 규칙 (강제)
 - **로컬 `wrangler deploy` 절대 금지.** 배포 검증이 필요하면 `wrangler dev --local`(로컬 개발 서버)만 사용한다.
 - 배포는 `git push origin main`으로 트리거하며, 실제 push는 사용자 승인 없이 임의로 수행하지 않는다.
-- D1 마이그레이션은 `npm run db:migrate:local`로 로컬 검증 후, 원격 적용(`db:migrate`)은 CI/사용자 승인 경로를 따른다 — 직접 원격 마이그레이션을 실행하지 않는다.
+- D1 마이그레이션은 `npm run db:migrate:local`로 로컬 검증 후, 원격 적용은 CI(`git push origin main`이 마이그레이션 후 배포)가 한다. 원격 적용용 npm 스크립트는 53차에 없앴다 — 직접 원격 마이그레이션을 실행하지 않는다.
 - `wrangler.toml`, `.github/workflows/deploy.yml` 변경 후에는 `npm run type-check && npm run lint && npm run build`가 통과하는지 확인한다.
 - secrets(`.dev.vars`, `.env.local`)는 커밋 대상이 아님을 항상 확인한다 (git add 전 재확인).
 

@@ -19,7 +19,7 @@ import type { Bindings } from '../types';
 import { authMiddleware } from '../auth';
 import { rateLimit } from '../middleware/rateLimit';
 import { isPlausiblePubDate, isTradeBook } from '../lib/discoverFilter';
-import { fetchLibrarianPicks, type LibrarianPick } from '../lib/nlLibrarianPicks';
+import { fetchLibrarianPicks, type LibrarianPick } from '../lib/nl/librarianPicks';
 
 /** 탐색 결과 단건 타입 */
 export interface DiscoverBook {
@@ -264,7 +264,7 @@ discoverRouter.get(
 );
 
 // ─── GET /api/discover/librarian — 국립중앙도서관 사서추천도서 (51차) ─────────────
-// 최근 12개월 추천(매달 문학·인문·사회·자연 1권씩). 출처·파싱 근거는 worker/lib/nlLibrarianPicks.ts.
+// 최근 12개월 추천(매달 문학·인문·사회·자연 1권씩). 출처·파싱 근거는 worker/lib/nl/librarianPicks.ts.
 // 추천은 매달 한 번 바뀌므로 12시간 캐시. 키가 없거나 실패면 빈 목록(캐시하지 않음).
 export const LIBRARIAN_PICKS_CACHE_KEY = 'nl_picks:v1';
 

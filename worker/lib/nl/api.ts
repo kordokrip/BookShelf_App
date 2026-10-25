@@ -5,7 +5,7 @@
  *
  * - seoji: https://www.nl.go.kr/seoji/SearchApi.do (JSON) — 쪽수 PAGE, 부가기호 EA_ADD_CODE, KDC, 목차 파일 URL
  * - 소장자료: https://www.nl.go.kr/NL/search/openApi/search.do (JSON) — classNo(세 자리 이상 KDC)
- * - 사서추천도서: https://nl.go.kr/NL/search/openApi/saseoApi.do (XML) — worker/lib/nlLibrarianPicks.ts
+ * - 사서추천도서: https://nl.go.kr/NL/search/openApi/saseoApi.do (XML) — worker/lib/nl/librarianPicks.ts
  */
 const MIN_PAGES = 10;
 
@@ -72,7 +72,7 @@ export async function fetchSeoji(env: NlEnv, isbn: string): Promise<SeojiInfo | 
   return parseSeoji(await fetchSeojiJson(env, isbn));
 }
 
-/** 서지정보 첫 문서 원본(제목·저자·출판사·쪽수 등 그대로) — 도서 조회 대체 출처용(lib/nlBooks.ts) */
+/** 서지정보 첫 문서 원본(제목·저자·출판사·쪽수 등 그대로) — 도서 조회 대체 출처용(lib/nl/books.ts) */
 export async function fetchSeojiDoc(env: NlEnv, isbn: string): Promise<Record<string, unknown> | null> {
   const o = (await fetchSeojiJson(env, isbn)) as { docs?: unknown[] } | null;
   return (o?.docs?.[0] as Record<string, unknown> | undefined) ?? null;

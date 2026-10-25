@@ -2,14 +2,14 @@
 # Admin API 교차 검증 스크립트
 set -uo pipefail
 
-# 사용법: ADMIN_EMAIL=... ADMIN_PASS=... bash scripts/admin-api-test.sh  (또는 ADMIN_TOKEN=... )
+# 사용법: ADMIN_EMAIL=... ADMIN_PASS=... bash scripts/qa/admin-api-test.sh  (또는 ADMIN_TOKEN=... )
 BASE="${BASE:-https://bookshelf-api.kordokrip.workers.dev}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-}"
 ADMIN_PASS="${ADMIN_PASS:-}"
 ADMIN_TOKEN="${ADMIN_TOKEN:-}"
 
 if [[ -z "$ADMIN_TOKEN" && ( -z "$ADMIN_EMAIL" || -z "$ADMIN_PASS" ) ]]; then
-  echo "사용법: ADMIN_EMAIL=<이메일> ADMIN_PASS=<비밀번호> bash scripts/admin-api-test.sh"
+  echo "사용법: ADMIN_EMAIL=<이메일> ADMIN_PASS=<비밀번호> bash scripts/qa/admin-api-test.sh"
   echo "        (또는 ADMIN_TOKEN=<관리자 JWT>; BASE=<API 주소>로 대상 변경 가능)"
   exit 1
 fi

@@ -13,7 +13,7 @@ import { searchBook } from '../lib/bookLookup';
 import { kstDateString } from '../lib/noteHelpers';
 import { resolveCollections, COLLECTIONS_MAX_BOOKS, type CollectionBook } from '../lib/ai/aiCollections';
 import { acquireLock, consumeCounter, dailyExpiresAtSec, readCounter, refundCounter, releaseLock } from '../lib/counters';
-import { fetchSeoji, fetchToc } from '../lib/nlApi';
+import { fetchSeoji, fetchToc } from '../lib/nl/api';
 import { normalizeIsbn } from '../lib/bookMeta';
 
 const aiRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
@@ -72,7 +72,7 @@ aiRouter.post('/book-summary/:bookId', authMiddleware, async (c) => {
       return c.json({ error: `AI 요약은 하루 ${BOOK_SUMMARY_DAILY_LIMIT}번까지 만들 수 있어요. 내일 다시 시도해 주세요.`, reason: 'daily_limit', remaining_today: 0 }, 429);
     }
     const remainingBefore = BOOK_SUMMARY_DAILY_LIMIT - (reserved - 1);
-    // 51차: 국립중앙도서관 서지정보에 목차 파일이 있으면 근거로 넣는다(보유율은 낮다 — 2021년 2월 이전 데이터만, lib/nlApi.ts)
+    // 51차: 국립중앙도서관 서지정보에 목차 파일이 있으면 근거로 넣는다(보유율은 낮다 — 2021년 2월 이전 데이터만, lib/nl/api.ts)
     const isbn = normalizeIsbn(book.isbn ?? undefined);
     const [match, notesRes, toc] = await Promise.all([
       searchBook(c.env, { title: book.title, author: book.author ?? undefined, isbn: book.isbn ?? undefined }).catch(() => null),

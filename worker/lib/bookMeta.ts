@@ -7,19 +7,19 @@
  * - Open Library: 페이지 수 3/15
  * - Google 제목 검색은 결과가 같은 책인지 확인하지 않고 첫 pageCount를 써서 다른 판·다른 책 값이 들어올 수 있었다
  *
- * 지금 순서 (51차, 국립중앙도서관 Open API 키 적용 — worker/lib/nlApi.ts)
+ * 지금 순서 (51차, 국립중앙도서관 Open API 키 적용 — worker/lib/nl/api.ts)
  * - 쪽수: 국립중앙도서관 ISBN 서지정보 PAGE(실측 14/19) → Open Library(ISBN 일치). 제목 추측은 하지 않는다.
  *   LLM은 쪽수에 쓰지 않는다(검색 근거 없이 숫자를 지어낼 수 있고, Gemini 검색 grounding은 무료 등급에서 429).
  * - 장르 근거 KDC: 소장자료 classNo(세 자리 이상, 실측 19/20) → 서지정보 KDC → 부가기호 내용분류(십 단위)
- * - 장르: KDC 확실 매핑(lib/kdcGenre.ts) → LLM 분류(카카오 소개·번역자·KDC 힌트) → KDC 대략값 → null(클라이언트 키워드 추정)
+ * - 장르: KDC 확실 매핑(lib/nl/kdcGenre.ts) → LLM 분류(카카오 소개·번역자·KDC 힌트) → KDC 대략값 → null(클라이언트 키워드 추정)
  * - 장르까지 정해진 결과만 ISBN 단위로 KV 30일 캐시(캐시라 최종 일관성이어도 됨)
  */
 import { searchBook, type LookupEnv } from './bookLookup';
-import { genreFromKdc } from './kdcGenre';
+import { genreFromKdc } from './nl/kdcGenre';
 import { FALLBACK_GENRE, type Genre } from './genres';
 import { buildGenreMessages, extractSuggestionArray, parseSuggestions } from './ai/genreSuggestions';
 import { generateText, type GenerateEnv, type LlmProvider } from './ai/llm';
-import { fetchCollectionKdc, fetchSeoji, parsePageText } from './nlApi';
+import { fetchCollectionKdc, fetchSeoji, parsePageText } from './nl/api';
 
 export { parsePageText };
 

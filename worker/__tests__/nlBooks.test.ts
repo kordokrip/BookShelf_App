@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { Hono } from 'hono';
 import {
   parseCollectionBooks, cleanNlTitle, cleanPublisher, cleanIsbn, cleanNlDate, coverUrl, searchNlBooks, nlBookByIsbn,
-} from '../lib/nlBooks';
+} from '../lib/nl/books';
 import { searchRouter } from '../routes/search';
 import { createToken } from '../auth';
 import type { Bindings } from '../types';

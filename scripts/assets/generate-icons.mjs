@@ -1,6 +1,6 @@
 /**
  * PWA 아이콘·파비콘·소셜 이미지 생성 — 벡터 마스터(design/icons/*.svg)에서 모든 크기를 만든다.
- * 실행: node scripts/generate-icons.mjs  (iOS 스플래시까지: npm run pwa:assets)
+ * 실행: node scripts/assets/generate-icons.mjs  (iOS 스플래시까지: npm run pwa:assets)
  *
  * 이전에는 128px 비트맵 한 장을 4.5배 확대해 만들어 모든 아이콘이 흐리고 흰 점이 남았다(2026-09-27 에셋 감사).
  *
@@ -19,7 +19,7 @@ import { mkdirSync, readFileSync, writeFileSync, copyFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..');
 const SRC = join(ROOT, 'design/icons');
 const OUT = join(ROOT, 'public/icons');
 const svg = (name) => readFileSync(join(SRC, name));

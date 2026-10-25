@@ -1,13 +1,13 @@
 /**
  * src/lib/themePresets.ts(프리셋 정의) → src/styles/accent.css(CSS 변수) 생성.
- * 실행: node scripts/generate-accent-css.mjs   (프리셋 값을 바꾼 뒤 실행, 결과 CSS도 커밋)
+ * 실행: node scripts/assets/generate-accent-css.mjs   (프리셋 값을 바꾼 뒤 실행, 결과 CSS도 커밋)
  * 두 파일이 같은지는 src/lib/__tests__/themePresets.test.ts가 검사한다.
  */
 import { readFileSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..');
 const src = readFileSync(join(ROOT, 'src/lib/themePresets.ts'), 'utf8');
 const STEPS = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
 const parse = (list) => list.split(',').map((s) => s.trim().replace(/'/g, '')).filter(Boolean);
@@ -26,7 +26,7 @@ const block = ({ id, brand, brand2 }) => {
 };
 
 const css = `/*
- * 개인 앱 테마(강조색) — scripts/generate-accent-css.mjs가 src/lib/themePresets.ts에서 생성. 직접 고치지 말 것.
+ * 개인 앱 테마(강조색) — scripts/assets/generate-accent-css.mjs가 src/lib/themePresets.ts에서 생성. 직접 고치지 말 것.
  * 앱의 강조색은 Tailwind indigo·violet 클래스와 인라인 var(--brand-*)로 쓰인다. 아래 @theme inline이
  * indigo→--brand, violet→--brand2로 연결하므로 <html data-accent="ocean"> 하나로 앱 전체 강조색이 바뀐다.
  * 장르 색·생성 표지·앱 로고처럼 의미가 고정된 색은 hex를 그대로 써서 테마를 따르지 않는다.

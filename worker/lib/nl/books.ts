@@ -8,8 +8,8 @@
  * - ISBN: 소장자료(isbn) + 서지정보(쪽수·출간일·표지)를 함께
  * - 표지: 소장자료 imageUrl은 상대 경로("kolis/2022/KMO…_thumbnail.jpg") → https://cover.nl.go.kr/ 기준(실측 200 image/jpeg)
  */
-import { fetchSeojiDoc, parsePageText, type NlEnv } from './nlApi';
-import { cleanAuthor, toPlainText } from './nlLibrarianPicks';
+import { fetchSeojiDoc, parsePageText, type NlEnv } from './api';
+import { cleanAuthor, toPlainText } from './librarianPicks';
 
 export interface NlBook {
   title: string;

@@ -4,7 +4,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(__dirname, '..');
+const ROOT = join(__dirname, '../..');
 const OUTPUT_DIR = join(ROOT, 'public', 'ios-startup');
 const INDEX_HTML = join(ROOT, 'index.html');
 // 벡터 글리프(투명 배경 흰색) — 예전 icon-512.png(흐린 비트맵 + 사각 타일)를 얹으면 "사각형 속 사각형"으로 보였다

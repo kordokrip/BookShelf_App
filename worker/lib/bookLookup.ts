@@ -7,7 +7,7 @@
  * 네트워크·키 문제는 모두 null로 삼킨다(호출 측이 "근거 없음"으로 처리).
  */
 import { normalizeTitle } from './ai/aiRecommend';
-import { nlBookByIsbn, searchNlBooks, type NlBook } from './nlBooks';
+import { nlBookByIsbn, searchNlBooks, type NlBook } from './nl/books';
 
 export interface LookupEnv {
   KAKAO_REST_API_KEY?: string;

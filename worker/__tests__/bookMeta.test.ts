@@ -3,11 +3,11 @@ import {
   resolveBookMeta, fillMissingBookMeta, parsePageText, normalizeIsbn, bookMetaCacheKey,
   type BookMetaDeps, type BookMetaEnv,
 } from '../lib/bookMeta';
-import type { SeojiInfo } from '../lib/nlApi';
+import type { SeojiInfo } from '../lib/nl/api';
 
 /** 서지정보 대역 — 기본은 부가기호만 있는 흔한 경우 */
 const sj = (pages: number | null, addCodeKdc: string | null = null, kdc: string | null = null): SeojiInfo => ({ pages, addCodeKdc, kdc, tocUrl: null });
-import { genreFromKdc, kdcFromSeoji } from '../lib/kdcGenre';
+import { genreFromKdc, kdcFromSeoji } from '../lib/nl/kdcGenre';
 import { buildGenreMessages } from '../lib/ai/genreSuggestions';
 import type { BookMatch } from '../lib/bookLookup';
 

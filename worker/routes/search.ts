@@ -1,7 +1,7 @@
 /**
  * search 라우터 — 도서 검색 + 메타데이터 조회
  *
- * GET /api/search/books        — 카카오 검색, 실패·0건이면 국립중앙도서관 소장자료(lib/nlBooks.ts)
+ * GET /api/search/books        — 카카오 검색, 실패·0건이면 국립중앙도서관 소장자료(lib/nl/books.ts)
  * GET /api/search/books/isbn   — ISBN으로 단일 도서 조회 (카카오 → 국립중앙도서관)
  * GET /api/search/pagecount    — 쪽수 + 장르 (lib/bookMeta.ts)
  *
@@ -19,7 +19,7 @@ import type { Bindings } from '../types';
 import { rateLimit } from '../middleware/rateLimit';
 import { authMiddleware } from '../auth';
 import { resolveBookMeta } from '../lib/bookMeta';
-import { nlBookByIsbn, searchNlBooks, type NlBook } from '../lib/nlBooks';
+import { nlBookByIsbn, searchNlBooks, type NlBook } from '../lib/nl/books';
 
 // ─── 카카오 API 응답 타입 ────────────────────────────────────
 interface KakaoDocument {

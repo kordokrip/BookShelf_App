@@ -4,9 +4,9 @@
  * 응답 태그는 문서와 다르다 — 소개는 recomcontens(오타 그대로), 목차는 recommokcha, 내용은 HTML이 엔티티로 들어 있다.
  * 표지(recomfilepath)는 http→https 리다이렉트 뒤 User-Agent 없는 요청을 403으로 막아 /api/cover-proxy로 받는다.
  */
-import type { NlEnv } from './nlApi';
+import type { NlEnv } from './api';
 import { genreFromKdc } from './kdcGenre';
-import type { Genre } from './genres';
+import type { Genre } from '../genres';
 
 export interface LibrarianPick {
   id: string;
