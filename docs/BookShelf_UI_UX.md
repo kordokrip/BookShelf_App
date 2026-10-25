@@ -69,8 +69,7 @@
   - [9.0 EntryGate (진입 분기)](#90-entrygate-진입-분기)
   - [9.1 SplashPage (온보딩에 통합)](#91-splashpage-온보딩에-통합)
   - [9.2 OnboardingPage](#92-onboardingpage)
-  - [9.3 LoginPage](#93-loginpage)
-  - [9.4 SignUpPage](#94-signuppage)
+  - [9.3 LoginPage · 9.4 SignUpPage](#93-loginpage--94-signuppage--공용-화면-틀-authshell-56차-개편-책갈피를-꽂아-둔-자리)
   - [9.5 GoogleCallbackPage](#95-googlecallbackpage)
   - [9.6 LibraryPage (완독 서재)](#96-librarypage-완독-서재)
   - [9.7 ReadingPage (읽는 중)](#97-readingpage-읽는-중)
@@ -189,6 +188,7 @@ background: linear-gradient(135deg, #94A3B8 0%, #CBD5E1 100%)
 | `--bg-success-soft(-strong)` / `--text-success` | `#ECFDF5`(`#DCFCE7`) / `#065F46` | `#064E3B`(`#065F46`) / `#6EE7B7` | 타이머 빠른 실행 |
 | `--text-primary` / `--text-body` / `--text-secondary` | `#1E293B` / `#475569` / `#64748B` | `#F8FAFC` / `#CBD5E1` / `#94A3B8` | 제목 / 본문 / 보조 |
 | `--text-sun` / `--text-sat` | `#DC2626` / `#2563EB` | `#F87171` / `#60A5FA` | 달력 일·토요일 |
+| `--text-danger` | `#DC2626` | `#F87171` | 입력 오류 글자·테두리(로그인·가입, 56차) |
 | `--border-color` | `#E2E8F0` | `#334155` | 테두리 |
 
 ### 1.5 Cover Gradients (8종)
@@ -592,139 +592,44 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 
 ---
 
-### 9.3 LoginPage
+### 9.3 LoginPage · 9.4 SignUpPage — 공용 화면 틀 AuthShell (56차 개편 "책갈피를 꽂아 둔 자리")
 
-- **파일**: `src/app/pages/LoginPage.tsx` (~500줄)
-- **경로**: `/login`
+- **파일**: `src/app/components/auth/AuthShell.tsx`(화면 틀) · `authUi.tsx`(입력칸·버튼·구분선·머리말 공용) · `src/app/pages/LoginPage.tsx` · `SignUpPage.tsx`
+- **원칙**: 독서 기록에 맞게, 최신이지만 과하지 않게. 눈에 띄는 요소는 금빛 책갈피 하나. 디자인 근거는 `docs/sessions/2026-10-25-auth-redesign.md`
+- **폼은 한 번만 렌더링**: 예전에는 모바일·데스크톱용 폼을 두 벌 그려 입력칸 id가 겹치고 폭을 바꾸면 입력·단계가 따로 놀았다(회귀 테스트 `src/app/pages/__tests__/AuthPages.test.tsx`)
 - **자동 채움·접근성 (2026-09-27, 가입 화면 동일)**: 입력에 `autocomplete`(로그인 `username`·`current-password`, 가입 `name`·`email`·`new-password`) — iOS 키체인·안드로이드 비밀번호 관리자 자동 채움·강력한 비밀번호 제안. 라벨은 `htmlFor`로 입력과 연결, 비밀번호 보기 버튼은 44px + `aria-label`·`aria-pressed`, 가입 약관 동의는 `role="checkbox"` + `aria-checked`, 가입 폼은 `<form>`(Enter 제출·저장 제안). Root 밖 독립 화면(로그인·가입·책 등록·노트 검색·404)은 최상위를 `<main>` 랜드마크로.
 
-#### 반응형 레이아웃
+#### 화면 틀 (AuthShell)
 
 | 화면 | 구조 |
 |------|------|
-| **모바일** | 상단 38vh 그래디언트(바이올렛→인디고) + 하단 바텀시트(rounded-t-[28px], -mt-6) |
-| **데스크톱** | 좌측 50% 그래디언트 패널(앱 목업 카드) + 우측 50% 로그인 폼 카드 |
+| **모바일(<lg)** | 위쪽 낮은 히어로 띠(앱 아이콘 + BookShelf, 세리프 문장 22px, 한 줄 설명) → 아래 폼. 책갈피는 오른쪽 위에서 짧게(22×72px) |
+| **데스크톱(lg↑)** | 왼쪽 46% 히어로(스크롤해도 고정, 세리프 문장 38px, 아래쪽에 앱 아이콘 + BookShelf) + 오른쪽 폼(최대 380px, 왼쪽 정렬, 카드·그림자 없음). 책갈피는 위에서 34vh 길이로 내려와 문장 바로 위에서 멈춤 |
 
-#### 모바일 상단 그래디언트 영역
+- **히어로 색**: Dusk Ink `#1D2142` + 왼쪽 아래 잉걸불 빛(`#C8643A` 약 30% 방사형) + 오른쪽 위 서리빛(`#7C93C4` 16%) — 앱 아이콘(가을→겨울)의 하늘. 글자 `#F4F1EA`, 설명 `#C9C6D6`(대비 AA 이상)
+- **책갈피**: 금빛 그라데이션(`#D9902C → #F2BC57`), 아래 끝 V자. 첫 로딩에 한 번 위에서 내려온다(`.auth-ribbon`, 900ms). 동작 줄이기 설정이면 처음부터 멈춘 자리
+- **앱 아이콘**: 홈 화면 아이콘과 같은 `public/icons/apple-touch-icon.png`(가을→겨울). 앱 안 로고(AppLogo, 강조색)와 달리 고정 색
+- **글꼴**: 히어로 문장만 고운바탕(`font-book`), 나머지는 Pretendard
+- **폼 쪽 색**: 앱 테마 변수(`--bg-primary`·`--bg-card`·`--text-*`·`--border-color`)라 다크 모드를 따른다. 오류 `--text-danger`(56차 추가, 라이트 `#DC2626`·다크 `#F87171`), 확인 `--text-success`, 링크 `--text-accent`, 주요 버튼 `--brand-600` 단색(그라데이션 없음)
 
-- FloatingBookIcons: 7개 SVG 북 아이콘 장식 (`absolute`, 각 `rotate/opacity/size` 고유)
-- 로고: 64px 라운드 아이콘(rgba 배경 + blur), "BookShelf" 텍스트 17px Bold White
-- 슬로건: "나만의 독서 기록 공간" 14px, opacity 0.8
+#### 9.3 로그인 (`/login`)
 
-#### 데스크톱 좌측 패널
-
-- 동일 FloatingBookIcons
-- 로고 + "BookShelf" 28px Bold White
-- 앱 목업 카드: 가상의 독서 대시보드 UI 미리보기 (rounded-2xl, shadow-2xl)
-  - "오늘의 독서" 헤딩, "클린 아키텍처" 책 예시, Progress 65%, 별점, 읽기 기간
-  - QuickStats 3칸: 📚 22권 / 📖 3권 / 🎯 85%
-
-#### LoginForm
-
-**Google OAuth 버튼**:
-- GoogleLogo SVG (18px) + "Google로 계속하기"
-- `h-48px rounded-2xl`, 흰 배경, `border 1.5px #E2E8F0`
-- 클릭 → `accounts.google.com` OAuth 리다이렉트 (외부)
-
-**구분선**: "또는" 텍스트 + 좌우 `<hr>`
-
-**이메일 입력**:
-- `<input type="email">` + floating label "이메일"
-- 유효성: `validateEmail` 정규식 `/^[^\s@]+@[^\s@]+\.[^\s@]+$/`
-- 에러 표시: `⚠ emailError` (빨강 `#EF4444`)
-
-**비밀번호 입력**:
-- `<input type="password">` + floating label "비밀번호"
-- EyeToggle: EyeIcon SVG (show/hide), `absolute right-4`
-- 에러 표시: 실패 시 에러 메시지
-
-**로그인 버튼**:
-- `h-48px rounded-2xl w-full`, 인디고→바이올렛 그래디언트
-- 로딩 시: Spinner(animate-spin) + "로그인 중..."
-- disabled 조건: `!email || !password || isLoading`
+- 히어로 문장: "읽은 페이지가 / 흩어지지 않도록", 설명 "완독한 책과 마음에 남은 문장을 한곳에 모아 두세요."
+- 머리말(h1): "다시 오셨군요" / "읽던 곳부터 이어서 기록해요"
+- 순서: Google로 계속하기(UX-107, 이메일보다 먼저) → "또는 이메일로" 구분선 → 이메일·비밀번호(48px, 비밀번호 보기 토글 44px) → 휴면·로그인 오류 → [로그인](로딩 시 스피너 + "로그인 중...") → "처음 오셨나요? 회원가입"
+- 빈 비밀번호로 제출하면 입력칸이 오류 상태(`aria-invalid`) + 안내. 이메일 형식 오류는 `aria-describedby`로 연결
 - **API**: `authStore.login(email, password)` → 성공 시 `navigate("/")`
 
-**하단 링크**: "아직 계정이 없으신가요? **회원가입**" → `/signup`
+#### 9.4 회원가입 (`/signup`) — 4단계, 마지막 단계에서 가입
 
-#### AuthPreviewNav
-
-- 하단에 AuthPreviewNav 표시
-
----
-
-### 9.4 SignUpPage
-
-- **파일**: `src/app/pages/SignUpPage.tsx` (~740줄)
-- **경로**: `/signup`
-
-#### 반응형 레이아웃
-
-| 화면 | 구조 |
-|------|------|
-| **모바일** | 상단 28vh 그래디언트(바이올렛→인디고) + 하단 바텀시트(-mt-6 rounded-t-[28px]) |
-| **데스크톱** | 좌측 50% 그래디언트 + 우측 50% 폼 (max-w 440px) |
-
-#### 데스크톱 좌측 패널
-
-- FloatingBookIcons (6개)
-- 로고 + "BookShelf" 30px Bold White
-- 혜택 카드 3개:
-  - 📚 "서재 관리" / "읽은 책, 읽는 중인 책, 읽고 싶은 책을 체계적으로"
-  - 📊 "독서 통계" / "월별, 연도별 독서 통계와 목표 달성 현황을 한눈에"
-  - 🎯 "목표 설정" / "연간 독서 목표를 설정하고 매일 진도를 확인하세요"
-
-#### 4단계 위자드 (MultiStepForm)
-
-**StepIndicator** (Step 1/4 ~ 4/4):
-- 4개 원형(18px): 완료=`#10B981` 체크마크, 활성=`#4F46E5` + 외부 링 `#C7D2FE`, 미완료=흰색+`#E2E8F0` 테두리
-- 연결 바(28px): 완료=`#10B981`, 미완료=`#E2E8F0`
-- "Step N/4" 라벨 12px `#64748B`
-
-**Step 1 — FormContent (회원 정보)**:
-
-| 입력 | 타입 | placeholder | 유효성 | 에러 메시지 |
-|------|------|------------|--------|-----------|
-| 이름 | text | "이름을 입력해주세요" | 필수 | "⚠ 이름을 입력해주세요" |
-| 이메일 | email | "이메일 주소를 입력해주세요" | 정규식 | "⚠ 올바른 이메일 형식이 아닙니다" |
-| 비밀번호 | password | "비밀번호 (8자 이상)" | 8자+ | "⚠ 비밀번호는 8자 이상이어야 합니다" |
-| 비밀번호 확인 | password | "비밀번호를 다시 입력해주세요" | 일치 | "⚠ 비밀번호가 일치하지 않습니다" |
-
-- **EyeToggle**: 비밀번호/확인 각각 독립 (`showPw`, `showCf`)
-- **비밀번호 일치 시**: 테두리 `#10B981`, 배경 `#F0FDF4`, "✓ 비밀번호가 일치합니다" 녹색
-- **에러 배경**: `#FEF2F2` (연분홍)
-- **약관 체크박스**: 커스텀 20px, 체크 시 `#4F46E5` + SVG 체크마크
-  - "**이용약관** 및 **개인정보처리방침**에 동의합니다" (파란 강조)
-  - 미체크 시: "⚠ 약관에 동의해주세요"
-- **"회원가입" 버튼**: `h-48px`, disabled=slate 그래디언트 opacity 0.6
-- **하단 링크**: "이미 계정이 있으신가요? **로그인**" → `/login`
-
-**Step 2 — GenreScreen (장르 선택)**:
-- "좋아하는 장르를 선택해주세요" 20px Bold
-- "1개 이상 선택하면 시작할 수 있어요" 14px `#64748B`
-- 장르 칩: GENRE_CONFIG 19개 전체, 선택 토글
-- 선택 카운트: "N개 선택됨" 13px `#94A3B8`
-- "다음 →" 버튼: canProceed=1개 이상
-
-**Step 3 — GoalScreen (독서 목표)**:
-- "연간 독서 목표를 설정해주세요" 20px Bold
-- "나중에 언제든지 변경할 수 있어요" 14px `#64748B`
-- **NumberStepper**: min 1, max 100, unit "권", label "연간 목표"
-- 가이드 메시지 (인디고→바이올렛 그래디언트 카드):
-  - ≤6: 🌱 "한 달에 한 권씩이에요. 천천히 시작해봐요!"
-  - ≤15: 📚 "한 달에 한 권 이상! 좋은 목표예요 😊"
-  - ≤30: 🚀 "거의 격주로 한 권! 독서 고수네요 🔥"
-  - >30: 🌟 "하루 한 권에 도전! 대단한 목표예요 ⚡"
-- "다음 →" 버튼
-
-**Step 4 — CompleteScreen (완료)**:
-- 📚 이모지(48px) + "{name}님, 반가워요!" 22px Bold
-- "독서 여정을 시작해보세요! 📚" 15px `#64748B`
-- 요약 카드 (bg `#F8FAFC`, border `#E2E8F0`):
-  - 연간 목표: "📖 N권" (인디고 Bold)
-  - 선택한 장르 (N개): 배지 칩 나열
-- **"🚀 시작하기" 버튼**: `h-52px`, 로딩→"계정 생성 중..."
-- **API**: `authStore.register(name, email, password)` → `usersApi.updateProfile({ favorite_genres, reading_goal })` → `navigate("/")`
-- 에러 시: `setStep(1)`로 롤백 + 에러 메시지
+- 히어로 문장: "오늘부터 한 권씩, / 차곡차곡 쌓아 가요". 데스크톱 히어로에만 짧은 목록 3줄(금빛 lucide 아이콘): 한 서재 · 문장 노트 · 통계와 결산
+- **단계 표시**: 현재 단계 이름(계정 만들기 → 좋아하는 장르 → 올해 목표 → 준비 완료) + "N / 4" + 4칸 막대. `role="progressbar"` + `aria-label="가입 단계"` + `aria-valuetext`
+- **1 계정 만들기**: 이름·이메일·비밀번호(8자 이상)·비밀번호 확인(일치하면 초록 테두리 + 안내) → 저장하는 정보 안내(회색 상자) → 약관 동의(버튼 자체가 44px, 안쪽 20px 상자 — 전역 터치 규칙 때문에 막대처럼 늘어나던 문제 수정) → [다음](필수값·동의 전에는 비활성)
+- **2 좋아하는 장르**: GENRE_CONFIG 전체 칩(44px, `aria-pressed`), 하나 이상 골라야 [다음]
+- **3 올해 목표**: NumberStepper(1~100권) + 속도 안내(두 달에/한 달에/2주에/일주일에 한 권꼴)
+- **4 준비 완료**: 앱 아이콘 + "{이름}님의 서재가 준비됐어요" + 요약(올해 목표, 좋아하는 장르) → [시작하기](로딩 "서재를 만드는 중...")
+- **API**: `authStore.register` → (장르·목표가 기본값과 다르면) `usersApi.updateProfile({ favorite_genres, reading_goal })` → `navigate("/")`. 실패하면 1단계로 돌아가 오류 표시
+- 개발 서버에서는 AuthPreviewNav(소개·로그인·회원가입 바로가기)가 아래에 뜬다(`import.meta.env.DEV`만)
 
 ---
 
