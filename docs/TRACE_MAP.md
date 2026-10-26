@@ -3,6 +3,8 @@
 > 목적: 프로덕션 오류 발생 시 UI → Hook → API → DB 레이어를 빠르게 추적하기 위한 기준 문서
 > 기준: 실제 소스 코드. API 스펙이 바뀌면 이 문서를 같은 커밋에서 고친다(CLAUDE.md). 차수별 변경 내역은 `docs/CHANGELOG.md`, 문서 목록은 `docs/README.md`
 >
+> **보안 점검(2026-10-26, 57차)**: 계정 탈취·권한 우회·SSRF·CSP 보완 — 상세 `SECURITY.md` 8절, `docs/sessions/2026-10-26-security-audit.md`
+>
 > **최근 정리(2026-10-25, 53차)**: 호출처 없는 `GET /api/discover`(커뮤니티 둘러보기) 삭제, 국립중앙도서관 연동 경로 `worker/lib/nl/`(api·books·librarianPicks·kdcGenre)로 이동, 네이버 책 API 종료(52차) 반영
 
 ---
@@ -73,7 +75,7 @@
 | `/api/push/*` | `worker/routes/push.ts` | 엔드포인트별(대부분 auth 필요) |
 | `/api/discover/*` | `worker/routes/discover.ts` | `authMiddleware` (전체) |
 | `/api/admin/*` | `worker/routes/admin.ts` | `authMiddleware` + 관리자 권한 |
-| `GET /api/cover-proxy?url=` | `worker/index.ts` | 없음(허용 도메인만, 이미지 MIME·10MB 검사) — 45차: 받은 표지를 R2 `cover-cache/{sha256(url)}`에 저장해 재사용(`X-Cover-Cache: hit/miss`), 브라우저 캐시 30일 |
+| `GET /api/cover-proxy?url=` | `worker/index.ts` | 없음(정책 `lib/coverProxyPolicy.ts`: 허용 호스트 + 리다이렉트 끝 주소 재검사, 래스터 이미지만(SVG 거절), 10MB를 실제 바이트로도 검사 — 57차) — 45차: 받은 표지를 R2 `cover-cache/{sha256(url)}`에 저장해 재사용(`X-Cover-Cache: hit/miss`), 브라우저 캐시 30일 |
 | `GET *` | SPA 폴백 | 없음 (ASSETS 서빙). 48차: 등록되지 않은 `/api/*`는 폴백하지 않고 JSON 404 `{error:'Not Found'}` |
 
 ### 1-C. 검증 기반 자동 점검 (누락 방지)
@@ -507,8 +509,9 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 
 | Method | 경로 | 인증 | 요청 | 응답 | Worker 파일 |
 |---|---|---|---|---|---|
-| GET | `/api/auth/google/callback` | 없음 | `?code=` | redirect `/?token=...` | `routes/auth.ts` ★ (A-1) |
-| POST | `/api/auth/refresh` | 없음(쿠키) | Refresh Token 쿠키 | `{data:{token}}` | `routes/auth.ts` — rate limit 10회/60s |
+| GET | `/api/auth/google/callback` | 없음 | `?code=` | redirect `/#token=…&refreshToken=…&provider=google` (57차: ?쿼리 → #프래그먼트, 미인증 이메일은 `/auth/google/callback?error=google_unverified`) | `routes/auth.ts` ★ (A-1) |
+| POST | `/api/auth/refresh` | 없음(쿠키) | Refresh Token 쿠키 | `{data:{token}}` | `routes/auth.ts` — rate limit 10회/60s. 로그아웃으로 폐기된 토큰(D1 `revoked_refresh:{token}`)은 401 |
+| POST | `/api/auth/logout` | 없음(토큰이 자격) | Refresh Token 쿠키 또는 `{refreshToken}` | 204 + 쿠키 삭제 | `routes/auth.ts` — 57차. D1 폐기 표시 + KV 삭제, rate limit 20회/60s. 앱 로그아웃 때 자동 호출 |
 
 ### 사용자 (`/api/users`)
 
@@ -520,7 +523,6 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 | GET | `/api/users/:id` | **authMiddleware** | — | `{data: user}` (자신: 전체, 타인: 공개 필드) | `routes/users.ts` |
 
 > 48차 삭제: `GET /api/users/:id/stats`(로그인만 하면 남의 독서 통계를 볼 수 있었고 화면은 쓰지 않음 — 통계는 본인용 `GET /api/stats`), `GET /api/initial-data`(첫 화면 일괄 로드 — 45차 책 목록 1회 공유로 대체되어 호출처 없음).
-| POST | `/api/users` | **authMiddleware** | `{id, email, name, avatar_url?}` | `{data: user}` 201 | `routes/users.ts` |
 | PATCH | `/api/users/profile` | **authMiddleware** | `{name?, favorite_genres?, reading_goal?, avatar_url?, profile_emoji?, reminder_*?, weekly_report_enabled?, theme_accent?: 'indigo'\|'ocean'\|'forest'\|'sunset'\|'rose'\|'graphite'\|null, theme_mode?: 'auto'\|'light'\|'dark'\|null}` (zod 검증 ✅; 테마 필드는 0017, GET/PATCH 응답에 `theme_accent`·`theme_mode` 포함) | `{data}` (SELECT 시 role 포함 ★16차) | `routes/users.ts` |
 | DELETE | `/api/users/me` | **authMiddleware** + rate limit `delete_account` 5회/분 | `{password}`(비밀번호 계정) 또는 `{confirm_email}`(소셜 로그인 계정, 가입 이메일 재입력·대소문자 무시) | `{data:{deleted:true}}` · 403 비밀번호 불일치(44차: 401은 클라이언트가 토큰 만료로 보고 갱신·재시도하므로 403) · 403 관리자 · 400 이메일 불일치/누락 | `routes/users.ts` (FK CASCADE로 연관 데이터 삭제, `group_messages.deleted_by` NULL 처리, R2 `covers/{userId}/` 정리) |
 
@@ -553,8 +555,8 @@ STEP 4: UI(등록 확인) → useAddBook.mutate(bookData)
 | POST | `/api/books` | **authMiddleware** ✅ | CreateBookBody | `{data: Book}` 201 / `400`(wish 10권 초과) / `409`(wish 중복 제목) ★ | `routes/books.ts` · **51차**: 장르가 `기타`이거나 쪽수가 비면 응답 뒤 `waitUntil`로 `fillMissingBookMeta`(국립중앙도서관 KDC·쪽수 → AI) 보정 — 그사이 사용자가 바꾼 값은 덮어쓰지 않음 |
 | PUT | `/api/books/:id` | **authMiddleware** ✅ | UpdateBookBody (partial) — **보낸 필드만 바뀐다**(기본값 없음, 2026-10-03 수정 전에는 장르·표지·현재 페이지·우선순위가 기본값으로 덮였음). 비울 수 있는 필드(출판사·ISBN·완독일·메모·목표일·별점·총 페이지·하루 목표·표지 이미지)는 `null` 허용 | `{data: Book}` | `routes/books.ts`, 스키마 `lib/bookSchemas.ts` |
 | DELETE | `/api/books/:id` | **authMiddleware** ✅ | — | `{success: true}` | `routes/books.ts` |
-| POST | `/api/books/:id/cover` | **authMiddleware** ✅ | ArrayBuffer (`Content-Type: image/*`) | `{success, r2Key, coverUrl}` | `routes/books.ts` |
-| GET | `/api/books/:id/cover` | 없음 | — | `image/*` binary 또는 redirect | `routes/books.ts` |
+| POST | `/api/books/:id/cover` | **authMiddleware** ✅ | ArrayBuffer (`Content-Type: image/*`) | `{success, r2Key, coverUrl}` | `routes/books.ts` — 57차: 매직 바이트로 JPEG·PNG·WebP 확인, 저장 형식은 실제 형식 |
+| GET | `/api/books/:id/cover` | 없음 | — | `image/*` binary 또는 redirect | `routes/books.ts` — 57차: 외부 주소는 같은 출처 `/api/cover-proxy`로 리다이렉트(오픈 리다이렉트 제거), R2는 `covers/` 키만 |
 
 ### 독서 세션 (`/api/sessions`)
 
@@ -631,7 +633,7 @@ totals:       { totalPages: number; totalMinutes: number }
 |---|---|---|---|---|---|
 | GET | `/api/groups` | **authMiddleware** | — | `{data: Group[], count}` | 가입 모임만 (approved+pending), my_status 포함 |
 | POST | `/api/groups` | **authMiddleware** | `{name, description?, max_members?}` | `{data: Group}` 201 / **409** 중복 | 유저당 1개 제한 ★ |
-| GET | `/api/groups/:id` | **authMiddleware** | — | `{data: Group}` (members 포함, status/last_read_at) | members에 status 필드 포함 ★ |
+| GET | `/api/groups/:id` | **authMiddleware** | — | `{data: Group}` (members: user_id·name·avatar·emoji·role·status·joined_at) | 57차: 회원 이메일 미포함. 승인 회원이 아니면 승인된 회원만·`last_read_message_id` 제외 ★ |
 | POST | `/api/groups/:id/join` | **authMiddleware** | — | `{requested: true, status: "pending"}` | pending 가입 + 리더에게 알림 ★ |
 | POST | `/api/groups/:id/approve-member` | **authMiddleware** | `{userId}` | `{data: {approved: true}}` | 리더만. 요청자에게 승인 알림 ★ |
 | POST | `/api/groups/:id/reject-member` | **authMiddleware** | `{userId}` | `{data: {rejected: true}}` | 리더만. pending 멤버 삭제 ★ |
@@ -683,7 +685,7 @@ totals:       { totalPages: number; totalMinutes: number }
 | Method | 경로 | 인증 | 요청 | 응답 | 비고 |
 |---|---|---|---|---|---|
 | GET | `/api/push/vapid-key` | 없음 | — | `{key}` | VAPID 공개키 |
-| POST | `/api/push/subscribe` | **authMiddleware** | `{endpoint, keys:{p256dh, auth}}` (zod) | `{success: true}` | rate limit 5회/300s |
+| POST | `/api/push/subscribe` | **authMiddleware** | `{endpoint, keys:{p256dh, auth}}` (zod) | `{success: true}` | rate limit 5회/300s. 57차: endpoint는 https + 브라우저 푸시 서비스(FCM·Apple·Mozilla·Windows)만 |
 | DELETE | `/api/push/unsubscribe` | **authMiddleware** | — | `{success: true}` | |
 | GET | `/api/push/status` | **authMiddleware** | — | `{subscribed: boolean}` | |
 | POST | `/api/push/test` | **authMiddleware** | — | `{success: boolean, sent: number, total: number}` | 테스트 알림 발송, rate limit 3회/3600s |
@@ -917,11 +919,12 @@ Worker (routes/auth.ts):
   3. ALLOWED_EMAILS 게이트 확인 (설정된 경우)
   4. D1 조회/생성/최신화: SELECT/INSERT/UPDATE users (google_id 기준)
   5. createToken({sub, email}, JWT_SECRET) + createRefreshToken() (KV 저장, HttpOnly 쿠키)
-  6. redirect "${FRONTEND_URL}/?token={JWT}&provider=google"
+  2-1. verified_email !== true → redirect "${FRONTEND_URL}/auth/google/callback?error=google_unverified" (57차)
+  6. redirect "${FRONTEND_URL}/#token={JWT}&refreshToken=…&provider=google" (57차: #프래그먼트 — 서버 로그에 안 남음)
   실패 시: redirect "${FRONTEND_URL}/login?error=google_cancelled|google_token|google_userinfo"
 
 App.tsx (useEffect):
-  → URLSearchParams 'token' 감지
+  → readOAuthTokens(src/lib/oauthTokens.ts): #프래그먼트 우선, 옛 ?쿼리도 읽음
   → localStorage.setItem('auth_token', token)
   → URL 클린업 (window.history.replaceState)
   → checkAuth() 실행

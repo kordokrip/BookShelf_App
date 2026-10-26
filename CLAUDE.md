@@ -56,4 +56,6 @@ bash scripts/e2e-api-test.sh
 - 외부 도서 출처: 검색·ISBN은 카카오 → (실패·0건) 국립중앙도서관 소장자료. 네이버 책 API는 2026-07-31 종료돼 52차에 제거됨(다시 넣지 말 것). 국립중앙도서관 연동(서지·소장자료·목차·사서 추천·KDC 장르)은 `worker/lib/nl/`, 쪽수·장르 조합은 `worker/lib/bookMeta.ts`
 - AI 공급자 체인은 `worker/lib/ai/llm.ts`(Gemini → Workers AI → OpenRouter) — 현행 구성·결정 이력은 `docs/AI_PROVIDERS.md`
 - `VITE_` 환경 변수는 브라우저 번들에 그대로 실린다 — 비밀 값은 `VITE_` 없이 둔다. `vite.config.ts`가 비밀처럼 보이는 `VITE_` 이름(TOKEN·SECRET·PASSWORD·PRIVATE·API_KEY·_KEY)이면 빌드를 멈춘다. 공개 허용 목록은 `PUBLIC_VITE_VARS`
+- 보안 헤더·CSP는 `worker/lib/securityHeaders.ts` 한곳 + 정적 파일용 `public/_headers`(같은 값, 테스트가 비교). **index.html에 인라인 `<script>` 금지**(CSP가 막음 — 시작 전 스크립트는 `public/boot.js`)
+- 상태·폐기 표시처럼 즉시 일관돼야 하는 값은 KV가 아니라 D1(`counters`). 예: 로그아웃한 리프레시 토큰 폐기 표시(57차 — KV 삭제 전파 지연 동안 토큰이 되살아났다)
 - 문서 목록은 `docs/README.md`

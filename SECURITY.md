@@ -64,6 +64,7 @@ edge 실측(`wrangler tail`, 스테이징): 로그인 CPU 34~45ms(계정 단위 
 | POST /api/users/login (**계정 단위**, 실패만 셈) | 10회 실패 | 900초(15분) 고정 창 — 닿으면 맞는 비밀번호도 429 `login_locked`, 성공 시 기록 삭제. 키는 이메일 해시(`worker/lib/loginGuard.ts`) |
 | DELETE /api/users/me | 5회 | 60초 |
 | POST /api/auth/refresh | 10회 | 60초 |
+| POST /api/auth/logout | 20회 | 60초 |
 | POST /api/ai/book-summary/:bookId (AI 요약) | 사용자별 3회 | KST 하루(실제 생성 시에만 차감 — `ai_book_summary_count`) |
 | GET /api/ai/recommend | 사용자별 3회(`ai_rec`) | 600초(10분) — 실제 생성할 때만 소모(캐시·stale 응답은 무료) |
 | GET /api/ai/collections | 사용자별 3회(`ai_col`) | 600초(10분) — 실제 생성할 때만 소모 |
@@ -90,14 +91,17 @@ edge 실측(`wrangler tail`, 스테이징): 로그인 CPU 34~45ms(계정 단위 
 
 ## 4. 보안 헤더
 
-모든 응답에 다음 헤더가 포함됩니다:
+값은 `worker/lib/securityHeaders.ts` 한곳에서 정의한다. Worker가 만든 응답(API, `/wishlist` 같은 SPA 경로)은 `worker/index.ts` 미들웨어가, 정적 파일(첫 화면 `/`, JS·CSS·이미지·`sw.js`)은 `public/_headers`가 붙인다 — Workers Assets는 정적 파일을 Worker를 거치지 않고 내보내므로, 57차 전에는 첫 화면에 보안 헤더가 하나도 없었다. 두 곳이 같은지는 `worker/__tests__/securityHeaders.test.ts`가 확인한다(헤더를 바꾸면 두 파일을 같이 고칠 것).
 
+- `Content-Security-Policy` — `script-src 'self'`(인라인·eval 스크립트 금지), `frame-ancestors 'none'`, `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`. 스타일은 인라인 style 속성 때문에 `'unsafe-inline'`, 이미지는 표지 CDN 때문에 `https:`·`data:`·`blob:`, `connect-src`는 서비스 워커가 외부 표지를 캐시하므로 `https:`·`wss:`. 근거는 `securityHeaders.ts` 주석
+  - **index.html에 인라인 `<script>`를 넣지 말 것** — CSP가 막아 조용히 멈춘다. 시작 전 스크립트는 `public/boot.js`(테마 깜빡임 방지·iOS 표시·청크 오류 안전망). 테스트가 인라인 스크립트를 잡는다
 - `X-Frame-Options: DENY` — 클릭재킹 방지
 - `X-Content-Type-Options: nosniff` — MIME 스니핑 방지
 - `Strict-Transport-Security: max-age=31536000; includeSubDomains` — HTTPS 강제
 - `Referrer-Policy: strict-origin-when-cross-origin` — Referer 정보 제한
-- `Permissions-Policy: camera=(), microphone=(), geolocation=()` — 불필요 API 차단
+- `Permissions-Policy: camera=(self), microphone=(), geolocation=()` — 카메라는 같은 출처만(ISBN 바코드·사진 OCR). 57차 전 `camera=()`는 Worker 경유 화면에서 새로고침하면 카메라를 막았다
 - `X-Permitted-Cross-Domain-Policies: none` — Flash/PDF 크로스 도메인 방지
+- `Cross-Origin-Opener-Policy: same-origin` — 다른 창이 이 창을 조작하지 못하게
 
 ---
 
@@ -158,3 +162,22 @@ Credentials: true (HttpOnly 쿠키 지원)
 ## 7. 보안 연락처
 
 보안 취약점을 발견하시면 프로젝트 관리자에게 직접 연락해주세요.
+
+---
+
+## 8. 보안 점검 기록
+
+### 2026-10-26 (57차) — 소스·백엔드 전수 점검
+
+모든 API 경로의 인증·권한·SQL 범위, 외부 요청(SSRF), XSS 싱크, 헤더, 의존성을 코드에서 하나씩 확인했다. 원칙: **기능·편의성을 해치지 않는 보완만**. 상세·근거는 `docs/sessions/2026-10-26-security-audit.md`, 회귀 테스트는 `worker/__tests__/securityRoutes.test.ts` 등.
+
+| 심각도 | 고친 것 |
+|---|---|
+| 높음 | 구글 로그인이 `verified_email`을 보지 않고 같은 이메일의 기존 계정에 연결(계정 탈취) → 인증된 이메일만 |
+| 높음 | `POST /api/users`(옛 소셜 upsert)로 아무 사용자의 이름·사진 덮어쓰기 → 경로 삭제 |
+| 높음 | 모임 상세가 비회원에게도 회원 전원 이메일 노출 → 이메일 제거, 비회원에게는 승인 회원만 |
+| 높음 | 강퇴·탈퇴한 사람이 열린 채팅 연결로 계속 읽고 쓰기 → 메시지마다 회원 확인 + 강퇴·탈퇴·삭제 시 연결 끊기 + 분당 30회 |
+| 중간 | 다른 모임 후기 삭제, 첫 화면 보안 헤더 없음, CSP 없음, 표지 프록시(리다이렉트 우회·SVG), 표지 오픈 리다이렉트·임의 R2 읽기, 토큰이 URL 쿼리로 서버 로그에, 로그아웃해도 리프레시 토큰 유효(KV 전파 지연 중 되살아남 — D1 폐기 표시), 푸시 구독 SSRF |
+| 낮음 | 로그인 타이밍(없는 계정도 같은 비용), 업로드 매직 바이트, 노트 limit 상한, 운영 의존성(hono·zod·lodash·react-router) |
+
+남긴 위험(기능 보호 때문에 이번에 바꾸지 않음): OAuth `state`(로그인 CSRF — iOS 홈 화면 앱 구글 로그인 확인 필요), 이메일 가입 무인증·`ALLOWED_EMAILS`가 구글 경로에만 적용(가입 정책 결정), 토큰이 `localStorage`(CSP로 XSS 경로 차단), 개발 도구 의존성(vite 개발 서버·wrangler CLI 등 — 운영 번들 미포함, `npm audit`으로 확인).
