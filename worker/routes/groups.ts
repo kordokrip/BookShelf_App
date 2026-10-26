@@ -22,7 +22,7 @@ import { Jwt } from 'hono/utils/jwt';
 import type { Bindings } from '../types';
 import { authMiddleware } from '../auth';
 import { rateLimit } from '../middleware/rateLimit';
-import { broadcastToRoom } from '../lib/chatBroadcast';
+import { broadcastToRoom, kickFromRoom, KICK_ALL } from '../lib/chatBroadcast';
 
 export const groupsRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -167,14 +167,17 @@ groupsRouter.post('/', authMiddleware, zValidator('json', createGroupSchema), as
 
 /** GET /api/groups/:id — 그룹 상세 (멤버 목록 포함, status 표시) */
 groupsRouter.get('/:id', authMiddleware, async (c) => {
+  const userId = c.get('userId');
   const groupId = c.req.param('id');
   const db = c.env.DB;
 
+  // 회원 이메일은 보내지 않는다(화면 미사용) — 예전엔 비회원에게도 비공개 모임 회원 전원의 이메일이 나갔다(57차).
+  // 가입 신청 화면을 위해 비회원도 모임 정보는 보지만, 회원 목록은 승인된 회원만(신청자·읽음 위치 제외).
   const [groupRes, membersRes] = await db.batch([
     db.prepare('SELECT * FROM groups WHERE id = ?').bind(groupId),
     db.prepare(`
       SELECT gm.role, gm.joined_at, gm.status, gm.last_read_message_id,
-             u.id AS user_id, u.name, u.email, u.avatar_url, u.profile_emoji
+             u.id AS user_id, u.name, u.avatar_url, u.profile_emoji
       FROM group_members gm
       JOIN users u ON u.id = gm.user_id
       WHERE gm.group_id = ?
@@ -185,8 +188,14 @@ groupsRouter.get('/:id', authMiddleware, async (c) => {
   const group = groupRes?.results[0];
   if (!group) return c.json({ error: '그룹을 찾을 수 없습니다.' }, 404);
 
+  const members = (membersRes?.results ?? []) as Array<{ user_id: string; status: string; last_read_message_id: unknown }>;
+  const isApprovedMember = members.some((m) => m.user_id === userId && m.status === 'approved');
+  const visibleMembers = isApprovedMember
+    ? members
+    : members.filter((m) => m.status === 'approved').map(({ last_read_message_id: _hidden, ...m }) => m);
+
   return c.json({
-    data: { ...group, members: membersRes?.results ?? [] },
+    data: { ...group, members: visibleMembers },
   });
 });
 
@@ -201,6 +210,7 @@ groupsRouter.delete('/:id', authMiddleware, async (c) => {
   }
 
   await db.prepare('DELETE FROM groups WHERE id = ?').bind(groupId).run();
+  await kickFromRoom(c.env.CHAT_ROOM, groupId, KICK_ALL); // 열린 채팅 연결도 모두 닫는다
   return c.json({ data: { deleted: true } });
 });
 
@@ -323,6 +333,7 @@ groupsRouter.post('/:id/leave', authMiddleware, async (c) => {
   await db.prepare(
     'DELETE FROM group_members WHERE group_id = ? AND user_id = ?',
   ).bind(groupId, userId).run();
+  await kickFromRoom(c.env.CHAT_ROOM, groupId, userId); // 탈퇴한 사람의 열린 채팅 연결을 닫는다
 
   return c.json({ data: { left: true } });
 });
@@ -345,6 +356,7 @@ groupsRouter.delete('/:id/members/:userId', authMiddleware, async (c) => {
   await db.prepare(
     'DELETE FROM group_members WHERE group_id = ? AND user_id = ?',
   ).bind(groupId, targetUserId).run();
+  await kickFromRoom(c.env.CHAT_ROOM, groupId, targetUserId); // 추방한 사람의 열린 채팅 연결을 닫는다
 
   return c.json({ data: { removed: true } });
 });
@@ -745,12 +757,16 @@ groupsRouter.post('/:id/meetings/:meetingId/feedbacks', authMiddleware, rateLimi
 groupsRouter.delete('/:id/meetings/:meetingId/feedbacks/:feedbackId', authMiddleware, async (c) => {
   const userId = c.get('userId');
   const groupId = c.req.param('id');
+  const meetingId = c.req.param('meetingId');
   const feedbackId = c.req.param('feedbackId');
   const db = c.env.DB;
 
+  // 후기 → 일정 → 이 모임으로 범위를 묶는다 — 예전엔 아무 모임의 모임장이 다른 모임 후기를 id로 지울 수 있었다(57차)
   const feedback = await db.prepare(
-    'SELECT user_id FROM meeting_feedbacks WHERE id = ?',
-  ).bind(feedbackId).first<{ user_id: string }>();
+    `SELECT f.user_id FROM meeting_feedbacks f
+     JOIN group_meetings m ON m.id = f.meeting_id
+     WHERE f.id = ? AND f.meeting_id = ? AND m.group_id = ?`,
+  ).bind(feedbackId, meetingId, groupId).first<{ user_id: string }>();
 
   if (!feedback) return c.json({ error: '피드백을 찾을 수 없습니다.' }, 404);
 

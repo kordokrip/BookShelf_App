@@ -1,6 +1,12 @@
 import { DurableObject } from 'cloudflare:workers';
 import type { Bindings } from '../types';
-import { BROADCAST_PATH } from '../lib/chatBroadcast';
+import { BROADCAST_PATH, KICK_ALL, KICK_PATH } from '../lib/chatBroadcast';
+
+/** WebSocket 전송 한도 — HTTP 전송(POST /messages)과 같은 분당 30회 */
+export const WS_MESSAGE_LIMIT = 30;
+export const WS_MESSAGE_WINDOW_MS = 60_000;
+/** 회원이 아니게 된 연결을 닫을 때 쓰는 코드(4000~4999는 앱 정의) */
+export const WS_CLOSE_NOT_MEMBER = 4003;
 
 interface WsAttachment {
   userId: string;
@@ -14,12 +20,22 @@ interface WsAttachment {
  * 메시지 수신 → 룸 전체 브로드캐스트 → D1 write-behind (group_messages 테이블)
  * 접속/해제 시 Presence 브로드캐스트 (KV heartbeat 대체)
  * HTTP로 보낸 메시지·삭제는 워커가 POST /broadcast로 넘겨 같은 소켓들에 전달한다(2026-10-19~)
+ *
+ * 보안(57차): 메시지마다 승인된 회원인지 다시 확인하고(탈퇴·강퇴 뒤 열린 연결로 쓰기 차단), 탈퇴·강퇴·모임 삭제 때
+ * 워커가 POST /kick으로 그 회원의 연결을 끊는다. 전송은 회원별 분당 30회(HTTP와 같음, DO 메모리 — 잠들면 초기화).
  */
 export class ChatRoom extends DurableObject<Bindings> {
+  private readonly sendLog = new Map<string, { windowStart: number; count: number }>();
+
   override async fetch(request: Request): Promise<Response> {
     // 워커 내부 호출 전용(DO는 바인딩으로만 닿는다): HTTP로 저장된 메시지·삭제를 접속 중인 소켓에 전달
     if (request.method === 'POST' && new URL(request.url).pathname === BROADCAST_PATH) {
       this.broadcastRaw(await request.text());
+      return new Response(null, { status: 204 });
+    }
+    if (request.method === 'POST' && new URL(request.url).pathname === KICK_PATH) {
+      const { user_id } = await request.json<{ user_id?: string }>().catch(() => ({ user_id: undefined }));
+      if (user_id) this.kick(user_id);
       return new Response(null, { status: 204 });
     }
     if (request.headers.get('Upgrade') !== 'websocket') {
@@ -66,20 +82,33 @@ export class ChatRoom extends DurableObject<Bindings> {
     const content = rawContent.trim().replace(/<[^>]*>/g, '').slice(0, 1000);
     if (!content) return;
 
+    if (!this.allowSend(userId)) {
+      try { ws.send(JSON.stringify({ type: 'error', code: 'rate_limited' })); } catch { /* closed */ }
+      return;
+    }
+
+    // 승인된 회원인지 메시지마다 확인 — 원래 하던 사용자 조회에 조건을 합쳐 쿼리 수는 같다
+    const userRow = await this.env.DB.prepare(
+      `SELECT u.name, u.avatar_url, u.profile_emoji FROM users u
+       JOIN group_members gm ON gm.user_id = u.id AND gm.group_id = ? AND gm.status = 'approved'
+       WHERE u.id = ?`,
+    ).bind(groupId, userId).first<{ name: string; avatar_url: string | null; profile_emoji: string | null }>();
+    if (!userRow) {
+      try { ws.close(WS_CLOSE_NOT_MEMBER, 'not a member'); } catch { /* already closed */ }
+      this.broadcastPresence(ws);
+      return;
+    }
+
     const messageId = crypto.randomUUID();
     const createdAt = new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '');
-
-    const userRow = await this.env.DB.prepare(
-      'SELECT name, avatar_url, profile_emoji FROM users WHERE id = ?',
-    ).bind(userId).first<{ name: string; avatar_url: string | null; profile_emoji: string | null }>();
 
     const msgData = {
       id: messageId,
       group_id: groupId,
       user_id: userId,
-      user_name: userRow?.name ?? '알 수 없음',
-      avatar_url: userRow?.avatar_url ?? null,
-      profile_emoji: userRow?.profile_emoji ?? null,
+      user_name: userRow.name ?? '알 수 없음',
+      avatar_url: userRow.avatar_url ?? null,
+      profile_emoji: userRow.profile_emoji ?? null,
       content,
       deleted_at: null,
       created_at: createdAt,
@@ -106,6 +135,29 @@ export class ChatRoom extends DurableObject<Bindings> {
   override async webSocketError(ws: WebSocket): Promise<void> {
     try { ws.close(); } catch { /* already closed */ }
     this.broadcastPresence(ws);
+  }
+
+  /** 회원별 고정 창 전송 한도 */
+  private allowSend(userId: string, now = Date.now()): boolean {
+    const cur = this.sendLog.get(userId);
+    if (!cur || now - cur.windowStart >= WS_MESSAGE_WINDOW_MS) {
+      this.sendLog.set(userId, { windowStart: now, count: 1 });
+      return true;
+    }
+    if (cur.count >= WS_MESSAGE_LIMIT) return false;
+    cur.count += 1;
+    return true;
+  }
+
+  /** 그 회원(또는 KICK_ALL이면 전원)의 연결을 닫는다 */
+  private kick(userId: string): void {
+    for (const s of this.ctx.getWebSockets()) {
+      try {
+        const att = s.deserializeAttachment() as WsAttachment | null;
+        if (userId === KICK_ALL || att?.userId === userId) s.close(WS_CLOSE_NOT_MEMBER, 'membership revoked');
+      } catch { /* already closed */ }
+    }
+    this.broadcastPresence();
   }
 
   private broadcastRaw(payload: string): void {

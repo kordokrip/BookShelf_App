@@ -19,13 +19,13 @@ export interface Group {
 export interface GroupMember {
   user_id: string;
   name: string;
-  email: string;
   avatar_url: string | null;
   profile_emoji: string | null;
   role: string;
   status: string; // 'approved' | 'pending'
   joined_at: string;
-  last_read_message_id: string | null;
+  /** 승인된 회원에게만 온다(비회원에게는 신청자·읽음 위치를 보내지 않음, 이메일은 아무에게도 안 보냄 — 57차) */
+  last_read_message_id?: string | null;
 }
 
 export interface Notification {
