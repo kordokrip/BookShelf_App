@@ -26,21 +26,18 @@ import { achievementsRouter } from './routes/achievements';
 import { shouldServeSpaFallback } from './lib/spaFallback';
 import { isPregenerateWindow, pregenerateDailyCards } from './lib/dailyCardService';
 import { pruneExpiredCounters } from './lib/counters';
+import { SECURITY_HEADERS } from './lib/securityHeaders';
+import { COVER_MAX_BYTES, isAllowedCoverFinalUrl, isAllowedCoverUrl, isRasterImageType } from './lib/coverProxyPolicy';
 export { ChatRoom } from './durable/ChatRoom';
 export { GeminiProxy } from './durable/GeminiProxy';
 
 // ─── App 인스턴스 ─────────────────────────────────────────────
 const app = new Hono<{ Bindings: Bindings }>();
 
-// ─── SEC-03: 보안 응답 헤더 ───────────────────────────────────
+// ─── SEC-03: 보안 응답 헤더 — 값은 lib/securityHeaders.ts 한곳(정적 파일은 public/_headers가 같은 값) ──
 app.use('*', async (c, next) => {
   await next();
-  c.header('X-Frame-Options', 'DENY');
-  c.header('X-Content-Type-Options', 'nosniff');
-  c.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  c.header('Referrer-Policy', 'strict-origin-when-cross-origin');
-  c.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  c.header('X-Permitted-Cross-Domain-Policies', 'none');
+  for (const [name, value] of Object.entries(SECURITY_HEADERS)) c.header(name, value);
 });
 
 // ─── ARCH-03: 요청 추적 ID ───────────────────────────────────
@@ -112,16 +109,7 @@ app.get('/api/health', async (c) => {
 });
 
 // ─── 책 표지 이미지 프록시 ────────────────────────────────────
-// 카카오/네이버 CDN 이미지를 CORS 없이 서빙 (PWA 서비스워커 캐시 문제 해결)
-const COVER_PROXY_ALLOWED_DOMAINS = [
-  'search1.kakaocdn.net',
-  'search2.kakaocdn.net',
-  'shopping.phinf.naver.net',
-  'books.google.com',
-  'covers.openlibrary.org',
-  'nl.go.kr', // 국립중앙도서관 사서추천도서 표지(www.nl.go.kr 포함)
-];
-
+// 카카오/네이버 CDN 이미지를 CORS 없이 서빙 (PWA 서비스워커 캐시 문제 해결). 허용 호스트·형식·크기 정책은 lib/coverProxyPolicy.ts
 /** 원본 표지 요청 헤더 — 국립중앙도서관 표지는 User-Agent 없는 요청을 403으로 막는다(2026-10-25 실측) */
 const COVER_FETCH_HEADERS = { 'User-Agent': 'Mozilla/5.0 (compatible; BookShelf/1.0)' };
 
@@ -144,23 +132,19 @@ app.get('/api/cover-proxy', async (c) => {
     return c.json({ error: '잘못된 URL 인코딩입니다.' }, 400);
   }
 
-  let hostname: string;
   try {
-    hostname = new URL(decoded).hostname;
+    new URL(decoded);
   } catch {
     return c.json({ error: '잘못된 URL 형식입니다.' }, 400);
   }
-
-  const isAllowed = COVER_PROXY_ALLOWED_DOMAINS.some(
-    (d) => hostname === d || hostname.endsWith('.' + d),
-  );
-  if (!isAllowed) return c.json({ error: '허용되지 않는 도메인입니다.' }, 403);
+  if (!isAllowedCoverUrl(decoded)) return c.json({ error: '허용되지 않는 도메인입니다.' }, 403);
 
   // R2 캐시: 표지마다 매번 원본(카카오 CDN 등)을 다시 받느라 장당 0.9~1.1초 걸렸다(2026-10-11 운영 측정).
   // 한 번 받은 표지는 R2에 두고 다음부터 거기서 준다. (Cache API는 workers.dev 주소에서 동작이 보장되지 않아 R2를 쓴다)
   const r2Key = `cover-cache/${await sha256Hex(decoded)}`;
   const stored = await c.env.R2.get(r2Key).catch(() => null);
-  if (stored) {
+  // 예전 정책으로 저장된 비래스터(SVG 등) 캐시는 내주지 않고 다시 받는다(아래에서 거절됨)
+  if (stored && isRasterImageType(stored.httpMetadata?.contentType)) {
     return new Response(stored.body, {
       headers: {
         'Content-Type': stored.httpMetadata?.contentType ?? 'image/jpeg',
@@ -173,22 +157,29 @@ app.get('/api/cover-proxy', async (c) => {
 
   try {
     const upstream = await fetch(decoded, { redirect: 'follow', headers: COVER_FETCH_HEADERS });
+    // 리다이렉트를 따라간 끝 주소도 허용 호스트여야 한다(허용 호스트를 거쳐 임의 주소로 가는 우회 차단)
+    if (upstream.url && !isAllowedCoverFinalUrl(upstream.url)) {
+      return c.json({ error: '허용되지 않는 도메인입니다.' }, 403);
+    }
     if (!upstream.ok) return c.json({ error: '이미지를 가져오는데 실패했습니다.' }, 502);
 
     const contentType = upstream.headers.get('content-type') ?? '';
-    // SEC-10: Content-Type 검증 — 이미지만 서빙
-    if (!contentType.startsWith('image/')) {
+    // SEC-10: 래스터 이미지만 서빙 — SVG는 스크립트를 품을 수 있다(우리 출처에서 열리면 저장형 XSS)
+    if (!isRasterImageType(contentType)) {
       return c.json({ error: '이미지가 아닌 응답입니다.' }, 502);
     }
 
-    // SEC-10: 응답 크기 제한 (10MB)
+    // SEC-10: 응답 크기 제한 — 헤더로 먼저, 헤더가 없거나 틀려도 실제 바이트로 한 번 더
     const size = parseInt(upstream.headers.get('content-length') ?? '0');
-    if (size > 10 * 1024 * 1024) {
+    if (size > COVER_MAX_BYTES) {
       return c.json({ error: '이미지가 너무 큽니다.' }, 413);
     }
 
     // 본문을 한 번 읽어 응답과 R2 저장에 같이 쓴다(표지는 수십 KB)
     const bytes = await upstream.arrayBuffer();
+    if (bytes.byteLength > COVER_MAX_BYTES) {
+      return c.json({ error: '이미지가 너무 큽니다.' }, 413);
+    }
     c.executionCtx.waitUntil(
       c.env.R2.put(r2Key, bytes, { httpMetadata: { contentType } }).catch(() => undefined),
     );
