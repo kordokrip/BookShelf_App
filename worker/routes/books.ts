@@ -28,6 +28,7 @@ import { rateLimit } from '../middleware/rateLimit';
 import { parseBookIds, selectTargetBooks, suggestGenres } from '../lib/ai/genreSuggestions';
 import { fillMissingBookMeta } from '../lib/bookMeta';
 import { FALLBACK_GENRE } from '../lib/genres';
+import { sniffImageType } from '../lib/imageBytes';
 
 export const booksRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -435,13 +436,19 @@ booksRouter.post('/:id/cover', authMiddleware, async (c) => {
     return c.json({ error: '파일 크기는 2MB를 초과할 수 없습니다.' }, 400);
   }
 
+  // 실제 바이트로 형식 확인(헤더는 보내는 쪽이 정한다) — 이미지가 아니면 거절, 저장 형식은 실제 형식으로
+  const actualType = sniffImageType(body);
+  if (!actualType) {
+    return c.json({ error: '이미지 파일만 업로드 가능합니다 (image/jpeg, image/png, image/webp)' }, 400);
+  }
+
   // R2 키: covers/{userId}/{bookId}.{ext}
-  const ext = contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg';
+  const ext = actualType === 'image/png' ? 'png' : actualType === 'image/webp' ? 'webp' : 'jpg';
   const r2Key = `covers/${userId}/${bookId}.${ext}`;
 
   await c.env.R2.put(r2Key, body, {
     httpMetadata: {
-      contentType,
+      contentType: actualType,
       cacheControl: 'public, max-age=31536000',
     },
     customMetadata: {
@@ -477,13 +484,17 @@ booksRouter.get('/:id/cover', async (c) => {
 
   const coverValue = row.cover_image;
 
-  // 외부 URL(카카오 등)이면 리다이렉트
-  if (coverValue.startsWith('http')) {
-    return c.redirect(coverValue);
+  // 외부 URL이면 같은 출처 표지 프록시로 보낸다 — 프록시가 허용 호스트·형식을 검사한다.
+  // 예전에는 저장된 주소로 바로 리다이렉트해 오픈 리다이렉트가 됐다(57차). 서버는 r2:// 표지에만 이 경로를 쓴다.
+  if (/^https?:\/\//i.test(coverValue)) {
+    return c.redirect(`/api/cover-proxy?url=${encodeURIComponent(coverValue)}`);
   }
 
-  // r2:// prefix 제거 (레거시 raw 키도 지원)
+  // r2:// prefix 제거 (레거시 raw 키도 지원) — 표지 업로드가 쓴 covers/ 아래만 읽는다
   const r2Key = coverValue.startsWith('r2://') ? coverValue.slice(5) : coverValue;
+  if (!r2Key.startsWith('covers/') || r2Key.includes('..')) {
+    return c.json({ error: '표지 이미지가 없습니다.' }, 404);
+  }
 
   const object = await c.env.R2.get(r2Key);
   if (!object) return c.json({ error: 'R2에서 이미지를 찾을 수 없습니다.' }, 404);

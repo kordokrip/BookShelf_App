@@ -5,6 +5,13 @@
  */
 import { z } from 'zod';
 
+/**
+ * 표지 주소는 http(s)만 — z.string().url()은 r2:·javascript:·data:도 통과시켰다(57차 보안 점검).
+ * r2:// 값은 서버(표지 업로드)만 쓴다. 사용자가 넣으면 GET /api/books/:id/cover가 임의 R2 키를 읽을 수 있었다.
+ * 프론트는 항상 https 주소(검색 결과·프록시 주소)를 보낸다.
+ */
+const coverImageUrl = z.string().url().refine((v) => /^https?:\/\//i.test(v), { message: '표지 주소는 http(s)만 쓸 수 있습니다.' });
+
 const bookBaseSchema = z.object({
   title: z.string().min(1).max(200),
   author: z.string().min(1).max(100),
@@ -13,7 +20,7 @@ const bookBaseSchema = z.object({
   genre: z.string().max(50).optional(),
   cover_emoji: z.string().optional(),
   cover_color: z.string().optional(),
-  cover_image: z.string().url().optional(),
+  cover_image: coverImageUrl.optional(),
   status: z.enum(['done', 'reading', 'wish']),
   rating: z.number().int().min(1).max(5).optional(),
   finished_date: z.string().optional(),

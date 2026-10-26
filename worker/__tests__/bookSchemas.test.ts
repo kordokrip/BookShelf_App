@@ -27,3 +27,14 @@ describe('createBookSchema', () => {
     expect(r).toMatchObject({ genre: '기타', cover_emoji: '📚', current_page: 0, priority: 5 });
   });
 });
+
+describe('표지 주소(cover_image) — http(s)만 (57차 보안)', () => {
+  it('https·http 주소는 통과', () => {
+    expect(createBookSchema.safeParse({ title: 't', author: 'a', status: 'wish', cover_image: 'https://search1.kakaocdn.net/x.jpg' }).success).toBe(true);
+    expect(createBookSchema.safeParse({ title: 't', author: 'a', status: 'wish', cover_image: 'http://books.google.com/x' }).success).toBe(true);
+  });
+  it.each(['r2://covers/u/b.jpg', 'javascript:alert(1)', 'data:image/svg+xml,<svg/>'])('%s는 거절', (v) => {
+    expect(createBookSchema.safeParse({ title: 't', author: 'a', status: 'wish', cover_image: v }).success).toBe(false);
+    expect(updateBookSchema.safeParse({ cover_image: v }).success).toBe(false);
+  });
+});

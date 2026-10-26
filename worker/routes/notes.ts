@@ -153,8 +153,9 @@ notesRouter.get('/', authMiddleware, async (c) => {
   // Phase 4: AI 태그 필터 — tags(JSON 배열)에 정확히 일치하는 값이 있는 노트
   const tag = c.req.query('tag')?.trim() || undefined;
   const TAG_SQL = 'EXISTS (SELECT 1 FROM json_each(COALESCE(tags, \'[]\')) WHERE value = ?)';
-  const limit = parseInt(c.req.query('limit') ?? '100');
-  const offset = parseInt(c.req.query('offset') ?? '0');
+  // 상한·하한을 둔다(57차) — 예전엔 limit 상한이 없어 한 요청으로 아주 큰 목록을 끌어낼 수 있었다. 프론트 기본값은 100
+  const limit = Math.min(Math.max(1, parseInt(c.req.query('limit') ?? '100', 10) || 100), 1000);
+  const offset = Math.max(0, parseInt(c.req.query('offset') ?? '0', 10) || 0);
 
   // search 파라미터가 있을 때 FTS5 경로 (LIKE 폴백 포함)
   if (search) {

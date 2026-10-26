@@ -22,8 +22,28 @@ import { getKstSlot, getKstDayOfWeek, calcStreak } from '../lib/reminderUtils';
 export const pushRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
 // ─── 스키마 검증 ──────────────────────────────────────────────
+/**
+ * 브라우저 푸시 서비스 주소만 구독으로 받는다(57차 보안 점검). 예전엔 아무 URL이나 받아, 서버가 알림을 보낼 때
+ * 임의 주소로 요청을 보낼 수 있었다(SSRF). 운영 구독은 FCM·Apple뿐(2026-10-26 집계).
+ * 크롬·안드로이드·삼성·오페라 = FCM, 파이어폭스 = Mozilla, 사파리·iOS = Apple, 엣지 = Windows Push.
+ */
+export const PUSH_SERVICE_DOMAINS = [
+  'fcm.googleapis.com',
+  'android.googleapis.com',
+  'push.services.mozilla.com',
+  'push.apple.com',
+  'notify.windows.com',
+];
+
+export function isPushServiceEndpoint(raw: string): boolean {
+  let url: URL;
+  try { url = new URL(raw); } catch { return false; }
+  if (url.protocol !== 'https:') return false;
+  return PUSH_SERVICE_DOMAINS.some((d) => url.hostname === d || url.hostname.endsWith('.' + d));
+}
+
 const subscribeSchema = z.object({
-  endpoint: z.string().url(),
+  endpoint: z.string().url().max(2048).refine(isPushServiceEndpoint, { message: '지원하지 않는 푸시 서비스 주소입니다.' }),
   keys: z.object({
     p256dh: z.string().min(1),
     auth: z.string().min(1),
