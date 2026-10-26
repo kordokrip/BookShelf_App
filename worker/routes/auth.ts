@@ -11,7 +11,7 @@
  *   - KV에서 Refresh Token 검증 후 새 JWT 발급
  *   - Rate Limit: 10회/분 (브루트포스 방지)
  *
- * POST /api/auth/logout — Refresh Token 폐기(KV 삭제) + 쿠키 삭제, 항상 204 (57차)
+ * POST /api/auth/logout — Refresh Token 폐기(D1 폐기 표시 + KV 삭제) + 쿠키 삭제, 항상 204 (57차)
  *
  * 보안:
  *   - Refresh Token은 HttpOnly Secure SameSite=Strict 쿠키로 전달
@@ -19,7 +19,7 @@
  */
 import { Hono } from 'hono';
 import type { Bindings, DbUser } from '../types';
-import { createToken, createRefreshToken, verifyRefreshToken } from '../auth';
+import { createToken, createRefreshToken, verifyRefreshToken, revokeRefreshToken, isRefreshTokenRevoked } from '../auth';
 import { rateLimit } from '../middleware/rateLimit';
 import { logActivity } from './admin';
 import { dormantBody } from '../lib/accountHelpers';
@@ -214,6 +214,10 @@ authRouter.post(
       return c.json({ error: 'refreshToken이 필요합니다.' }, 400);
     }
 
+    // 로그아웃으로 폐기된 토큰은 KV에 아직 남아 있어도(전파 지연) 거절한다 — 아래 TTL 연장 쓰기로 되살리지 않게 먼저 확인
+    if (await isRefreshTokenRevoked(c.env.DB, refreshToken)) {
+      return c.json({ error: '유효하지 않거나 만료된 토큰입니다.' }, 401);
+    }
     const userId = await verifyRefreshToken(refreshToken, c.env.KV);
     if (!userId) {
       return c.json({ error: '유효하지 않거나 만료된 토큰입니다.' }, 401);
@@ -264,7 +268,7 @@ authRouter.post(
       refreshToken = typeof body.refreshToken === 'string' ? body.refreshToken : '';
     }
     if (/^[0-9a-f-]{36}$/i.test(refreshToken)) {
-      await c.env.KV.delete(`refresh:${refreshToken}`).catch((err) => console.error('[auth/logout] 폐기 실패:', err));
+      await revokeRefreshToken(c.env.DB, c.env.KV, refreshToken).catch((err) => console.error('[auth/logout] 폐기 실패:', err));
     }
     c.header('Set-Cookie', 'refreshToken=; HttpOnly; Secure; SameSite=Strict; Path=/api/auth; Max-Age=0');
     return c.body(null, 204);

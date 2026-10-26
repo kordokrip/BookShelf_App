@@ -2,6 +2,7 @@ import { createMiddleware } from 'hono/factory';
 import { Jwt } from 'hono/utils/jwt';
 import type { Bindings } from './types';
 import { dormantKey, dormantBody } from './lib/accountHelpers';
+import { acquireLock, readCounter } from './lib/counters';
 
 /** JWT payload */
 export interface JwtPayload {
@@ -39,6 +40,29 @@ export async function verifyRefreshToken(
   kv: KVNamespace,
 ): Promise<string | null> {
   return kv.get(`refresh:${token}`);
+}
+
+const REFRESH_TTL_SEC = 60 * 60 * 24 * 30;
+export const revokedRefreshKey = (token: string) => `revoked_refresh:${token}`;
+
+/**
+ * 리프레시 토큰 폐기(로그아웃) — D1에 폐기 표시를 남기고 KV에서도 지운다(57차).
+ * KV 삭제는 전 세계에 퍼지기까지 최대 약 1분 걸려, 그 사이 갱신 요청이 지운 토큰을 읽고 TTL 연장 쓰기로 되살렸다
+ * (스테이징 재현: 로그아웃 2초 뒤 갱신 200). D1은 즉시 일관되므로 갱신 경로가 먼저 확인한다(ADR-005와 같은 이유).
+ */
+export async function revokeRefreshToken(db: D1Database, kv: KVNamespace, token: string): Promise<void> {
+  await acquireLock(db, revokedRefreshKey(token), REFRESH_TTL_SEC);
+  await kv.delete(`refresh:${token}`).catch((err) => console.error('[auth] KV 리프레시 토큰 삭제 실패(D1 폐기 표시로 막힘):', err));
+}
+
+/** 폐기된 토큰인지 — D1 오류면 막지 않는다(가용성 우선, 한도 카운터와 같은 원칙) */
+export async function isRefreshTokenRevoked(db: D1Database, token: string): Promise<boolean> {
+  try {
+    return (await readCounter(db, revokedRefreshKey(token))) > 0;
+  } catch (err) {
+    console.error('[auth] 폐기 표시 조회 실패 — 통과:', err);
+    return false;
+  }
 }
 
 /**

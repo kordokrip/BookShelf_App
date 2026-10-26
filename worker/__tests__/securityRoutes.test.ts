@@ -188,6 +188,19 @@ describe('#11 로그아웃 — 리프레시 토큰 서버 폐기', () => {
     expect(kv.store.has(`refresh:${token}`)).toBe(false);
     expect(res.headers.get('Set-Cookie')).toContain('Max-Age=0');
   });
+
+  it('KV 삭제가 아직 안 퍼진 상태(옛 값이 읽힘)에서도 로그아웃한 토큰으로는 갱신이 안 되고, 되살아나지 않는다', async () => {
+    const { db, kv, call } = setup();
+    seedUsers(db, 'u1');
+    const token = crypto.randomUUID();
+    kv.store.set(`refresh:${token}`, 'u1');
+    const body = JSON.stringify({ refreshToken: token });
+    const json = { 'Content-Type': 'application/json' };
+    expect((await call('/api/auth/refresh', { method: 'POST', headers: json, body })).status).toBe(200); // 로그아웃 전: 정상
+    await call('/api/auth/logout', { method: 'POST', headers: json, body });
+    kv.store.set(`refresh:${token}`, 'u1'); // 전파 지연 흉내 — 다른 지역에서는 아직 옛 값이 읽힌다
+    expect((await call('/api/auth/refresh', { method: 'POST', headers: json, body })).status).toBe(401);
+  });
 });
 
 describe('#1·#10 구글 로그인 — 인증된 이메일만, 토큰은 #프래그먼트로', () => {
