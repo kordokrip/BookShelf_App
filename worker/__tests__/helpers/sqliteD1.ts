@@ -26,7 +26,16 @@ export function makeSqliteD1(migrations: string[] = ['0020_counters.sql']): D1Da
     };
     return stmt;
   };
-  return { prepare, raw } as unknown as D1Database & { raw: DatabaseSync };
+  // D1 batch: 각 문장을 순서대로 실행해 결과 배열을 돌려준다(읽기 문장은 results, 쓰기 문장은 빈 results)
+  const batch = async (stmts: Array<ReturnType<typeof prepare>>) => Promise.all(stmts.map((st) => st.all()));
+  return { prepare, batch, raw } as unknown as D1Database & { raw: DatabaseSync };
+}
+
+/** 전체 스키마(worker/db/schema.sql)로 만든 D1 대역 — 라우트 권한 테스트용 */
+export function makeSchemaD1(): D1Database & { raw: DatabaseSync } {
+  const db = makeSqliteD1([]);
+  db.raw.exec(readFileSync(path.resolve(__dirname, '../../db/schema.sql'), 'utf8'));
+  return db;
 }
 
 /** 키 접두사가 같은 카운터 행들 (테스트에서 한도 소모 확인용, 동기) */

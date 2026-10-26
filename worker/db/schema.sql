@@ -9,7 +9,8 @@
 -- 마이그레이션 이력 확인:
 --   npx wrangler d1 migrations list bookshelf-db --remote
 --
--- 이 파일은 migrations/0001~0012 를 순서대로 적용한 결과를 나타냅니다.
+-- 이 파일은 migrations/ 전체를 순서대로 적용한 결과를 나타냅니다(테이블·인덱스 이름은
+-- worker/__tests__/schemaSync.test.ts가 마이그레이션 결과와 비교한다 — 마이그레이션을 추가하면 이 파일도 고칠 것).
 -- 마지막 갱신: 0012_soft_delete_messages
 -- ============================================================
 
@@ -38,7 +39,6 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_users_email     ON users (email);
 CREATE INDEX IF NOT EXISTS idx_users_status    ON users (status);
 CREATE INDEX IF NOT EXISTS idx_users_kakao_id  ON users (kakao_id)  WHERE kakao_id  IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_users_google_id ON users (google_id) WHERE google_id IS NOT NULL;
@@ -77,7 +77,6 @@ CREATE TABLE IF NOT EXISTS books (
   updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_books_user_id ON books (user_id);
 CREATE INDEX IF NOT EXISTS idx_books_status  ON books (user_id, status);
 CREATE INDEX IF NOT EXISTS idx_books_genre   ON books (user_id, genre);
 -- 0019: 목록 정렬(created_at DESC)까지 인덱스로
@@ -102,7 +101,6 @@ CREATE TABLE IF NOT EXISTS reading_sessions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_sessions_book  ON reading_sessions (book_id);
-CREATE INDEX IF NOT EXISTS idx_sessions_user  ON reading_sessions (user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_date  ON reading_sessions (user_id, session_date);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_sessions_dedup
   ON reading_sessions (user_id, book_id, session_date, pages_read);
@@ -125,7 +123,6 @@ CREATE TABLE IF NOT EXISTS notes (
 );
 
 CREATE INDEX IF NOT EXISTS idx_notes_book_id ON notes(book_id);
-CREATE INDEX IF NOT EXISTS idx_notes_user_id ON notes(user_id);
 CREATE INDEX IF NOT EXISTS idx_notes_user_created ON notes(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_notes_type    ON notes(type);
 CREATE INDEX IF NOT EXISTS idx_notes_session_id ON notes(session_id);
@@ -228,7 +225,6 @@ CREATE TABLE IF NOT EXISTS group_members (
   UNIQUE(group_id, user_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_gm_group        ON group_members(group_id);
 CREATE INDEX IF NOT EXISTS idx_gm_user         ON group_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_group_members_group ON group_members(group_id, user_id);
 
@@ -243,7 +239,6 @@ CREATE TABLE IF NOT EXISTS group_messages (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_gmsgs_group ON group_messages(group_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_group_messages_group_created
   ON group_messages(group_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_gmsgs_active
@@ -266,7 +261,6 @@ CREATE TABLE IF NOT EXISTS group_meetings (
   updated_at   TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_gmtg_group ON group_meetings(group_id, meeting_date);
 CREATE INDEX IF NOT EXISTS idx_group_meetings_group
   ON group_meetings(group_id, meeting_date DESC);
 
@@ -281,7 +275,6 @@ CREATE TABLE IF NOT EXISTS meeting_feedbacks (
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_mfb_meeting ON meeting_feedbacks(meeting_id);
 CREATE INDEX IF NOT EXISTS idx_meeting_feedbacks_meeting
   ON meeting_feedbacks(meeting_id, created_at);
 
@@ -296,8 +289,6 @@ CREATE TABLE IF NOT EXISTS shared_reports (
   created_at   TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_sr_sender    ON shared_reports(sender_id);
-CREATE INDEX IF NOT EXISTS idx_sr_recipient ON shared_reports(recipient_id, is_read);
 CREATE INDEX IF NOT EXISTS idx_shared_reports_recipient
   ON shared_reports(recipient_id, is_read, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_shared_reports_sender
@@ -359,3 +350,15 @@ CREATE TABLE IF NOT EXISTS user_achievements (
   unlocked_at    TEXT NOT NULL DEFAULT (datetime('now')),
   PRIMARY KEY (user_id, achievement_id)
 );
+
+-- ─── 0021: 정렬용 인덱스 (중복 인덱스 10개는 위에서 뺐다) ──────
+CREATE INDEX IF NOT EXISTS idx_notif_user_created ON notifications(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notes_user_book ON notes(user_id, book_id, created_at);
+
+-- ─── 0020: 원자적 카운터 (rate limit·AI 하루 한도·생성 잠금, ADR-005) ──
+CREATE TABLE IF NOT EXISTS counters (
+  key        TEXT PRIMARY KEY,
+  count      INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_counters_expires ON counters(expires_at);
