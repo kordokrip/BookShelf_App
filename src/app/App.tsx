@@ -12,6 +12,7 @@ import { router } from "./routes";
 import { ToastProvider, useToast } from "./components/ui/Toast";
 import { UpdatePrompt } from "./components/ui/UpdatePrompt";
 import { TooltipProvider } from "./components/ui/tooltip";
+import { readOAuthTokens } from "../lib/oauthTokens";
 
 export default function App() {
   const checkAuth = useAuthStore((s) => s.checkAuth);
@@ -32,20 +33,13 @@ export default function App() {
   }, [themeMode, accent]);
 
   useEffect(() => {
-    // OAuth 콜백 후 /?token=xxx&refreshToken=yyy&provider=google 파라미터 처리
-    const url = new URL(window.location.href);
-    const oauthToken = url.searchParams.get('token');
-    const oauthRefreshToken = url.searchParams.get('refreshToken');
-    if (oauthToken) {
-      localStorage.setItem('auth_token', oauthToken);
-      if (oauthRefreshToken) {
-        localStorage.setItem('refresh_token', oauthRefreshToken);
-      }
-      // token + refreshToken + provider를 URL에서 제거 (보안: 주소창 노출 방지)
-      url.searchParams.delete('token');
-      url.searchParams.delete('refreshToken');
-      url.searchParams.delete('provider');
-      window.history.replaceState({}, '', url.pathname + (url.search !== '?' ? url.search : ''));
+    // 구글 로그인 콜백: 서버가 /#token=…&refreshToken=…&provider=google 로 보낸다(57차 — #뒤는 서버 로그에 안 남음).
+    // 배포 직후 옛 서버가 보낸 ?쿼리 형식도 읽는다. 읽은 뒤 주소창에서 지운다.
+    const oauth = readOAuthTokens(window.location.href);
+    if (oauth) {
+      localStorage.setItem('auth_token', oauth.token);
+      if (oauth.refreshToken) localStorage.setItem('refresh_token', oauth.refreshToken);
+      window.history.replaceState({}, '', oauth.cleanUrl);
     }
     checkAuth();
   }, [checkAuth]);

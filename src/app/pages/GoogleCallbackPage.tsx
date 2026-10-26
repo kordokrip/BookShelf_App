@@ -15,6 +15,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   google_unknown: '구글 로그인 중 오류가 발생했습니다.',
   not_allowed: '접근이 허용되지 않은 계정입니다. 관리자에게 문의하세요.',
   not_registered: '가입되지 않은 계정입니다. 먼저 회원가입을 완료해주세요.',
+  google_unverified: '이메일 인증이 끝나지 않은 구글 계정입니다. 구글 계정에서 이메일을 인증한 뒤 다시 시도해주세요.',
 };
 
 export function GoogleCallbackPage() {

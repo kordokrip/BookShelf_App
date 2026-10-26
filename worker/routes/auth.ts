@@ -11,6 +11,8 @@
  *   - KV에서 Refresh Token 검증 후 새 JWT 발급
  *   - Rate Limit: 10회/분 (브루트포스 방지)
  *
+ * POST /api/auth/logout — Refresh Token 폐기(KV 삭제) + 쿠키 삭제, 항상 204 (57차)
+ *
  * 보안:
  *   - Refresh Token은 HttpOnly Secure SameSite=Strict 쿠키로 전달
  *   - ALLOWED_EMAILS 환경 변수로 가입 허용 이메일 제한 가능
@@ -79,9 +81,17 @@ authRouter.get('/google/callback', async (c) => {
     const googleUser = await userRes.json<{
       id: string;
       email: string;
+      verified_email?: boolean;
       name: string;
       picture?: string;
     }>();
+
+    // 인증된 이메일만 받는다(57차) — 이메일로 기존 계정을 찾아 연결하므로, 남의 이메일을 인증 없이 단
+    // 구글 계정이면 그 사람 계정에 들어갈 수 있었다. 정상 구글 계정(지메일 포함)은 인증돼 있다.
+    if (googleUser.verified_email !== true) {
+      console.warn('[Google] 미인증 이메일 로그인 거절');
+      return c.redirect(`${frontendUrl}/auth/google/callback?error=google_unverified`);
+    }
 
     const googleId = googleUser.id;
     const email = googleUser.email;
@@ -171,8 +181,8 @@ authRouter.get('/google/callback', async (c) => {
     const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? 'unknown';
     await logActivity(c.env.DB, user.id, 'user:login_oauth', { provider: 'google', email: user.email }, ip);
 
-    // SEC-06: HttpOnly 쿠키 + URL 파라미터 (하위 호환)
-    const redirectUrl = `${frontendUrl}/?token=${encodeURIComponent(token)}&refreshToken=${encodeURIComponent(refreshToken)}&provider=google`;
+    // SEC-06: HttpOnly 쿠키 + URL 프래그먼트 — #뒤는 서버로 가지 않아 요청 로그·Referer에 토큰이 남지 않는다(57차, 예전엔 ?쿼리)
+    const redirectUrl = `${frontendUrl}/#token=${encodeURIComponent(token)}&refreshToken=${encodeURIComponent(refreshToken)}&provider=google`;
     return new Response(null, {
       status: 302,
       headers: {
@@ -237,6 +247,27 @@ authRouter.post(
       token: newAccessToken,
       refreshToken,
     });
+  },
+);
+
+// ─── POST /api/auth/logout ────────────────────────────────────
+// 리프레시 토큰을 서버에서 폐기한다(57차). 예전엔 로그아웃해도 KV에 30일간 남아, 새어 나간 토큰으로 계속 로그인할 수 있었다.
+// 토큰 자체가 자격이라 별도 인증은 받지 않는다(남이 아는 토큰을 지우는 것은 그 토큰을 무력화할 뿐). 항상 204.
+authRouter.post(
+  '/logout',
+  rateLimit({ limit: 20, windowMs: 60_000, keyPrefix: 'logout' }),
+  async (c) => {
+    const cookie = c.req.header('Cookie') ?? '';
+    let refreshToken = cookie.match(/(?:^|;\s*)refreshToken=([^;]+)/)?.[1] ?? '';
+    if (!refreshToken) {
+      const body = await c.req.json<{ refreshToken?: string }>().catch(() => ({ refreshToken: undefined }));
+      refreshToken = typeof body.refreshToken === 'string' ? body.refreshToken : '';
+    }
+    if (/^[0-9a-f-]{36}$/i.test(refreshToken)) {
+      await c.env.KV.delete(`refresh:${refreshToken}`).catch((err) => console.error('[auth/logout] 폐기 실패:', err));
+    }
+    c.header('Set-Cookie', 'refreshToken=; HttpOnly; Secure; SameSite=Strict; Path=/api/auth; Max-Age=0');
+    return c.body(null, 204);
   },
 );
 

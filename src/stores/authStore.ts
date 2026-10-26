@@ -7,7 +7,7 @@
 
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { usersApi, ApiError } from '../lib/api';
+import { usersApi, ApiError, BASE_URL } from '../lib/api';
 import { useTimerStore } from './timerStore';
 import { useUiStore } from './uiStore';
 import { queryClient, QUERY_CACHE_KEY } from '../lib/queryClient';
@@ -142,6 +142,18 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
+        // 서버의 리프레시 토큰도 폐기한다(57차) — 예전엔 로그아웃해도 30일간 유효해, 새어 나간 토큰으로 계속 로그인할 수 있었다.
+        // 결과를 기다리지 않는다(로그아웃은 즉시). keepalive: 페이지가 바뀌어도 요청은 끝까지 간다
+        const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+        if (refreshToken) {
+          fetch(`${BASE_URL}/api/auth/logout`, {
+            method: 'POST',
+            credentials: 'include',
+            keepalive: true,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refreshToken }),
+          }).catch(() => undefined);
+        }
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(REFRESH_TOKEN_KEY);
         // 타이머는 기기에 저장되므로(persist) 로그아웃 시 비워 다음 사용자에게 넘어가지 않게 한다

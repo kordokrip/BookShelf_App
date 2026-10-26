@@ -7,25 +7,27 @@
  * PATCH  /api/users/profile   — 프로필 수정 (이름/장르/목표/아바타)
  * DELETE /api/users/me        — 본인 계정 영구 삭제 (비밀번호 재확인, Rate Limit: 5회/분)
  * GET    /api/users/:id       — 사용자 조회 (자신: 전체, 타인: 공개 필드만)
- * POST   /api/users           — 소셜 로그인 upsert (인증 필요)
- * GET    /api/users/:id/stats — 독서 통계 (인증 필요, 프론트 미사용 죽은 코드)
  *
  * 보안 주의사항:
  * - password_hash는 외부에 절대 노출되지 않도록 safeUser() 사용
- * - 레거시 SHA-256 해시는 로그인 시 PBKDF2로 자동 마이그레이션
+ * - 예전 PBKDF2 10,000회 해시는 로그인 시 현재 횟수로 자동 재해시
+ * - (57차) 아무 사용자 id를 덮어쓰던 POST /api/users(옛 소셜 upsert, 프론트 미사용)를 삭제했다
  */
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { HTTPException } from 'hono/http-exception';
 import type { Bindings, DbUser } from '../types';
-import { hashPassword, verifyPassword, needsRehash, createToken, createRefreshToken, authMiddleware } from '../auth';
+import { hashPassword, verifyPassword, needsRehash, createToken, createRefreshToken, authMiddleware, PBKDF2_ITERATIONS } from '../auth';
 import { rateLimit } from '../middleware/rateLimit';
 import { logActivity } from './admin';
 import { checkEmailConfirmation, getAccountDeletionBlock, purgeUserAccount, dormantBody } from '../lib/accountHelpers';
 import { clearLoginFailures, isLoginLocked, LOGIN_LOCKED_MESSAGE, recordLoginFailure } from '../lib/loginGuard';
 
 export const usersRouter = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
+
+/** 없는 계정 로그인 때 비교에 쓰는 더미 해시 — 실제 해시와 같은 형식·반복 횟수(어떤 비밀번호와도 맞지 않음) */
+const TIMING_DUMMY_HASH = `pbkdf2:${PBKDF2_ITERATIONS}:${'00'.repeat(16)}:${'00'.repeat(32)}`;
 
 // ─── 스키마 검증 ───────────────────────────────────────────────
 const registerSchema = z.object({
@@ -44,13 +46,6 @@ const deleteAccountSchema = z.object({
   password: z.string().min(1).optional(),
   confirm_email: z.string().min(1).max(320).optional(),
 }).refine((v) => !!v.password || !!v.confirm_email);
-
-const upsertSchema = z.object({
-  id: z.string().uuid(),
-  email: z.string().email(),
-  name: z.string().min(1).max(50),
-  avatar_url: z.string().url().optional(),
-});
 
 /** 안전한 사용자 응답 (password_hash 제외) */
 export function safeUser(user: DbUser) {
@@ -116,6 +111,8 @@ usersRouter.post(
     ).bind(email).first<DbUser>();
 
     if (!user) {
+      // 없는 계정도 같은 비용의 비밀번호 검증을 한다 — 건너뛰면 응답이 빨라 계정 존재 여부가 시간으로 드러난다(57차)
+      await verifyPassword(password, TIMING_DUMMY_HASH);
       await recordLoginFailure(c.env.DB, email); // 없는 계정도 똑같이 센다(존재 여부 구분 불가)
       return c.json({ error: '이메일 또는 비밀번호가 올바르지 않습니다.' }, 401);
     }
@@ -230,32 +227,6 @@ usersRouter.get('/:id', authMiddleware, async (c) => {
   // 타인 프로필: 공개 필드만
   return c.json({ data: { id: user.id, name: user.name, avatar_url: user.avatar_url, profile_emoji: user.profile_emoji } });
 });
-
-// ─── POST /api/users ───────────────────────────────────────────
-// ARCH-05: 소셜 로그인 upsert — 인증 필수
-usersRouter.post(
-  '/',
-  authMiddleware,
-  zValidator('json', upsertSchema),
-  async (c) => {
-    const body = c.req.valid('json');
-    const now = new Date().toISOString();
-
-    await c.env.DB.prepare(
-      `INSERT INTO users (id, email, name, avatar_url, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?)
-       ON CONFLICT(id) DO UPDATE SET
-         name = excluded.name,
-         avatar_url = excluded.avatar_url,
-         updated_at = excluded.updated_at`,
-    ).bind(body.id, body.email, body.name, body.avatar_url ?? null, now, now).run();
-
-    const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?')
-      .bind(body.id).first<DbUser>();
-
-    return c.json({ data: safeUser(user!) }, 201);
-  },
-);
 
 const updateProfileSchema = z.object({
   name: z.string().min(1).max(50).optional(),

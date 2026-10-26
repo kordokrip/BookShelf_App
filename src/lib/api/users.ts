@@ -39,13 +39,6 @@ export const usersApi = {
   get: (id: string) =>
     apiFetch<ApiResponse<User>>(`/api/users/${id}`),
 
-  /** 사용자 생성 / upsert (소셜 로그인 후 호출) */
-  upsert: (data: { id: string; email: string; name: string; avatar_url?: string }) =>
-    apiFetch<ApiResponse<User>>('/api/users', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-
   /** 프로필 업데이트 */
   updateProfile: (data: {
     name?: string;
