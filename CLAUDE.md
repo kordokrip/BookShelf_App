@@ -2,8 +2,8 @@
 
 ## 프로젝트 개요
 - React 18 + TypeScript + Vite PWA (프론트엔드)
-- Cloudflare Workers (Hono) + D1(SQLite) + KV + R2 + Workers AI (백엔드)
-- TanStack Query v5, Tailwind CSS, Framer Motion
+- Cloudflare Workers (Hono) + D1(SQLite) + KV + R2 + Durable Objects(채팅) + Workers AI (백엔드)
+- TanStack Query v5, zustand, Tailwind CSS v4, motion(`motion/react`)
 
 ## 필수 검증 (모든 변경 후)
 ```bash
@@ -48,15 +48,15 @@ bash scripts/e2e-api-test.sh
 - 인라인 스타일은 프로젝트 기존 패턴 유지 (CSS inline style 경고는 pre-existing, 무시)
 - 테스트 없이 외부 API 연동 코드 작성 금지
 
-## 아키텍처 메모
-- `/register-flow`, `/notes-search`: Root 레이아웃 **외부** 독립 라우트 → TopBar 없음 → safe-area-top spacer 직접 추가 필요
-- KV 캐시 키 패턴: `ai_recommend:{version}:{userId}:{fingerprint}`, `ai_book_summary:{version}:{userId}:{bookId}`
-- AI 한도: 추천 `ai_rec`(rate limit prefix), AI 요약은 하루 카운터 `ai_book_summary_count:{userId}:{KST 날짜}`(하루 3번) — 공유하지 말 것
-- 한도·카운터·잠금은 KV가 아니라 D1 `counters` 테이블(`worker/lib/counters.ts`, ADR-005)에 둔다. KV는 최종 일관성이라 get→put 카운터가 동작하지 않는다(캐시 용도로만 사용)
-- TanStack Query staleTime: stats 30s, ai recommendations 1h
-- 외부 도서 출처: 검색·ISBN은 카카오 → (실패·0건) 국립중앙도서관 소장자료. 네이버 책 API는 2026-07-31 종료돼 52차에 제거됨(다시 넣지 말 것). 국립중앙도서관 연동(서지·소장자료·목차·사서 추천·KDC 장르)은 `worker/lib/nl/`, 쪽수·장르 조합은 `worker/lib/bookMeta.ts`
-- AI 공급자 체인은 `worker/lib/ai/llm.ts`(Gemini → Workers AI → OpenRouter) — 현행 구성·결정 이력은 `docs/AI_PROVIDERS.md`
-- `VITE_` 환경 변수는 브라우저 번들에 그대로 실린다 — 비밀 값은 `VITE_` 없이 둔다. `vite.config.ts`가 비밀처럼 보이는 `VITE_` 이름(TOKEN·SECRET·PASSWORD·PRIVATE·API_KEY·_KEY)이면 빌드를 멈춘다. 공개 허용 목록은 `PUBLIC_VITE_VARS`
-- 보안 헤더·CSP는 `worker/lib/securityHeaders.ts` 한곳 + 정적 파일용 `public/_headers`(같은 값, 테스트가 비교). **index.html에 인라인 `<script>` 금지**(CSP가 막음 — 시작 전 스크립트는 `public/boot.js`)
-- 상태·폐기 표시처럼 즉시 일관돼야 하는 값은 KV가 아니라 D1(`counters`). 예: 로그아웃한 리프레시 토큰 폐기 표시(57차 — KV 삭제 전파 지연 동안 토큰이 되살아났다)
-- 문서 목록은 `docs/README.md`
+## 영역별 규칙 (`.claude/rules/` — 해당 파일을 읽거나 고칠 때 자동으로 실린다)
+- `backend.md`(`worker/**`): D1 `counters`(ADR-005)·KV 캐시 키·AI 한도 버킷·공급자 체인·외부 도서 출처·인증·보안 헤더
+- `database.md`(`worker/db/**`): 마이그레이션 번호·`schema.sql` 동기화·원격 적용은 CI만
+- `frontend.md`(`src/**` 등): 독립 라우트 safe-area·CSP(인라인 스크립트 금지)·`VITE_` 비밀 금지·디자인(단색 버튼·테마 변수·Dusk)·접근성
+
+## 강제 장치 (`.claude/settings.json`)
+- PreToolUse 훅 `.claude/hooks/guard-bash.sh`가 로컬 `wrangler deploy`(`--dry-run` 제외)·원격 마이그레이션 적용·비밀 파일 통째 출력을 막는다
+- `.dev.vars`·`.env`·`.env.local`은 Read 금지(키 이름만 필요하면 `grep -o '^[A-Z_]*=' .dev.vars`)
+- 서브에이전트는 `.claude/agents/`(역할별 7개). 이 파일(CLAUDE.md)을 함께 읽으므로 공통 규칙은 여기에만 둔다
+
+## 문서 목록
+`docs/README.md`(무엇을 바꾸면 어느 문서를 고치나 포함). 옛 기록은 `docs/archive/`
