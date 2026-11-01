@@ -168,6 +168,7 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 | `0019_sort_indexes.sql` | `idx_books_user_created`·`idx_notes_user_created`(user_id, created_at DESC) — 서재·노트 목록 정렬을 인덱스로(임시 정렬 제거) |
 | `0020_counters.sql` | `counters(key, count, expires_at)` + `idx_counters_expires` — rate limit·AI 하루 한도·생성 잠금 원자적 카운터(ADR-005), 15분 Cron이 만료 행 정리 |
 | `0021_index_cleanup.sql` | 중복 인덱스 10개 DROP + `idx_notif_user_created`(알림 목록)·`idx_notes_user_book`(노트 목록·책별 노트) 추가 |
+| `0022_drop_shared_reports.sql` | 44차에 기능을 없앤 뒤 쓰지 않던 `shared_reports` 테이블 삭제(운영·스테이징 행 0건 확인, 59차) |
 
 마이그레이션 적용 절차·로컬 검증 원칙은 `docs/CI_CD.md` 참고. **로컬에서 `--remote` 마이그레이션을 직접 실행하지 말 것** — `git push origin main` 시 CI가 자동 적용한다.
 

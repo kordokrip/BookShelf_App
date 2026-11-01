@@ -278,22 +278,6 @@ CREATE TABLE IF NOT EXISTS meeting_feedbacks (
 CREATE INDEX IF NOT EXISTS idx_meeting_feedbacks_meeting
   ON meeting_feedbacks(meeting_id, created_at);
 
--- ─── 통계 공유 레포트 (0008 + 0009 indexes) ──────────────────
-CREATE TABLE IF NOT EXISTS shared_reports (
-  id           TEXT PRIMARY KEY,
-  sender_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  recipient_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  report_data  TEXT NOT NULL,
-  message      TEXT,
-  is_read      INTEGER NOT NULL DEFAULT 0,
-  created_at   TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
-CREATE INDEX IF NOT EXISTS idx_shared_reports_recipient
-  ON shared_reports(recipient_id, is_read, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_shared_reports_sender
-  ON shared_reports(sender_id, created_at DESC);
-
 -- ─── 서버 알림 (0010) ────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS notifications (
   id         TEXT PRIMARY KEY,
