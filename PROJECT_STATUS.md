@@ -1,10 +1,23 @@
 # BookShelf App — 현재 상태 스냅샷
 
-> **최종 업데이트:** 2026-10-25 (53차: 정리 — 안 쓰는 시크릿·코드·스크립트 삭제, `worker/lib/nl/`·`scripts/assets`·`scripts/qa` 폴더 정리, VITE_ 비밀 변수 빌드 차단, 문서 최신화 / 52차: Gemini 503 재시도·목차 압축, 네이버 책 API 종료 → 국립중앙도서관 폴백). 이전 차수는 `docs/CHANGELOG.md`, 문서 목록은 `docs/README.md`
+> **최종 업데이트:** 2026-11-02 (57차: 소스·백엔드 보안 점검 15건 보완·CSP / 56차: 로그인·가입 화면 개편 / 55차: 서비스 워커 탐색 폴백 / 54차: 가을→겨울 앱 아이콘·반응형 재점검 / 53차: 정리). 이전 차수는 `docs/CHANGELOG.md`, 문서 목록은 `docs/README.md`
 > **Git 브랜치:** `main` (kordokrip/BookShelf_App)
 > **E2E 테스트:** `bash scripts/e2e-api-test.sh --url <대상>` → **전체 PASS** ✅ (2026-10-19 스테이징 전체·프로덕션 `--readonly` 확인, 테스트 개수는 `grep -n '^  TOTAL=' scripts/e2e-api-test.sh`로 확인)
-> **상세 세션 리포트:** `docs/sessions/2026-10-25-cleanup.md` (직전: `2026-10-25-summary-naver.md`) — **진행 중·대기 항목은 최신 세션 리포트 맨 위 '진행 상태' 표**
+> **상세 세션 리포트:** `docs/sessions/2026-10-26-security-audit.md` (직전: `2026-10-25-auth-redesign.md`) — **진행 중·대기 항목은 최신 세션 리포트 맨 위 '진행 상태' 표**
 > **기능 플래그:** 등록 목록은 `worker/lib/featureFlags.ts`의 `ALL_FEATURE_FLAGS`(현재 비어 있음), 공개 상태는 `GET /api/flags/public`으로 확인 (ADR-003)
+
+---
+
+## 0. 열린 결정 사항 (사용자 결정 대기 — 세션 시작 훅이 이 절을 함께 보여 준다)
+
+여러 차수에 흩어진 대기 항목을 한곳에 모은다. 결정되면 이 표에서 지우고 해당 세션 리포트에 결과를 적는다.
+
+| 항목 | 출처 | 메모 |
+|---|---|---|
+| 구글 로그인 OAuth `state`(로그인 CSRF 방어) | 57차 `2026-10-26-security-audit.md` | iPhone 홈 화면 앱에서 구글 로그인이 깨질 위험 — 실기기 확인 후 진행 |
+| 가입 정책: 공개 가입 유지 vs 초대제 | 57차 | 이메일 가입은 메일 인증 없음, `ALLOWED_EMAILS`는 구글 가입에만 적용 |
+| 온보딩(`/onboarding`)도 새 로그인 디자인 원칙으로 맞출지 | 56차 `2026-10-25-auth-redesign.md` | 지금은 흰 바탕·알록달록 일러스트·그라데이션 버튼 |
+| 개발 도구 업그레이드(wrangler·vite·sharp·happy-dom) | 57차 | 운영 번들 미포함. wrangler는 workers-types 메이저 연동(`docs/CI_CD.md` 2번 교훈) |
 
 ---
 
@@ -77,7 +90,7 @@
 
 ### 라우터 목록 (`worker/index.ts`, 개수는 `grep -c app.route worker/index.ts`로 확인)
 ```
-/api/auth          → Google OAuth, refresh token
+/api/auth          → Google OAuth(인증된 이메일만, 토큰은 #프래그먼트), refresh·logout(D1 폐기 표시)
 /api/users         → 회원가입·로그인·프로필
 /api/books         → CRUD + R2 커버 업로드 + 카카오 커버 백필
 /api/sessions      → 독서 세션 기록
@@ -248,9 +261,13 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 | 개인 앱 테마 (강조색 프리셋·화면 모드, 서버 동기화) | ✅ 2026-10-03 — `docs/BookShelf_UI_UX.md` 5.4. 프리셋 정의 `src/lib/themePresets.ts` → `npm run theme:accent` |
 | iPad·태블릿 (안전 영역, 가로 시작 화면) | ✅ 2026-10-03 에뮬레이션 점검(WebKit + safe-area 주입). **iPad 실기기 설치 상태 미확인** — 시작 화면은 앱 재설치 필요 |
 | 전체 화면 기능·이벤트 점검 | ✅ 2026-10-03 QA 서브에이전트(Playwright·DevTools MCP) 3영역 + 재검증 2회. 책 일부 수정 데이터 초기화 버그(출시 때부터) 수정 — 이미 '기타'로 바뀐 장르는 자동 복구 불가 → 36차에 서재 배너 + AI 장르 추천(사용자 확인 후 적용) 추가. 실기기 전용 항목은 `docs/QA_가이드.md` C-2 |
+| 앱 아이콘 '가을→겨울'·반응형 재점검 | ✅ 54차 — `design/icons/season-philosophy.md`, 8폭×17화면 이미지 깨짐·넘침 0 |
+| 서비스 워커 탐색 폴백 | ✅ 55차 — precache가 비어도 앱이 열림(`/` 폴백, ADR-001 보완) |
+| 로그인·가입 화면 개편 | ✅ 56차 — 공용 `AuthShell`, 다크 모드, axe 위반 0 |
+| 보안 점검·CSP | ✅ 57차 — 15건 보완(높음 4), CSP·정적 헤더, 운영 의존성 취약점 0. 기록 `SECURITY.md` 8절 |
 
 > 상세 변경 이력: `docs/CHANGELOG.md`
-> 마지막 세션 상세 리포트: `docs/sessions/2026-10-25-cleanup.md`
+> 마지막 세션 상세 리포트: `docs/sessions/2026-10-26-security-audit.md`
 > 문서 목록: `docs/README.md`
 > 아키텍처 결정 기록: `docs/adr/README.md`
 > API 스펙: `docs/TRACE_MAP.md`

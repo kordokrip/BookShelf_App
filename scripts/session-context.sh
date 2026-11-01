@@ -47,5 +47,12 @@ if [ -n "$latest" ]; then
   fi
 fi
 
+# 여러 차수에 흩어진 사용자 결정 대기 항목(최신 리포트 하나만 보면 놓친다)
+open_items=$(awk '/^## 0\. 열린 결정 사항/{f=1; next} f && /^## /{exit} f && /^\| /' PROJECT_STATUS.md 2>/dev/null)
+if [ -n "$open_items" ]; then
+  echo
+  echo "### 열린 결정 사항 (PROJECT_STATUS.md 0절)"
+  echo "$open_items"
+fi
 echo
 echo "규칙(CLAUDE.md): 커밋·배포·대기 상태가 바뀔 때마다 최신 세션 리포트의 '## 진행 상태' 표를 갱신한다."

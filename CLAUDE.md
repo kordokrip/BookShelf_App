@@ -33,6 +33,7 @@ bash scripts/e2e-api-test.sh
 
 ## 문서 관리
 - `PROJECT_STATUS.md`: 세션 종료 시에만 갱신 (작업 중 수정 금지)
+  - 사용자 결정 대기 항목은 `PROJECT_STATUS.md` 0절 '열린 결정 사항' 표에 모은다(세션 시작 훅이 함께 보여 줌). 결정되면 지우고 결과는 세션 리포트에
 - `docs/` 내 문서: 코드 변경과 정합성 유지 필수
   - API 스펙 변경 → `docs/TRACE_MAP.md` 업데이트
   - DB 스키마 변경 → `PROJECT_STATUS.md`의 D1 마이그레이션 표 업데이트
