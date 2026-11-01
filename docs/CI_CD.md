@@ -79,14 +79,12 @@ PWA 정적 자산(아이콘, iOS startup 이미지, `sw.js`/workbox 프리캐시
 ## Node / wrangler 버전 정책
 
 - CI Node 버전: **24** (`actions/setup-node@v7`, `lint-and-typecheck`/`build`/`deploy-*` job 전부 동일)
-- `package.json`의 `wrangler`: **`4.107.1`** (caret 없음, 정확히 고정)
-- `package.json`의 `@cloudflare/workers-types`: **`4.20260702.1`** (마찬가지로 고정)
+- `package.json`의 `wrangler`·`@cloudflare/workers-types`: caret 없이 정확히 고정. 현재 값은 `npm ls wrangler @cloudflare/workers-types` 또는 `npx wrangler --version`으로 확인
+- 58차(2026-11-02)에 workers-types v4 → v5 경계를 넘어 둘 다 최신으로 올렸다(타입 변경 없이 tsc 통과, `wrangler deploy --dry-run` 번들 확인). CI는 원래 `wranglerVersion: '4'`(4.x 최신)라 이제 로컬과 같은 세대다
 
 ### 왜 caret(`^`)을 쓰지 않는가
 
-wrangler `4.108.0`부터 `@cloudflare/workers-types`가 메이저 버전 `v5`를 요구하도록 peer dependency 경계가 바뀐다. `4.107.1`은 이 경계 바로 앞의, `workers-types` v4 계열로 갈 수 있는 가장 최신 지점이다.
-
-만약 `"wrangler": "^4.107.1"`처럼 caret을 썼다면, 다음 `npm install`(예: CI의 `npm ci`가 아니라 로컬에서 `package-lock.json` 없이 새로 설치하거나 lockfile을 갱신하는 시점)에 npm이 `^4.107.1` 범위 내에서 임의로 `4.108.0` 이상을 끌어올 수 있고, 그러면 `workers-types`의 요구 버전이 v5로 튀면서 기존 v4 고정 버전(`4.20260702.1`)과 충돌해 `ERESOLVE` 에러가 난다. 두 패키지를 캐럿 없이 정확한 버전으로 박아두면 `npm ci`/`npm install`이 항상 동일한 조합을 재현하고, 의도적으로 버전을 올릴 때만 사람이 명시적으로 두 값을 함께 바꾸게 된다.
+wrangler와 workers-types는 peer dependency로 묶여 있다(예: wrangler 4.108.0부터 workers-types v5 요구). caret을 쓰면 lockfile을 갱신하는 시점에 npm이 범위 안에서 wrangler만 올려 workers-types 요구 버전과 충돌(`ERESOLVE`)할 수 있다. 두 패키지를 정확한 버전으로 박아 두면 `npm ci`/`npm install`이 항상 같은 조합을 재현하고, 올릴 때만 사람이 두 값을 함께 바꾸게 된다.
 
 버전을 올릴 계획이 있다면:
 
