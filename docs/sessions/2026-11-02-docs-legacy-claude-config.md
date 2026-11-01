@@ -6,8 +6,8 @@
 | 항목 | 상태 |
 |---|---|
 | 교차 검증 | 완료 — 아래 '발견 사항' |
-| 문서·DB 정리 | 커밋 — 808fc9b(마이그레이션 0022 shared_reports 삭제) · 문서 교차 검증 수정 |
-| 레거시 압축 보관 | 대기 |
+| 문서·DB 정리 | 커밋 — 808fc9b(마이그레이션 0022 shared_reports 삭제) · b7ac8ee(문서 교차 검증) |
+| 레거시 압축 보관 | 커밋 — 1~44차 CHANGELOG·세션 리포트 9개·TRACE_MAP 버그 로그 → `docs/archive/legacy-docs-2026-11-02.tar.gz`(풀어서 원본과 같음 확인). 로컬 전용: `.playwright-mcp/`(77MB 스크린샷) → `.local-archive/`(gitignore), `dev-dist/` 삭제 |
 | Claude Code 설정 | 대기 — 공식 문서 확인 후 |
 | 스테이징·운영 | 대기(마이그레이션 0022 포함) |
 

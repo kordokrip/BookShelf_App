@@ -59,3 +59,6 @@ oracleJdk-26.jdk/
 # ─── 로컬 MCP 도구 설정·산출물 ───────────────────────────────
 .mcp.json
 .playwright-mcp/
+
+# 로컬 전용 압축 보관(점검 스크린샷 등, 59차)
+.local-archive/
