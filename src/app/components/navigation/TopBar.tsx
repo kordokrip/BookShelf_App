@@ -4,7 +4,7 @@
  * - 반응형: xs(~374px) / sm(375px~) / lg(1024px+)
  * - 알림 벨: 미읽음 카운트 배지 + NotificationPanel 드롭다운
  */
-import { useState, useRef, lazy, Suspense } from 'react';
+import { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { Bell, FileSearch } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { useAuthStore } from '../../../stores/authStore';
@@ -13,9 +13,12 @@ import { useMarkAllNotificationsRead, useNotificationUnreadCount } from '../../.
 import { NotificationPanel } from '../ui/NotificationPanel';
 import { ProfileAvatar } from '../ui/ProfileAvatar';
 
-// 프로필 팝업은 누를 때만 받는다(motion 포함 — 첫 로딩에서 제외, 58차). 서비스 워커 precache라 첫 열기도 즉시
-const ProfilePopup = lazy(() => import('../ui/ProfilePopup').then((m) => ({ default: m.ProfilePopup })));
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
+
+// 프로필 팝업은 첫 화면을 그린 뒤 받는다(motion 포함 — 첫 로딩에서 제외, 58차).
+// 서비스 워커가 아직 없는 첫 방문에서도 바로 열리도록 1.5초 뒤 미리 받아 둔다
+const loadProfilePopup = () => import('../ui/ProfilePopup');
+const ProfilePopup = lazy(() => loadProfilePopup().then((m) => ({ default: m.ProfilePopup })));
 import { AppLogo } from "../brand/AppLogo";
 
 const pageTitles: Record<string, string> = {
@@ -53,6 +56,11 @@ export function TopBar() {
   const setProfileOpen = (next: boolean | ((v: boolean) => boolean)) =>
     setProfilePopupOpen(typeof next === 'function' ? next(profileOpen) : next);
   const bellRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => void loadProfilePopup(), 1500);
+    return () => clearTimeout(t);
+  }, []);
 
   // z-[45]: 헤더 안의 프로필·알림 팝업이 설치 배너·하단 탭바(z-40)보다 위에 오도록 (시트·모달은 z-50 이상)
   // 불투명 배경 — 반투명 + 배경 블러(유리 효과)는 스크롤한 콘텐츠가 노치·상태 표시줄 영역에 뿌옇게 비쳐
