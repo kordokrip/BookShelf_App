@@ -9,7 +9,8 @@
 | 문서·DB 정리 | 커밋 — 808fc9b(마이그레이션 0022 shared_reports 삭제) · b7ac8ee(문서 교차 검증) |
 | 레거시 압축 보관 | 커밋 — 1~44차 CHANGELOG·세션 리포트 9개·TRACE_MAP 버그 로그 → `docs/archive/legacy-docs-2026-11-02.tar.gz`(풀어서 원본과 같음 확인). 로컬 전용: `.playwright-mcp/`(77MB 스크린샷) → `.local-archive/`(gitignore), `dev-dist/` 삭제 |
 | Claude Code 설정 | 커밋 — 아래 'Claude Code 설정' |
-| 스테이징·운영 | 대기(마이그레이션 0022 포함) |
+| 스테이징 | 완료 — 28ad39e, 마이그레이션 0022 적용(테이블·인덱스 0개 확인), e2e 83/83 |
+| **운영** | **사용자 승인 대기** — `git push origin main` 하면 CI가 0022(`shared_reports` 삭제, 운영 행 0건 확인됨)를 적용하고 배포. 확인: health, `bash scripts/e2e-api-test.sh --readonly` |
 
 ## 발견 사항 (자동 대조 — 코드가 기준)
 
