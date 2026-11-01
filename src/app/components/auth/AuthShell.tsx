@@ -10,49 +10,9 @@
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { AuthPreviewNav } from "./AuthPreviewNav";
-
-const DUSK = "#1D2142";
-const HERO_INK = "#F4F1EA";
-const HERO_SUB = "#C9C6D6";
+import { DUSK_BACKGROUND, HERO_INK, HERO_SUB, RIBBON_GOLD, Ribbon, Wordmark } from "../brand/dusk";
 
 export interface AuthFeature { icon: LucideIcon; text: string }
-
-/** 금빛 책갈피 — 아래 끝이 V자로 갈라진 리본(앱 아이콘의 책갈피와 같은 모양) */
-function Ribbon({ className }: { className: string }) {
-  return (
-    <div aria-hidden className={`auth-ribbon absolute top-0 pointer-events-none ${className}`}>
-      <div
-        className="h-full"
-        style={{
-          width: "100%",
-          background: "linear-gradient(180deg, #D9902C 0%, #E9A73B 55%, #F2BC57 100%)",
-          clipPath: "polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 12px), 0 100%)",
-          filter: "drop-shadow(0 6px 10px rgba(0,0,0,0.25))",
-        }}
-      />
-    </div>
-  );
-}
-
-function Wordmark({ size }: { size: "sm" | "md" }) {
-  const icon = size === "md" ? 40 : 34;
-  return (
-    <div className="flex items-center gap-2.5">
-      {/* 홈 화면에서 누른 그 아이콘 — OS 아이콘(가을→겨울)을 그대로 보여 준다 */}
-      <img
-        src="/icons/apple-touch-icon.png"
-        alt=""
-        width={icon}
-        height={icon}
-        className="flex-shrink-0"
-        style={{ borderRadius: icon * 0.24, boxShadow: "0 4px 14px rgba(0,0,0,0.3)" }}
-      />
-      <span style={{ color: HERO_INK, fontFamily: "var(--font-pretendard)", fontWeight: 700, fontSize: size === "md" ? 17 : 15, letterSpacing: "-0.01em" }}>
-        BookShelf
-      </span>
-    </div>
-  );
-}
 
 export function AuthShell({
   headline,
@@ -72,12 +32,7 @@ export function AuthShell({
       <section
         aria-label="BookShelf 소개"
         className="relative overflow-hidden flex-shrink-0 lg:w-[46%] lg:min-h-svh lg:sticky lg:top-0 lg:self-start"
-        style={{
-          backgroundColor: DUSK,
-          backgroundImage:
-            "radial-gradient(120% 90% at 0% 100%, rgba(200,100,58,0.32) 0%, rgba(200,100,58,0) 58%), " +
-            "radial-gradient(80% 70% at 100% 0%, rgba(124,147,196,0.16) 0%, rgba(124,147,196,0) 60%)",
-        }}
+        style={DUSK_BACKGROUND}
       >
         {/* 모바일: 오른쪽 위에서 짧게 / 데스크톱: 문장 왼쪽 끝 위에서 길게 */}
         <Ribbon className="right-7 w-[22px] h-[72px] lg:right-auto lg:left-14 lg:w-[28px] lg:h-[34vh]" />
@@ -101,7 +56,7 @@ export function AuthShell({
               <ul className="hidden lg:flex flex-col gap-3.5 mt-10">
                 {features.map(({ icon: Icon, text }) => (
                   <li key={text} className="flex items-center gap-3 text-[14px]" style={{ color: HERO_SUB, fontFamily: "var(--font-pretendard)" }}>
-                    <Icon size={17} aria-hidden style={{ color: "#E9A73B", flexShrink: 0 }} />
+                    <Icon size={17} aria-hidden style={{ color: RIBBON_GOLD, flexShrink: 0 }} />
                     {text}
                   </li>
                 ))}
