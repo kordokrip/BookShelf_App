@@ -1,9 +1,9 @@
 # BookShelf App — 현재 상태 스냅샷
 
-> **최종 업데이트:** 2026-11-02 (57차: 소스·백엔드 보안 점검 15건 보완·CSP / 56차: 로그인·가입 화면 개편 / 55차: 서비스 워커 탐색 폴백 / 54차: 가을→겨울 앱 아이콘·반응형 재점검 / 53차: 정리). 이전 차수는 `docs/CHANGELOG.md`, 문서 목록은 `docs/README.md`
+> **최종 업데이트:** 2026-11-02 (58차: UI/UX 최적화 — 온보딩 Dusk 개편·첫 로딩 motion 제외·버튼 단색·다크 모드 정리, 개발 도구 업그레이드 / 57차: 소스·백엔드 보안 점검 15건 보완·CSP / 56차: 로그인·가입 화면 개편 / 55차: 서비스 워커 탐색 폴백 / 54차: 가을→겨울 앱 아이콘·반응형 재점검 / 53차: 정리). 이전 차수는 `docs/CHANGELOG.md`, 문서 목록은 `docs/README.md`
 > **Git 브랜치:** `main` (kordokrip/BookShelf_App)
 > **E2E 테스트:** `bash scripts/e2e-api-test.sh --url <대상>` → **전체 PASS** ✅ (2026-10-19 스테이징 전체·프로덕션 `--readonly` 확인, 테스트 개수는 `grep -n '^  TOTAL=' scripts/e2e-api-test.sh`로 확인)
-> **상세 세션 리포트:** `docs/sessions/2026-10-26-security-audit.md` (직전: `2026-10-25-auth-redesign.md`) — **진행 중·대기 항목은 최신 세션 리포트 맨 위 '진행 상태' 표**
+> **상세 세션 리포트:** `docs/sessions/2026-11-02-uiux-evolution.md` (직전: `2026-10-26-security-audit.md`) — **진행 중·대기 항목은 최신 세션 리포트 맨 위 '진행 상태' 표**
 > **기능 플래그:** 등록 목록은 `worker/lib/featureFlags.ts`의 `ALL_FEATURE_FLAGS`(현재 비어 있음), 공개 상태는 `GET /api/flags/public`으로 확인 (ADR-003)
 
 ---
@@ -265,9 +265,10 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 | 서비스 워커 탐색 폴백 | ✅ 55차 — precache가 비어도 앱이 열림(`/` 폴백, ADR-001 보완) |
 | 로그인·가입 화면 개편 | ✅ 56차 — 공용 `AuthShell`, 다크 모드, axe 위반 0 |
 | 보안 점검·CSP | ✅ 57차 — 15건 보완(높음 4), CSP·정적 헤더, 운영 의존성 취약점 0. 기록 `SECURITY.md` 8절 |
+| UI/UX 최적화·개발 도구 | ✅ 58차 — 온보딩 Dusk(`brand/dusk.tsx` 공유), 첫 로딩 motion 제외, 주요 버튼 단색, 다크 모드 누락 정리, wrangler·vite·sharp·happy-dom 업그레이드 |
 
 > 상세 변경 이력: `docs/CHANGELOG.md`
-> 마지막 세션 상세 리포트: `docs/sessions/2026-10-26-security-audit.md`
+> 마지막 세션 상세 리포트: `docs/sessions/2026-11-02-uiux-evolution.md`
 > 문서 목록: `docs/README.md`
 > 아키텍처 결정 기록: `docs/adr/README.md`
 > API 스펙: `docs/TRACE_MAP.md`
