@@ -236,7 +236,7 @@ export function RecommendedBooksTab() {
                   disabled={addingKey === key}
                   aria-label={`${book.title} 읽을 책에 담기`}
                   className="shrink-0 min-h-11 min-w-11 rounded-xl px-3 text-white disabled:opacity-50 transition-opacity"
-                  style={{ fontSize: 12, fontWeight: 600, background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))" }}
+                  style={{ fontSize: 12, fontWeight: 600, background: "var(--brand-600)" }}
                 >
                   담기
                 </button>

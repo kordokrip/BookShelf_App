@@ -14,7 +14,7 @@ export function AddBookFab({ onClick, label = "책 추가" }: FABProps) {
       style={{
         bottom: "var(--floating-bottom)",
         right: "var(--floating-right)",
-        background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))",
+        background: "var(--brand-600)",
       }}
     >
       <Plus size={24} />

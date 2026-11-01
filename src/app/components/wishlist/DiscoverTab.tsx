@@ -71,7 +71,7 @@ function NewBooksTab({ wishTitleSet }: { wishTitleSet: Set<string> }) {
             onClick={() => handleAdd(book)}
             disabled={addBook.isPending}
             className="shrink-0 rounded-xl px-3 py-1.5 text-white disabled:opacity-50 transition-opacity"
-            style={{ fontSize: 12, fontWeight: 600, background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))" }}
+            style={{ fontSize: 12, fontWeight: 600, background: "var(--brand-600)" }}
           >
             담기
           </button>

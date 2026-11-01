@@ -142,7 +142,7 @@ export function InstallBanner() {
           className="shrink-0 rounded-xl px-4 min-h-10 text-white font-semibold transition-opacity hover:opacity-80"
           style={{
             fontSize: 13,
-            background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))",
+            background: "var(--brand-600)",
           }}
         >
           설치

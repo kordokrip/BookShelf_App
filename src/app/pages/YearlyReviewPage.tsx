@@ -330,7 +330,7 @@ export function YearlyReviewPage() {
               <button
                 onClick={() => navigate("/reading")}
                 className="px-5 py-2 rounded-full text-white"
-                style={{ fontSize: 13, fontWeight: 600, background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))" }}
+                style={{ fontSize: 13, fontWeight: 600, background: "var(--brand-600)" }}
               >
                 독서 중 페이지로 이동
               </button>

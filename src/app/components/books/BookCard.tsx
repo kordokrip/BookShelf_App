@@ -512,7 +512,7 @@ export function WishBookCard({
           className="flex items-center gap-1.5 rounded-xl text-white transition-opacity hover:opacity-90 active:scale-[0.98] px-3"
           style={{
             height: 32,
-            background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))",
+            background: "var(--brand-600)",
             fontSize: 12,
             fontWeight: 700,
             fontFamily: "var(--font-pretendard)",

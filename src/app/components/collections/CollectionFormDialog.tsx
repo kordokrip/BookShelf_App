@@ -107,7 +107,7 @@ export function CollectionFormDialog({ onClose, collection }: Props) {
               type="submit"
               disabled={!name.trim() || pending}
               className="flex-1 min-h-11 rounded-xl text-white disabled:opacity-50"
-              style={{ fontSize: 13, fontWeight: 600, background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))" }}
+              style={{ fontSize: 13, fontWeight: 600, background: "var(--brand-600)" }}
             >
               {pending ? (isEdit ? "저장 중..." : "생성 중...") : isEdit ? "저장" : "만들기"}
             </button>

@@ -57,7 +57,7 @@ export function DailyRecallCard() {
             type="button"
             onClick={() => navigate(`/book/${book.id}?note=new&prompt=${encodeURIComponent(quote.question)}`)}
             className="mt-2 w-full min-h-11 rounded-xl text-white"
-            style={{ fontSize: 14, fontWeight: 700, background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))" }}
+            style={{ fontSize: 14, fontWeight: 700, background: "var(--brand-600)" }}
           >
             노트로 답하기
           </button>

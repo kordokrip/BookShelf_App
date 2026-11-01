@@ -135,7 +135,7 @@ export function AICollectionCard({ collection, index, books, saved, saving, onSa
             onClick={onSave}
             disabled={saving || books.length === 0}
             className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl text-white disabled:opacity-50"
-            style={{ fontSize: 13, fontWeight: 600, background: 'linear-gradient(135deg, var(--brand-600), var(--brand2-600))' }}
+            style={{ fontSize: 13, fontWeight: 600, background: 'var(--brand-600)' }}
           >
             {saving ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <FolderPlus size={16} aria-hidden="true" />}
             {saving ? '저장하는 중…' : '컬렉션으로 저장'}

@@ -87,7 +87,7 @@ export function AchievementCelebration() {
           type="button"
           onClick={dismiss}
           className="w-full rounded-xl py-3 text-white"
-          style={{ fontSize: 15, fontWeight: 700, background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))" }}
+          style={{ fontSize: 15, fontWeight: 700, background: "var(--brand-600)" }}
         >
           {remaining > 1 ? `확인 (${remaining - 1}개 더)` : "확인"}
         </button>

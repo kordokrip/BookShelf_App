@@ -62,7 +62,7 @@ export function EmptyState({ emoji = "📚", heading, subtext, ctaLabel, onCta }
             paddingLeft: 48,
             paddingRight: 48,
             borderRadius: 12,
-            background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))",
+            background: "var(--brand-600)",
             fontSize: 15,
             fontWeight: 700,
             fontFamily: "var(--font-pretendard)",

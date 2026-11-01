@@ -104,7 +104,7 @@ export function AISummarySection({ bookId, isDone }: { bookId: string; isDone: b
                 onClick={() => create.mutate(false)}
                 disabled={!canCreate}
                 className="flex items-center justify-center gap-2 min-h-12 rounded-xl text-white transition-all active:scale-[0.98] disabled:opacity-50"
-                style={{ background: "linear-gradient(135deg, var(--brand2-600), var(--brand-600))", fontSize: 14, fontWeight: 700 }}
+                style={{ background: "var(--brand2-600)", fontSize: 14, fontWeight: 700 }}
               >
                 <Sparkles size={15} aria-hidden />
                 AI 요약 만들기

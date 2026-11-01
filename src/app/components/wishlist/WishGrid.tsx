@@ -177,7 +177,7 @@ function WishBookDetailSheet({
               className="w-full rounded-2xl text-white transition-opacity hover:opacity-90"
               style={{
                 height: 48,
-                background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))",
+                background: "var(--brand-600)",
                 fontSize: 15,
                 fontWeight: 700,
               }}

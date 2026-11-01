@@ -133,7 +133,7 @@ function PageUpdateModal({
             </div>
             <span
               className="px-2.5 py-1 rounded-full text-white"
-              style={{ fontSize: 12, fontWeight: 700, background: isComplete ? "linear-gradient(135deg, #10B981, #059669)" : "linear-gradient(135deg, var(--brand-600), var(--brand2-600))" }}
+              style={{ fontSize: 12, fontWeight: 700, background: isComplete ? "#047857" /* 완료 — 흰 글자 5.5:1 */ : "var(--brand-600)" }}
             >
               {progress}%
             </span>
@@ -314,7 +314,7 @@ function PageUpdateModal({
                 className="w-full rounded-2xl text-white transition-opacity hover:opacity-90 active:scale-[0.98]"
                 style={{
                   height: 48,
-                  background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))",
+                  background: "var(--brand-600)",
                   fontSize: 15,
                   fontWeight: 700,
                 }}
@@ -610,7 +610,7 @@ function LogTodayModal({
               className="w-full rounded-2xl text-white transition-opacity hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
               style={{
                 height: 48,
-                background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))",
+                background: "var(--brand-600)",
                 fontSize: 15,
                 fontWeight: 700,
               }}

@@ -52,7 +52,7 @@ export function NotFoundPage() {
             paddingLeft: 24,
             paddingRight: 24,
             borderRadius: 12,
-            background: "linear-gradient(135deg, var(--brand-600) 0%, var(--brand2-600) 100%)",
+            background: "var(--brand-600)",
             color: "#fff",
             fontFamily: "var(--font-pretendard)",
             fontSize: 15,

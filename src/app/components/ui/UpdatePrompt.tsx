@@ -72,7 +72,7 @@ export function UpdatePrompt() {
           className="shrink-0 rounded-xl px-3 py-1.5 text-white font-semibold transition-opacity hover:opacity-80"
           style={{
             fontSize: 13,
-            background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))",
+            background: "var(--brand-600)",
           }}
         >
           업데이트

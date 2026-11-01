@@ -178,7 +178,7 @@ export function CollectionsPage() {
         <button
           onClick={() => setShowCreate(true)}
           className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-white"
-          style={{ fontSize: 13, fontWeight: 600, background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))" }}
+          style={{ fontSize: 13, fontWeight: 600, background: "var(--brand-600)" }}
         >
           <Plus size={14} />
           만들기
@@ -208,7 +208,7 @@ export function CollectionsPage() {
           <button
             onClick={() => setShowCreate(true)}
             className="mt-4 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-white"
-            style={{ fontSize: 13, fontWeight: 600, background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))" }}
+            style={{ fontSize: 13, fontWeight: 600, background: "var(--brand-600)" }}
           >
             <Plus size={14} />
             첫 컬렉션 만들기
@@ -285,7 +285,7 @@ export function CollectionsPage() {
                 type="button"
                 onClick={() => setShowCreate(true)}
                 className="inline-flex items-center justify-center gap-1.5 min-h-11 px-5 mt-4 rounded-xl text-white"
-                style={{ fontSize: 13, fontWeight: 600, background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))" }}
+                style={{ fontSize: 13, fontWeight: 600, background: "var(--brand-600)" }}
               >
                 <Plus size={16} />
                 컬렉션 만들기

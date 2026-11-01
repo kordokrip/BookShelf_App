@@ -372,7 +372,7 @@ export function StatsPage() {
               disabled={sharing}
               aria-busy={sharing}
               className="flex-1 flex items-center justify-center gap-2 rounded-2xl py-3 text-white disabled:opacity-70 transition-opacity"
-              style={{ fontSize: 14, fontWeight: 700, background: "linear-gradient(135deg, var(--brand-600) 0%, var(--brand2-600) 100%)" }}
+              style={{ fontSize: 14, fontWeight: 700, background: "var(--brand-600)" }}
             >
               {sharing ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Share2 size={16} aria-hidden />}
               {sharing ? "이미지 만드는 중..." : "내 통계 공유"}

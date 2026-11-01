@@ -46,7 +46,7 @@ function Shell({ labelId, onClose, icon, title, desc, children }: {
 
 const primaryStyle = {
   height: 48,
-  background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))",
+  background: "var(--brand-600)",
   fontSize: 15,
   fontWeight: 700,
 } as const;

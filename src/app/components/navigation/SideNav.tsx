@@ -180,7 +180,7 @@ export function SideNav() {
               {user ? (
                 <ProfileAvatar user={user} size={40} fontSize={14} />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center shadow-sm flex-shrink-0">
+                <div className="w-10 h-10 rounded-full bg-[var(--brand-600)] flex items-center justify-center shadow-sm flex-shrink-0">
                   <span className="text-white" style={{ fontSize: 14, fontWeight: 700 }}>{avatarInitial}</span>
                 </div>
               )}
@@ -215,7 +215,7 @@ export function SideNav() {
                 {user ? (
                   <ProfileAvatar user={user} size={40} fontSize={14} className="cursor-pointer" />
                 ) : (
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center shadow-sm cursor-pointer">
+                  <div className="w-10 h-10 rounded-full bg-[var(--brand-600)] flex items-center justify-center shadow-sm cursor-pointer">
                     <span className="text-white" style={{ fontSize: 14, fontWeight: 700 }}>{avatarInitial}</span>
                   </div>
                 )}

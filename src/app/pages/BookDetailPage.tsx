@@ -404,7 +404,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
               onClick={() => void handleQuickSave()}
               disabled={!quickText.trim() || addMutation.isPending}
               className="rounded-xl text-white px-3 py-1.5 transition-opacity hover:opacity-90 active:scale-[0.97] disabled:opacity-40"
-              style={{ fontSize: 12, fontWeight: 700, background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))" }}
+              style={{ fontSize: 12, fontWeight: 700, background: "var(--brand-600)" }}
             >
               {addMutation.isPending ? "저장 중..." : "저장"}
             </button>
@@ -1075,7 +1075,7 @@ export function BookDetailPage() {
             {book.status === "reading" && (
               <span
                 className="px-3 py-1 rounded-full text-white"
-                style={{ fontSize: 12, fontWeight: 700, background: "linear-gradient(135deg, var(--brand-600), var(--brand2-600))" }}
+                style={{ fontSize: 12, fontWeight: 700, background: "var(--brand-600)" }}
               >
                 📖 읽는 중
               </span>
