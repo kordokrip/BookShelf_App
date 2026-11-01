@@ -332,7 +332,7 @@ export function CameraOCRSheet({ bookId, onClose }: Props) {
 
       {/* 리뷰 단계 */}
       {step === 'review' && (
-        <div className="flex-1 bg-[#F8FAFC] flex flex-col overflow-y-auto">
+        <div className="flex-1 bg-[var(--bg-primary)] flex flex-col overflow-y-auto">
           {/* 촬영 이미지 미리보기 */}
           {previewUrl && (
             <img
@@ -346,7 +346,7 @@ export function CameraOCRSheet({ bookId, onClose }: Props) {
           <div className="flex-1 px-4 py-4 flex flex-col gap-3">
             {/* OCR 처리 중 */}
             {isProcessing && (
-              <div className="flex items-center gap-2 text-indigo-600 py-1">
+              <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-300 py-1">
                 <Loader2 size={16} className="animate-spin" />
                 <span className="text-sm font-medium">
                   {retryCount > 0 ? `텍스트 재인식 중... (${retryCount}회)` : '텍스트 인식 중...'}
@@ -357,8 +357,8 @@ export function CameraOCRSheet({ bookId, onClose }: Props) {
             {/* 신뢰도 표시 */}
             {!isProcessing && confidence !== null && (
               <div className="flex items-center gap-2">
-                <span className="text-xs text-[#64748B]">인식 신뢰도</span>
-                <div className="flex-1 h-1.5 rounded-full bg-[#E2E8F0] overflow-hidden">
+                <span className="text-xs text-[var(--text-secondary)]">인식 신뢰도</span>
+                <div className="flex-1 h-1.5 rounded-full bg-[var(--border-color)] overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all"
                     style={{
@@ -382,7 +382,7 @@ export function CameraOCRSheet({ bookId, onClose }: Props) {
                 <p className="text-red-500 text-xs leading-relaxed">{ocrError}</p>
                 <button
                   onClick={handleRetryOCR}
-                  className="self-start flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-600 text-xs font-semibold border border-red-200 active:scale-95 transition-transform"
+                  className="self-start flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-300 dark:border-red-900 text-xs font-semibold border border-red-200 active:scale-95 transition-transform"
                 >
                   <RefreshCw size={12} />
                   다시 인식하기
@@ -400,7 +400,7 @@ export function CameraOCRSheet({ bookId, onClose }: Props) {
                     'flex-1 py-2 text-xs rounded-xl border transition-colors font-semibold',
                     noteType === t.value
                       ? 'bg-indigo-600 text-white border-indigo-600'
-                      : 'border-[#E2E8F0] text-[#64748B]',
+                      : 'border-[var(--border-color)] text-[var(--text-secondary)]',
                   )}
                 >
                   <NoteTypeLabel type={t.value} size={14} />
@@ -428,7 +428,7 @@ export function CameraOCRSheet({ bookId, onClose }: Props) {
             <button
               onClick={handleSave}
               disabled={!extractedText.trim() || addMutation.isPending || isProcessing}
-              className="w-full py-3 rounded-xl bg-emerald-600 text-white font-semibold text-sm disabled:opacity-40 transition-opacity flex items-center justify-center gap-2"
+              className="w-full py-3 rounded-xl bg-emerald-700 text-white font-semibold text-sm disabled:opacity-40 transition-opacity flex items-center justify-center gap-2"
             >
               {addMutation.isPending ? (
                 <Loader2 size={16} className="animate-spin" />

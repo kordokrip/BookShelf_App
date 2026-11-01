@@ -350,7 +350,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
         {/* Phase 4: 몰입 타이머 진행 중 안내 */}
         {timerActiveForBook && (
           <div
-            className="flex items-center gap-2 rounded-xl px-3 py-2 bg-indigo-50 text-indigo-800"
+            className="flex items-center gap-2 rounded-xl px-3 py-2 bg-indigo-50 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-200"
             role="status"
             style={{ fontSize: 12, fontWeight: 600 }}
           >
@@ -560,7 +560,7 @@ function NotesTab({ notes, bookId, currentPage }: { notes: BookNote[]; bookId: s
                     "flex-1 py-2 text-sm rounded-xl border transition-colors",
                     form.type === t.value
                       ? "bg-indigo-600 text-white border-indigo-600"
-                      : "border-[#E2E8F0] text-[#64748B]"
+                      : "border-[var(--border-color)] text-[var(--text-secondary)]"
                   )}
                   style={{ fontWeight: 600 }}
                 >
@@ -747,7 +747,7 @@ function BookInfoTab({ book }: { book: UIBook }) {
           <span className="text-[#64748B] dark:text-[#94A3B8]" style={{ fontSize: 12 }}>({sessions.length}건)</span>
         </div>
         {sessionsLoading ? (
-          <div className="h-16 rounded-xl bg-[#F1F5F9] animate-pulse" />
+          <div className="h-16 rounded-xl bg-[var(--bg-muted)] animate-pulse" />
         ) : sessions.length === 0 ? (
           <p className="text-[#64748B] dark:text-[#94A3B8] text-center py-4" style={{ fontSize: 14 }}>
             아직 독서 기록이 없어요
@@ -999,7 +999,7 @@ export function BookDetailPage() {
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={handleDeleteBook}
-              className="text-red-500 focus:text-red-600 focus:bg-red-50"
+              className="text-red-500 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/40"
             >
               <Trash2 size={14} className="mr-2" />
               책 삭제

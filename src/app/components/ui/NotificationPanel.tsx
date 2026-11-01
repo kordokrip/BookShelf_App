@@ -9,29 +9,29 @@ import type { NotificationItem, NotificationType } from '../../../stores/uiStore
 import { useBackToClose } from "../../../hooks/useBackToClose";
 
 const TYPE_ICON: Record<NotificationType, React.ReactNode> = {
-  book_added:    <BookPlus  size={16} className="text-indigo-600" />,
-  book_updated:  <BookOpen  size={16} className="text-violet-600" />,
-  session_saved: <BookOpen  size={16} className="text-[#059669]" />,
-  note_saved:    <PenLine   size={16} className="text-[#D97706]" />,
-  collection_created: <FolderPlus size={16} className="text-indigo-600" />,
-  collection_deleted: <FolderMinus size={16} className="text-[#EF4444]" />,
-  offline_sync:  <Wifi      size={16} className="text-[#0EA5E9]" />,
-  sync:          <RefreshCw size={16} className="text-[#0EA5E9]" />,
-  achievement:   <Trophy    size={16} className="text-[#B45309]" />,
-  info:          <Info      size={16} className="text-[#64748B]" />,
+  book_added:    <BookPlus  size={16} className="text-indigo-600 dark:text-indigo-300" />,
+  book_updated:  <BookOpen  size={16} className="text-violet-600 dark:text-violet-300" />,
+  session_saved: <BookOpen  size={16} className="text-[#059669] dark:text-emerald-300" />,
+  note_saved:    <PenLine   size={16} className="text-[#D97706] dark:text-amber-300" />,
+  collection_created: <FolderPlus size={16} className="text-indigo-600 dark:text-indigo-300" />,
+  collection_deleted: <FolderMinus size={16} className="text-[#EF4444] dark:text-red-300" />,
+  offline_sync:  <Wifi      size={16} className="text-[#0EA5E9] dark:text-sky-300" />,
+  sync:          <RefreshCw size={16} className="text-[#0EA5E9] dark:text-sky-300" />,
+  achievement:   <Trophy    size={16} className="text-[#B45309] dark:text-amber-300" />,
+  info:          <Info      size={16} className="text-[#64748B] dark:text-[#94A3B8]" />,
 };
 
 const TYPE_BG: Record<NotificationType, string> = {
-  book_added:    'bg-indigo-50',
-  book_updated:  'bg-violet-50',
-  session_saved: 'bg-[#ECFDF5]',
-  note_saved:    'bg-[#FFFBEB]',
-  collection_created: 'bg-indigo-50',
-  collection_deleted: 'bg-[#FEF2F2]',
-  offline_sync:  'bg-[#F0F9FF]',
-  sync:          'bg-[#F0F9FF]',
-  achievement:   'bg-[#FEF3C7]',
-  info:          'bg-[#F1F5F9]',
+  book_added:    'bg-indigo-50 dark:bg-indigo-950/60',
+  book_updated:  'bg-violet-50 dark:bg-violet-950/60',
+  session_saved: 'bg-[#ECFDF5] dark:bg-emerald-950/60',
+  note_saved:    'bg-[#FFFBEB] dark:bg-amber-950/60',
+  collection_created: 'bg-indigo-50 dark:bg-indigo-950/60',
+  collection_deleted: 'bg-[#FEF2F2] dark:bg-red-950/60',
+  offline_sync:  'bg-[#F0F9FF] dark:bg-sky-950/60',
+  sync:          'bg-[#F0F9FF] dark:bg-sky-950/60',
+  achievement:   'bg-[#FEF3C7] dark:bg-amber-950/60',
+  info:          'bg-[#F1F5F9] dark:bg-[#334155]',
 };
 
 function timeAgo(ts: number): string {
@@ -137,7 +137,7 @@ export function NotificationPanel({ onClose }: Props) {
               onClick={clearNotifications}
               aria-label="전체 삭제"
               title="전체 삭제"
-              className="w-11 h-11 flex items-center justify-center rounded-full text-[#64748B] dark:text-[#94A3B8] hover:text-[#EF4444] hover:bg-[#FEF2F2] transition-colors"
+              className="w-11 h-11 flex items-center justify-center rounded-full text-[#64748B] dark:text-[#94A3B8] hover:text-[#EF4444] hover:bg-[#FEF2F2] dark:hover:bg-red-950/40 transition-colors"
             >
               <Trash2 size={15} />
             </button>

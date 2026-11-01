@@ -68,7 +68,7 @@ function GenreSummary({ genres }: { genres: { genre: string; count: number }[] }
                 <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-body)" }}>{genre}</span>
                 <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>{count}권 ({pct}%)</span>
               </div>
-              <div className="h-1.5 rounded-full bg-[#F1F5F9] overflow-hidden">
+              <div className="h-1.5 rounded-full bg-[var(--bg-muted)] overflow-hidden">
                 <div
                   className="h-full rounded-full"
                   style={{ width: `${pct}%`, backgroundColor: cfg?.text ?? "var(--brand-600)" }}
@@ -171,7 +171,7 @@ export function YearlyReviewPage() {
           onClick={handleShare}
           disabled={sharing}
           aria-busy={sharing}
-          className="disabled:opacity-60 flex items-center gap-1.5 rounded-full px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
+          className="disabled:opacity-60 flex items-center gap-1.5 rounded-full px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:text-indigo-300 dark:hover:bg-indigo-900/60 transition-colors"
           style={{ fontSize: 13, fontWeight: 600 }}
         >
           <Share2 size={14} />
@@ -242,7 +242,7 @@ export function YearlyReviewPage() {
                   {goalRate}%
                 </span>
               </div>
-              <div className="h-2.5 rounded-full bg-[#F1F5F9] overflow-hidden mb-1">
+              <div className="h-2.5 rounded-full bg-[var(--bg-muted)] overflow-hidden mb-1">
                 <div
                   className="h-full rounded-full"
                   style={{ width: `${goalRate}%`, background: "linear-gradient(90deg, #F59E0B, #D97706)" }}
@@ -323,7 +323,7 @@ export function YearlyReviewPage() {
 
           {/* 올해 완독 도서 목록 */}
           {thisYearDone.length === 0 && totalDone > 0 && (
-            <div className="bg-gray-50 rounded-xl p-6 text-center mb-3" style={{ border: "1px solid #E2E8F0" }}>
+            <div className="bg-gray-50 dark:bg-[#0F172A] rounded-xl p-6 text-center mb-3" style={{ border: "1px solid var(--border-color)" }}>
               <p style={{ fontSize: 24, marginBottom: 8 }}>📚</p>
               <p style={{ fontSize: 14, fontWeight: 700, color: "var(--text-body)", marginBottom: 4 }}>올해 완독한 책이 없어요</p>
               <p style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 16 }}>새로운 책을 시작해보세요!</p>

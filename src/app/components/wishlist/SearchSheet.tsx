@@ -186,10 +186,10 @@ export function SearchSheet({
             <div className="flex flex-col gap-0 mt-2">
               {[...Array(5)].map((_, i) => (
                 <div key={i} className="flex items-center gap-3 px-4 py-3 border-b border-[#F8FAFC]">
-                  <div className="w-10 h-14 bg-[#F1F5F9] rounded-lg animate-pulse shrink-0" />
+                  <div className="w-10 h-14 bg-[var(--bg-muted)] rounded-lg animate-pulse shrink-0" />
                   <div className="flex-1 flex flex-col gap-2">
-                    <div className="h-3.5 bg-[#F1F5F9] rounded animate-pulse w-3/4" />
-                    <div className="h-3 bg-[#F1F5F9] rounded animate-pulse w-1/2" />
+                    <div className="h-3.5 bg-[var(--bg-muted)] rounded animate-pulse w-3/4" />
+                    <div className="h-3 bg-[var(--bg-muted)] rounded animate-pulse w-1/2" />
                   </div>
                 </div>
               ))}
@@ -203,7 +203,7 @@ export function SearchSheet({
               {searchResults.map((book) => (
                 <li
                   key={book.isbn || book.title}
-                  className="flex items-center gap-3 px-4 py-3 border-b border-[#F8FAFC] hover:bg-[#FAFAFA] transition-colors"
+                  className="flex items-center gap-3 px-4 py-3 border-b border-[var(--bg-primary)] hover:bg-[#FAFAFA] dark:hover:bg-[#334155]/50 transition-colors"
                 >
                   {/* 표지 */}
                   {book.coverImage ? (
@@ -214,7 +214,7 @@ export function SearchSheet({
                       className="w-10 h-14 object-cover rounded-lg shrink-0 shadow-sm"
                     />
                   ) : (
-                    <div className="w-10 h-14 bg-[#F1F5F9] rounded-lg shrink-0 flex items-center justify-center">
+                    <div className="w-10 h-14 bg-[var(--bg-muted)] rounded-lg shrink-0 flex items-center justify-center">
                       <span style={{ fontSize: 18 }}>📚</span>
                     </div>
                   )}
