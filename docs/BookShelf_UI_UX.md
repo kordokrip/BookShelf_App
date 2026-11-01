@@ -147,12 +147,14 @@
 - 라이트 전용 색을 인라인 `style={{ color }}`로 주면 `dark:` 클래스가 먹지 않는다 — 다크 모드가 있는 화면은 `className="text-[#64748B] dark:text-[#94A3B8]"`처럼 클래스로 지정하거나, 인라인이 필요하면 아래 1.4의 다크 대응 CSS 변수(`var(--text-primary)` 등)를 쓴다
 - 다크 모드에서 흰 카드·패널이 그대로 남는 "밝은 섬"도 결함으로 본다 (2026-09-27 통계·연간 결산·책 상세·기록 모달에서 발견·수정). 점검: `.playwright-mcp/light-island-audit.js`(화면), `overlay-dark-audit.js`(시트·모달·팝업)
 
-### 1.2 CTA 그래디언트
+### 1.2 주요 버튼 (58차 — 단색)
 
 ```css
-background: var(--brand-gradient) /* = linear-gradient(135deg, var(--brand-600) 0%, var(--brand2-600) 100%) */
+background: var(--brand-600) /* 강조색 단색. 6종 프리셋 모두 흰 글자 4.5:1 이상 */
 ```
-- **사용처**: 회원가입/로그인 버튼, FAB, 아바타, AuthPreviewNav 토글, 설치 배너 버튼
+- **사용처**: 저장·시작·추가 같은 화면의 주요 버튼, FAB, 설치·업데이트 배너 버튼, 기본 아바타. 56차 로그인 화면 원칙을 58차에 앱 전체로 넓혔다
+- **AI 영역 버튼**은 `var(--brand2-600)` 단색(AI 요약), **완료 상태**는 `#047857`
+- `var(--brand-gradient)`(brand→brand2 그라데이션)는 **장식 면에만** 쓴다: 연간 결산 히어로, 통계의 연간 결산 프로모션 카드, 읽는 중 히어로, 강조색 미리보기. 버튼에는 쓰지 않는다
 
 ### 1.3 비활성 그래디언트
 
@@ -584,10 +586,11 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 
 - **파일**: `src/app/pages/OnboardingPage.tsx`, 슬라이드 구성 `components/onboarding/onboardingSlides.tsx`, SVG 일러스트 `components/onboarding/Illustrations.tsx`
 - **경로**: `/onboarding` (공개, lazy) — 처음 방문한 미인증 사용자의 첫 화면
+- **장면 (58차 — 로그인과 같은 원칙)**: Dusk Ink 하늘(`#1D2142` + 왼쪽 아래 주홍·오른쪽 위 서리 빛)을 **라이트·다크 모드와 무관하게** 쓴다. 색·배경·책갈피·워드마크는 `components/brand/dusk.tsx`에서 로그인(AuthShell)과 공유한다. 일러스트는 종이색 카드 안에 앱 아이콘 팔레트(종이 `#F4EDE4`·주홍 `#C8643A`·금빛 `#E9A73B`·자두 `#5A3367`·서리 `#7F93C4`·세이지)로 그리고, 카드 오른쪽 위에 금빛 책갈피가 내려온다(`.auth-ribbon`). 제목은 세리프(`font-book`) `HERO_INK`, 본문 `HERO_SUB`, 소제목은 금빛. 현재 위치 점은 작은 책갈피, 주요 버튼은 종이색 단색(`#F4EDE4` 바탕 + `#1D2142` 글자)
 - **레이아웃**: 화면 높이에 고정(`height: var(--vp-h)`), 헤더·하단 버튼은 고정, 소개 영역만 스크롤. 일러스트 높이는 `min(32dvh,300px)`(태블릿 이상 `min(56dvh,360px)`)라 작은 폰(320×568)·가로 모드(844×390)에서도 하단 버튼이 항상 보인다. 태블릿 이상은 일러스트·글 2단 + 이전/다음 화살표.
 - **항상 보이는 행동**: 헤더 [로그인](44px) / 하단 [다음] 또는 마지막 장 [무료로 시작하기] / [바로 가입하기]·[이미 계정이 있어요](마지막 장은 "이미 계정이 있나요? 로그인"). 어느 버튼이든 누르면 `onboarding_seen=1` → 다음 진입부터 로그인으로.
 - **내용**: 서재 · 기록(서식·페이지 범위·오늘의 회고) · 몰입(집중 타이머·몰입 메모·AI 태그) · 성장(책 쌓기·캐릭터) 4장 고정(`ONBOARDING_SLIDES`). 2026-09-27 리뉴얼 전체 공개 후 공개 플래그 분기를 제거했다 — 새 기능을 단계 공개할 때는 미공개 기능을 약속하지 않도록 `GET /api/flags/public`으로 다시 분기한다.
-- **접근성**: 캐러셀 패턴(`role="region"` + `aria-roledescription="carousel"`, 슬라이드 `aria-roledescription="slide"` + "n / 전체" 라벨), 위치 점은 28px 버튼(`aria-current="step"`), 좌우 화살표 키, 스와이프(50px), `useReducedMotion` 시 전환 애니메이션 생략, 자동 넘김 없음.
+- **접근성**: `<main>`(역할 덮어쓰기 없음 — 58차에 `role="region"`이 메인 랜드마크를 지우던 문제 수정) 안의 캐러셀 `<section role="region" aria-roledescription="carousel">`, 슬라이드 `aria-roledescription="slide"` + "n / 전체" 라벨), 위치 점은 28px 버튼(`aria-current="step"`), 좌우 화살표 키, 스와이프(50px), `useReducedMotion` 시 전환 애니메이션 생략, 자동 넘김 없음.
 - **제거한 것**: 장르·독서 목표 선택 슬라이드 — 회원가입 위자드에 이미 있고, 가입 전이라 토큰이 없어 저장되지도 않았다(선택값 유실 버그).
 
 ---
@@ -1455,7 +1458,7 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 |---------|------|-------|------|
 | **Button** | `ui/Buttons.tsx` | variant(primary/secondary/ghost/danger), size(sm/md/lg), fullWidth, loading | 기본 버튼, rounded-xl, active:scale-95 |
 | **IconButton** | `ui/Buttons.tsx` | icon, label, variant(default/primary/ghost) | 40px 원형 아이콘 버튼 |
-| **AddBookFab** | `ui/Buttons.tsx` | onClick, label | 56px 원형 플로팅 버튼, gradient, fixed 우하단 — 완독/읽는중/추천 3개 페이지 공용 |
+| **AddBookFab** | `ui/Buttons.tsx` | onClick, label | 56px 원형 플로팅 버튼, 강조색 단색, fixed 우하단 — 완독/읽는중/추천 3개 페이지 공용 |
 | **TextInput** | `ui/Inputs.tsx` | label, error, helper, (HTML input props) | Floating label, focus ring, error/success 상태 |
 | **GenreSelect** | `ui/Inputs.tsx` | value, onChange, label | 드롭다운 + 검색 필터, GENRE_CONFIG 기반 |
 | **NumberStepper** | `ui/Inputs.tsx` | value, onChange, min, max, step, label | Minus/Plus 스텝퍼, h-12 |

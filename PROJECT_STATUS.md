@@ -16,8 +16,8 @@
 |---|---|---|
 | 구글 로그인 OAuth `state`(로그인 CSRF 방어) | 57차 `2026-10-26-security-audit.md` | iPhone 홈 화면 앱에서 구글 로그인이 깨질 위험 — 실기기 확인 후 진행 |
 | 가입 정책: 공개 가입 유지 vs 초대제 | 57차 | 이메일 가입은 메일 인증 없음, `ALLOWED_EMAILS`는 구글 가입에만 적용 |
-| 온보딩(`/onboarding`)도 새 로그인 디자인 원칙으로 맞출지 | 56차 `2026-10-25-auth-redesign.md` | 지금은 흰 바탕·알록달록 일러스트·그라데이션 버튼 |
-| 개발 도구 업그레이드(wrangler·vite·sharp·happy-dom) | 57차 | 운영 번들 미포함. wrangler는 workers-types 메이저 연동(`docs/CI_CD.md` 2번 교훈) |
+| 맞춤 도메인 연결(한국 사용자를 ICN 엣지로) | 58차 `2026-11-02-uiux-evolution.md` P8 | API 0.3~0.8초 중 대부분이 HKG 엣지·APAC D1 왕복. 도메인 구입·DNS 필요 |
+| 큰 화면 파일 분할·vite 8/vitest 5 전환 | 58차 P7·P9 | 사용자 체감 없음, 회귀 위험 — 별도 차수로 할지 |
 
 ---
 

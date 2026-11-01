@@ -7,8 +7,9 @@
 |---|---|
 | 분석 | 완료 — 아래 '측정' |
 | 계획서 | 완료 — 아래 '계획'(P1~P6 실행, P7~P9 제안만) |
-| 실행 | P1 커밋(e5d17d0) · P2 온보딩 Dusk·P3 첫 로딩 경량화 커밋 · P4~P6 진행 중 |
-| 스테이징·운영 | 대기 |
+| 실행 | 완료 — e5d17d0(P1 도구) · 4def4af(P2 온보딩) · 15181ff(P3 첫 로딩) · ef2774d(P4 버튼) · 4b8c62a(P5 다크 모드) · 문서(P6). 테스트 772 → 775, type-check·lint·build 통과 |
+| 스테이징·운영 | 대기 — 다음: `git push origin main:staging` → 화면·e2e 확인 → `git push origin main` |
+| 사용자 결정 대기 | P7~P9 제안(PROJECT_STATUS 0절) |
 
 ## 측정 (2026-11-02, 운영)
 
@@ -35,3 +36,17 @@
 | P7 | (제안) 큰 화면 파일 분할(BookDetail·Reading·Stats·Admin·RegisterFlow) | — | 없음 | 회귀 위험 대비 효익이 낮아 별도 차수에서 화면 단위로 |
 | P8 | (제안) 맞춤 도메인 연결 — 한국 사용자가 ICN 엣지로 붙으면 왕복 감소 가능 | DNS·wrangler routes | 응답 체감 | 도메인 필요(사용자 결정) |
 | P9 | (제안) vite 8·vitest 5 메이저 전환 | 빌드 체계 | 없음 | rolldown 전환 — 별도 검증 차수 |
+
+## 실행 결과
+
+| # | 결과 |
+|---|---|
+| P1 | wrangler 4.156.0·workers-types 5.20261101.1(정확 고정), vite 6.4.5(+overrides), sharp ^0.35, happy-dom ^21. tsc·테스트·`wrangler deploy --dry-run` 통과. npm audit high/critical 0(남은 moderate·low는 eslint·glob 개발 도구 체인, 수정판 없음). sharp 0.35로 아이콘을 다시 만들면 PNG 바이트만 바뀌어 되돌렸다 |
+| P2 | `components/brand/dusk.tsx`(색·배경·책갈피·워드마크)를 AuthShell과 공유. 온보딩: Dusk 하늘, 종이색 일러스트 카드 + 책갈피, 세리프 제목, 책갈피 모양 위치 점, 종이색 단색 버튼. 로컬 확인: 모바일 라이트·다크·데스크톱 모두 같은 장면, `<main>` 1개(역할 없음)·h1 1개·가로 넘침 없음·콘솔 오류 0. 테스트 3개 추가 |
+| P3 | `ui/ProfileAvatar.tsx` 분리, ProfilePopup은 TopBar에서 `lazy`, AchievementCelebration은 Root에서 축하 대기열이 있을 때만 `lazy`. 첫 화면 modulepreload: react·router·query·ui(motion 제외) |
+| P4 | 버튼 26곳(21파일) `var(--brand-600)` 단색, AI 요약 버튼 `--brand2-600`, 읽기 완료 `#047857`, 사이드바 기본 아바타. 남긴 그라데이션: 연간 결산 히어로·통계 프로모션 카드·읽는 중 히어로·집중 타이머 배경·아이콘 원(장식 면) |
+| P5 | 알림 패널(아이콘 10종 배경·색, 지우기 hover), 연간 결산(막대·버튼·빈 상태), 책 상세(안내·노트 종류 선택·스켈레톤·삭제 메뉴), 검색 시트(스켈레톤·행 테두리·hover), 카메라 OCR(결과 패널 바탕·글자·막대·재시도·저장 버튼 AA) |
+| P6 | UI_UX 1.2(주요 버튼 단색 규칙)·9.2(온보딩 장면·랜드마크), CHANGELOG 58차, PROJECT_STATUS 0절(온보딩·도구 항목 해결 → 삭제, P7~P9 추가) |
+
+### 남은 일(이번 범위 밖)
+- 관리자 화면·모임 빈 상태 등에 `from-indigo-* to-violet-*` 장식 그라데이션(아바타·아이콘)이 남아 있다 — 버튼이 아니라 이번 범위에서 제외.
