@@ -51,7 +51,7 @@
 
 ### 2026-10-04 · 37차 — Gemma 3 27B → Gemini 3.8 Flash(유료, OpenRouter)
 
-> 요청: "OpenRouter가 가격을 우선해 가장 느린 공급자로 가는 문제를 해결하도록, 빠른 응답을 받을 수 있는 모델을 찾아 적용". 현재 모델명은 `worker/lib/openrouter.ts`의 `OPENROUTER_MODEL`. 비교 스크립트는 `scripts/ai-bench/`.
+> 요청: "OpenRouter가 가격을 우선해 가장 느린 공급자로 가는 문제를 해결하도록, 빠른 응답을 받을 수 있는 모델을 찾아 적용". 현재 모델명은 `worker/lib/ai/openrouter.ts`의 `OPENROUTER_MODEL`. 비교 스크립트는 `scripts/ai-bench/`.
 
 ### 배경
 - 36차 실측에서 `google/gemma-3-27b-it`은 인생책 첫 생성이 13~42초로 들쭉날쭉했다.
@@ -110,7 +110,7 @@ Gemini 3.8 Flash의 다른 작업 결과:
 
 ### 2026-10-05 · 42차 — 크레딧 $0 대응, 무료 Qwen 3.8 27B
 
-> 요청: "OpenRouter 현재 남아 있는 무료 크레딧으로 쓸 수 있는 것을 정해서 설정". 현재 모델명은 `worker/lib/openrouter.ts`의 `OPENROUTER_MODEL`. 이전 유료 비교는 `docs/AI_PROVIDERS.md`.
+> 요청: "OpenRouter 현재 남아 있는 무료 크레딧으로 쓸 수 있는 것을 정해서 설정". 현재 모델명은 `worker/lib/ai/openrouter.ts`의 `OPENROUTER_MODEL`. 이전 유료 비교는 `docs/AI_PROVIDERS.md`.
 
 ### 배경
 - 계정 상태(`GET /api/v1/key`, `GET /api/v1/credits`로 확인)

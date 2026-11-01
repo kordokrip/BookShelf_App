@@ -118,21 +118,20 @@ DevTools 설정:
 
 | # | 테스트 항목 | 결과 | 비고 |
 |---|------------|------|------|
-| 1 | `/entry` 접속 (미인증) → `/splash`로 리다이렉트 | ⚠️ WARN | 신규 사용자 기준. 재방문 미인증은 `/login` 이동 |
+| 1 | `/entry` 접속 (미인증, 처음 방문) → `/onboarding` 이동 | 🔍 MANUAL | 소개를 봤거나 로그인한 적이 있으면 `/login` |
 | 2 | `/entry` 접속 (인증 상태) → `/` 이동 | ✅ PASS | `EntryGate.tsx` — status === 'authenticated' |
 
-### B-02. SplashPage
+### B-02. 옛 주소
 
 | # | 테스트 항목 | 결과 | 비고 |
 |---|------------|------|------|
-| 1 | `/splash` → "시작하기" 클릭 → `/onboarding` 이동 | ✅ PASS | 자동 이동 없음, 버튼 기반 |
-| 2 | 인증 완료 상태 → `/` 이동 | ✅ PASS | `authStore` status 분기 |
+| 1 | `/splash` → `/onboarding` 리다이렉트 | 🔍 MANUAL | 스플래시는 2026-09-27 온보딩에 통합 |
 
 ### B-03. OnboardingPage
 
 | # | 테스트 항목 | 결과 |
 |---|------------|------|
-| 1~6 | ProgressBar, 스와이프, 장르 칩, 완료 → `PATCH /api/users/profile` | 🔍 MANUAL |
+| 1~5 | 4장 넘김(버튼·스와이프·좌우 키), 위치 점, 마지막 장 [무료로 시작하기]·로그인, 라이트·다크 모두 같은 Dusk 장면(58차) | 🔍 MANUAL |
 
 ### B-04. 회원가입 (SignUpPage)
 
@@ -183,7 +182,7 @@ DevTools 설정:
 | 오프라인 배너 표시/숨김 | ✅ PASS | `window.addEventListener('offline')` |
 | BottomNavBar, TopBar, 테마 색상 | 🔍 MANUAL | |
 
-### C-1. 반응형/디바이스 회귀 (`docs/테스트_체크리스트.md`에서 흡수)
+### C-1. 반응형/디바이스 회귀
 
 | # | 테스트 항목 | 결과 |
 |---|------------|------|
@@ -269,11 +268,10 @@ Playwright·DevTools 에뮬레이션은 아래를 재현하지 못한다. 릴리
 
 ---
 
-## SECTION H — 공유 & AI
+## SECTION H — AI
 
 | 항목 | 결과 | 비고 |
 |------|------|------|
-| 통계 보고서 공유/수신함/발신함 | ✅ PASS | `share.ts` |
 | AI 책 추천 `GET /api/ai/recommend` | ✅ PASS | KV 캐시 1h, 위시 제외 |
 | AI 추천 강제 갱신 (`refresh=true`) | ✅ PASS | KV 캐시 삭제 후 재조회 |
 
@@ -417,7 +415,7 @@ ADMIN_TOKEN="<admin-jwt>" bash scripts/qa/admin-api-test.sh
 
 ---
 
-## SECTION M — 성능 벤치마크 & 번들 크기 (`docs/테스트_체크리스트.md`에서 흡수)
+## SECTION M — 성능 벤치마크 & 번들 크기
 
 ### M-1. 번들 크기 기준
 
@@ -436,14 +434,7 @@ npm run build 2>&1 | grep "dist/assets"
 
 > `vendor-charts`는 `/stats` 진입 시에만 로드되는 lazy chunk
 
-**마지막 측정: 2026-04-28** (재측정 필요 — wrangler 4.107.1, react-router 등 대규모 업그레이드 이후 미검증)
-
-| 청크 | 측정값 (gzip, 2026-04-28) | 기준 대비 (당시) |
-|------|---------------------------|------------------|
-| `vendor-react-*.js` | 102.77 kB | ⚠️ +2.77 kB 초과 |
-| `index-*.js` | 31.21 kB | ✅ 기준 이내 |
-| `vendor-charts-*.js` | 102.40 kB | ✅ 기준 이내 |
-| `index-*.css` | 17.82 kB | ✅ 기준 이내 |
+**측정값은 이 문서에 적지 않는다**(금방 낡는다 — CLAUDE.md). 최근 측정은 `docs/sessions/2026-11-02-uiux-evolution.md` '측정'(첫 로딩 JS·CSS, 58차에 motion을 첫 로딩에서 제외). 첫 화면에 실리는 청크는 `curl -s <주소>/ | grep -o 'modulepreload[^>]*'`로 확인한다.
 
 ### M-2. Lighthouse 목표 점수 (전체 카테고리)
 
@@ -481,7 +472,7 @@ npm run build 2>&1 | grep "dist/assets"
 npx vite-bundle-visualizer
 ```
 - `vendor-charts` lazy 분리 확인 (`/stats` 직접 접속 시에만 로드)
-- `framer-motion` 트리쉐이킹: `import { motion } from 'framer-motion/m'` 검토
+- `motion`(애니메이션)은 첫 로딩에 없어야 한다 — 쓰는 컴포넌트는 지연 로딩(58차)
 
 **PWA 점수 낮음**
 - HTTPS 필수: localhost는 OK, 프로덕션은 Workers 자동 HTTPS
@@ -574,6 +565,5 @@ open lighthouse-a11y.html
 | 항목 | 상태 | 비고 |
 |------|------|------|
 | OCR 한국어 인식 | ⚠️ 부분 지원 | CF Dashboard에서 llama-3.2-11b 라이선스 수락 필요 (코드 변경 불필요) |
-| SplashPage 자동 이동 없음 | ⚠️ 설계 결정 | 버튼 클릭 기반 (자동 타이머 없음) |
 | WebSocket 채팅 | ✅ 기본 켜짐 (ADR-002, 2026-10-19~) | HTTP 전송·삭제도 DO로 실시간 전달. `localStorage.chat_ws='0'`이면 끄고 3초 폴링 |
 | 관리자 API 스크립트 기본 로그인 | ⚠️ 환경 의존 | 기본 자격증명이 없으면 실패. `ADMIN_TOKEN` 실행 경로 사용 권장 |

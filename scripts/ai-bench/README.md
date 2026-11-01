@@ -9,7 +9,7 @@ npx esbuild scripts/ai-bench/dumpPrompts.ts --bundle --platform=node --format=cj
 node /tmp/dumpPrompts.cjs > /tmp/prompts.json
 
 # 2) 모델 비교 (키 값은 출력하지 않는다. 모델 뒤 @none/@minimal은 추론 정도)
-KEY=$(grep '^VITE_OPENROUTER_API_KEY=' .env.local | cut -d= -f2- | tr -d '"') \
+KEY=$(grep '^OPENROUTER_API_KEY=' .dev.vars | cut -d= -f2- | tr -d '"') \
 KAKAO=$(grep '^KAKAO_REST_API_KEY=' .dev.vars | cut -d= -f2- | tr -d '"') \
 PROMPTS=/tmp/prompts.json \
 python3 scripts/ai-bench/bench.py "google/gemini-3.8-flash@minimal,google/gemma-3-27b-it"

@@ -128,7 +128,7 @@ DO(Durable Objects)를 포함한 기능(채팅룸)을 테스트할 때는 `npx w
 
 ## D1 마이그레이션 절차
 
-1. `worker/db/migrations/`에 다음 순번의 `.sql` 파일을 추가한다 (예: 기존 마지막이 `0014_reminder_prefs.sql`이면 `0015_...sql`).
+1. `worker/db/migrations/`에 다음 순번의 `.sql` 파일을 추가한다 (마지막 번호는 `ls worker/db/migrations | tail -1`로 확인).
 2. **로컬 D1에 먼저 적용**해 검증한다:
    ```bash
    npm run db:migrate:local
