@@ -3,7 +3,7 @@ import { BookMarked, BookOpen, Star, BarChart2, Settings, Palette, FileText, Che
 import { useAuthStore } from "../../../stores/authStore";
 import { useBookCount, useBooks } from "../../../hooks/useBooks";
 import { useUiStore } from "../../../stores/uiStore";
-import { ProfileAvatar } from "../ui/ProfilePopup";
+import { ProfileAvatar } from "../ui/ProfileAvatar";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 import { AppLogo } from "../brand/AppLogo";
 

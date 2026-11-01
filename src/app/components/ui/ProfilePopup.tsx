@@ -5,11 +5,13 @@
  * - 오늘의 인사말
  * - 프로필 이모지 선택 기능
  * - 로그아웃 버튼
+ * - 첫 로딩에서 빼려고 TopBar가 지연 로딩한다(58차 — motion 39KB). 아바타는 ProfileAvatar.tsx(가벼움, 항상 로드)
  */
-import { useState, useEffect, forwardRef } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { LogOut, X, Camera, Palette, ChevronRight, Users, LibraryBig, CalendarRange, UserCog } from "lucide-react";
-import { useAuthStore, type AuthUser } from "../../../stores/authStore";
+import { useAuthStore } from "../../../stores/authStore";
+import { ProfileAvatar } from "./ProfileAvatar";
 import { usersApi } from "../../../lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { PushNotificationToggle } from "./PushNotificationToggle";
@@ -135,84 +137,6 @@ function EmojiPicker({
   );
 }
 
-/* ─── 아바타 표시 컴포넌트 (공유) ──────────────────── */
-type ProfileAvatarProps = Omit<React.HTMLAttributes<HTMLDivElement>, "className"> & {
-  user: AuthUser | null;
-  size?: number;
-  fontSize?: number;
-  className?: string;
-};
-
-// forwardRef + rest props: Radix Slot(asChild, 예: TooltipTrigger)이 ref·이벤트 핸들러를 직접 전달한다
-export const ProfileAvatar = forwardRef<HTMLDivElement, ProfileAvatarProps>(function ProfileAvatar({
-  user,
-  size = 40,
-  fontSize = 16,
-  className = "",
-  ...rest
-}, ref) {
-  const emoji = user?.profile_emoji;
-  const avatarUrl = user?.avatar_url;
-  const initial = user?.name?.[0] ?? "?";
-
-  if (avatarUrl) {
-    return (
-      <div
-        {...rest}
-        ref={ref}
-        className={`rounded-full overflow-hidden flex-shrink-0 ${className}`}
-        style={{ width: size, height: size }}
-      >
-        <img
-          src={avatarUrl}
-          alt="프로필"
-          loading="lazy"
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            // fallback to gradient
-            (e.target as HTMLImageElement).style.display = "none";
-            (e.target as HTMLImageElement).parentElement!.classList.add(
-              "bg-gradient-to-br", "from-indigo-600", "to-violet-600"
-            );
-          }}
-        />
-      </div>
-    );
-  }
-
-  if (emoji) {
-    return (
-      <div
-        {...rest}
-        ref={ref}
-        className={`rounded-full flex items-center justify-center flex-shrink-0 ${className}`}
-        style={{
-          width: size,
-          height: size,
-          backgroundColor: "var(--bg-accent-soft)",
-          border: "2px solid var(--brand-200)",
-        }}
-      >
-        <span style={{ fontSize: fontSize * 1.2 }}>{emoji}</span>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      {...rest}
-      ref={ref}
-      className={`rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center flex-shrink-0 shadow-sm ${className}`}
-      style={{ width: size, height: size }}
-    >
-      <span className="text-white" style={{ fontSize, fontWeight: 700 }}>
-        {initial}
-      </span>
-    </div>
-  );
-});
-
-/* ─── 메인 팝업 ───────────────────────────────────── */
 export function ProfilePopup({ onClose }: { onClose: () => void }) {
   useBackToClose(true, onClose);
   const navigate = useNavigate();

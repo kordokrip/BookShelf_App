@@ -4,14 +4,17 @@
  * - 반응형: xs(~374px) / sm(375px~) / lg(1024px+)
  * - 알림 벨: 미읽음 카운트 배지 + NotificationPanel 드롭다운
  */
-import { useState, useRef } from 'react';
+import { useState, useRef, lazy, Suspense } from 'react';
 import { Bell, FileSearch } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { useAuthStore } from '../../../stores/authStore';
 import { useUiStore } from '../../../stores/uiStore';
 import { useMarkAllNotificationsRead, useNotificationUnreadCount } from '../../../hooks/useGroups';
 import { NotificationPanel } from '../ui/NotificationPanel';
-import { ProfilePopup, ProfileAvatar } from '../ui/ProfilePopup';
+import { ProfileAvatar } from '../ui/ProfileAvatar';
+
+// 프로필 팝업은 누를 때만 받는다(motion 포함 — 첫 로딩에서 제외, 58차). 서비스 워커 precache라 첫 열기도 즉시
+const ProfilePopup = lazy(() => import('../ui/ProfilePopup').then((m) => ({ default: m.ProfilePopup })));
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
 import { AppLogo } from "../brand/AppLogo";
 
@@ -157,7 +160,7 @@ export function TopBar() {
                   {user ? (
                     <ProfileAvatar user={user} size={32} fontSize={12} />
                   ) : (
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: "var(--brand-600)" }}>
                       <span className="text-white text-xs font-semibold">?</span>
                     </div>
                   )}
@@ -167,7 +170,9 @@ export function TopBar() {
             </Tooltip>
 
             {profileOpen && user && (
-              <ProfilePopup onClose={() => setProfileOpen(false)} />
+              <Suspense fallback={null}>
+                <ProfilePopup onClose={() => setProfileOpen(false)} />
+              </Suspense>
             )}
           </div>
         </div>

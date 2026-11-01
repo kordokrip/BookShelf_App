@@ -6,16 +6,21 @@ import { ToastProvider } from "./components/ui/Toast";
 import { OfflineBanner } from "./components/ui/OfflineBanner";
 import { InstallBanner } from "./components/ui/InstallBanner";
 import { LayoutDebugPanel } from "./components/ui/LayoutDebugPanel";
-import { AchievementCelebration } from "./components/characters/AchievementCelebration";
+import { lazy, Suspense } from "react";
+import { useCelebrationStore } from "../stores/celebrationStore";
 import { DeleteAccountDialog } from "./components/account/DeleteAccountDialog";
 import { useUiStore } from "../stores/uiStore";
 import { useOfflineQueue } from "../hooks/useOfflineQueue";
+
+// 업적 축하는 축하할 일이 생겼을 때만 받는다(motion 포함 — 첫 로딩에서 제외, 58차)
+const AchievementCelebration = lazy(() => import("./components/characters/AchievementCelebration").then((m) => ({ default: m.AchievementCelebration })));
 
 export function Root() {
   const sidebarOpen = useUiStore((s) => s.sidebarOpen);
   const deleteAccountOpen = useUiStore((s) => s.deleteAccountOpen);
   const setDeleteAccountOpen = useUiStore((s) => s.setDeleteAccountOpen);
   useOfflineQueue();
+  const hasCelebration = useCelebrationStore((s) => s.queue.length > 0);
 
   return (
     <ToastProvider>
@@ -56,8 +61,12 @@ export function Root() {
         {/* 계정 삭제 확인(프로필 팝업의 '계정 삭제') */}
         <DeleteAccountDialog open={deleteAccountOpen} onOpenChange={setDeleteAccountOpen} />
 
-        {/* 업적 달성·캐릭터 진화 축하 */}
-        <AchievementCelebration />
+        {/* 업적 달성·캐릭터 진화 축하 — 큐에 있을 때만 로드 */}
+        {hasCelebration && (
+          <Suspense fallback={null}>
+            <AchievementCelebration />
+          </Suspense>
+        )}
 
         {/* DEV only: layout 계산값 실시간 패널 */}
         <LayoutDebugPanel />
