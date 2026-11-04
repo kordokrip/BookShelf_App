@@ -23,6 +23,7 @@ dev-dist/
 Thumbs.db
 .idea/
 .vscode/settings.json
+.vscode/excel-pq-symbols/
 *.suo
 *.ntvs*
 *.njsproj

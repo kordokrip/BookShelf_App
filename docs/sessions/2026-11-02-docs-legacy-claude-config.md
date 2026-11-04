@@ -39,6 +39,13 @@
 | — (사실 정합) | 없는 `docs/api.md`·`schema.md`, 삭제된 SplashPage, "최신 마이그레이션 0014", Framer Motion, 그라데이션 CTA, 알림 6종, 보관된 접근성 감사 문서를 기준으로 삼음 | 현행 코드·문서(TRACE_MAP·UI_UX 1.1·1.2·`uiStore.ts`)로 교체. Sequential Thinking은 저장소 밖(gitignore된 `.mcp.json`) 서버라 필수 규칙에서 뺌 |
 | AGENTS.md는 CLAUDE.md가 있으면 Claude가 읽지 않는다 | Codex용 안내 | 그대로 둠(다른 도구용) |
 
-### 사용자 결정 대기 (개인 설정이라 고치지 않음)
-- `.claude/settings.local.json`의 플러그인 19개 중 이 프로젝트와 무관한 것(cloud-sql-postgresql·data·mcp-apps·agent-sdk-dev·plugin-dev·desktop-commander 등)은 스킬·도구 설명이 매 세션 컨텍스트를 차지한다 — 이 프로젝트에서만 끄려면 같은 파일에 `false`로.
-- `.mcp.json`(gitignore)의 `playwright`가 `@playwright/mcp@latest`(버전 미고정)이고, 같은 기능의 playwright 플러그인도 켜져 있어 도구가 두 벌 실린다 — 하나만 남기는 것을 권장.
+### 후속 — 플러그인·Playwright 중복 정리 (2026-11-04, 사용자 요청)
+개인 설정 파일이라 저장소에는 들어가지 않는다(둘 다 git 제외). 되돌리려면 해당 값을 `true`로, 또는 항목을 지운다.
+
+| 파일 | 바꾼 것 |
+|---|---|
+| `.claude/settings.local.json` | 이 프로젝트에서만 끔: claude.ai 동기화 플러그인 전체(`syncClaudeAiPlugins: false` — bio-research·legal·finance·marketing·adobe·brightdata·windsor 등, 인증 실패 MCP 서버 다수 포함), 무관한 공식 플러그인 13개(skill-creator·plugin-dev·agent-sdk-dev·coderabbit·desktop-commander·data·cloud-sql-postgresql·mcp-apps·figma·data-engineering·atomic-agents·github·mcp-server-dev). 남긴 11개: superpowers·frontend-design·code-review·code-simplifier·commit-commands·claude-md-management·typescript-lsp·context7·cloudflare·playwright·chrome-devtools-mcp |
+| `.mcp.json` | `playwright` 서버 삭제 — playwright 플러그인과 같은 `@playwright/mcp@latest`가 두 벌 실리던 중복. `sequential-thinking`은 유지 |
+
+- claude.ai 커넥터(Figma·Datadog·Notion·Gmail 등)는 플러그인이 아니라 그대로다. 이 프로젝트에서 끄려면 `.claude/settings.local.json`에 `"disableClaudeAiConnectors": true`.
+- GitHub 작업은 `gh` CLI로 한다(github 플러그인 MCP는 인증 오류로 연결 실패 상태였다).
