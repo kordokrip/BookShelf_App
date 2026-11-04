@@ -18,7 +18,6 @@
 | 가입 정책: 공개 가입 유지 vs 초대제 | 57차 | 이메일 가입은 메일 인증 없음, `ALLOWED_EMAILS`는 구글 가입에만 적용 |
 | 맞춤 도메인 연결(한국 사용자를 ICN 엣지로) | 58차 `2026-11-02-uiux-evolution.md` P8 | API 0.3~0.8초 중 대부분이 HKG 엣지·APAC D1 왕복. 도메인 구입·DNS 필요 |
 | 큰 화면 파일 분할·vite 8/vitest 5 전환 | 58차 P7·P9 | 사용자 체감 없음, 회귀 위험 — 별도 차수로 할지 |
-| 59차 운영 배포(마이그레이션 0022 `shared_reports` 삭제 포함) | 59차 `2026-11-02-docs-legacy-claude-config.md` | 스테이징 확인 완료. `git push origin main` 승인 필요 |
 
 ---
 
