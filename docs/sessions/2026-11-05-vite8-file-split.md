@@ -7,8 +7,8 @@
 |---|---|
 | 결정 반영 | 진행 중 |
 | vite 8·vitest 5 전환 | 커밋 — 아래 '빌드 도구 전환' |
-| 큰 파일 분할 | 대기 |
-| 스테이징 | 대기 |
+| 큰 파일 분할 | 커밋 — 64acf15(통계) · 52698d8(책 상세) · 2d1f26d(읽는 중) · 45a43c2(관리자) · 7647f39(등록 흐름), 아래 '큰 파일 분할' |
+| 스테이징 | 381dbca(vite 8) CI 성공·배포. 분할 커밋 배포·화면 점검 진행 중 |
 | 운영 | 대기 |
 
 ## 결정 (2026-11-05 사용자)
@@ -55,3 +55,18 @@
 | 서비스 워커 | — | `/` 폴백·`/api/` 제외·`sw-push.js`·캐시 이름 그대로 |
 
 파일 수가 는 것은 rolldown이 진입 청크와 지연 청크가 함께 쓰는 앱 코드(uiStore·authStore·api·client·utils 등)를 작은 공용 청크로 나누기 때문이다(진입 청크로 합치면 순환이 생기는 경우 rolldown은 합치지 않는다). 바이트는 같고 같은 출처 HTTP/2라 요청 수 부담은 작다 — 스테이징에서 운영과 로딩 시간을 비교해 확인한다.
+
+## 큰 파일 분할
+코드는 줄 단위 그대로 옮기고, 각 파일은 실제로 쓰는 import만 둔다(줄 범위를 받아 import를 골라 주는 임시 스크립트 사용, 저장소에 두지 않음). 상태·mutation은 원래 주인이 그대로 갖고 props로 넘겨 동작이 바뀌지 않게 했다.
+
+| 원본(줄) | 남은 페이지 | 새 파일(줄) |
+|---|---|---|
+| `components/stats/StatsComponents.tsx`(1053) | 삭제 | `stats/` statsTokens 16 · streak 109 · StatCards 135 · StatsCharts 301 · ReadingHeatmap 191 · ReadingCalendar 314 |
+| `pages/BookDetailPage.tsx`(1148) | 374 | `bookDetail/` NotesTab 357 · QuickNoteBar 99 · NoteFormSheet 106 · NoteCards 101 · BookInfoTab 185 |
+| `pages/ReadingPage.tsx`(1047) | 309 | `reading/` PageUpdateModal 309 · LogTodayModal 225 · GoalModal 149 · ReadingOverviewBanner 84 |
+| `pages/AdminPage.tsx`(992) | 106 | `admin/` UsersTab 235 · UserDetailModal 187 · SendNotifTab 175 · MessagesHistoryTab 146 · DashboardTab 112 · StatCard 25 · adminFormat 34 |
+| `pages/RegisterFlowPage.tsx`(851) | 131 | `registerFlow/` StepBookInfo 231 · StepSearch 166 · StepStatusCover 147 · StepConfirm 112 · StepIndicator 33 · registerForm 51 |
+
+- 새 파일은 모두 400줄 이하(최대 357). 테스트 775 통과, tsc·lint·빌드 경고 0.
+- 번들: 전체 gzip 합계 600.6KB → 600.8KB, 첫 로딩 파일 목록 같음. 공용 코드 일부가 청크 사이에서 자리만 옮겼다(StatsPage +4.2KB ↔ statsShareImage −4.4KB 등).
+- 연간 결산은 `calcReadingStreak`를 recharts가 있는 파일 대신 `stats/streak.ts`에서 직접 가져온다. 분할 전에도 tree-shaking으로 차트를 받지 않았으니 성능 변화는 없다(구조 정리).
