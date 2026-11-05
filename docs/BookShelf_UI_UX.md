@@ -973,7 +973,7 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 
 ### 9.10 RegisterFlowPage (책 등록)
 
-- **파일**: `src/app/pages/RegisterFlowPage.tsx` (~746줄)
+- **파일**: `src/app/pages/RegisterFlowPage.tsx`(단계 진행·저장) + `src/app/components/registerFlow/`(60차 분할 — 단계별 `StepSearch`·`StepBookInfo`·`StepStatusCover`·`StepConfirm`, `StepIndicator`, 폼 타입·초기값 `registerForm.ts`)
 - **경로**: `/register-flow`
 - **보호**: ProtectedRoute
 
