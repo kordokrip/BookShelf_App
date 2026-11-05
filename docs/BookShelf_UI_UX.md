@@ -731,7 +731,7 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 
 ### 9.7 ReadingPage (읽는 중)
 
-- **파일**: `src/app/pages/ReadingPage.tsx` (~970줄)
+- **파일**: `src/app/pages/ReadingPage.tsx`(화면·상태) + `src/app/components/reading/`(60차 분할 — `PageUpdateModal`·`LogTodayModal`·`GoalModal`·`ReadingOverviewBanner`, 기존 `FocusTimer`·`TimerDialogs`)
 - **경로**: `/reading`
 - **보호**: ProtectedRoute
 - **구성(39차)**: 대시보드 카드(읽는 중 N권·읽은 페이지·평균 진행·이번 주 + 연간 목표 줄(버튼 → 목표 설정) + 구분선 + 한 줄 타이머: [자유|집중 N분] · mm:ss · ▶/⏸ · ↺(1분 넘으면 확인) · ✎기록(오늘 독서 기록 시트) · 연결된 책) → 읽는 중인 책 카드 목록. 책 카드를 누르면 페이지 업데이트 시트가 열리고 타이머가 멈춰 있으면 그 책이 연결된다. `?action=goal`은 목표 설정을 연다
