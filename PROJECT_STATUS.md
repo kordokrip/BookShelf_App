@@ -1,9 +1,9 @@
 # BookShelf App — 현재 상태 스냅샷
 
-> **최종 업데이트:** 2026-11-02 (59차: 코드·문서 교차 검증, 1~44차 기록 압축 보관, `shared_reports` 삭제(0022), Claude Code 설정 최신화 / 58차: UI/UX 최적화 — 온보딩 Dusk 개편·첫 로딩 motion 제외·버튼 단색·다크 모드 정리, 개발 도구 업그레이드 / 57차: 소스·백엔드 보안 점검 15건 보완·CSP / 56차: 로그인·가입 화면 개편 / 55차: 서비스 워커 탐색 폴백 / 54차: 가을→겨울 앱 아이콘·반응형 재점검 / 53차: 정리). 이전 차수는 `docs/CHANGELOG.md`, 문서 목록은 `docs/README.md`
+> **최종 업데이트:** 2026-11-05 (60차: 열린 결정 정리(OAuth 현행 유지·공개 가입 유지·맞춤 도메인 유보), vite 8·vitest 5 전환, 큰 화면 파일 5개 분할 / 59차: 코드·문서 교차 검증, 1~44차 기록 압축 보관, `shared_reports` 삭제(0022), Claude Code 설정 최신화 / 58차: UI/UX 최적화 — 온보딩 Dusk 개편·첫 로딩 motion 제외·버튼 단색·다크 모드 정리, 개발 도구 업그레이드 / 57차: 소스·백엔드 보안 점검 15건 보완·CSP / 56차: 로그인·가입 화면 개편 / 55차: 서비스 워커 탐색 폴백 / 54차: 가을→겨울 앱 아이콘·반응형 재점검 / 53차: 정리). 이전 차수는 `docs/CHANGELOG.md`, 문서 목록은 `docs/README.md`
 > **Git 브랜치:** `main` (kordokrip/BookShelf_App)
 > **E2E 테스트:** `bash scripts/e2e-api-test.sh --url <대상>` → **전체 PASS** ✅ (2026-10-19 스테이징 전체·프로덕션 `--readonly` 확인, 테스트 개수는 `grep -n '^  TOTAL=' scripts/e2e-api-test.sh`로 확인)
-> **상세 세션 리포트:** `docs/sessions/2026-11-02-docs-legacy-claude-config.md` (직전: `2026-11-02-uiux-evolution.md`) — **진행 중·대기 항목은 최신 세션 리포트 맨 위 '진행 상태' 표**
+> **상세 세션 리포트:** `docs/sessions/2026-11-05-vite8-file-split.md` (직전: `2026-11-02-docs-legacy-claude-config.md`) — **진행 중·대기 항목은 최신 세션 리포트 맨 위 '진행 상태' 표**
 > **기능 플래그:** 등록 목록은 `worker/lib/featureFlags.ts`의 `ALL_FEATURE_FLAGS`(현재 비어 있음), 공개 상태는 `GET /api/flags/public`으로 확인 (ADR-003)
 
 ---
@@ -14,10 +14,7 @@
 
 | 항목 | 출처 | 메모 |
 |---|---|---|
-| 구글 로그인 OAuth `state`(로그인 CSRF 방어) | 57차 `2026-10-26-security-audit.md` | iPhone 홈 화면 앱에서 구글 로그인이 깨질 위험 — 실기기 확인 후 진행 |
-| 가입 정책: 공개 가입 유지 vs 초대제 | 57차 | 이메일 가입은 메일 인증 없음, `ALLOWED_EMAILS`는 구글 가입에만 적용 |
-| 맞춤 도메인 연결(한국 사용자를 ICN 엣지로) | 58차 `2026-11-02-uiux-evolution.md` P8 | API 0.3~0.8초 중 대부분이 HKG 엣지·APAC D1 왕복. 도메인 구입·DNS 필요 |
-| 큰 화면 파일 분할·vite 8/vitest 5 전환 | 58차 P7·P9 | 사용자 체감 없음, 회귀 위험 — 별도 차수로 할지 |
+| 맞춤 도메인 연결(한국 사용자를 ICN 엣지로) | 58차 `2026-11-02-uiux-evolution.md` P8 | **유보**(2026-11-05 사용자 — 나중에 결정). API 0.3~0.8초 중 대부분이 HKG 엣지·APAC D1 왕복. 도메인 구입·DNS 필요 |
 
 ---
 
@@ -267,9 +264,10 @@ DELETE /api/admin/messages/:id       → 관리자 메시지 삭제
 | 로그인·가입 화면 개편 | ✅ 56차 — 공용 `AuthShell`, 다크 모드, axe 위반 0 |
 | 보안 점검·CSP | ✅ 57차 — 15건 보완(높음 4), CSP·정적 헤더, 운영 의존성 취약점 0. 기록 `SECURITY.md` 8절 |
 | UI/UX 최적화·개발 도구 | ✅ 58차 — 온보딩 Dusk(`brand/dusk.tsx` 공유), 첫 로딩 motion 제외, 주요 버튼 단색, 다크 모드 누락 정리, wrangler·vite·sharp·happy-dom 업그레이드 |
+| 빌드 도구 메이저 전환·큰 파일 분할 | ✅ 60차 — vite 8(rolldown)·vitest 5, 청크 분리 `codeSplitting`(`docs/CI_CD.md` 빌드 도구 절). 1000줄 안팎 화면 5개를 `components/{stats,bookDetail,reading,admin,registerFlow}/`로 분할 |
 
 > 상세 변경 이력: `docs/CHANGELOG.md`
-> 마지막 세션 상세 리포트: `docs/sessions/2026-11-02-docs-legacy-claude-config.md`
+> 마지막 세션 상세 리포트: `docs/sessions/2026-11-05-vite8-file-split.md`
 > 문서 목록: `docs/README.md`
 > 아키텍처 결정 기록: `docs/adr/README.md`
 > API 스펙: `docs/TRACE_MAP.md`

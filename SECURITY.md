@@ -180,4 +180,4 @@ Credentials: true (HttpOnly 쿠키 지원)
 | 중간 | 다른 모임 후기 삭제, 첫 화면 보안 헤더 없음, CSP 없음, 표지 프록시(리다이렉트 우회·SVG), 표지 오픈 리다이렉트·임의 R2 읽기, 토큰이 URL 쿼리로 서버 로그에, 로그아웃해도 리프레시 토큰 유효(KV 전파 지연 중 되살아남 — D1 폐기 표시), 푸시 구독 SSRF |
 | 낮음 | 로그인 타이밍(없는 계정도 같은 비용), 업로드 매직 바이트, 노트 limit 상한, 운영 의존성(hono·zod·lodash·react-router) |
 
-남긴 위험(기능 보호 때문에 이번에 바꾸지 않음): OAuth `state`(로그인 CSRF — iOS 홈 화면 앱 구글 로그인 확인 필요), 이메일 가입 무인증·`ALLOWED_EMAILS`가 구글 경로에만 적용(가입 정책 결정), 토큰이 `localStorage`(CSP로 XSS 경로 차단), 개발 도구 의존성(vite 개발 서버·wrangler CLI 등 — 운영 번들 미포함, `npm audit`으로 확인).
+남긴 위험(기능 보호 때문에 이번에 바꾸지 않음): OAuth `state`(로그인 CSRF — iOS 홈 화면 앱 구글 로그인이 깨질 위험이 있어 **현행 유지로 결정**, 60차 2026-11-05 사용자. 영향은 '공격자 계정으로 로그인됨' 수준), 이메일 가입 무인증·`ALLOWED_EMAILS`가 구글 경로에만 적용(**공개 가입 유지로 결정**, 60차), 토큰이 `localStorage`(CSP로 XSS 경로 차단), 개발 도구 의존성(vite 개발 서버·wrangler CLI 등 — 운영 번들 미포함, `npm audit`으로 확인).

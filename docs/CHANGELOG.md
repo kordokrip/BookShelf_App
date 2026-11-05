@@ -4,6 +4,16 @@
 
 ---
 
+## 60차 (2026-11-05) — 열린 결정 정리, vite 8·vitest 5 전환, 큰 화면 파일 분할
+
+상세 경위·측정: `docs/sessions/2026-11-05-vite8-file-split.md`
+
+- 사용자 결정: 구글 로그인 OAuth는 현재 방식 유지, 가입은 공개 가입 유지, 맞춤 도메인은 유보.
+- 빌드 도구를 vite 8(번들러 rolldown)·vitest 5·tailwind 4.3·vite-plugin-pwa 2로 올렸다. 청크 분리 설정은 rolldown `codeSplitting`으로 옮겼고, 첫 로딩 바이트·서비스 워커 동작은 그대로다.
+- 1000줄 안팎의 화면 파일 5개(책 상세·통계 컴포넌트·읽는 중·관리자·책 등록 흐름)를 역할별 파일로 나눴다. 코드는 그대로 옮겨 동작 변화가 없고, 새 파일은 모두 400줄 이하다.
+
+---
+
 ## 59차 (2026-11-02) — 코드·문서 교차 검증, 레거시 압축 보관, Claude Code 설정 최신화
 
 상세 경위: `docs/sessions/2026-11-02-docs-legacy-claude-config.md`
