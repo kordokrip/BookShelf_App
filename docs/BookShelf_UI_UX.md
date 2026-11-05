@@ -1389,7 +1389,7 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 
 ### 9.20 AdminPage (관리자 대시보드)
 
-- **파일**: `src/app/pages/AdminPage.tsx`
+- **파일**: `src/app/pages/AdminPage.tsx`(권한 확인·탭 틀) + `src/app/components/admin/`(60차 분할 — 탭별 `DashboardTab`·`UsersTab`·`SendNotifTab`·`MessagesHistoryTab`, `UserDetailModal`, `StatCard`, 쿼리 키·날짜/숫자 표시 `adminFormat.ts`)
 - **경로**: `/admin` (Lazy loaded, 인증 필수 + `role === 'admin'` 가드)
 
 #### 접근 제어
