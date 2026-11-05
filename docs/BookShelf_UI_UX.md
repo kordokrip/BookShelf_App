@@ -843,7 +843,7 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 
 ### 9.9 BookDetailPage (책 상세)
 
-- **파일**: `src/app/pages/BookDetailPage.tsx` (~1100줄, 가장 복잡)
+- **파일**: `src/app/pages/BookDetailPage.tsx`(화면 틀·히어로·탭·메뉴) + `src/app/components/bookDetail/`(60차 분할 — `NotesTab`·`QuickNoteBar`(빠른 노트)·`NoteFormSheet`(노트 추가/편집 시트)·`NoteCards`(인용·메모·독후감 카드, 별점)·`BookInfoTab`)
 - **경로**: `/book/:id`
 - **보호**: ProtectedRoute
 
@@ -917,7 +917,7 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 
 활성 탭: `border-b-2 border-[#4F46E5] text-[#4F46E5]`, 비활성: `text-[#94A3B8]`
 
-#### NotesTab
+#### NotesTab (`components/bookDetail/NotesTab.tsx`)
 
 **빠른 노트 입력**:
 - `<textarea>` + 빠른 타입 버튼 3개: 📝 메모, 💬 인용, ✍️ 리뷰
@@ -947,7 +947,7 @@ from-zinc-500 to-stone-700       from-fuchsia-500 to-pink-700
 - 인식 결과 → review 시트로 텍스트 전달
 - 노트 타입 선택(📝/💬/✍️) → `useAddNote()`
 
-#### BookInfoTab
+#### BookInfoTab (`components/bookDetail/BookInfoTab.tsx`)
 
 **AI 요약 섹션**(46차, `components/books/AISummarySection.tsx` — 예전 'AI 책 분석' 대체):
 - 제목 "AI 요약" + 오른쪽 "오늘 N/3회 남음"(완독한 책만)
