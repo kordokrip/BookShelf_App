@@ -14,7 +14,7 @@ import { BookStack } from "../components/stats/BookStack";
 import { useAuthStore } from "../../stores/authStore";
 import { GENRE_CONFIG, normalizeGenre } from "../../types/book";
 import { collectShareData, sumPagesRead, shareStatsImage, copyStatsSummary } from "../../lib/statsShareImage";
-import { calcReadingStreak } from "../components/stats/StatsComponents";
+import { calcReadingStreak } from "../components/stats/streak";
 import { useToast } from "../components/ui/Toast";
 
 const YEAR = new Date().getFullYear();

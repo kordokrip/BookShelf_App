@@ -179,7 +179,7 @@ background: linear-gradient(135deg, #94A3B8 0%, #CBD5E1 100%)
 | `--page-pb` | `calc(var(--bottomnav-h) + 1rem)` | — | 페이지 하단 패딩 (탭바 + 여유) |
 | `--font-pretendard` | `"Pretendard Variable", sans-serif` | — | 한국어 본문 폰트 |
 
-**인라인 style용 다크 대응 색** (2026-09-27, `theme.css` `:root`/`.dark`) — 통계·결산처럼 인라인 style이 많은 컴포넌트는 hex 대신 이 변수를 쓴다(`StatsComponents.tsx`의 `C` 팔레트가 이 변수를 가리킴).
+**인라인 style용 다크 대응 색** (2026-09-27, `theme.css` `:root`/`.dark`) — 통계·결산처럼 인라인 style이 많은 컴포넌트는 hex 대신 이 변수를 쓴다(`stats/statsTokens.ts`의 `C` 팔레트가 이 변수를 가리킴).
 
 | 변수 | Light | Dark | 용도 |
 |---|---|---|---|
@@ -1506,14 +1506,16 @@ ChevronLeft, MoreVertical, Plus, FileText, AlignLeft, Camera, Pencil, Trash2, Bo
 | **CameraOCRSheet** | `books/CameraOCRSheet.tsx` | 카메라→촬영→OCR 전처리→API→노트 자동 생성 |
 | **ISBNScanner** | `books/ISBNScanner.tsx` | EAN-13 바코드 스캔→ISBN 조회→책 정보 반환 |
 
-### 10.6 Stats 컴포넌트 (4개)
+### 10.6 Stats 컴포넌트 (`components/stats/`)
 
 | 컴포넌트 | 파일 | 설명 |
 |---------|------|------|
-| **SummaryCard** | `stats/StatsComponents.tsx` | 아이콘+라벨+숫자+트렌드, 3px 좌측 색상 바 |
-| **MonthlyBarChart** | `stats/StatsComponents.tsx` | 월별 바 차트 (recharts), 클릭→상세 카드(AnimatePresence) |
-| **GenreDonutChart** | `stats/StatsComponents.tsx` | 장르 파이 차트 (recharts) |
-| **ReadingHeatmap** | `stats/StatsComponents.tsx` | 독서 히트맵 |
+| **SummaryCard** · **StreakCard** | `stats/StatCards.tsx` | 아이콘+라벨+숫자+트렌드, 3px 좌측 색상 바 |
+| **MonthlyBarChart** | `stats/StatsCharts.tsx` | 월별 바 차트 (recharts), 클릭→상세 카드(AnimatePresence) |
+| **GenreDonutChart** | `stats/StatsCharts.tsx` | 장르 파이 차트 (recharts) |
+| **ReadingHeatmap** | `stats/ReadingHeatmap.tsx` | 독서 히트맵 |
+| **ReadingCalendar** | `stats/ReadingCalendar.tsx` | 월별 독서 달력 — 완독일에 표지 썸네일(최대 2개 + 개수), 독서 기록만 있는 날은 초록 점, 날짜를 누르면 그날 완독한 책 |
+| (계산) | `stats/streak.ts` | 연속 독서일·총 독서일 계산(`calcReadingStreak`, 로컬 날짜 기준). 차트 라이브러리 없이 연간 결산·테스트에서도 쓴다. 색 토큰 `C`는 `stats/statsTokens.ts` |
 | **BookStack** ★ 리뉴얼 Phase 2 | `stats/BookStack.tsx` | 완독 책을 페이지 수 비례 두께로 쌓은 시각화. 아래=오래된 책, 위=최근 완독(완독일 미상은 맨 아래). 두께 14쪽당 1px(12~32px), 총 높이는 쪽당 0.06mm+표지 1mm로 **추정**해 "약 n cm" 표기(`src/lib/bookStack.ts`). 책등 색은 사용자가 고른 표지 색, 기본값이면 id 기반 팔레트(등록 흐름이 대부분 기본값이라 단색 방지). 폭 78~96%·좌우 ±8px 어긋남을 id로 고정. 최대 40권 표시 + "이전 n권" 요약(높이에는 포함), 쌓기 영역 최대 폭 360px. 배치 화면(StatsPage·YearlyReviewPage) 카드가 다크 모드에서도 흰색이라 밝은 톤 고정. `useReducedMotion` 시 낙하 애니메이션 생략. 책등 제목은 흰 글씨 + `bg-black/40` 배경(모든 책등 색에서 대비 5.07:1 이상). 책등은 전역 버튼 `min-height: 44px`를 인라인 `minHeight`로 덮어써 두께를 표현 — **얇은 책등(12~23px)은 WCAG 2.5.8 권장 24px 미만**(절충 사항) |
 
 ### 10.6b Notes 컴포넌트 (`components/notes/`) ★ 리뉴얼 Phase 1

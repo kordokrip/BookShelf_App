@@ -2,7 +2,7 @@
 process.env.TZ = 'Asia/Seoul';
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { calcReadingStreak } from '../StatsComponents';
+import { calcReadingStreak } from '../streak';
 import type { UISession } from '../../../../types/book';
 
 function session(sessionDate: string): UISession {

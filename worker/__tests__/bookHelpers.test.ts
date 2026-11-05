@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { calcIsOverdue, deriveFinishedDate } from '../lib/bookHelpers';
-import { calcReadingStreak } from '../../src/app/components/stats/StatsComponents';
+import { calcReadingStreak } from '../../src/app/components/stats/streak';
 import type { UISession } from '../../src/types/book';
 
 // ── calcIsOverdue ─────────────────────────────────────────────

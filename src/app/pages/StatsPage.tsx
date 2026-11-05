@@ -7,7 +7,11 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { BookMarked, BookOpen, Sparkles, FileText, Target, ChevronRight, Download, CalendarRange, CalendarDays, Share2, Copy, Loader2 } from "lucide-react";
-import { SummaryCard, MonthlyBarChart, GenreDonutChart, ReadingHeatmap, StreakCard, ReadingCalendar, calcReadingStreak } from "../components/stats/StatsComponents";
+import { SummaryCard, StreakCard } from "../components/stats/StatCards";
+import { MonthlyBarChart, GenreDonutChart } from "../components/stats/StatsCharts";
+import { ReadingHeatmap } from "../components/stats/ReadingHeatmap";
+import { ReadingCalendar } from "../components/stats/ReadingCalendar";
+import { calcReadingStreak } from "../components/stats/streak";
 import { StatCardSkeleton, ChartSkeleton } from "../components/ui/skeleton";
 import { useStats } from "../../hooks/useStats";
 import { useBooks } from "../../hooks/useBooks";
