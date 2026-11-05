@@ -3,7 +3,7 @@ import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
-import { SW_NAVIGATE_FALLBACK, precacheIndexAsRoot } from './src/lib/swPrecache'
+import { SW_NAVIGATE_FALLBACK, precacheIndexAsRoot } from './src/lib/swPrecache.ts'
 
 /**
  * VITE_ 변수는 번들에 그대로 들어가는 공개 값이다. 비밀처럼 보이는 이름이면 빌드를 멈춘다.
@@ -94,7 +94,7 @@ export default defineConfig(({ command, mode }) => {
   resolve: {
     alias: {
       // Alias @ to the src directory
-      '@': path.resolve(__dirname, './src'),
+      '@': path.resolve(import.meta.dirname, './src'),
     },
   },
 
@@ -106,34 +106,23 @@ export default defineConfig(({ command, mode }) => {
     target: 'es2022',
     outDir: 'dist',
     sourcemap: false,
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        // 청크 분리 — 초기 번들 크기 최적화
-        manualChunks: (id) => {
-          // clsx는 recharts도 쓰는 작은 유틸이라 규칙이 없으면 vendor-charts에 묶여, 앱 진입부터 차트 라이브러리(약 400KB)를
-          // 함께 받게 됐다(2026-10-11 측정: index.html이 vendor-charts를 modulepreload). UI 공용 청크로 고정한다.
-          if (id.includes('/node_modules/clsx/') || id.includes('/node_modules/tailwind-merge/')) {
-            return 'vendor-ui';
-          }
-          if (id.includes('recharts') || id.includes('d3-') || id.includes('victory')) {
-            return 'vendor-charts';
-          }
-          if (id.includes('motion') && !id.includes('@emotion')) {
-            return 'vendor-motion';
-          }
-          if (id.includes('@tanstack/react-query')) {
-            return 'vendor-query';
-          }
-          // react-router를 vendor-react에서 분리 — 독립 캐시 무효화 + 초기 청크 크기 축소
-          if (id.includes('react-router')) {
-            return 'vendor-router';
-          }
-          if (id.includes('react-dom') || id.includes('/node_modules/react/')) {
-            return 'vendor-react';
-          }
-          if (id.includes('@radix-ui') || id.includes('lucide-react')) {
-            return 'vendor-ui';
-          }
+        // 청크 분리 — 초기 번들 크기 최적화(vite 8: manualChunks → rolldown codeSplitting, 60차).
+        // 그룹은 자기 의존성까지 끌어가므로(includeDependenciesRecursively 기본값) 여러 라이브러리가 함께 쓰는 모듈은
+        // priority가 높은 그룹이 먼저 차지한다. 순서를 바꾸면 react가 vendor-charts에 들어가는 식으로 첫 로딩이 커진다.
+        codeSplitting: {
+          groups: [
+            { name: 'vendor-react', test: (id) => id.includes('react-dom') || id.includes('/node_modules/react/'), priority: 60 },
+            // react-router를 vendor-react에서 분리 — 독립 캐시 무효화 + 초기 청크 크기 축소
+            { name: 'vendor-router', test: /react-router/, priority: 50 },
+            { name: 'vendor-query', test: /@tanstack\/react-query/, priority: 40 },
+            // clsx는 recharts도 쓰는 작은 유틸이라 규칙이 없으면 vendor-charts에 묶여, 앱 진입부터 차트 라이브러리(약 400KB)를
+            // 함께 받게 됐다(2026-10-11 측정: index.html이 vendor-charts를 modulepreload). UI 공용 청크로 고정한다.
+            { name: 'vendor-ui', test: /\/node_modules\/(clsx|tailwind-merge|@radix-ui|lucide-react)\//, priority: 30 },
+            { name: 'vendor-motion', test: (id) => id.includes('motion') && !id.includes('@emotion'), priority: 20 },
+            { name: 'vendor-charts', test: /recharts|d3-|victory/, priority: 10 },
+          ],
         },
       },
     },

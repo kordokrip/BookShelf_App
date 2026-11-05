@@ -103,13 +103,13 @@
 |------|-----|
 | **앱 이름** | BookShelf (북쉘프) |
 | **슬로건** | "나만의 독서 기록 공간" / "내 독서의 모든 순간을 기록하세요" |
-| **프론트엔드** | React 18.3.1 + TypeScript 5.9.3 + Vite 6.3.5 |
-| **UI 프레임워크** | Tailwind CSS 4.1.12 + 21개 핵심 UI 컴포넌트 (17차: 40개 미사용 shadcn/ui 래퍼 삭제) + Lucide React 0.525.0 |
-| **상태 관리** | Zustand v5.0.11 (authStore, uiStore) + TanStack Query v5.90.21 |
+| **프론트엔드** | React 18 + TypeScript + Vite(버전은 `npm ls react typescript vite`로 확인) |
+| **UI 프레임워크** | Tailwind CSS 4 + 핵심 UI 컴포넌트(`src/app/components/ui/`, 17차: 미사용 shadcn/ui 래퍼 40개 삭제) + Lucide React |
+| **상태 관리** | Zustand 5 (authStore, uiStore 등 `src/stores/`) + TanStack Query 5 |
 | **차트** | recharts (BarChart, PieChart) |
-| **애니메이션** | framer-motion (AnimatePresence) |
+| **애니메이션** | motion(`motion/react`, 구 framer-motion) |
 | **바코드** | @zxing/browser (EAN-13) |
-| **백엔드** | Hono 4.12.4 on Cloudflare Workers |
+| **백엔드** | Hono 4 on Cloudflare Workers |
 | **데이터베이스** | Cloudflare D1 (SQLite) |
 | **파일 저장** | Cloudflare R2 (표지 이미지) |
 | **캐시** | Cloudflare KV |

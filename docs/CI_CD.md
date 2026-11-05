@@ -7,6 +7,7 @@
 
 - [배포 파이프라인](#배포-파이프라인)
 - [Node / wrangler 버전 정책](#node--wrangler-버전-정책)
+- [빌드 도구(vite·vitest) 버전 정책](#빌드-도구vitevitest-버전-정책)
 - [로컬 개발 서버](#로컬-개발-서버)
 - [D1 마이그레이션 절차](#d1-마이그레이션-절차)
 - [롤백 절차](#롤백-절차)
@@ -52,7 +53,7 @@ PWA 정적 자산(아이콘, iOS startup 이미지, `sw.js`/workbox 프리캐시
 5. **Verify deployment** — 10초 대기 후 `curl -sf .../api/health`로 `"status":"ok"` 확인 (실패해도 워크플로 자체를 실패시키진 않고 경고만 출력 — 전파 지연 가능성 고려)
 6. **Notify deployment result** — `if: always()`, job 성공/실패를 로그에 명시적으로 남김
 
-두 wrangler-action 스텝 모두 `wranglerVersion: '4'`로 고정 — 이는 항상 4.x 최신을 쓰겠다는 뜻이며, 로컬 `package.json`의 정확한 고정 버전(`4.107.1`)과는 독립적이다. 즉 CI가 실제로 배포에 쓰는 wrangler 버전과 로컬 개발용 wrangler 버전이 다를 수 있다 — [Node / wrangler 버전 정책](#node--wrangler-버전-정책) 참고.
+두 wrangler-action 스텝 모두 `wranglerVersion: '4'`로 고정 — 이는 항상 4.x 최신을 쓰겠다는 뜻이며, 로컬 `package.json`의 정확한 고정 버전(`npm ls wrangler`로 확인)과는 독립적이다. 즉 CI가 실제로 배포에 쓰는 wrangler 버전과 로컬 개발용 wrangler 버전이 다를 수 있다 — [Node / wrangler 버전 정책](#node--wrangler-버전-정책) 참고.
 
 **마이그레이션이 코드 배포보다 먼저 적용된다**(2026-09-27 순서 변경). 이전에는 코드가 먼저 배포돼, 새 컬럼을 조회하는 코드가 마이그레이션 적용 전까지 실패할 수 있었다. 이 순서가 안전하려면 **마이그레이션은 하위 호환 변경(컬럼·테이블·인덱스 추가)만** 해야 한다. 기존 코드는 새 컬럼을 무시하기 때문이다. 컬럼 삭제나 이름 변경처럼 기존 코드를 깨는 변경은 "코드에서 사용 중단 → 배포 → 다음 배포에서 스키마 변경"의 2단계로 나눈다.
 
@@ -95,6 +96,20 @@ npm view wrangler@<올리려는 버전> peerDependencies
 로 `@cloudflare/workers-types` 요구 범위를 먼저 확인하고, wrangler·workers-types 두 값을 **같은 커밋에서 함께** 정확한 버전으로 갱신한다. (실제 사고 사례는 [겪은 문제 / 교훈](#겪은-문제--교훈) 참고.)
 
 CI 배포 자체는 `cloudflare/wrangler-action@v4`가 `wranglerVersion: '4'`로 항상 최신 4.x를 받아서 쓰므로, 로컬 `package.json`의 고정 버전을 올리지 않아도 프로덕션 배포에 영향은 없다. 이 정책은 로컬 개발 경험(`wrangler dev --local`, D1 마이그레이션 CLI)의 재현성을 위한 것이다.
+
+---
+
+## 빌드 도구(vite·vitest) 버전 정책
+
+60차(2026-11-05)에 vite 6 → 8, vitest 4 → 5로 올렸다. 현재 값은 `npm ls vite vitest @vitejs/plugin-react @tailwindcss/vite vite-plugin-pwa`로 확인한다.
+
+- **vite 8은 번들러가 rolldown이다**(Rollup·esbuild 대신, JS 압축은 Oxc, CSS 압축은 Lightning CSS). 설정은 `build.rolldownOptions`(옛 `rollupOptions`는 deprecated 별칭).
+- **청크 분리는 `output.codeSplitting.groups`**(옛 `manualChunks`는 deprecated). 그룹은 자기 의존성까지 끌어가므로 여러 라이브러리가 함께 쓰는 모듈(react·clsx 등)은 `priority`가 높은 그룹이 먼저 차지해야 한다 — 순서를 잘못 두면 react가 `vendor-charts`에 들어가 첫 로딩이 커진다. 바꾼 뒤에는 `dist/index.html`의 `modulepreload`에 `vendor-motion`·`vendor-charts`가 없는지 확인한다.
+- rolldown은 진입 청크와 지연 청크가 함께 쓰는 앱 코드(스토어·api 등)를 작은 공용 청크로 나눈다. 그래서 vite 6보다 첫 화면 파일 수가 많지만 바이트 합계는 같다(측정: `docs/sessions/2026-11-05-vite8-file-split.md`).
+- `vite`·`@vitejs/plugin-react`·`@tailwindcss/vite`·`tailwindcss`는 정확한 버전으로 고정한다(플러그인마다 지원하는 vite 메이저가 peer로 묶여 있다). 올릴 때는 `npm view <패키지>@<버전> peerDependencies`로 vite 범위를 먼저 확인한다.
+- `package.json`의 `overrides`(`@babel/plugin-transform-runtime` → 7.x)는 npm이 plugin-react 6의 **선택적** peer 체인(`@rolldown/plugin-babel` → babel 8)을 잘못 풀어 `ERESOLVE`를 내는 것을 막는다. 우리는 babel 플러그인을 쓰지 않으니 동작에는 영향이 없다. plugin-react를 올릴 때 이 override 없이 `npm install --dry-run`이 통과하면 지운다.
+- vitest 5는 테스트마다 `vi.clearAllMocks()`를 기본으로 한다(`clearMocks: true`). 테스트 사이에 mock 호출 기록이 이어진다고 가정하지 않는다.
+- `vite.config.ts`·`vitest.config.ts`는 `import.meta.dirname`과 확장자를 붙인 import를 쓴다(앞으로 기본이 될 native 설정 로더 호환).
 
 ---
 
